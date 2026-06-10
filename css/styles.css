@@ -2009,35 +2009,37 @@ textarea.f-input{resize:vertical;min-height:84px;}
 .shorts-video::-webkit-media-controls{opacity:0;transition:opacity .2s;}
 .shorts-video-wrap:hover .shorts-video::-webkit-media-controls{opacity:1;}
 
-/* 3-dots */
+/* 3-dots — always visible & on top so it stays clickable */
 .shorts-dots{
-  position:absolute;top:12px;right:12px;z-index:6;
+  position:absolute;top:12px;right:12px;z-index:9;
   width:36px;height:36px;border-radius:50%;border:none;cursor:pointer;
   background:rgba(0,0,0,0.5);color:#fff;
-  display:flex;align-items:center;justify-content:center;opacity:0;transition:opacity .2s;
+  display:flex;align-items:center;justify-content:center;opacity:1;transition:background .2s;
 }
-.shorts-video-wrap:hover .shorts-dots{opacity:1;}
+.shorts-dots:hover{background:rgba(0,0,0,0.7);}
 .shorts-dots .mi{font-size:22px;}
 
-/* Custom TOP control bar */
+/* Top-LEFT controls (play/pause, mute, time) — width = content, never under the 3-dots */
 .shorts-top-ctrl{
-  position:absolute;top:0;left:0;right:0;z-index:7;
-  display:flex;align-items:center;gap:10px;padding:10px 12px;
-  background:linear-gradient(180deg,rgba(0,0,0,.55),transparent);
-  opacity:0;transition:opacity .2s;
+  position:absolute;top:0;left:0;z-index:7;width:auto;
+  display:flex;align-items:center;gap:8px;padding:10px 12px;
+  background:linear-gradient(135deg,rgba(0,0,0,.55),transparent);
 }
-.shorts-video-wrap:hover .shorts-top-ctrl{opacity:1;}
 .shorts-top-ctrl button{
   background:none;border:none;color:#fff;cursor:pointer;
   width:32px;height:32px;display:flex;align-items:center;justify-content:center;flex-shrink:0;
 }
 .shorts-top-ctrl button .mi{font-size:24px;}
-.shorts-seek{
-  flex:1;height:4px;accent-color:#FF0033;cursor:pointer;
-}
 .shorts-time{font-size:12px;color:#fff;flex-shrink:0;min-width:38px;font-family:'IBM Plex Mono',monospace;}
-/* leave room so the 3-dots button doesn't overlap the control bar */
-.shorts-top-ctrl{padding-right:54px;}
+
+/* Seek bar — BOTTOM, full width, red */
+.shorts-seek-wrap{
+  position:absolute;bottom:0;left:0;right:0;z-index:8;
+  padding:0 10px 8px;
+}
+.shorts-seek{
+  width:100%;height:4px;accent-color:#FF0033;cursor:pointer;display:block;
+}
 
 /* 3-dots menu */
 .shorts-menu{
@@ -2079,10 +2081,14 @@ textarea.f-input{resize:vertical;min-height:84px;}
 
 /* Bottom-left info */
 .shorts-info{
-  position:absolute;left:16px;right:70px;bottom:20px;z-index:5;
+  position:absolute;left:16px;right:70px;bottom:28px;z-index:5;
   text-shadow:0 1px 4px rgba(0,0,0,.8);
 }
-.shorts-creator-row{display:flex;align-items:center;gap:10px;margin-bottom:10px;}
+.shorts-creator-row{display:flex;align-items:center;gap:10px;margin-bottom:8px;}
+/* Taker line (below creator) */
+.shorts-taker-row{display:flex;align-items:center;gap:8px;margin-bottom:8px;font-size:13px;color:#fff;}
+.shorts-taker-label{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:#bbb;background:rgba(255,255,255,.12);padding:2px 7px;border-radius:50px;}
+.shorts-taker-name{font-weight:600;color:#fff;}
 .shorts-creator-av{
   width:36px;height:36px;border-radius:50%;flex-shrink:0;
   background:linear-gradient(135deg,#FF0033,#FF4E45);

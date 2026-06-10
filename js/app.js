@@ -3837,10 +3837,12 @@ async function renderShort() {
   }
   document.getElementById('shortsCaption').innerHTML = capHtml;
 
-  // Creator info (left bottom)
+  // Creator + Taker info (left bottom)
   document.getElementById('shortsCreatorName').textContent = '@' + creatorName;
   const cAv = document.getElementById('shortsCreatorAv');
   cAv.innerHTML = _avHtml(d.creatorPhotoURL || p.posterPhotoURL, creatorName);
+  const takerNameEl = document.getElementById('shortsTakerName');
+  if (takerNameEl) takerNameEl.textContent = '@' + (p.takerName || 'taker');
 
   // Like state + count
   const liked = (typeof userLikes !== 'undefined' && userLikes.includes(p.id));
