@@ -3193,8 +3193,9 @@ function _explorerDareCard(d) {
 function _explorerVideoCard(p) {
   const cat=p.cat||'fitness';const color=CAT_C[cat]||'#1a73e8';const icon=CAT_I[cat]||'bolt';
   const dur=p.videoDuration?(p.videoDuration>=60?Math.floor(p.videoDuration/60)+':'+String(p.videoDuration%60).padStart(2,'0'):p.videoDuration+'s'):'';
+  const _short=_isShortVideo(p);const _ts=_short?'aspect-ratio:9/16;width:auto;max-width:62%;margin:0 auto;':'';
   return `<div class="yt-card" onclick="openVideo('${p.id}')">
-    <div class="yt-thumb">
+    <div class="yt-thumb" style="${_ts}">
       ${vidThumb(p,480)?`<img src="${vidThumb(p,480)}" alt="" loading="lazy" style="width:100%;height:100%;object-fit:cover;display:block;"/>`:`<div class="yt-thumb-bg"><span class="mi">${icon}</span></div>`}
       <div class="yt-play-over"><span class="mi">play_circle</span></div>
       <div class="yt-bounty">Rs.${(p.dareBounty||0).toLocaleString('en-IN')}</div>
@@ -3427,8 +3428,9 @@ function _updateNotifBadge() {
 function _videoCardSearch(p) {
   const cat=p.cat||'fitness'; const color=CAT_C[cat]||'#1a73e8'; const icon=CAT_I[cat]||'bolt';
   const dur=p.videoDuration?(p.videoDuration>=60?Math.floor(p.videoDuration/60)+':'+String(p.videoDuration%60).padStart(2,'0'):p.videoDuration+'s'):'';
+  const _short=_isShortVideo(p);const _ts=_short?'aspect-ratio:9/16;width:auto;max-width:62%;margin:0 auto;':'';
   return `<div class="yt-card" onclick="openVideo('${p.id}')">
-    <div class="yt-thumb">
+    <div class="yt-thumb" style="${_ts}">
       ${vidThumb(p,480)?`<img src="${vidThumb(p,480)}" alt="" loading="lazy" style="width:100%;height:100%;object-fit:cover;display:block;"/>`:`<div class="yt-thumb-bg"><span class="mi">${icon}</span></div>`}
       <div class="yt-play-over"><span class="mi">play_circle</span></div>
       <div class="yt-bounty">Rs.${(p.dareBounty||0).toLocaleString('en-IN')}</div>
@@ -4014,11 +4016,12 @@ function closeCollabModal() {
 }
 
 // #7: Interleaved infinite feed — mixes long videos & shorts rows in random chunks
-let _feedLong = [], _feedShorts = [], _feedLongIdx = 0, _feedScrollBound = false;
+let _feedLong = [], _feedShorts = [], _feedLongIdx = 0, _feedScrollBound = false, _shortsRowShown = false;
 function _renderInterleavedFeed(longVids, shorts) {
   _feedLong = longVids || [];
   _feedShorts = shorts || [];
   _feedLongIdx = 0;
+  _shortsRowShown = false;
   const container = document.getElementById('homeVideoGrid');
   if (!container) return;
   if (!_feedLong.length && !_feedShorts.length) {
@@ -4054,7 +4057,14 @@ function _appendFeedChunk() {
   const container = document.getElementById('homeVideoGrid');
   if (!container) return;
   // FIX 2: no repeats — stop when all long videos shown once
-  if (_feedLongIdx >= _feedLong.length) return;
+  if (_feedLongIdx >= _feedLong.length) {
+    // Longs exhausted: still show the Shorts shelf once if it hasn't appeared yet
+    if (_feedShorts.length && !_shortsRowShown) {
+      _shortsRowShown = true;
+      container.insertAdjacentHTML('beforeend', _shortsRowHtml(_shuffle(_feedShorts).slice(0, Math.min(12, _feedShorts.length))));
+    }
+    return;
+  }
   const n = 2 + Math.floor(Math.random()*3); // 2-4 per chunk
   let longHtml = '';
   for (let i=0; i<n && _feedLongIdx < _feedLong.length; i++){
@@ -4062,9 +4072,10 @@ function _appendFeedChunk() {
     _feedLongIdx++;
   }
   if (longHtml) container.insertAdjacentHTML('beforeend', `<div class="feed-longs">${longHtml}</div>`);
-  // Shorts row between chunks (only if shorts exist AND more longs remain)
-  if (_feedShorts.length && _feedLongIdx < _feedLong.length) {
-    const someShorts = _shuffle(_feedShorts).slice(0, Math.min(6, _feedShorts.length));
+  // Show the Shorts shelf once, after the first long chunk (independent of how many longs remain)
+  if (_feedShorts.length && !_shortsRowShown) {
+    _shortsRowShown = true;
+    const someShorts = _shuffle(_feedShorts).slice(0, Math.min(12, _feedShorts.length));
     container.insertAdjacentHTML('beforeend', _shortsRowHtml(someShorts));
   }
 }
