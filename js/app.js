@@ -670,7 +670,7 @@ function _renderVideoGrid(proofs) {
           padding:2px 7px;border-radius:5px;">${dur}</div>` : ''}
       </div>
       <div class="yt-info">
-        <div class="yt-av">${(p.takerName||'?')[0].toUpperCase()}</div>
+        <div class="yt-av">${_avHtml(p.takerPhotoURL, p.takerName)}</div>
         <div class="yt-meta">
           <div class="yt-title">${p.dareTitle||'Dare Completed'}</div>
           <div class="yt-sub">
@@ -1347,6 +1347,15 @@ function escHtml(str) {
     .replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
 
+// Avatar inner-HTML: real profile photo if present, else the name's first letter.
+// Drop into any circular avatar container (it centers text / the img fills it).
+function _avHtml(photoURL, name) {
+  const letter = (String(name||'?').trim().charAt(0) || '?').toUpperCase().replace(/['"\\<>]/g,'');
+  return photoURL
+    ? `<img src="${photoURL}" alt="" style="width:100%;height:100%;object-fit:cover;border-radius:50%;display:block;" onerror="this.parentElement.textContent='${letter}'"/>`
+    : letter;
+}
+
 // ════════════════════════════════════════════════════════════════════
 //  SUBMIT DARE — v0.15
 //  Combined: v15 post-dare improvements + v14 AdManager.showPostDareAds
@@ -1445,9 +1454,11 @@ async function submitDare() {
       // ── CREATE MODE: new dare ─────────────────────────────────────────────
       await db.collection('dares').add({
         ...dareData,
-        creator:      user.name,
-        creatorEmail: user.email,
-        creatorUid:   user.uid,
+        creator:        user.name,
+        creatorEmail:   user.email,
+        creatorUid:     user.uid,
+        creatorUsername: user.username || '',
+        creatorPhotoURL: user.picture || '',
         takers:       0,
         proofCount:   0,
         completed:    false,
@@ -1895,6 +1906,10 @@ async function submitProof() {
       takerName:        user.name,
       takerUsername:    user.username || (user.name||'user').toLowerCase().replace(/[^a-z0-9_.]/g,''),
       takerEmail:       user.email,
+      takerPhotoURL:    user.picture || '',
+      posterName:       d.creator || '',
+      posterUsername:   d.creatorUsername || '',
+      posterPhotoURL:   d.creatorPhotoURL || '',
       cat:              d.tags?.[0] || d.cat || 'general',
       videoURL,
       proofThumbnailURL,          // thumbnail from frame picker (may be empty)
@@ -2040,7 +2055,7 @@ function proofItemHTML(p) {
   <div class="proof-item ${isApproved?'approved':isRejected?'rejected':''}">
     <div class="proof-item-header">
       <div class="taker-info">
-        <div class="taker-av">${(p.takerName||'?')[0].toUpperCase()}</div>
+        <div class="taker-av">${_avHtml(p.takerPhotoURL, p.takerName)}</div>
         <div>
           <div class="taker-name">${p.takerName||'Unknown'}</div>
           <div class="taker-date">${_relTimeStr(p.submittedAt)} · ${p.takerEmail||''}</div>
@@ -3105,6 +3120,8 @@ let notifUnsub      = null;
 let activeProof     = null;
 let commentsProofId = null;
 let commentsCache   = {};
+let replyingToCommentId = null;   // video-detail: comment being replied to
+let shortsReplyingTo    = null;   // shorts: comment being replied to
 let searchType      = 'dares';
 let searchDebounceTimer = null;
 let activeExpTab    = 'all';
@@ -3200,7 +3217,7 @@ function _explorerVideoCard(p) {
       ${dur?`<div style="position:absolute;bottom:8px;right:8px;background:rgba(0,0,0,.8);color:#fff;font-size:10px;font-weight:600;padding:2px 7px;border-radius:5px;">${dur}</div>`:''}
     </div>
     <div class="yt-info">
-      <div class="yt-av">${(p.takerName||'?')[0].toUpperCase()}</div>
+      <div class="yt-av">${_avHtml(p.takerPhotoURL, p.takerName)}</div>
       <div class="yt-meta">
         <div class="yt-title">${escHtml(p.dareTitle||'Dare Video')}</div>
         <div class="yt-sub"><span>${escHtml(p.takerName||'—')}</span><span class="yt-dot"></span><span>${(p.viewCount||0).toLocaleString('en-IN')} views</span><span class="yt-dot"></span><span> ${(p.likeCount||0).toLocaleString('en-IN')}</span></div>
@@ -3297,8 +3314,8 @@ async function _renderVideoDetail(p) {
   const creatorUser = (_dare?.creatorUsername || creatorName).toLowerCase().replace(/[^a-z0-9_.]/g,'');
   const creatorId = _dare?.creatorUid || p.posterId || '';
   const takerUser = (p.takerUsername || p.takerName || 'taker');
-  document.getElementById('vdTakerAv').textContent  = (p.takerName||'T')[0].toUpperCase();
-  document.getElementById('vdCreatorAv').textContent = creatorName[0].toUpperCase();
+  document.getElementById('vdTakerAv').innerHTML   = _avHtml(p.takerPhotoURL, p.takerName||'T');
+  document.getElementById('vdCreatorAv').innerHTML = _avHtml(_dare?.creatorPhotoURL || p.posterPhotoURL, creatorName);
   document.getElementById('vdCreatorName').textContent = '@'+creatorUser;
   document.getElementById('vdTakerName').textContent = '@'+takerUser;
   // Stash ids for collab modal
@@ -3444,7 +3461,7 @@ function _videoCardSearch(p) {
       ${dur?`<div style="position:absolute;bottom:8px;right:8px;background:rgba(0,0,0,.8);color:#fff;font-size:10px;font-weight:600;padding:2px 7px;border-radius:5px;">${dur}</div>`:''}
     </div>
     <div class="yt-info">
-      <div class="yt-av">${(p.takerName||'?')[0].toUpperCase()}</div>
+      <div class="yt-av">${_avHtml(p.takerPhotoURL, p.takerName)}</div>
       <div class="yt-meta">
         <div class="yt-title">${escHtml(p.dareTitle||'Dare Video')}</div>
         <div class="yt-sub"><span>${escHtml(p.takerName||'—')}</span><span class="yt-dot"></span><span>${(p.viewCount||0).toLocaleString('en-IN')} views</span><span class="yt-dot"></span><span> ${(p.likeCount||0).toLocaleString('en-IN')}</span></div>
@@ -3632,7 +3649,7 @@ async function submitComment() {
   if(!user){showToast('Please sign in to comment');return;}
   const input=document.getElementById('vdCommentInput'); const text=(input.value||'').trim();
   if(!text) return; if(text.length>500){showToast('Too long (max 500 chars)');return;}
-  const newComment={proofId:commentsProofId,userId:user.uid,userName:user.name,text,likeCount:0,createdAt:firebase.firestore.Timestamp.now()};
+  const newComment={proofId:commentsProofId,userId:user.uid,userName:user.name,userPhotoURL:user.picture||'',text,likeCount:0,likedBy:[],parentId:(replyingToCommentId||null),createdAt:firebase.firestore.Timestamp.now()};
   try{
     await db.collection('comments').add(newComment); input.value='';
     const cached=commentsCache[commentsProofId]||[];
@@ -3760,7 +3777,7 @@ async function renderShort() {
   // Creator info (left bottom)
   document.getElementById('shortsCreatorName').textContent = '@' + creatorName;
   const cAv = document.getElementById('shortsCreatorAv');
-  cAv.textContent = creatorName.charAt(0).toUpperCase();
+  cAv.innerHTML = _avHtml(d.creatorPhotoURL || p.posterPhotoURL, creatorName);
 
   // Like state + count
   const liked = (typeof userLikes !== 'undefined' && userLikes.includes(p.id));
@@ -3884,8 +3901,8 @@ async function submitShortsComment() {
   inp.value = '';
   try {
     await db.collection('comments').add({
-      proofId: pid, userId: user.uid, userName: user.name || 'user', text,
-      likes: 0, likeCount: 0, pinned: false, createdAt: firebase.firestore.Timestamp.now()
+      proofId: pid, userId: user.uid, userName: user.name || 'user', userPhotoURL: user.picture || '', text,
+      likes: 0, likeCount: 0, likedBy: [], parentId: (shortsReplyingTo || null), pinned: false, createdAt: firebase.firestore.Timestamp.now()
     });
     await db.collection('proofs').doc(pid).update({ commentCount: firebase.firestore.FieldValue.increment(1) }).catch(()=>{});
     const p = shortsFeed[shortsIndex];
@@ -4097,7 +4114,7 @@ function _longCardHtml(p) {
         <div class="yt-rs">Rs.${(p.dareBounty||0).toLocaleString('en-IN')}</div>
       </div>
       <div class="yt-info">
-        <div class="yt-av">${(p.takerName||'?')[0].toUpperCase()}</div>
+        <div class="yt-av">${_avHtml(p.takerPhotoURL, p.takerName)}</div>
         <div class="yt-meta">
           <div class="yt-title">${escHtml(p.dareTitle||'Dare Completed')}</div>
           <div class="yt-sub"><span>@${p.takerUsername||p.takerName||'creator'}</span><span class="yt-dot"></span><span>${(p.viewCount||0).toLocaleString('en-IN')} views</span><span class="yt-dot"></span><span>${_relTime(p)}</span></div>
