@@ -987,7 +987,17 @@
     <div class="shorts-video-col">
       <div class="shorts-snap-container" id="shortsSnapContainer" style="display:none;"></div>
       <div class="shorts-video-wrap" id="shortsVideoWrapLegacy">
-        <video class="shorts-video" id="shortsVideo" loop playsinline controls controlsList="nofullscreen"></video>
+        <video class="shorts-video" id="shortsVideo" loop playsinline
+          onclick="shortsTogglePlay()" ontimeupdate="shortsOnTime()"></video>
+
+        <!-- Custom control bar (TOP) — play/pause, mute, seek -->
+        <div class="shorts-top-ctrl">
+          <button onclick="shortsTogglePlay()" id="shortsPlayBtn" title="Play/Pause"><span class="mi">pause</span></button>
+          <button onclick="shortsToggleMute()" id="shortsMuteBtn" title="Mute"><span class="mi">volume_up</span></button>
+          <input type="range" id="shortsSeek" class="shorts-seek" min="0" max="1000" value="0"
+            oninput="shortsSeekTo(this.value)"/>
+          <span class="shorts-time" id="shortsTime">0:00</span>
+        </div>
 
         <!-- 3-dots button -->
         <button class="shorts-dots" onclick="shortsToggleMenu()"><span class="mi">more_vert</span></button>

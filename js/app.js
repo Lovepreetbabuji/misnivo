@@ -3759,8 +3759,10 @@ async function renderShort() {
   const v = document.getElementById('shortsVideo');
   if (v.getAttribute('src') !== p.videoURL) {
     v.src = p.videoURL;
+    _shortsSpeedIdx = 0;            // new clip → reset playback speed
     v.play().catch(()=>{});
   }
+  _shortsSyncPlayIcon();
 
   // Caption with 5-word truncation
   const words = caption.split(' ');
@@ -3801,6 +3803,9 @@ async function renderShort() {
     ${(d.rules && d.rules.length) ? `<div class="shorts-menu-row"><span class="shorts-menu-label">Rules</span><span>${d.rules.map(r=>escHtml(r)).join(' • ')}</span></div>` : ''}
     <div class="shorts-menu-row"><span class="shorts-menu-label">Creator</span><span>@${creatorName} <button class="shorts-follow-mini" onclick="toggleFollow('${creatorId}','creator')">Follow</button></span></div>
     <div class="shorts-menu-row"><span class="shorts-menu-label">Taker</span><span>@${takerName} <button class="shorts-follow-mini" onclick="toggleFollow('${takerId}','taker')">Follow</button></span></div>
+    <button class="shorts-menu-action" onclick="shortsDownload()"><span class="mi">download</span> Download</button>
+    <button class="shorts-menu-action" onclick="shortsCycleSpeed()"><span class="mi">slow_motion_video</span> Playback speed <span id="shortsSpeedLbl" style="margin-left:auto;color:var(--t3);">${_SHORTS_SPEEDS[_shortsSpeedIdx]}x</span></button>
+    <button class="shorts-menu-action" onclick="shortsPiP()"><span class="mi">picture_in_picture_alt</span> Picture-in-picture</button>
     <button class="shorts-menu-report" onclick="openReportModal('proof','${p.id}')"><span class="mi">flag</span> Report</button>
   `;
 
@@ -3827,6 +3832,66 @@ function _fmtCount(n) {
   if (n >= 1000000) return (n/1000000).toFixed(1).replace('.0','') + 'M';
   if (n >= 1000) return (n/1000).toFixed(1).replace('.0','') + 'K';
   return String(n || 0);
+}
+
+// ── Shorts custom video controls (top bar) ──────────────────────────────────
+function shortsTogglePlay() {
+  const v = document.getElementById('shortsVideo'); if (!v) return;
+  if (v.paused) v.play().catch(()=>{}); else v.pause();
+  _shortsSyncPlayIcon();
+}
+function _shortsSyncPlayIcon() {
+  const v = document.getElementById('shortsVideo');
+  const b = document.getElementById('shortsPlayBtn');
+  if (v && b) b.querySelector('.mi').textContent = v.paused ? 'play_arrow' : 'pause';
+}
+function shortsToggleMute() {
+  const v = document.getElementById('shortsVideo');
+  const b = document.getElementById('shortsMuteBtn');
+  if (!v) return;
+  v.muted = !v.muted;
+  if (b) b.querySelector('.mi').textContent = v.muted ? 'volume_off' : 'volume_up';
+}
+function shortsSeekTo(val) {
+  const v = document.getElementById('shortsVideo');
+  if (v && v.duration) v.currentTime = (val/1000) * v.duration;
+}
+function shortsOnTime() {
+  const v = document.getElementById('shortsVideo'); if (!v || !v.duration) return;
+  const seek = document.getElementById('shortsSeek');
+  const time = document.getElementById('shortsTime');
+  if (seek) seek.value = Math.round((v.currentTime / v.duration) * 1000);
+  if (time) time.textContent = _fmtTimeS(v.currentTime);
+  _shortsSyncPlayIcon();
+}
+function _fmtTimeS(s) {
+  s = Math.floor(s||0); const m = Math.floor(s/60);
+  return m + ':' + String(s%60).padStart(2,'0');
+}
+// ── 3-dots menu actions (merged from the native video menu) ──
+function shortsDownload() {
+  const p = shortsFeed[shortsIndex]; if (!p || !p.videoURL) return;
+  const a = document.createElement('a');
+  a.href = p.videoURL; a.download = (p.dareTitle||'dare-short') + '.mp4'; a.target = '_blank';
+  document.body.appendChild(a); a.click(); a.remove();
+}
+let _shortsSpeedIdx = 0;
+const _SHORTS_SPEEDS = [1, 1.25, 1.5, 2, 0.5];
+function shortsCycleSpeed() {
+  const v = document.getElementById('shortsVideo'); if (!v) return;
+  _shortsSpeedIdx = (_shortsSpeedIdx + 1) % _SHORTS_SPEEDS.length;
+  v.playbackRate = _SHORTS_SPEEDS[_shortsSpeedIdx];
+  const lbl = document.getElementById('shortsSpeedLbl');
+  if (lbl) lbl.textContent = _SHORTS_SPEEDS[_shortsSpeedIdx] + 'x';
+  showToast('Speed: ' + _SHORTS_SPEEDS[_shortsSpeedIdx] + 'x');
+}
+async function shortsPiP() {
+  const v = document.getElementById('shortsVideo'); if (!v) return;
+  try {
+    if (document.pictureInPictureElement) await document.exitPictureInPicture();
+    else if (v.requestPictureInPicture) await v.requestPictureInPicture();
+    else showToast('Picture-in-picture not supported');
+  } catch(e) { showToast('Picture-in-picture not available'); }
 }
 
 // Like current short (reuse toggleLike backend)
