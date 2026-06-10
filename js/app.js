@@ -567,6 +567,18 @@ let userLikes     = [];   // proofIds current user liked
 let _searchTrackTimer = null;
 let homeFilterCat = 'all';
 
+// ─── SHARED ROUTING RULE ─────────────────────────────────
+// Confirmed rule: a video is a SHORT if it's under 1 minute OR vertical (9:16).
+// Otherwise (1 min+ AND 16:9/landscape) it's a LONG video.
+// Used by home feed split, openShorts, and openVideo so they never disagree.
+function _isShortVideo(p) {
+  if (!p) return false;
+  if (p.videoDuration > 0 && p.videoDuration < 60) return true;  // under 1 min → Shorts
+  if (p.videoH > 0 && p.videoW > 0) return p.videoH > p.videoW;   // else by aspect ratio (9:16 → short)
+  if (typeof p.isVertical === 'boolean') return p.isVertical;     // fallback: stored flag
+  return false;                                                   // default → Long
+}
+
 // ─── MAIN HOME RENDER ────────────────────────────────────
 async function renderHome(cat) {
   if (cat) homeFilterCat = cat;
@@ -598,14 +610,9 @@ async function renderHome(cat) {
     //   regular = no duration stored OR duration >= 60 seconds
     // Route by aspect ratio: vertical (9:16) → shorts, horizontal (16:9) → long
     // Fallback for old videos without dimensions: duration < 60 = short
-    const _isShort = (p) => {
-      // PURE aspect ratio: 9:16 (vertical) = short, 16:9 (landscape) = long. Duration irrelevant.
-      if (p.videoH > 0 && p.videoW > 0) return p.videoH > p.videoW;
-      if (typeof p.isVertical === 'boolean') return p.isVertical;
-      return (p.videoDuration > 0 && p.videoDuration < 60); // last-resort for old videos w/o dims
-    };
-    const shorts  = filtered.filter(p => _isShort(p));
-    const regular = filtered.filter(p => !_isShort(p));
+    // Routing: under 1 min OR 9:16 → Shorts; 1 min+ and 16:9 → Long (see _isShortVideo)
+    const shorts  = filtered.filter(p => _isShortVideo(p));
+    const regular = filtered.filter(p => !_isShortVideo(p));
 
     // #7: Build interleaved infinite feed (long + shorts mixed, never-ending)
     _renderInterleavedFeed(regular, shorts);
@@ -3670,10 +3677,7 @@ let shortsCaptionExpanded = false;
 
 function openShorts(proofId) {
   const pool = (typeof allProofs !== 'undefined' && allProofs.length) ? allProofs : homeProofs;
-  const _isShort = (p) => (typeof p.isVertical === 'boolean')
-    ? p.isVertical
-    : (p.videoH > 0 && p.videoW > 0 ? p.videoH > p.videoW : (p.videoDuration > 0 && p.videoDuration < 60));
-  shortsFeed = (pool || []).filter(p => p.videoURL && _isShort(p));
+  shortsFeed = (pool || []).filter(p => p.videoURL && _isShortVideo(p));
   if (!shortsFeed.length) { showToast('No videos yet'); return; }
   shortsIndex = shortsFeed.findIndex(p => p.id === proofId);
   if (shortsIndex < 0) shortsIndex = 0;
@@ -3952,11 +3956,7 @@ function renderWallet() {
 function openVideo(proofId) {
   const pool = (typeof allProofs !== 'undefined' && allProofs.length) ? allProofs : homeProofs;
   const p = (pool||[]).find(x => x.id === proofId);
-  const isShort = p && (
-    (p.videoH > 0 && p.videoW > 0) ? (p.videoH > p.videoW)
-    : (typeof p.isVertical === 'boolean' ? p.isVertical
-    : (p.videoDuration > 0 && p.videoDuration < 60))
-  );
+  const isShort = _isShortVideo(p);
   if (isShort) openShorts(proofId);
   else openVideoDetail(proofId);
 }
