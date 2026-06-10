@@ -2186,7 +2186,10 @@ html{scroll-behavior:smooth;}
 .shorts-video-wrap.slide-down { animation: shortsSlideDown .35s cubic-bezier(.22,1,.36,1); }
 
 /* YouTube thumbnail ratios: long 16:9, shorts 9:16 */
-#homeVideoGrid .yt-thumb{aspect-ratio:16/9 !important;background:#000;}
+/* width/height forced so legacy fixed-height mobile rules (.yt-thumb{height:100px})
+   can't override aspect-ratio and shrink the long card to half width */
+#homeVideoGrid .yt-thumb{aspect-ratio:16/9 !important;background:#000;width:100% !important;height:auto !important;}
+.feed-longs .yt-thumb{aspect-ratio:16/9 !important;background:#000;width:100% !important;height:auto !important;}
 .short-thumb{aspect-ratio:9/16 !important;background:#000;}
 .shorts-row .short-card{aspect-ratio:9/16;}
 .yt-thumb video,.yt-thumb img{width:100%;height:100%;object-fit:cover;}
@@ -2544,7 +2547,9 @@ html{scroll-behavior:smooth;}
 .short-meta { font-size: 12px; color: #aaa; margin-top: 3px; }
 @media(max-width:768px){
   .short-card { flex: 0 0 44vw; }
-  .short-thumb { width: 44vw; }
+  /* height:auto + aspect-ratio so legacy .short-thumb{height:230px} can't break 9:16;
+     44vw width = ~2 shorts visible per row like YouTube mobile */
+  .short-thumb { width: 44vw; height: auto; aspect-ratio: 9/16; }
   .shorts-home-sec { margin: 16px 0 24px; padding: 0 0 0 0; }
 }
 
