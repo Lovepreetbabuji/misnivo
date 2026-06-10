@@ -3172,7 +3172,7 @@ function _doSearch(q) {
     if (!results.length) {
       feed.innerHTML=typeBar+`<div class="empty"><span class="mi">search_off</span><div class="empty-title">No videos for "${escHtml(q)}"</div><p class="empty-desc">Try Dares tab instead</p></div>`;
     } else {
-      feed.innerHTML=typeBar+`<div style="font-size:12px;color:var(--t3);margin-bottom:14px;padding:0 4px;">${results.length} video${results.length!==1?'s':''} for "<strong style="color:var(--t1);">${escHtml(q)}</strong>"</div><div class="yt-grid">${results.map(p=>_videoCardSearch(p)).join('')}</div>`;
+      feed.innerHTML=typeBar+`<div style="font-size:12px;color:var(--t3);margin-bottom:14px;padding:0 4px;">${results.length} video${results.length!==1?'s':''} for "<strong style="color:var(--t1);">${escHtml(q)}</strong>"</div>`+_mixedVideoFeedHtml(results,'No videos');
     }
   }
   _trackSearch(q);
@@ -3193,9 +3193,8 @@ function _explorerDareCard(d) {
 function _explorerVideoCard(p) {
   const cat=p.cat||'fitness';const color=CAT_C[cat]||'#1a73e8';const icon=CAT_I[cat]||'bolt';
   const dur=p.videoDuration?(p.videoDuration>=60?Math.floor(p.videoDuration/60)+':'+String(p.videoDuration%60).padStart(2,'0'):p.videoDuration+'s'):'';
-  const _short=_isShortVideo(p);const _ts=_short?'aspect-ratio:9/16;width:auto;max-width:62%;margin:0 auto;':'';
   return `<div class="yt-card" onclick="openVideo('${p.id}')">
-    <div class="yt-thumb" style="${_ts}">
+    <div class="yt-thumb">
       ${vidThumb(p,480)?`<img src="${vidThumb(p,480)}" alt="" loading="lazy" style="width:100%;height:100%;object-fit:cover;display:block;"/>`:`<div class="yt-thumb-bg"><span class="mi">${icon}</span></div>`}
       <div class="yt-play-over"><span class="mi">play_circle</span></div>
       <div class="yt-bounty">Rs.${(p.dareBounty||0).toLocaleString('en-IN')}</div>
@@ -3209,6 +3208,16 @@ function _explorerVideoCard(p) {
       </div>
     </div>
   </div>`;
+}
+
+// Mixed video list → longs in a 16:9 grid, shorts in a 9:16 row below (clean separation)
+function _mixedVideoFeedHtml(arr, emptyMsg) {
+  const longs  = (arr||[]).filter(p => !_isShortVideo(p));
+  const shorts = (arr||[]).filter(p =>  _isShortVideo(p));
+  let html = '';
+  if (longs.length)  html += `<div class="yt-grid">${longs.map(p=>_explorerVideoCard(p)).join('')}</div>`;
+  if (shorts.length) html += _shortsRowHtml(shorts);
+  return html || `<div class="exp-empty">${emptyMsg||'Nothing here yet'}</div>`;
 }
 
 function _hideSuggestions() { const el=document.getElementById('searchSuggestions'); if(el) el.style.display='none'; }
@@ -3428,9 +3437,8 @@ function _updateNotifBadge() {
 function _videoCardSearch(p) {
   const cat=p.cat||'fitness'; const color=CAT_C[cat]||'#1a73e8'; const icon=CAT_I[cat]||'bolt';
   const dur=p.videoDuration?(p.videoDuration>=60?Math.floor(p.videoDuration/60)+':'+String(p.videoDuration%60).padStart(2,'0'):p.videoDuration+'s'):'';
-  const _short=_isShortVideo(p);const _ts=_short?'aspect-ratio:9/16;width:auto;max-width:62%;margin:0 auto;':'';
   return `<div class="yt-card" onclick="openVideo('${p.id}')">
-    <div class="yt-thumb" style="${_ts}">
+    <div class="yt-thumb">
       ${vidThumb(p,480)?`<img src="${vidThumb(p,480)}" alt="" loading="lazy" style="width:100%;height:100%;object-fit:cover;display:block;"/>`:`<div class="yt-thumb-bg"><span class="mi">${icon}</span></div>`}
       <div class="yt-play-over"><span class="mi">play_circle</span></div>
       <div class="yt-bounty">Rs.${(p.dareBounty||0).toLocaleString('en-IN')}</div>
@@ -3586,9 +3594,9 @@ async function renderExplorer() {
     try{const ss=await db.collection('searches').orderBy('count','desc').limit(10).get();topSearches=ss.docs.map(d=>d.data());}catch(_){}
     const showAll=activeExpTab==='all';
     container.innerHTML=`
-      ${showAll||activeExpTab==='viewed'?`<div class="exp-section"><div class="exp-sec-hdr"><span class="exp-fire"></span><div><div class="exp-sec-title">Most Viewed Today</div><div class="exp-sec-sub">Top taker videos</div></div></div>${mostViewed.length?`<div class="yt-grid">${mostViewed.map(p=>_explorerVideoCard(p)).join('')}</div>`:`<div class="exp-empty">Complete dares to see videos here!</div>`}</div>`:''}
+      ${showAll||activeExpTab==='viewed'?`<div class="exp-section"><div class="exp-sec-hdr"><span class="exp-fire"></span><div><div class="exp-sec-title">Most Viewed Today</div><div class="exp-sec-sub">Top taker videos</div></div></div>${_mixedVideoFeedHtml(mostViewed,'Complete dares to see videos here!')}</div>`:''}
       ${showAll||activeExpTab==='accepted'?`<div class="exp-section"><div class="exp-sec-hdr"><span class="exp-fire"></span><div><div class="exp-sec-title">Most Accepted Dares</div><div class="exp-sec-sub">Dares everyone wants to try</div></div></div>${mostAccepted.length?`<div class="dare-list">${mostAccepted.map(d=>_explorerDareCard(d)).join('')}</div>`:`<div class="exp-empty">No active dares!</div>`}</div>`:''}
-      ${showAll||activeExpTab==='liked'?`<div class="exp-section"><div class="exp-sec-hdr"><span class="exp-fire"></span><div><div class="exp-sec-title">Most Liked Videos</div><div class="exp-sec-sub">Community favorites</div></div></div>${mostLiked.filter(p=>(p.likeCount||0)>0).length?`<div class="yt-grid">${mostLiked.filter(p=>(p.likeCount||0)>0).map(p=>_explorerVideoCard(p)).join('')}</div>`:`<div class="exp-empty">Like videos to see them here!</div>`}</div>`:''}
+      ${showAll||activeExpTab==='liked'?`<div class="exp-section"><div class="exp-sec-hdr"><span class="exp-fire"></span><div><div class="exp-sec-title">Most Liked Videos</div><div class="exp-sec-sub">Community favorites</div></div></div>${_mixedVideoFeedHtml(mostLiked.filter(p=>(p.likeCount||0)>0),'Like videos to see them here!')}</div>`:''}
       ${showAll||activeExpTab==='searched'?`<div class="exp-section"><div class="exp-sec-hdr"><span class="exp-fire"></span><div><div class="exp-sec-title">Trending Searches</div><div class="exp-sec-sub">What people are looking for</div></div></div>${topSearches.length?`<div class="trending-searches-list">${topSearches.map((s,i)=>`<div class="trending-search-row" onclick="doTrendingSearch('${escHtml(s.term||'')}')"><span class="trending-rank">${i<3?['🥇','🥈','🥉'][i]:'#'+(i+1)}</span><span class="trending-term">${escHtml(s.term||'')}</span><span class="trending-count">${(s.count||0).toLocaleString('en-IN')} searches</span><span class="mi" style="color:var(--t4);margin-left:auto;font-size:14px;">arrow_forward_ios</span></div>`).join('')}</div>`:`<div class="exp-empty">Search for something to start tracking!</div>`}</div>`:''}`;
   }catch(e){container.innerHTML=`<div class="empty"><span class="mi">error_outline</span><div class="empty-title">Error loading trending</div><p class="empty-desc">${e.message}</p></div>`;}
 }
