@@ -1087,97 +1087,11 @@ function _handleSearchNow() {
   if (!q) { document.getElementById('searchInput').focus(); _hideSuggestions(); return; }
   if (q.length < 2) { _hideSuggestions(); return; }
 
-  // Track search words as tags (dynamic chips)
-  if (user && q.length >= 2) {
-    q.split(/\s+/).forEach(word => {
-      const tag = word.replace(/[^a-z0-9]/g,'');
-      if (tag.length >= 2 && tag.length <= 20) {
-        dares.forEach(d => {
-          if (!d.tags) d.tags = [];
-          if (!d.tags.includes(tag) && (d.caption||d.title||'').toLowerCase().includes(tag)) d.tags.push(tag);
-        });
-      }
-    });
-  }
-
+  _hideSuggestions();
   closeMobileSearch();
-  goPage('dares');
-  const feed = document.getElementById('daresPageFeed');
-  if (!feed) return;
-
-  const pool = (typeof allProofs!=='undefined' && allProofs.length) ? allProofs : homeProofs;
-
-  // ── VIDEOS search (proofs) — title/caption/tags/taker name ──
-  if (searchType === 'videos') {
-    const vids = (pool||[]).filter(p => {
-      const t = (p.dareTitle||'').toLowerCase();
-      const tg = (p.tags||[p.cat]||[]).join(' ').toLowerCase();
-      const nm = (p.takerName||p.takerUsername||'').toLowerCase();
-      return p.videoURL && (t.includes(q) || tg.includes(q) || nm.includes(q));
-    });
-    feed.innerHTML = `<div style="font-size:13px;color:var(--t3);margin-bottom:14px;padding:0 4px;">
-      ${vids.length} video${vids.length!==1?'s':''} for "${escHtml(q)}"</div>`;
-    if (!vids.length) {
-      feed.innerHTML += `<div class="empty"><span class="mi">search_off</span>
-        <div class="empty-title">No videos for "${escHtml(q)}"</div>
-        <p class="empty-desc">Try different keywords or switch to Dares</p></div>`;
-      return;
-    }
-    feed.innerHTML += `<div class="feed-longs">${vids.map(p=>_longCardHtml(p)).join('')}</div>`;
-    return;
-  }
-
-  // ── DARES search — includes COMPLETED dares too (bug fix) ──
-  const results = dares.filter(d => {
-    const title = (d.caption || d.title || '').toLowerCase();
-    const desc  = (d.description || d.desc || '').toLowerCase();
-    const tags  = (d.tags || [d.cat] || []).join(' ').toLowerCase();
-    return title.includes(q) || desc.includes(q) || tags.includes(q);
-  });
-
-  if (!results.length) {
-    feed.innerHTML = `<div class="empty"><span class="mi">search_off</span>
-      <div class="empty-title">No results for "${escHtml(q)}"</div>
-      <p class="empty-desc">Try different keywords or switch to Videos</p></div>`;
-    return;
-  }
-
-  // Show ALL matching dares (active + completed) — completed get a video link
-  feed.innerHTML = `<div style="font-size:13px;color:var(--t3);margin-bottom:14px;padding:0 4px;">
-      ${results.length} result${results.length!==1?'s':''} for "${escHtml(q)}"
-    </div><div class="dare-list">${results.map(d => {
-      const cat    = d.tags?.[0] || d.cat || 'fitness';
-      const title  = d.caption || d.title || 'Untitled';
-      const reward = d.rewardAmount ?? d.bounty ?? 0;
-      const color  = CAT_C[cat] || '#717171';
-      const icon   = CAT_I[cat] || 'bolt';
-      const myEntry = acceptedDares.find(a => a.dareId === d.id);
-      const isMine  = d.creatorUid === user?.uid;
-      // Completed dare → find its video to open
-      const vid = d.completed ? (pool||[]).find(p => p.dareId === d.id && p.videoURL) : null;
-      let btn = '';
-      if (vid) {
-        btn = `<button class="btn-accept" style="width:auto;padding:9px 20px;border-radius:50px;" onclick="openVideo('${vid.id}')"><span class="mi">play_arrow</span>Watch</button>`;
-      } else if (isMine) {
-        btn = `<button class="btn-yours" style="padding:8px 14px;border-radius:50px;width:auto;">Your Dare</button>`;
-      } else if (myEntry) {
-        btn = `<button class="btn-proof-done" style="padding:8px 14px;border-radius:50px;width:auto;"><span class="mi">check_circle</span>Accepted</button>`;
-      } else {
-        btn = `<button class="btn-accept" style="width:auto;padding:9px 20px;border-radius:50px;" onclick="acceptDare('${d.id}')">Accept</button>`;
-      }
-      const tImg = vid ? vidThumb(vid,480) : (d.thumbnailURL||'');
-      const thumbHTML = tImg
-        ? `<div class="dare-list-thumb" style="background:#000;overflow:hidden;"><img src="${tImg}" style="width:100%;height:100%;object-fit:cover;" loading="lazy"/></div>`
-        : `<div class="dare-list-thumb" style="background:linear-gradient(135deg,${color}22,${color}55);"><span class="mi" style="color:${color};font-size:40px;">${icon}</span></div>`;
-      const badge = d.completed ? `<span style="font-size:10px;color:#3ea6ff;font-weight:600;margin-left:6px;">✓ Completed</span>` : '';
-      return `<div class="dare-list-card">${thumbHTML}
-        <div class="dare-list-body">
-          <div class="dare-list-title">${escHtml(title)}${badge}</div>
-          <div class="dare-list-bottom">
-            <span class="dare-list-bounty">Rs.${reward.toLocaleString('en-IN')}</span>${btn}
-          </div>
-        </div></div>`;
-    }).join('')}</div>`;
+  // Delegate to the v32 search engine: Dares/Videos toggle + scored relevance
+  // + Active/Completed sections + search tracking. (Was previously dead code.)
+  _doSearch(q);
 }
 
 // ════════════════════════════════════════════════════════════════════
@@ -3213,6 +3127,7 @@ function _doSearch(q) {
   const el=document.getElementById('pageDares'); if(el) el.classList.add('active');
   document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
   const nav=document.getElementById('nav-dares'); if(nav) nav.classList.add('active');
+  if (typeof syncBottomNav === 'function') syncBottomNav('dares');
   const feed=document.getElementById('daresPageFeed');
 
   const typeBar=`
