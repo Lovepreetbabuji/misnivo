@@ -1,0 +1,1168 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>Dare Market</title>
+
+<!-- Fonts -->
+<link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700;900&display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/icon?family=Material+Icons+Round" rel="stylesheet"/>
+
+<!-- App Styles -->
+<link rel="stylesheet" href="css/styles.css"/>
+
+<!-- Firebase CDN -->
+<script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore-compat.js"></script>
+
+<!--
+  ══════════════════════════════════════════════════════════
+  GOOGLE ADSENSE — SETUP INSTRUCTIONS
+  ══════════════════════════════════════════════════════════
+  TESTNET MODE (current):
+    • TESTNET_MODE = true  (app.js → AdManager config)
+    • data-adtest="on"     already set on all <ins> tags
+    • Real AdSense script is commented below — uncomment to go live
+    • No publisher ID needed in testnet mode
+
+  TO GO LIVE WITH REAL ADS:
+    STEP 1 → Create an AdSense account at AdSense.com
+    STEP 2 → Get your Publisher ID: ca-pub-XXXXXXXXXXXXXXXX
+    STEP 3 → Create 3 Ad Units (Display type, 300x250 + 320x50)
+    STEP 4 → Uncomment the script tag below and add your ca-pub-ID
+    STEP 5 → In app.js set TESTNET_MODE = false
+    STEP 6 → Replace SLOT_OVERLAY + SLOT_BANNER with your real slot IDs
+  ══════════════════════════════════════════════════════════
+-->
+<!-- UNCOMMENT WHEN GOING LIVE (apna Publisher ID daalo):
+<script async
+  src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-XXXXXXXXXXXXXXXX"
+  crossorigin="anonymous"></script>
+-->
+</head>
+<body>
+
+<!-- LOADING -->
+<div id="loadScreen">
+  <div class="load-logo"><span class="mi">bolt</span></div>
+  <div class="load-name"><span style="color:var(--t1)">Dare</span><span style="color:var(--blue2)">Market</span></div>
+  <div class="spinner"></div>
+  <div class="load-txt">Connecting...</div>
+</div>
+
+<!-- ════════ AUTH ════════ -->
+<div id="authScreen">
+  <div class="auth-box">
+    <div class="auth-logo">
+      <div class="auth-logo-icon"><span class="mi">bolt</span></div>
+      <span style="color:var(--t1)">Dare</span><span style="color:var(--blue2)">Market</span>
+    </div>
+    <p class="auth-tagline">Challenge yourself. Entertain others.<br>Get paid — directly.</p>
+    <div class="auth-tabs">
+      <button class="auth-tab active" id="tabLogin"  onclick="switchTab('login')">Sign In</button>
+      <button class="auth-tab"        id="tabSignup" onclick="switchTab('signup')">Sign Up</button>
+    </div>
+    <!-- LOGIN -->
+    <div id="panelLogin">
+      <button class="btn-google" onclick="googleLogin()">
+        <svg class="g-icon" viewBox="0 0 24 24"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z"/><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/></svg>
+        Continue with Google
+      </button>
+      <div class="divider">or sign in with email</div>
+      <div class="auth-err" id="loginErr"></div>
+      <input class="auth-input" type="email"    id="liEmail" placeholder="Email address"/>
+      <input class="auth-input" type="password" id="liPass"  placeholder="Password"/>
+      <button class="btn-fill" onclick="emailLogin()">Sign In</button>
+      <p class="auth-note">By continuing you agree to our <a href="#">Terms</a> and <a href="#">Privacy Policy</a></p>
+      <div style="margin-top:16px;padding-top:16px;border-top:1px solid var(--border);">
+        <button class="btn-guest" onclick="enterGuestMode()" style="width:100%;display:flex;align-items:center;justify-content:center;gap:8px;background:transparent;border:1px solid var(--border2);color:var(--t2);padding:12px;border-radius:12px;font-size:14px;font-weight:600;cursor:pointer;font-family:inherit;">
+          <span class="mi">visibility</span> Browse as Guest
+        </button>
+        <p style="font-size:11px;color:var(--t3);margin-top:8px;text-align:center;">15 minutes free browsing — no account needed</p>
+      </div>
+    </div>
+    <!-- SIGNUP -->
+    <div id="panelSignup" style="display:none;">
+      <button class="btn-google" onclick="googleLogin()">
+        <svg class="g-icon" viewBox="0 0 24 24"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z"/><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/></svg>
+        Sign up with Google
+      </button>
+      <div class="divider">or sign up with email</div>
+      <div class="auth-err" id="signupErr"></div>
+      <input class="auth-input" type="text"     id="suName"  placeholder="Full name"/>
+      <input class="auth-input" type="email"    id="suEmail" placeholder="Email address"/>
+      <input class="auth-input" type="password" id="suPass"  placeholder="Create password (min 6 chars)"/>
+      <button class="btn-fill" onclick="emailSignup()">Create Account</button>
+      <p class="auth-note">Already have an account? <a href="#" onclick="switchTab('login')">Sign In</a></p>
+    </div>
+  </div>
+</div>
+
+<!-- ════════ APP ════════ -->
+<div id="appScreen">
+
+  <!-- MOBILE: tap-outside overlay closes sidebar -->
+  <div class="sb-overlay" id="sbOverlay" onclick="closeSidebar()"></div>
+
+  <!-- BOTTOM NAV (mobile only, YouTube-style) -->
+  <nav class="bottom-nav" id="bottomNav">
+    <button class="bn-item active" id="bn-home"     onclick="goPage('home')">
+      <span class="mi">home</span><span>Home</span>
+    </button>
+    <button class="bn-item" id="bn-dares"            onclick="goPage('dares')">
+      <span class="mi">bolt</span><span>Dares</span>
+    </button>
+    <button class="bn-post"                          onclick="openPost()">
+      <span class="mi">add</span>
+    </button>
+    <button class="bn-item" id="bn-accepted"         onclick="goPage('accepted')">
+      <span class="mi">task_alt</span><span>Accepted</span>
+    </button>
+    <button class="bn-item" id="bn-profile"          onclick="goPage('profile')">
+      <span class="mi">person</span><span>Profile</span>
+    </button>
+  </nav>
+
+  <!-- TOPBAR -->
+  <header class="topbar">
+    <div class="topbar-left">
+      <button class="icon-btn" id="menuBtn" onclick="toggleSidebar()" aria-label="Toggle menu"><span class="mi">menu</span></button>
+      <div class="logo" onclick="goPage('home')">
+        <div class="logo-icon"><span class="mi">bolt</span></div>
+        <span style="color:var(--t1)">Dare</span><span style="color:var(--blue2)">Market</span>
+      </div>
+    </div>
+    <div class="search-wrap" style="position:relative;">
+      <input type="text" id="searchInput" placeholder="Search"
+             oninput="handleSearch()" onfocus="if(this.value.trim().length>=2)handleSearchImmediate()"
+             onkeydown="if(event.key==='Enter'){event.preventDefault();handleSearchImmediate();}"
+             onblur="setTimeout(_hideSuggestions,200)"/>
+      <button class="search-go" onclick="handleSearchImmediate()" aria-label="Search"><span class="mi">search</span></button>
+      <div class="search-suggestions" id="searchSuggestions" style="display:none;"></div>
+    </div>
+    <!-- Search icon (mobile — search bar hidden on mobile) -->
+    <button class="search-icon-btn" onclick="openMobileSearch()" aria-label="Search">
+      <span class="mi">search</span>
+    </button>
+    <div class="topbar-right">
+      <!-- Guest topbar -->
+      <div id="guestTopbarEl" style="display:none;align-items:center;gap:8px;">
+        <div class="guest-timer-badge" id="guestTimerBadge"><span class="mi" style="font-size:13px;">schedule</span><span id="guestTimerText">15:00</span></div>
+        <button class="btn-login-topbar" onclick="leaveGuestMode('login')">Login</button>
+        <button class="btn-signup-topbar" onclick="leaveGuestMode('signup')">Sign Up</button>
+      </div>
+      <button class="btn-post" id="btnPostTop" onclick="openPost()"><span class="mi">add_circle</span><span>Post Dare</span></button>
+      <div class="notif-wrap">
+        <button class="icon-btn notif-btn" onclick="toggleNotifPanel()"><span class="mi">notifications</span><div class="notif-badge" id="notifBadge" style="display:none;">0</div></button>
+        <div class="notif-panel" id="notifPanel">
+          <div class="notif-panel-hdr"><div class="notif-panel-title">Notifications</div><button class="notif-panel-close" onclick="closeNotifPanel()"><span class="mi">close</span></button></div>
+          <div class="notif-list" id="notifList"><div class="notif-empty"><span class="mi">notifications_none</span><div>No notifications yet</div></div></div>
+        </div>
+      </div>
+      <div class="user-menu">
+        <div class="user-av" id="topAv" onclick="toggleDD()"></div>
+        <div class="dropdown" id="userDD">
+          <div class="dd-info">
+            <div class="dd-name"  id="ddName">—</div>
+            <div class="dd-email" id="ddEmail">—</div>
+          </div>
+          <div class="dd-item" onclick="goPage('profile');closeDD()"><span class="mi">person</span>My Profile</div>
+          <div class="dd-item" onclick="goPage('profile');closeDD()"><span class="mi">account_balance_wallet</span>My Wallet</div>
+          <div class="dd-item" onclick="goPage('profile');closeDD()"><span class="mi">assignment</span>My Dares</div>
+          <div class="dd-item admin-link" onclick="openAdminReports();closeDD()" id="adminDDItem" style="display:none;"><span class="mi">admin_panel_settings</span>Admin Reports</div>
+          <div class="dd-item danger" onclick="logout()"><span class="mi">logout</span>Sign Out</div>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- SIDEBAR -->
+  <aside class="sidebar" id="sidebar">
+    <div class="sb-top">
+      <div class="nav-item active" id="nav-home" onclick="goPage('home')">
+        <span class="mi">home</span><span class="nav-lbl">Home</span>
+      </div>
+      <div class="nav-item" id="nav-explore" onclick="goPage('explore')"><span class="mi">explore</span><span class="nav-lbl">Explore</span></div>
+      <div class="nav-item" id="nav-dares" onclick="goPage('dares')">
+        <span class="mi">bolt</span><span class="nav-lbl">Dares</span>
+      </div>
+      <div class="nav-item" id="nav-wallet" onclick="goPage('wallet')">
+        <span class="mi">account_balance_wallet</span><span class="nav-lbl">Wallet</span>
+      </div>
+    </div>
+    <div class="sb-bottom">
+      <div class="nav-item" id="nav-profile" onclick="goPage('profile')">
+        <div class="sb-prof-av" id="sbProfAv"></div>
+        <span class="nav-lbl">Profile</span>
+      </div>
+    </div>
+  </aside>
+
+  <!-- MAIN CONTENT -->
+  <main class="main">
+
+    <!-- ══════════════════════════════════════
+         HOME — YouTube-style 3-Section Layout
+         Section 1: Dare Videos (approved proofs)
+         Section 2: Dare Shorts (under 60s)
+         Section 3: Active Dares (accept & earn)
+         ══════════════════════════════════════ -->
+    <div class="page active" id="pageHome">
+
+      <!-- ── CATEGORY CHIPS (sticky) ── -->
+      <!-- Chips populated dynamically from real dare tags — see _renderHomeChips() in app.js -->
+      <div class="chips-bar" id="homeChips" style="display:none;">
+        <button class="chip active" onclick="homeFilter('all',this)">All</button>
+      </div>
+
+      <!-- ══ SECTION 1: DARE VIDEOS (main grid) ══ -->
+      <div class="home-section" id="homeSection1">
+        <div class="home-sec-hdr">
+          <div class="home-sec-dot"></div>
+          <span class="home-sec-title">Dare Videos</span>
+          <span class="home-sec-sub">Completed dares</span>
+        </div>
+        <div id="homeVideoGrid"></div>
+      </div>
+
+      <!-- ══ SECTION 2: DARE SHORTS (hidden until short videos exist) ══ -->
+      <div class="home-section" id="homeShortsSection" style="display:none;">
+        <div class="home-sec-hdr">
+          <span class="mi" style="color:#FF453A;font-size:20px;">play_circle</span>
+          <span class="home-sec-title">Dare Shorts</span>
+          <span class="home-sec-sub">Under 1 minute</span>
+          <span class="home-sec-viewall" onclick="goPage('dares')">View All →</span>
+        </div>
+        <!-- Horizontal scroll row of vertical short cards -->
+        <div class="shorts-row" id="homeShortsRow"></div>
+      </div>
+
+    </div>
+
+    <div class="page" id="pageExplore">
+      <div class="sec-hdr" style="margin-bottom:8px;">
+        <div class="sec-title"><div class="sec-dot" style="background:var(--orange);"></div> Trending</div>
+        <div style="font-size:11px;color:var(--t3);font-weight:500;">Resets daily</div>
+      </div>
+      <div class="exp-tabs" id="expTabs">
+        <button class="exp-tab active" onclick="switchExpTab(this,'all')">All</button>
+        <button class="exp-tab" onclick="switchExpTab(this,'viewed')"> Most Viewed</button>
+        <button class="exp-tab" onclick="switchExpTab(this,'accepted')"> Most Accepted</button>
+        <button class="exp-tab" onclick="switchExpTab(this,'liked')"> Most Liked</button>
+        <button class="exp-tab" onclick="switchExpTab(this,'searched')"> Searches</button>
+      </div>
+      <div id="explorerContent"></div>
+    </div>
+
+    <!-- DARES — Active dares to accept -->
+    <div class="page" id="pageDares">
+      <div class="sec-hdr" style="margin-bottom:20px;">
+        <div class="sec-title"><div class="sec-dot"></div>Active Dares</div>
+        <button class="btn-post" onclick="openPost()" style="font-size:12px;padding:8px 14px;">
+          <span class="mi">add_circle</span><span>Post Dare</span>
+        </button>
+      </div>
+      <div id="daresPageFeed"></div>
+    </div>
+
+    <!-- ACCEPTED — User's accepted dares -->
+    <div class="page" id="pageAccepted">
+      <div class="sec-hdr" style="margin-bottom:20px;">
+        <div class="sec-title"><div class="sec-dot"></div>My Accepted Dares</div>
+      </div>
+      <div id="acceptedPageFeed"></div>
+    </div>
+
+    <!-- LEADERBOARD -->
+    <div class="page" id="pageLeaderboard">
+      <div class="sec-hdr" style="margin-bottom:24px;">
+        <div class="sec-title"><div class="sec-dot"></div>Top Earners</div>
+      </div>
+      <div id="lbContent">
+        <div class="empty"><span class="mi">hourglass_empty</span><div class="empty-title">Loading...</div></div>
+      </div>
+    </div>
+
+    <!-- PROFILE -->
+    <div class="page" id="pageProfile">
+      <!-- Banner (clickable to customize) -->
+      <div class="profile-banner" id="profBanner" onclick="openProfileEdit()">
+        <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;opacity:0;transition:opacity .2s;"
+             class="banner-edit-hint">
+          <span class="mi" style="font-size:28px;color:#fff;">edit</span>
+        </div>
+      </div>
+
+      <!-- Profile Header Row -->
+      <div class="profile-header">
+        <div class="profile-pic-wrap">
+          <div class="profile-pic" id="profPic" onclick="openProfileEdit()"></div>
+          <div class="profile-pic-edit" onclick="openProfileEdit()">
+            <span class="mi">edit</span>
+          </div>
+        </div>
+        <div class="profile-info">
+          <div class="profile-name" id="profName">—</div>
+          <div class="profile-handle" id="profHandle">@—</div>
+          <div class="profile-bio" id="profBio" style="display:none;"></div>
+          <div class="profile-actions">
+            <button class="btn-customize" onclick="openProfileEdit()">
+              <span class="mi">edit</span> Customize Profile
+            </button>
+            <span class="profile-provider" id="profProvider">—</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Stats -->
+
+
+      <!-- Tabs -->
+      <div class="tabs">
+        <button class="tab active" onclick="switchPTab(this,'tMyDares')">My Dares</button>
+        <button class="tab"        onclick="switchPTab(this,'tAccepted')">Accepted</button>
+      </div>
+      <div id="tMyDares"></div>
+      <div id="tAccepted" style="display:none;"></div>
+    </div>
+
+    <!-- ══ WALLET PAGE ══ -->
+    <div class="page" id="pageWallet">
+      <div class="sec-title" style="margin-bottom:20px;"><div class="sec-dot"></div>Wallet</div>
+      <div class="wallet-card">
+        <div class="wallet-label">Available Balance</div>
+        <div class="wallet-balance" id="walletBal">Rs. 1,00,000</div>
+        <div class="wallet-sub">Testnet balance — real payments coming soon</div>
+        <div class="wallet-actions">
+          <button class="btn-wallet" onclick="showToast('Deposit — coming soon!')"><span class="mi">add</span>Deposit</button>
+          <button class="btn-wallet" onclick="showToast('Withdraw — coming soon!')"><span class="mi">arrow_downward</span>Withdraw</button>
+          <button class="btn-wallet" onclick="showToast('Transfer — coming soon!')"><span class="mi">send</span>Transfer</button>
+        </div>
+      </div>
+      <div class="sec-title" style="font-size:16px;margin:24px 0 14px;"><div class="sec-dot"></div>Transactions</div>
+      <div id="walletTxns"></div>
+    </div>
+
+  </main>
+</div>
+
+<!-- ══════════════════════════════════
+     PROFILE EDIT MODAL
+     Username, Bio, Photo, Website
+     ══════════════════════════════════ -->
+<div class="profile-edit-overlay" id="profileEditOverlay" onclick="if(event.target===this)cancelProfileEdit()">
+  <div class="profile-edit-modal">
+    <div class="pe-header">
+      <div class="pe-title">Customize Profile</div>
+      <button class="pe-close" onclick="cancelProfileEdit()"><span class="mi">close</span></button>
+    </div>
+    <div class="pe-body">
+
+      <!-- Avatar upload -->
+      <div class="pe-avatar-row">
+        <div class="pe-big-av" id="peAvatar" onclick="document.getElementById('pePhotoInput').click()"></div>
+        <div>
+          <div class="pe-av-btns">
+            <input type="file" id="pePhotoInput" accept="image/*" style="display:none;"
+                   onchange="onProfilePhotoSelected(event)"/>
+            <button class="pe-av-upload" onclick="document.getElementById('pePhotoInput').click()">
+              <span class="mi">photo_camera</span> Change Photo
+            </button>
+          </div>
+          <div class="pe-av-note" style="margin-top:8px;">JPG, PNG — max 5 MB</div>
+        </div>
+      </div>
+
+      <!-- Display Name -->
+      <div class="pe-field">
+        <div class="pe-label">Display Name</div>
+        <input class="pe-input" id="peName" type="text" placeholder="Your full name" maxlength="60"/>
+      </div>
+
+      <!-- Username / Handle -->
+      <div class="pe-field">
+        <div class="pe-label">
+          Username (handle)
+          <span>Only letters, numbers, _ and . — unique</span>
+        </div>
+        <div class="pe-handle-wrap">
+          <span class="pe-handle-prefix">@</span>
+          <input class="pe-input" id="peHandle" type="text" placeholder="yourhandle"
+                 maxlength="30" oninput="onHandleInput()"
+                 style="padding-left:28px;"/>
+        </div>
+        <div class="pe-status" id="peHandleStatus"></div>
+      </div>
+
+      <!-- Bio -->
+      <div class="pe-field">
+        <div class="pe-label">
+          Bio <span id="peBioCount">0 / 160</span>
+        </div>
+        <textarea class="pe-input pe-textarea" id="peBio" placeholder="Tell the community about yourself..."
+                  maxlength="160"
+                  oninput="document.getElementById('peBioCount').textContent=this.value.length+' / 160'"></textarea>
+      </div>
+
+      <!-- Website / Contact -->
+      <div class="pe-field">
+        <div class="pe-label">Website / Contact Link <span>Optional</span></div>
+        <input class="pe-input" id="peWebsite" type="url" placeholder="https://yourwebsite.com"/>
+      </div>
+
+      <!-- Actions -->
+      <div class="pe-footer">
+        <button class="pe-btn-cancel" onclick="cancelProfileEdit()">Cancel</button>
+        <button class="pe-btn-save" id="peSaveBtn" onclick="saveProfile()">
+          <span class="mi">check</span> Save Changes
+        </button>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- VIDEO PLAY MODAL -->
+<div class="video-modal-overlay" id="videoPlayOverlay" onclick="if(event.target===this)closeVideoPlay()">
+  <div class="video-modal-inner">
+    <div class="video-modal-header">
+      <div class="video-modal-title" id="vpTitle">—</div>
+      <button class="video-modal-close" onclick="closeVideoPlay()"><span class="mi">close</span></button>
+    </div>
+    <video class="video-modal-player" id="vpPlayer" controls playsinline></video>
+    <div class="video-modal-info">
+      <div class="video-modal-av" id="vpAv">?</div>
+      <div class="video-modal-meta">
+        <div class="video-modal-dare" id="vpDare">—</div>
+        <div class="video-modal-sub"  id="vpSub">—</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- POST DARE MODAL — v0.15 (Caption · Media · Tags · Rules · Schedule) -->
+<div class="overlay" id="postOverlay">
+  <div class="modal post-dare-modal">
+    <div class="modal-hdr">
+      <div class="modal-title">Post a New Dare</div>
+      <button class="modal-close" onclick="closePost()"><span class="mi">close</span></button>
+    </div>
+
+    <!-- ① CAPTION -->
+    <div class="f-group">
+      <label class="f-label">Caption</label>
+      <input class="f-input" id="pCaption" type="text" placeholder="e.g. Run 5km in under 30 minutes"/>
+    </div>
+
+    <!-- ② DARE MEDIA (Thumbnail OR Video Preview) -->
+    <div class="f-group">
+      <label class="f-label">Dare Media <span class="f-opt-tag">Optional</span></label>
+      <div class="media-type-tabs">
+        <button class="mtype-tab active" id="mtImg" onclick="switchMediaTab('image')" type="button">
+          <span class="mi">image</span> Thumbnail
+        </button>
+        <button class="mtype-tab" id="mtVid" onclick="switchMediaTab('video')" type="button">
+          <span class="mi">videocam</span> Video Preview
+        </button>
+      </div>
+
+      <!-- IMAGE TAB -->
+      <div id="mediaTabImg">
+        <input type="file" id="thumbInput" accept="image/*" style="display:none;" onchange="onThumbSelected(event)"/>
+        <div class="dare-media-dz" id="thumbDZ" onclick="document.getElementById('thumbInput').click()">
+          <img id="thumbPreview" style="display:none;width:100%;height:100%;object-fit:cover;border-radius:10px;position:absolute;top:0;left:0;"/>
+          <div class="dz-inner" id="thumbDZInner">
+            <span class="mi" style="font-size:32px;color:var(--t3);">add_photo_alternate</span>
+            <div style="font-size:13px;font-weight:600;color:var(--t2);">Click to add thumbnail</div>
+            <div style="font-size:11px;color:var(--t3);">JPG, PNG, WEBP · Max 5MB</div>
+          </div>
+        </div>
+        <div class="dz-action-row" id="thumbEditRow" style="display:none;">
+          <button class="dz-action-btn" onclick="adjustThumb()" type="button">
+            <span class="mi">crop</span> Adjust
+          </button>
+          <button class="dz-action-btn" onclick="document.getElementById('thumbInput').click()" type="button">
+            <span class="mi">edit</span> Change
+          </button>
+          <button class="dz-action-btn dz-remove-btn" onclick="removeThumb()" type="button">
+            <span class="mi">delete</span> Remove
+          </button>
+        </div>
+      </div>
+
+      <!-- VIDEO TAB -->
+      <div id="mediaTabVid" style="display:none;">
+        <input type="file" id="previewVidInput" accept="video/*" style="display:none;" onchange="onPreviewVidSelected(event)"/>
+        <div class="dare-media-dz" id="previewVidDZ" onclick="document.getElementById('previewVidInput').click()">
+          <video id="previewVidPlayer" muted playsinline
+            style="display:none;width:100%;height:100%;object-fit:cover;border-radius:10px;position:absolute;top:0;left:0;"></video>
+          <div class="dz-inner" id="previewVidDZInner">
+            <span class="mi" style="font-size:32px;color:var(--t3);">videocam</span>
+            <div style="font-size:13px;font-weight:600;color:var(--t2);">Click to add video preview</div>
+            <div style="font-size:11px;color:var(--t3);">MP4, MOV · Max 100MB</div>
+          </div>
+        </div>
+
+        <!-- FRAME PICKER (YouTube-style pencil — appears after video is loaded) -->
+        <div id="framePicker" style="display:none;margin-top:14px;">
+          <div class="fp-label">
+            <span class="mi">tune</span> Pick a thumbnail — seek and capture a frame
+          </div>
+          <div style="position:relative;">
+            <video id="fpVideo" muted playsinline
+              style="width:100%;border-radius:8px;max-height:180px;background:#000;display:block;"></video>
+            <div class="fp-pencil-icon" title="Pick thumbnail frame">✏️</div>
+          </div>
+          <input type="range" id="fpScrubber" min="0" max="1000" value="0"
+            class="fp-scrubber" oninput="scrubFPVideo(this.value)"/>
+          <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-top:8px;">
+            <button class="dz-action-btn" onclick="captureVideoFrame()" type="button">
+              <span class="mi">photo_camera</span> Capture Frame
+            </button>
+            <input type="file" id="proofThumbInput" accept="image/*" style="display:none;" onchange="onProofThumbUpload(event)"/>
+            <button class="dz-action-btn" onclick="document.getElementById('proofThumbInput').click()" type="button">
+              <span class="mi">crop</span> Upload &amp; Adjust
+            </button>
+            <div id="fpCapturedRow" style="display:none;align-items:center;gap:8px;">
+              <img id="fpThumb" style="width:72px;height:45px;object-fit:cover;border-radius:6px;border:2px solid #30D158;"/>
+              <span style="font-size:11px;color:#30D158;font-weight:600;">Thumbnail set</span>
+            </div>
+          </div>
+          <canvas id="fpCanvas" style="display:none;"></canvas>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- ③ TAGS (replaces Category) -->
+    <div class="f-group">
+      <label class="f-label">Tags</label>
+      <div class="tags-field" id="tagsField">
+        <div class="post-tag-chips" id="tagChips"></div>
+        <input class="tags-inner-input" id="tagInput" type="text"
+          placeholder="Tag likho + Enter dabaao (e.g. fitness)"
+          onkeydown="handleTagInput(event)"/>
+      </div>
+      <div class="f-hint"># symbol auto-added · Max 5 tags</div>
+    </div>
+
+    <!-- ④ REWARD AMOUNT -->
+    <div class="f-group">
+      <label class="f-label">Reward Amount (Rs.)</label>
+      <input class="f-input" id="pReward" type="number" min="0" placeholder="0  (minimum zero, no upper limit)"/>
+    </div>
+
+    <!-- ⑤ DESCRIPTION -->
+    <div class="f-group">
+      <label class="f-label">Description</label>
+      <textarea class="f-input" id="pDesc"
+        placeholder="Describe the challenge — what to do, where, and how..."
+        style="min-height:80px;resize:vertical;"></textarea>
+    </div>
+
+    <!-- ⑥ RULES (dynamic add/remove) -->
+    <div class="f-group">
+      <label class="f-label">Rules <span class="f-opt-tag">Optional</span></label>
+      <div id="rulesList"></div>
+      <button class="add-rule-btn" onclick="addRule()" type="button">
+        <span class="mi">add_circle</span> Add a Rule
+      </button>
+    </div>
+
+    <!-- ⑦ VISIBILITY (Publish Now / Schedule) -->
+    <div class="f-group">
+      <label class="f-label">Visibility</label>
+      <div class="vis-toggle-row">
+        <button class="vis-opt active" id="visNow" onclick="switchVis('now')" type="button">
+          <span class="mi">public</span> Publish Now
+        </button>
+        <button class="vis-opt" id="visSched" onclick="switchVis('scheduled')" type="button">
+          <span class="mi">schedule</span> Schedule for Later
+        </button>
+      </div>
+      <div id="scheduleBox" style="display:none;margin-top:10px;">
+        <input class="f-input" id="scheduleDate" type="datetime-local" style="margin:0;"/>
+        <div class="f-hint">Your dare will be published automatically at this time.</div>
+      </div>
+    </div>
+
+    <!-- ⑧ TAKER SELECTION MODE (v0.19) -->
+    <div class="f-group">
+      <label class="f-label">Who can submit proof?</label>
+      <div class="vis-toggle-row">
+        <button class="vis-opt active" id="tmOpen" onclick="switchTakerMode('open')" type="button">
+          <span class="mi">people</span> Anyone (Open)
+        </button>
+        <button class="vis-opt" id="tmPick" onclick="switchTakerMode('creator_picks')" type="button">
+          <span class="mi">how_to_reg</span> I'll Select Takers
+        </button>
+      </div>
+      <div class="f-hint" id="takerModeHint">Anyone who accepts can submit proof immediately.</div>
+    </div>
+
+    <!-- ⑨ DARE EXPIRY (v0.19 · Optional) -->
+    <div class="f-group">
+      <label class="f-label">Dare Expiry <span class="f-opt-tag">Optional</span></label>
+      <input class="f-input" id="pExpiry" type="datetime-local" style="margin:0;"/>
+      <div class="f-hint">Dare auto-closes after this time and disappears from the feed.</div>
+    </div>
+
+    <!-- SUBMIT -->
+    <button class="btn-fill" onclick="submitDare()" id="submitDareBtn">
+      <span class="mi">bolt</span> Post Dare
+    </button>
+
+  </div>
+</div>
+
+<!-- VIDEO PROOF MODAL — v0.16 (Checklist · Frame Picker · Cancel · Background Upload) -->
+<div class="overlay" id="proofOverlay">
+  <div class="modal proof-modal-v16">
+    <div class="modal-hdr">
+      <div class="modal-title">Submit Video Proof</div>
+      <button class="modal-close" onclick="closeProof()"><span class="mi">close</span></button>
+    </div>
+
+    <!-- Dare info -->
+    <div class="proof-dare-info">
+      <div class="proof-dare-title"  id="proofDareTitle">—</div>
+      <div class="proof-dare-bounty" id="proofDareBounty">Rs. 0</div>
+    </div>
+
+    <!-- Rules: dare-specific (from creator) or generic fallback -->
+    <div class="proof-rules" id="proofRulesSection">
+      <div class="proof-rules-title">
+        <span class="mi" style="font-size:15px;vertical-align:-3px;">rule</span>
+        <span id="proofRulesHeading">Proof Requirements</span>
+      </div>
+      <div id="proofRulesList"></div>
+    </div>
+
+    <!-- Interactive checklist — all must be ticked before submit enables -->
+    <div class="proof-checklist-wrap">
+      <div class="proof-checklist-hdr">
+        <span class="mi" style="font-size:15px;vertical-align:-3px;">checklist</span>
+        Confirm before submitting:
+      </div>
+      <div id="proofChecklist" class="proof-checklist-grid"></div>
+    </div>
+
+    <!-- Video upload drop zone -->
+    <input type="file" id="videoFileInput" accept="video/*" style="display:none;" onchange="onVideoSelected(event)"/>
+    <div class="video-dz" id="videoDZ" onclick="document.getElementById('videoFileInput').click()">
+      <span class="mi" id="vdzIcon">video_call</span>
+      <div class="vdz-t" id="vdzTitle">Click to select video</div>
+      <div class="vdz-s" id="vdzSub">MP4, MOV, AVI — Max 500MB</div>
+    </div>
+
+    <!-- Duration warning/ok badge (shown after video loaded) -->
+    <div id="durationWarn" style="display:none;"></div>
+
+    <!-- Video preview + YouTube-style frame picker -->
+    <div id="proofVideoWrap" style="display:none;">
+      <video id="videoPreview" controls
+        style="width:100%;border-radius:10px;max-height:220px;background:#000;display:block;margin-bottom:12px;"></video>
+
+      <!-- Frame picker -->
+      <div class="proof-fp-wrap">
+        <div class="proof-fp-label">
+          <span class="mi">tune</span>
+          Pick a thumbnail — seek and capture a frame
+        </div>
+        <div style="position:relative;">
+          <video id="proofFPVideo" muted playsinline
+            style="width:100%;border-radius:8px;max-height:140px;background:#000;display:block;"></video>
+          <div class="fp-pencil-icon" title="Pick thumbnail frame">✏️</div>
+        </div>
+        <input type="range" id="proofFPScrubber" min="0" max="1000" value="0"
+          class="fp-scrubber" oninput="scrubProofFrame(this.value)"/>
+        <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-top:8px;">
+          <button class="dz-action-btn" onclick="captureProofFrame()" type="button">
+            <span class="mi">photo_camera</span> Capture Frame
+          </button>
+          <div id="proofFrameCaptured" style="display:none;align-items:center;gap:8px;">
+            <img id="proofThumbPreview"
+              style="width:72px;height:45px;object-fit:cover;border-radius:6px;border:2px solid #30D158;"/>
+            <span style="font-size:11px;color:#30D158;font-weight:600;">✓ Thumbnail set!</span>
+            <button onclick="removeProofThumb()" type="button"
+              style="background:none;border:none;cursor:pointer;color:var(--t3);font-size:12px;padding:0;">Remove</button>
+          </div>
+        </div>
+        <canvas id="proofFPCanvas" style="display:none;"></canvas>
+      </div>
+    </div>
+
+    <!-- File info bar -->
+    <div class="file-info" id="fileInfo" style="display:none;">
+      <span class="mi">check_circle</span><span id="fileName">—</span>
+    </div>
+
+    <!-- Additional note with char counter -->
+    <div class="f-group">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:5px;">
+        <label class="f-label" style="margin:0;">Additional Note
+          <span style="font-weight:400;color:var(--t3);font-size:10px;margin-left:4px;">Optional</span>
+        </label>
+        <span id="noteCharCount" style="font-size:11px;color:var(--t3);">0 / 200</span>
+      </div>
+      <textarea class="f-input" id="proofNote" maxlength="200"
+        placeholder="Any additional context for the reviewer..."
+        style="min-height:60px;resize:vertical;"
+        oninput="document.getElementById('noteCharCount').textContent=this.value.length+' / 200'"></textarea>
+    </div>
+
+    <!-- Upload progress bar with cancel button + speed -->
+    <div id="uploadWrap" style="display:none;margin-bottom:14px;">
+      <div style="display:flex;justify-content:space-between;align-items:center;
+                  font-size:12px;color:var(--t3);margin-bottom:6px;">
+        <span id="uploadStatusText">Uploading video...</span>
+        <div style="display:flex;align-items:center;gap:8px;">
+          <span id="uploadPct" style="font-weight:600;color:var(--t2);">0%</span>
+          <button class="cancel-upload-btn" id="cancelUploadBtn"
+            onclick="cancelUpload()" title="Cancel upload" type="button">
+            <span class="mi">close</span>
+          </button>
+        </div>
+      </div>
+      <div style="height:5px;background:var(--border);border-radius:4px;overflow:hidden;">
+        <div id="uploadBar"
+          style="height:100%;width:0%;background:linear-gradient(90deg,var(--blue),var(--blue2));
+                 border-radius:4px;transition:width .3s;"></div>
+      </div>
+      <div id="uploadSpeedText"
+        style="font-size:11px;color:var(--t4);margin-top:5px;"></div>
+    </div>
+
+    <!-- Submit button -->
+    <button class="btn-submit-proof" id="btnSubmitProof" onclick="submitProof()" disabled>
+      <span class="mi">upload</span>Submit Proof
+    </button>
+  </div>
+</div>
+
+<!-- REVIEW PROOFS MODAL -->
+<div class="overlay" id="reviewOverlay">
+  <div class="modal" style="max-width:560px;">
+    <div class="modal-hdr">
+      <div class="modal-title">Review Proofs</div>
+      <button class="modal-close" onclick="closeReview()"><span class="mi">close</span></button>
+    </div>
+    <div class="review-dare-header">
+      <div>
+        <div class="review-dare-name" id="rvDareTitle">—</div>
+        <div style="font-size:12px;color:var(--t3);margin-top:3px;" id="rvDareMeta">—</div>
+      </div>
+      <div class="review-dare-bounty" id="rvDareBounty">Rs. 0</div>
+    </div>
+    <div id="rvProofsList"></div>
+  </div>
+</div>
+
+<!-- REJECT REASON MODAL -->
+<div class="overlay" id="rejectOverlay">
+  <div class="modal" style="max-width:400px;">
+    <div class="modal-hdr">
+      <div class="modal-title">Reject Proof</div>
+      <button class="modal-close" onclick="closeRejectModal()"><span class="mi">close</span></button>
+    </div>
+    <p style="font-size:14px;color:var(--t2);margin-bottom:16px;line-height:1.6;">
+      Tell the taker why the proof was rejected — they can resubmit.
+    </p>
+    <div class="f-group">
+      <label class="f-label">Rejection Reason</label>
+      <textarea class="f-input" id="rejectReason" placeholder="e.g. Face was not clearly visible in the video..." style="min-height:90px;"></textarea>
+    </div>
+    <div style="display:flex;gap:10px;">
+      <button class="btn-reject" style="flex:1;" onclick="closeRejectModal()"><span class="mi">close</span>Cancel</button>
+      <button class="btn-reject" style="flex:2;background:rgba(255,69,58,0.2);" onclick="confirmReject()"><span class="mi">thumb_down</span>Confirm Reject</button>
+    </div>
+  </div>
+</div>
+
+<!--
+  ════════════════════════════════════════════
+  AD OVERLAY — Full-screen pre-roll + post-dare
+  Shows for: pre-roll (video play) + post-dare
+  AdManager controls this via JS
+  ════════════════════════════════════════════ -->
+<div class="ad-overlay" id="adOverlay">
+  <div class="ad-box">
+
+    <!-- Top bar: Ad badge + "Ad X of Y" counter -->
+    <div class="ad-top-bar">
+      <span class="ad-label-badge">Ad</span>
+      <span class="ad-num-txt" id="adCount">Ad 1 of 2</span>
+    </div>
+
+    <!--
+      ══════════════════════════════════════════════════
+      AD CREATIVE AREA — DUAL MODE
+      MODE 1 (TESTNET_MODE=true):  #adMockCreative shown
+      MODE 2 (TESTNET_MODE=false): #adRealSlot shown + AdSense loaded
+      AdManager._playOne() controls which one is visible
+      ══════════════════════════════════════════════════
+    -->
+    <div class="ad-content-area">
+
+      <!-- ── MODE 1: TESTNET MOCK CREATIVE ────────────── -->
+      <div id="adMockCreative" class="ad-placeholder-wrap">
+        <div class="ad-brand">DareMarket</div>
+        <div class="ad-headline" id="adHeadline">Challenge yourself. Get paid.</div>
+        <div class="ad-desc"    id="adDesc">Post dares, earn real bounty money.</div>
+        <div class="ad-testnet-badge">🧪 TESTNET AD</div>
+        <button class="ad-cta-btn" id="adCta" onclick="AdManager.skipAd()">Try Now →</button>
+      </div>
+
+      <!-- ── MODE 2: REAL GOOGLE ADSENSE SLOT ─────────── -->
+      <div id="adRealSlot" style="display:none; width:300px; margin:0 auto;">
+        <ins class="adsbygoogle"
+             style="display:block; width:300px; height:250px;"
+             data-ad-client="ca-pub-XXXXXXXXXXXXXXXX"
+             data-ad-slot="SLOT_OVERLAY_ID"
+             data-adtest="on"
+             data-ad-format="fixed">
+        </ins>
+      </div>
+
+    </div>
+
+    <!-- Bottom: progress bar + skip countdown -->
+    <div class="ad-footer">
+      <div class="ad-prog-track">
+        <div class="ad-prog-fill" id="adProgressBar"></div>
+      </div>
+      <div class="ad-skip-row">
+        <span class="ad-countdown-txt" id="adCountdown">Skip in 15s</span>
+        <button class="ad-skip-btn" id="adSkipBtn" onclick="AdManager.skipAd()" disabled>
+          Skip Ad →
+        </button>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<!-- App Logic -->
+<script src="js/app.js"></script>
+
+<!-- ══ v0.19 NEW MODALS ══ -->
+
+<!-- REPORT MODAL -->
+<div class="overlay" id="reportOverlay">
+  <div class="modal" style="max-width:420px;">
+    <div class="modal-hdr">
+      <div class="modal-title" id="reportModalTitle">Report</div>
+      <button class="modal-close" onclick="closeReportModal2()"><span class="mi">close</span></button>
+    </div>
+    <p style="font-size:13px;color:var(--t2);margin-bottom:18px;line-height:1.6;">Help us keep Dare Market safe. Reports are reviewed within 24 hours.</p>
+    <div class="f-group">
+      <label class="f-label">Report Type</label>
+      <select class="f-input" id="reportType" style="cursor:pointer;">
+        <option value="inappropriate">Inappropriate Content</option>
+        <option value="spam">Spam</option>
+        <option value="fake_proof">Fake / Edited Proof</option>
+        <option value="dangerous">Dangerous Dare</option>
+        <option value="harassment">Harassment</option>
+        <option value="other">Other</option>
+      </select>
+    </div>
+    <div class="f-group">
+      <label class="f-label">Describe the issue</label>
+      <textarea class="f-input" id="reportReason" placeholder="Tell us what's wrong..." style="min-height:80px;resize:vertical;"></textarea>
+    </div>
+    <div style="display:flex;gap:10px;">
+      <button class="btn-reject" style="flex:1;" onclick="closeReportModal2()"><span class="mi">close</span>Cancel</button>
+      <button id="submitReportBtn" onclick="submitReport()" class="btn-fill" style="flex:2;margin:0;display:flex;align-items:center;justify-content:center;gap:6px;border-radius:14px;padding:12px;">
+        <span class="mi">flag</span>Submit Report
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- SELECT TAKERS MODAL -->
+<div class="overlay" id="selectTakersOverlay">
+  <div class="modal" style="max-width:580px;max-height:90vh;overflow-y:auto;scrollbar-width:thin;">
+    <div class="modal-hdr">
+      <div>
+        <div class="modal-title">Select Takers</div>
+        <div id="selectTakersDareTitle" style="font-size:12px;color:var(--t3);margin-top:2px;"></div>
+      </div>
+      <button class="modal-close" onclick="closeSelectTakersModal()"><span class="mi">close</span></button>
+    </div>
+
+    <div id="applicantCount" style="font-size:12px;color:var(--t3);margin-bottom:16px;
+      font-family:'IBM Plex Mono',monospace;padding:10px 14px;
+      background:rgba(255,255,255,.03);border:1px solid var(--border);border-radius:10px;">Loading...</div>
+
+    <!-- Random toggle -->
+    <button onclick="toggleRandomPanel()" style="width:100%;display:flex;align-items:center;gap:8px;
+      margin-bottom:14px;background:rgba(155,114,255,.08);border:1px solid rgba(155,114,255,.3);
+      color:#b39dff;padding:10px 16px;border-radius:12px;font-size:13px;font-weight:600;
+      cursor:pointer;font-family:inherit;">
+      <span class="mi">shuffle</span>Random Selection
+      <span class="mi" style="margin-left:auto;">expand_more</span>
+    </button>
+
+    <!-- Random Config -->
+    <div id="randomPanel" style="display:none;background:rgba(155,114,255,.06);
+      border:1px solid rgba(155,114,255,.2);border-radius:14px;padding:16px;margin-bottom:16px;">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px;">
+        <div>
+          <label class="f-label">Pool Size</label>
+          <input class="f-input" id="randomPoolSize" type="number" min="1" placeholder="All applicants" style="margin:0;"/>
+          <div class="f-hint">Leave empty = all applicants</div>
+        </div>
+        <div>
+          <label class="f-label">Select Count</label>
+          <input class="f-input" id="randomSelectCount" type="number" min="1" placeholder="1" style="margin:0;"/>
+          <div class="f-hint">How many to randomly pick</div>
+        </div>
+      </div>
+      <div class="f-group" style="margin-bottom:12px;">
+        <label class="f-label">Criteria</label>
+        <select class="f-input" id="randomCriteria" style="cursor:pointer;margin:0;">
+          <option value="first_applied">First to Apply (earliest)</option>
+          <option value="completion_rate">Highest Completion Rate</option>
+          <option value="pure_random">Pure Random</option>
+        </select>
+      </div>
+      <button id="executeRandomBtn" onclick="executeRandomSelect()"
+        style="width:100%;background:linear-gradient(135deg,#9B72FF,#7B5EA7);color:#fff;border:none;
+        padding:11px;border-radius:12px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;">
+        <span class="mi" style="vertical-align:-4px;margin-right:4px;">shuffle</span>Select Randomly
+      </button>
+    </div>
+
+    <div id="applicantsList"></div>
+  </div>
+</div>
+
+<!-- ADMIN REPORTS -->
+<div class="overlay" id="adminReportsOverlay">
+  <div class="modal" style="max-width:640px;max-height:90vh;overflow-y:auto;">
+    <div class="modal-hdr">
+      <div class="modal-title">🛡️ Admin — Reports</div>
+      <button class="modal-close" onclick="closeAdminReports()"><span class="mi">close</span></button>
+    </div>
+    <div id="adminReportsList"></div>
+  </div>
+</div>
+
+
+<!-- video detail -->
+<div class="video-detail-overlay" id="videoDetailOverlay">
+  <div class="vd-layout">
+    <div class="vd-main">
+      <div class="vd-topbar">
+        <button class="vd-back-btn" onclick="closeVideoDetail()"><span class="mi">arrow_back</span></button>
+        <div class="vd-topbar-title" id="vdTopbarTitle" style="visibility:hidden;"></div>
+        <button class="vd-share-top-btn" onclick="shareDare(activeProof?.id, activeProof?.dareTitle)"><span class="mi">share</span></button>
+      </div>
+      <video class="vd-player" id="vdPlayer" controls playsinline></video>
+      <div class="vd-info-block">
+        <div class="vd-title" id="vdTitle">—</div>
+        <div class="vd-views-date" id="vdMeta">—</div>
+        <div class="vd-action-bar">
+          <button class="vd-action-btn" id="vdLikeBtn" onclick="toggleLike(activeProof?.id)">
+            <span class="mi" style="color:var(--t3);">favorite_border</span>
+            <span id="vdLikeCount">0</span>
+          </button>
+          <button class="vd-action-btn" onclick="shareDare(activeProof?.id, activeProof?.dareTitle)">
+            <span class="mi">share</span> Share
+          </button>
+          <div class="vd-bounty-pill" id="vdBountyPill">Rs. 0</div>
+        </div>
+        <div class="vd-collab-strip" onclick="openCollabModal()">
+          <div class="vd-collab-avs">
+            <div class="vd-collab-av" id="vdCreatorAv">C</div>
+            <div class="vd-collab-av vd-collab-av2" id="vdTakerAv">T</div>
+          </div>
+          <div class="vd-collab-info">
+            <div class="vd-collab-names"><span id="vdCreatorName">@creator</span> & <span id="vdTakerName">@taker</span></div>
+            <div class="vd-collab-sub" id="vdBounty">Creator & Taker · tap to view</div>
+          </div>
+          <div class="vd-cat-pill" id="vdCatPill"></div>
+        </div>
+      </div>
+      <div class="vd-comments-section">
+        <div class="vd-sec-title">
+          <span class="mi" style="font-size:18px;vertical-align:-4px;">chat</span>
+          Comments <span id="vdCommentCount" style="color:var(--t3);font-weight:400;font-size:13px;"></span>
+        </div>
+        <div class="vd-comment-input-row" id="vdCommentInputRow">
+          <div class="vd-input-av" id="vdInputAv">?</div>
+          <div class="vd-comment-field">
+            <input class="vd-comment-input" id="vdCommentInput" placeholder="Add a comment..." maxlength="500"
+                   onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();submitComment();}"/>
+            <button class="vd-comment-send-btn" onclick="submitComment()"><span class="mi">send</span></button>
+          </div>
+        </div>
+        <div id="vdComments"></div>
+      </div>
+    </div>
+    <div class="vd-sidebar">
+      <div class="vd-sec-title" style="margin-bottom:12px;">
+        <span class="mi" style="font-size:18px;vertical-align:-4px;">playlist_play</span> Related Videos
+      </div>
+      <div id="vdRelated"></div>
+    </div>
+  </div>
+</div>
+
+<!-- guest prompt -->
+<div class="overlay" id="guestPrompt" style="display:none;">
+  <div class="modal guest-modal">
+    <div class="guest-modal-icon" id="guestPromptIcon"></div>
+    <div class="guest-modal-title" id="guestPromptTitle">Create a free account</div>
+    <div class="guest-modal-msg"   id="guestPromptMsg">Join DareMarket to post dares, accept challenges, and earn real money.</div>
+    <button class="btn-fill" onclick="leaveGuestMode('signup')" style="margin-bottom:8px;">Sign Up — it's free</button>
+    <button class="btn-ghost-sm" onclick="leaveGuestMode('login')">Already have an account? Sign In</button>
+    <button class="btn-ghost-sm btn-tiny" id="guestPromptDismiss" onclick="closeGuestPrompt()" style="margin-top:4px;">Continue browsing</button>
+  </div>
+</div>
+
+<!-- ═══ YOUTUBE SHORTS PLAYER OVERLAY ═══ -->
+<div class="shorts-overlay" id="shortsOverlay"
+     onwheel="shortsWheel(event)" ontouchstart="shortsTouchStart(event)" ontouchend="shortsTouchEnd(event)">
+  <button class="shorts-close" onclick="closeShorts()"><span class="mi">arrow_back</span></button>
+
+  <div class="shorts-stage">
+    <!-- Video column -->
+    <div class="shorts-video-col">
+      <div class="shorts-snap-container" id="shortsSnapContainer"></div>
+      <div class="shorts-video-wrap" id="shortsVideoWrapLegacy" style="display:none;">
+        <video class="shorts-video" id="shortsVideo" loop playsinline controls></video>
+
+        <!-- 3-dots button -->
+        <button class="shorts-dots" onclick="shortsToggleMenu()"><span class="mi">more_vert</span></button>
+
+        <!-- 3-dots menu -->
+        <div class="shorts-menu" id="shortsMenu">
+          <div class="shorts-menu-hdr">
+            <span>Details</span>
+            <button onclick="shortsToggleMenu()"><span class="mi">close</span></button>
+          </div>
+          <div class="shorts-menu-body" id="shortsMenuBody"></div>
+        </div>
+
+        <!-- Bottom-left info: creator + caption -->
+        <div class="shorts-info">
+          <div class="shorts-creator-row">
+            <div class="shorts-creator-av" id="shortsCreatorAv">C</div>
+            <span class="shorts-creator-name" id="shortsCreatorName">@creator</span>
+            <button class="shorts-follow" onclick="toggleFollow(document.getElementById('shortsOverlay').dataset.creatorId,'creator')">Follow</button>
+          </div>
+          <div class="shorts-caption" id="shortsCaption"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Right action rail -->
+    <div class="shorts-actions">
+      <button class="shorts-act" id="shortsLikeBtn" onclick="shortsLike()">
+        <span class="mi">thumb_up</span>
+      </button>
+      <span class="shorts-act-lbl" id="shortsLikeCount">0</span>
+
+      <button class="shorts-act" onclick="showToast('Disliked')">
+        <span class="mi">thumb_down</span>
+      </button>
+      <span class="shorts-act-lbl">Dislike</span>
+
+      <button class="shorts-act" onclick="shortsToggleComments()">
+        <span class="mi">comment</span>
+      </button>
+      <span class="shorts-act-lbl" id="shortsCommentCount">0</span>
+
+      <button class="shorts-act" onclick="showToast('Share link copied!')">
+        <span class="mi">share</span>
+      </button>
+      <span class="shorts-act-lbl">Share</span>
+
+      <div class="shorts-act-views">
+        <span class="mi">visibility</span>
+        <span id="shortsViewCount">0</span>
+      </div>
+    </div>
+
+    <!-- Desktop up/down nav -->
+    <div class="shorts-nav">
+      <button class="shorts-nav-btn" id="shortsNavUp" onclick="shortsNav(-1)"><span class="mi">keyboard_arrow_up</span></button>
+      <button class="shorts-nav-btn" id="shortsNavDown" onclick="shortsNav(1)"><span class="mi">keyboard_arrow_down</span></button>
+    </div>
+  </div>
+
+  <!-- Comments panel (slides from right) -->
+  <div class="shorts-comments">
+    <div class="shorts-comments-hdr">
+      <span>Comments <b id="shortsCommentsCount">0</b></span>
+      <button onclick="shortsToggleComments()"><span class="mi">close</span></button>
+    </div>
+    <div class="shorts-comments-list" id="shortsCommentsList"></div>
+    <div class="shorts-comment-input-row">
+      <input id="shortsCommentInput" placeholder="Add a comment..." onkeydown="if(event.key==='Enter')submitShortsComment()"/>
+      <button onclick="submitShortsComment()"><span class="mi">send</span></button>
+    </div>
+  </div>
+</div>
+
+
+<!-- Collaborators modal (#5) -->
+<div class="overlay" id="collabModal" style="display:none;" onclick="if(event.target===this)closeCollabModal()">
+  <div class="collab-sheet">
+    <div class="collab-sheet-hdr">
+      <span>Collaborators</span>
+      <button onclick="closeCollabModal()"><span class="mi">close</span></button>
+    </div>
+    <div class="collab-row">
+      <div class="collab-row-av" id="cmCreatorAv">C</div>
+      <div class="collab-row-info">
+        <div class="collab-row-name" id="cmCreatorName">@creator</div>
+        <div class="collab-row-label">Dare Creator</div>
+      </div>
+      <button class="collab-follow-btn" id="cmCreatorFollow" onclick="toggleFollow(document.getElementById('collabModal').dataset.creatorId,'creator')">Follow</button>
+    </div>
+    <div class="collab-row">
+      <div class="collab-row-av vd-collab-av2" id="cmTakerAv">T</div>
+      <div class="collab-row-info">
+        <div class="collab-row-name" id="cmTakerName">@taker</div>
+        <div class="collab-row-label">Dare Taker (Bounty Winner)</div>
+      </div>
+      <button class="collab-follow-btn" id="cmTakerFollow" onclick="toggleFollow(document.getElementById('collabModal').dataset.takerId,'taker')">Follow</button>
+    </div>
+  </div>
+</div>
+
+
+<!-- #1: Thumbnail Adjuster (crop to 16:9 with drag + zoom) -->
+<div class="overlay" id="thumbAdjustModal" style="display:none;z-index:5000;" onclick="if(event.target===this)closeThumbAdjust()">
+  <div class="ta-sheet">
+    <div class="ta-hdr">
+      <span>Adjust Thumbnail</span>
+      <button onclick="closeThumbAdjust()"><span class="mi">close</span></button>
+    </div>
+    <p class="ta-hint">Drag to reposition · pinch or slider to zoom · always saved as 16:9</p>
+    <div class="ta-stage" id="taStage">
+      <div class="ta-frame" id="taFrame">
+        <img id="taImg" draggable="false" alt=""/>
+      </div>
+      <div class="ta-grid-overlay"></div>
+    </div>
+    <div class="ta-zoom-row">
+      <span class="mi">zoom_out</span>
+      <input type="range" id="taZoom" min="100" max="300" value="100" oninput="_taApply()"/>
+      <span class="mi">zoom_in</span>
+    </div>
+    <div class="ta-actions">
+      <button class="ta-cancel" onclick="closeThumbAdjust()">Cancel</button>
+      <button class="ta-save" onclick="applyThumbAdjust()"><span class="mi">check</span> Use This</button>
+    </div>
+  </div>
+</div>
+
+</body>
+</html>
