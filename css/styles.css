@@ -2603,8 +2603,11 @@ html{scroll-behavior:smooth;}
   background: transparent !important;
   border: none !important;
   box-shadow: none !important;   /* kill leftover neu shadow behind shorts cards */
+  overflow: visible !important;  /* don't clip the caption/views below the thumb */
+  border-radius: 0 !important;   /* rounding lives on .short-thumb only (YouTube style) */
 }
 .short-card:hover { transform: none !important; box-shadow: none !important; }
+.short-cap, .short-meta { padding: 0 2px; }   /* small breathing room so text isn't flush to edge */
 .short-thumb {
   width: 160px;
   aspect-ratio: 9/16;
