@@ -2373,30 +2373,52 @@ html{scroll-behavior:smooth;}
 
 /* ═══ #2: DESKTOP UI (≥769px) — YouTube-style permanent sidebar ═══ */
 @media(min-width:769px){
-  /* Hamburger button hidden on desktop */
   #menuToggle, .menu-btn-mobile, .hamburger { display: none !important; }
-  /* Sidebar always visible, no overlay/slide */
+  /* ── YouTube-style NARROW icon rail (desktop default) ── */
   .sidebar {
     transform: none !important;
     position: fixed !important;
     top: 56px !important;
     left: 0 !important;
     bottom: 0 !important;
-    width: 240px !important;
-    padding: 12px 0 !important;
+    width: 72px !important;
+    padding: 8px 0 !important;
     z-index: 90 !important;
   }
-  .sb-overlay { display: none !important; }
-  /* Main content pushed right for sidebar */
-  .main-content, main, .page-container {
-    margin-left: 240px !important;
+  .sidebar .nav-item {
+    flex-direction: column !important;
+    align-items: center !important;
+    justify-content: center !important;
+    gap: 6px !important;
+    padding: 16px 0 !important;
+    margin: 0 !important;
+    border-radius: 10px;
   }
-  /* Bottom nav hidden on desktop */
+  .sidebar .nav-item .mi { font-size: 24px; }
+  .sidebar .nav-lbl {
+    display: block !important;
+    font-size: 10px; font-weight: 400; line-height: 1; text-align: center;
+  }
+  .sb-overlay { display: none !important; }
+  .main-content, main, .page-container { margin-left: 72px !important; }
   .bottom-nav { display: none !important; }
-  /* Topbar logo aligned with sidebar */
   .topbar { padding: 0 24px !important; }
-  /* Search bar wider on desktop (YouTube style) */
   .search-wrap { max-width: 640px !important; }
+
+  /* ── Expanded drawer (hamburger toggles body.sidebar-expanded) ── */
+  body.sidebar-expanded .sidebar { width: 240px !important; padding: 8px 0 !important; }
+  body.sidebar-expanded .sidebar .nav-item {
+    flex-direction: row !important;
+    align-items: center !important;
+    justify-content: flex-start !important;
+    gap: 16px !important;
+    padding: 10px 12px !important;
+    margin: 0 4px !important;
+  }
+  body.sidebar-expanded .sidebar .nav-lbl { font-size: 14px; text-align: left; }
+  body.sidebar-expanded .main-content,
+  body.sidebar-expanded main,
+  body.sidebar-expanded .page-container { margin-left: 240px !important; }
 }
 
 /* ═══ MOBILE UI (≤768px) — bottom nav, hamburger sidebar ═══ */

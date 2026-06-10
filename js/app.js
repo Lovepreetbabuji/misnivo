@@ -3027,7 +3027,8 @@ let _sidebarOpen = false;
 //   Mobile  (<600px) → slides in as overlay
 //   Tablet/Desktop   → collapse/expand (icons ↔ full)
 function toggleSidebar() {
-  const isMobile = window.innerWidth < 600;
+  // ≤768 = mobile/tablet slide-in overlay; ≥769 = desktop narrow rail ↔ expanded drawer
+  const isMobile = window.innerWidth <= 768;
   const sb       = document.getElementById('sidebar');
   const overlay  = document.getElementById('sbOverlay');
   if (!sb) return;
@@ -3038,7 +3039,8 @@ function toggleSidebar() {
     if (overlay) overlay.classList.toggle('show', _sidebarOpen);
     document.body.style.overflow = _sidebarOpen ? 'hidden' : '';
   } else {
-    document.body.classList.toggle('sidebar-collapsed');
+    // Desktop: default is YouTube-style narrow rail; toggle to expanded drawer
+    document.body.classList.toggle('sidebar-expanded');
   }
 }
 
@@ -3059,7 +3061,7 @@ function syncBottomNav(pg) {
                 profile:'bn-profile', leaderboard:'bn-leaderboard' };
   const el = map[pg] ? document.getElementById(map[pg]) : null;
   if (el) el.classList.add('active');
-  if (window.innerWidth < 600) closeSidebar();
+  if (window.innerWidth <= 768) closeSidebar();
 }
 
 // PURPOSE: Mobile search icon tap → go to dares page + focus search
@@ -3082,9 +3084,9 @@ function closeMobileSearch() {
   }
 })();
 
-// Close sidebar on resize to desktop
+// Close mobile slide-in overlay when resizing up to desktop
 window.addEventListener('resize', () => {
-  if (window.innerWidth >= 600) closeSidebar();
+  if (window.innerWidth >= 769) closeSidebar();
 });
 
 // ESC closes sidebar
