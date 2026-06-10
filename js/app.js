@@ -4167,15 +4167,31 @@ function vidThumb(p, w) {
 }
 
 // ════════════════════════════════════════════════════════════════════
-//  THUMBNAIL ADJUSTER — crop any image to 16:9 with drag + zoom
+//  THUMBNAIL ADJUSTER — crop any image to 16:9 (long) or 9:16 (short) with drag + zoom
 // ════════════════════════════════════════════════════════════════════
 let _taState = { img:null, scale:1, x:0, y:0, baseW:0, baseH:0, natW:0, natH:0,
                  dragging:false, startX:0, startY:0, originX:0, originY:0,
-                 target:'creator', file:null, pinchDist:0 };
+                 target:'creator', file:null, pinchDist:0, ratio:'16:9' };
 
-function openThumbAdjust(file, target) {
+function openThumbAdjust(file, target, ratio) {
   _taState.file = file;
   _taState.target = target || 'creator';
+  _taState.ratio = (ratio === '9:16') ? '9:16' : '16:9';
+  // Shape the crop frame to the chosen ratio (16:9 long videos, 9:16 shorts)
+  const stage = document.getElementById('taStage');
+  if (stage) {
+    if (_taState.ratio === '9:16') {
+      stage.style.aspectRatio = '9 / 16';
+      stage.style.width = 'auto';
+      stage.style.maxWidth = '250px';
+      stage.style.margin = '14px auto';
+    } else {
+      stage.style.aspectRatio = '16 / 9';
+      stage.style.width = '';
+      stage.style.maxWidth = '';
+      stage.style.margin = '';
+    }
+  }
   const img = document.getElementById('taImg');
   const url = URL.createObjectURL(file);
   img.onload = () => {
@@ -4275,8 +4291,10 @@ function closeThumbAdjust() {
 function applyThumbAdjust() {
   const stage = document.getElementById('taStage');
   const sw = stage.clientWidth, sh = stage.clientHeight;
-  // Output 1280x720 (16:9)
-  const OUT_W = 1280, OUT_H = 720;
+  // Output: 1280x720 for 16:9 (long), 720x1280 for 9:16 (short)
+  const is916 = _taState.ratio === '9:16';
+  const OUT_W = is916 ? 720 : 1280;
+  const OUT_H = is916 ? 1280 : 720;
   const canvas = document.createElement('canvas');
   canvas.width = OUT_W; canvas.height = OUT_H;
   const ctx = canvas.getContext('2d');
@@ -4300,7 +4318,7 @@ function applyThumbAdjust() {
   }
   canvas.toBlob((blob) => {
     if (!blob) { showToast('Could not process image'); return; }
-    const cropped = new File([blob], 'thumbnail_16x9.jpg', { type:'image/jpeg' });
+    const cropped = new File([blob], (is916 ? 'thumbnail_9x16.jpg' : 'thumbnail_16x9.jpg'), { type:'image/jpeg' });
     if (_taState.target === 'creator') {
       selectedThumb = cropped;
       const prev = document.getElementById('thumbPreview');
@@ -4310,7 +4328,7 @@ function applyThumbAdjust() {
       document.getElementById('thumbEditRow').style.display = 'flex';
       document.getElementById('thumbDZ').classList.add('has-media');
     } else if (_taState.target === 'proof') {
-      // Taker proof modal: custom uploaded thumbnail (cropped to 16:9)
+      // Taker proof modal: custom uploaded thumbnail (16:9 or 9:16 per video)
       proofCapturedFrameBlob = cropped;
       const img = document.getElementById('proofThumbPreview');
       if (img) { if (img.src) URL.revokeObjectURL(img.src); img.src = URL.createObjectURL(cropped); }
@@ -4322,7 +4340,7 @@ function applyThumbAdjust() {
       _setProofThumbPreview(URL.createObjectURL(cropped));
     }
     closeThumbAdjust();
-    showToast('Thumbnail set (16:9)');
+    showToast('Thumbnail set (' + (is916 ? '9:16' : '16:9') + ')');
   }, 'image/jpeg', 0.9);
 }
 
@@ -4336,13 +4354,16 @@ function onProofThumbUpload(e) {
   e.target.value = '';
 }
 
-// Taker (proof modal) uploads a custom image thumbnail → adjust to 16:9
+// Taker (proof modal) uploads a custom image thumbnail.
+// Crop ratio follows the video: 9:16 video → 9:16 thumb (YouTube short style),
+// 16:9 video → 16:9 thumb.
 function onProofModalThumbUpload(e) {
   const file = e.target.files[0]; if (!file) return;
   if (!file.type.startsWith('image/')) { showToast('Please select an image'); return; }
   if (file.size > 5*1024*1024) { showToast('Max 5MB allowed'); return; }
+  const ratio = (selectedVideoH > 0 && selectedVideoW > 0 && selectedVideoH > selectedVideoW) ? '9:16' : '16:9';
   _taBindDrag();
-  openThumbAdjust(file, 'proof');
+  openThumbAdjust(file, 'proof', ratio);
   e.target.value = '';
 }
 // Helper: set proof thumb preview if the element exists
