@@ -4214,7 +4214,9 @@ function openThumbAdjust(file, target, ratio) {
   };
   img.src = url;
   document.getElementById('taZoom').value = 100;
-  document.getElementById('thumbAdjustModal').style.display = 'flex';
+  const modal = document.getElementById('thumbAdjustModal');
+  modal.style.display = 'flex';
+  modal.classList.add('open');   // .overlay is opacity:0/pointer-events:none until .open — without this the adjuster opened invisibly
 }
 
 function _taSetup() {
@@ -4297,7 +4299,9 @@ function _taBindDrag() {
 }
 
 function closeThumbAdjust() {
-  document.getElementById('thumbAdjustModal').style.display = 'none';
+  const modal = document.getElementById('thumbAdjustModal');
+  modal.classList.remove('open');
+  modal.style.display = 'none';
 }
 
 // ── Render the visible 16:9 crop to a canvas → File ──
