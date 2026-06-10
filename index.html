@@ -457,19 +457,9 @@
       <input class="f-input" id="pCaption" type="text" placeholder="e.g. Run 5km in under 30 minutes"/>
     </div>
 
-    <!-- ② DARE MEDIA (Thumbnail OR Video Preview) -->
+    <!-- ② DARE THUMBNAIL (16:9, optional) -->
     <div class="f-group">
-      <label class="f-label">Dare Media <span class="f-opt-tag">Optional</span></label>
-      <div class="media-type-tabs">
-        <button class="mtype-tab active" id="mtImg" onclick="switchMediaTab('image')" type="button">
-          <span class="mi">image</span> Thumbnail
-        </button>
-        <button class="mtype-tab" id="mtVid" onclick="switchMediaTab('video')" type="button">
-          <span class="mi">videocam</span> Video Preview
-        </button>
-      </div>
-
-      <!-- IMAGE TAB -->
+      <label class="f-label">Dare Thumbnail <span class="f-opt-tag">Optional</span></label>
       <div id="mediaTabImg">
         <input type="file" id="thumbInput" accept="image/*" style="display:none;" onchange="onThumbSelected(event)"/>
         <div class="dare-media-dz" id="thumbDZ" onclick="document.getElementById('thumbInput').click()">
@@ -491,49 +481,6 @@
             <span class="mi">delete</span> Remove
           </button>
         </div>
-      </div>
-
-      <!-- VIDEO TAB -->
-      <div id="mediaTabVid" style="display:none;">
-        <input type="file" id="previewVidInput" accept="video/*" style="display:none;" onchange="onPreviewVidSelected(event)"/>
-        <div class="dare-media-dz" id="previewVidDZ" onclick="document.getElementById('previewVidInput').click()">
-          <video id="previewVidPlayer" muted playsinline
-            style="display:none;width:100%;height:100%;object-fit:cover;border-radius:10px;position:absolute;top:0;left:0;"></video>
-          <div class="dz-inner" id="previewVidDZInner">
-            <span class="mi" style="font-size:32px;color:var(--t3);">videocam</span>
-            <div style="font-size:13px;font-weight:600;color:var(--t2);">Click to add video preview</div>
-            <div style="font-size:11px;color:var(--t3);">MP4, MOV · Max 100MB</div>
-          </div>
-        </div>
-
-        <!-- FRAME PICKER (YouTube-style pencil — appears after video is loaded) -->
-        <div id="framePicker" style="display:none;margin-top:14px;">
-          <div class="fp-label">
-            <span class="mi">tune</span> Pick a thumbnail — seek and capture a frame
-          </div>
-          <div style="position:relative;">
-            <video id="fpVideo" muted playsinline
-              style="width:100%;border-radius:8px;max-height:180px;background:#000;display:block;"></video>
-            <div class="fp-pencil-icon" title="Pick thumbnail frame">✏️</div>
-          </div>
-          <input type="range" id="fpScrubber" min="0" max="1000" value="0"
-            class="fp-scrubber" oninput="scrubFPVideo(this.value)"/>
-          <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-top:8px;">
-            <button class="dz-action-btn" onclick="captureVideoFrame()" type="button">
-              <span class="mi">photo_camera</span> Capture Frame
-            </button>
-            <input type="file" id="proofThumbInput" accept="image/*" style="display:none;" onchange="onProofThumbUpload(event)"/>
-            <button class="dz-action-btn" onclick="document.getElementById('proofThumbInput').click()" type="button">
-              <span class="mi">crop</span> Upload &amp; Adjust
-            </button>
-            <div id="fpCapturedRow" style="display:none;align-items:center;gap:8px;">
-              <img id="fpThumb" style="width:72px;height:45px;object-fit:cover;border-radius:6px;border:2px solid #30D158;"/>
-              <span style="font-size:11px;color:#30D158;font-weight:600;">Thumbnail set</span>
-            </div>
-          </div>
-          <canvas id="fpCanvas" style="display:none;"></canvas>
-        </div>
-
       </div>
     </div>
 

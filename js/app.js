@@ -1183,12 +1183,17 @@ function _resetVideoUI() {
 //  MEDIA TAB SWITCH
 // ════════════════════════════════════════════════════════════════════
 function switchMediaTab(tab) {
-  currentMediaTab = tab;
-  const isImg = (tab === 'image');
-  document.getElementById('mediaTabImg').style.display = isImg ? 'block' : 'none';
-  document.getElementById('mediaTabVid').style.display = isImg ? 'none'  : 'block';
-  document.getElementById('mtImg').classList.toggle('active',  isImg);
-  document.getElementById('mtVid').classList.toggle('active', !isImg);
+  // Video Preview tab removed — only the image thumbnail remains. Kept null-safe
+  // so existing callers (openPost/openEditDare) don't break.
+  currentMediaTab = 'image';
+  const mImg = document.getElementById('mediaTabImg');
+  const mVid = document.getElementById('mediaTabVid');
+  const tImg = document.getElementById('mtImg');
+  const tVid = document.getElementById('mtVid');
+  if (mImg) mImg.style.display = 'block';
+  if (mVid) mVid.style.display = 'none';
+  if (tImg) tImg.classList.toggle('active', true);
+  if (tVid) tVid.classList.toggle('active', false);
 }
 
 // ════════════════════════════════════════════════════════════════════
