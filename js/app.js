@@ -1759,12 +1759,11 @@ function captureProofFrame() {
   canvas.getContext('2d').drawImage(vid, 0, 0, canvas.width, canvas.height);
   canvas.toBlob(blob => {
     if (!blob) { showToast('Could not capture frame — try again'); return; }
-    proofCapturedFrameBlob = blob;
-    const img = document.getElementById('proofThumbPreview');
-    if (img.src) URL.revokeObjectURL(img.src);
-    img.src = URL.createObjectURL(blob);
-    document.getElementById('proofFrameCaptured').style.display = 'flex';
-    showToast('Thumbnail captured!');
+    // Send the captured frame into the adjuster so the taker can crop/zoom it
+    const ratio = (selectedVideoH > 0 && selectedVideoW > 0 && selectedVideoH > selectedVideoW) ? '9:16' : '16:9';
+    const file  = new File([blob], 'captured_frame.jpg', { type:'image/jpeg' });
+    _taBindDrag();
+    openThumbAdjust(file, 'proof', ratio);
   }, 'image/jpeg', 0.88);
 }
 
@@ -4112,12 +4111,14 @@ function _shortsRowHtml(shorts) {
     <div class="home-sec-hdr"><span class="mi" style="color:#FF0033;font-size:22px;">play_circle</span><span class="home-sec-title">Shorts</span></div>
     <div class="shorts-row">${shorts.map(p=>{
       const t = vidThumb(p, 360);
+      const _w = (p.dareTitle||'Short').trim().split(/\s+/);
+      const _cap = _w.length > 5 ? _w.slice(0,5).join(' ') + '...' : _w.join(' ');
       return `
       <div class="short-card" onclick="openShorts('${p.id}')">
         <div class="short-thumb">
           ${t ? `<img src="${t}" alt="" loading="lazy" onerror="this.style.display='none'"/>` : `<div class="yt-thumb-bg"><span class="mi">bolt</span></div>`}
         </div>
-        <div class="short-cap">${escHtml((p.dareTitle||'Short').slice(0,40))}</div>
+        <div class="short-cap">${escHtml(_cap)}</div>
         <div class="short-meta">${(p.viewCount||0).toLocaleString('en-IN')} views</div>
       </div>`;}).join('')}</div>
   </div>`;
