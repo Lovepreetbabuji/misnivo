@@ -4304,8 +4304,15 @@ function applyThumbAdjust() {
       document.getElementById('thumbDZInner').style.display = 'none';
       document.getElementById('thumbEditRow').style.display = 'flex';
       document.getElementById('thumbDZ').classList.add('has-media');
+    } else if (_taState.target === 'proof') {
+      // Taker proof modal: custom uploaded thumbnail (cropped to 16:9)
+      proofCapturedFrameBlob = cropped;
+      const img = document.getElementById('proofThumbPreview');
+      if (img) { if (img.src) URL.revokeObjectURL(img.src); img.src = URL.createObjectURL(cropped); }
+      const row = document.getElementById('proofFrameCaptured');
+      if (row) row.style.display = 'flex';
     } else {
-      // taker proof thumbnail
+      // taker proof thumbnail (post-dare video tab)
       proofCapturedFrameBlob = cropped;
       _setProofThumbPreview(URL.createObjectURL(cropped));
     }
@@ -4321,6 +4328,16 @@ function onProofThumbUpload(e) {
   if (file.size > 5*1024*1024) { showToast('Max 5MB allowed'); return; }
   _taBindDrag();
   openThumbAdjust(file, 'taker');
+  e.target.value = '';
+}
+
+// Taker (proof modal) uploads a custom image thumbnail → adjust to 16:9
+function onProofModalThumbUpload(e) {
+  const file = e.target.files[0]; if (!file) return;
+  if (!file.type.startsWith('image/')) { showToast('Please select an image'); return; }
+  if (file.size > 5*1024*1024) { showToast('Max 5MB allowed'); return; }
+  _taBindDrag();
+  openThumbAdjust(file, 'proof');
   e.target.value = '';
 }
 // Helper: set proof thumb preview if the element exists
