@@ -1,2 +1,10 @@
 /*
   Cross-Origin-Opener-Policy: same-origin-allow-popups
+
+# Always revalidate so a new deploy is never served stale from cache
+/index.html
+  Cache-Control: no-cache
+/css/styles.css
+  Cache-Control: no-cache
+/js/app.js
+  Cache-Control: no-cache
