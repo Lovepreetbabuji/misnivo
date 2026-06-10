@@ -945,6 +945,10 @@
           <span class="mi" style="font-size:18px;vertical-align:-4px;">chat</span>
           Comments <span id="vdCommentCount" style="color:var(--t3);font-weight:400;font-size:13px;"></span>
         </div>
+        <div class="cmt-reply-bar" id="vdReplyBar" style="display:none;">
+          <span>Replying to <b id="vdReplyName"></b></span>
+          <button onclick="cancelReply()" title="Cancel"><span class="mi">close</span></button>
+        </div>
         <div class="vd-comment-input-row" id="vdCommentInputRow">
           <div class="vd-input-av" id="vdInputAv">?</div>
           <div class="vd-comment-field">
@@ -1065,6 +1069,10 @@
       <button onclick="shortsToggleComments()"><span class="mi">close</span></button>
     </div>
     <div class="shorts-comments-list" id="shortsCommentsList"></div>
+    <div class="cmt-reply-bar" id="shortsReplyBar" style="display:none;">
+      <span>Replying to <b id="shortsReplyName"></b></span>
+      <button onclick="cancelShortsReply()" title="Cancel"><span class="mi">close</span></button>
+    </div>
     <div class="shorts-comment-input-row">
       <input id="shortsCommentInput" placeholder="Add a comment..." onkeydown="if(event.key==='Enter')submitShortsComment()"/>
       <button onclick="submitShortsComment()"><span class="mi">send</span></button>

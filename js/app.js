@@ -3260,13 +3260,74 @@ function _onGuestExpired() {
 }
 
 function _renderComments(comments) {
-  // #5: On mobile, show only the single most-liked comment
-  if (window.innerWidth <= 768 && comments && comments.length > 1) {
-    comments = [...comments].sort((a,b)=>(b.likeCount||b.likes||0)-(a.likeCount||a.likes||0)).slice(0,1);
-  }
   const el=document.getElementById('vdComments');
-  if(!comments.length){el.innerHTML='<div class="vd-no-comments"><span class="mi">chat_bubble_outline</span><div>No comments yet — be the first!</div></div>';return;}
-  el.innerHTML=comments.map(c=>`<div class="vd-comment"><div class="vd-comment-av">${(c.userName||'?')[0].toUpperCase()}</div><div class="vd-comment-body"><div class="vd-comment-author">${escHtml(c.userName||'—')}<span class="vd-comment-time">${c.createdAt?_timeAgo(c.createdAt.toDate()):''}</span></div><div class="vd-comment-text">${escHtml(c.text||'')}</div></div></div>`).join('');
+  if(!comments || !comments.length){el.innerHTML='<div class="vd-no-comments"><span class="mi">chat_bubble_outline</span><div>No comments yet — be the first!</div></div>';return;}
+  const tops = comments.filter(c => !c.parentId);
+  const byParent = {};
+  comments.forEach(c => { if (c.parentId) (byParent[c.parentId] = byParent[c.parentId]||[]).push(c); });
+  el.innerHTML = tops.map(c => _vdCommentHtml(c, byParent[c.id]||[])).join('');
+}
+function _vdCommentHtml(c, replies) {
+  const liked = (c.likedBy||[]).includes(user?.uid);
+  const acts = `<div class="vd-comment-acts">
+    <button class="cmt-act ${liked?'liked':''}" onclick="likeComment('${c.id}')"><span class="mi">thumb_up</span>${(c.likeCount||0)>0?' '+_fmtCount(c.likeCount):''}</button>
+    <button class="cmt-act" onclick="startReply('${c.id}','${escHtml((c.userName||'').replace(/'/g,''))}')">Reply</button>
+  </div>`;
+  return `<div class="vd-comment">
+    <div class="vd-comment-av">${_avHtml(c.userPhotoURL, c.userName)}</div>
+    <div class="vd-comment-body">
+      <div class="vd-comment-author">${escHtml(c.userName||'—')}<span class="vd-comment-time">${c.createdAt&&c.createdAt.toDate?_timeAgo(c.createdAt.toDate()):''}</span></div>
+      <div class="vd-comment-text">${escHtml(c.text||'')}</div>
+      ${acts}
+      ${replies.length?`<div class="vd-replies">${replies.map(r=>_vdReplyHtml(r)).join('')}</div>`:''}
+    </div>
+  </div>`;
+}
+function _vdReplyHtml(c) {
+  const liked = (c.likedBy||[]).includes(user?.uid);
+  return `<div class="vd-comment vd-reply">
+    <div class="vd-comment-av">${_avHtml(c.userPhotoURL, c.userName)}</div>
+    <div class="vd-comment-body">
+      <div class="vd-comment-author">${escHtml(c.userName||'—')}<span class="vd-comment-time">${c.createdAt&&c.createdAt.toDate?_timeAgo(c.createdAt.toDate()):''}</span></div>
+      <div class="vd-comment-text">${escHtml(c.text||'')}</div>
+      <div class="vd-comment-acts">
+        <button class="cmt-act ${liked?'liked':''}" onclick="likeComment('${c.id}')"><span class="mi">thumb_up</span>${(c.likeCount||0)>0?' '+_fmtCount(c.likeCount):''}</button>
+      </div>
+    </div>
+  </div>`;
+}
+// Like/unlike a comment (works for both video-detail & shorts; updates whichever list is cached)
+async function likeComment(commentId) {
+  if (!user) { showToast('Sign in to like'); return; }
+  const lists = [commentsCache[commentsProofId], _shortsComments];
+  let c = null;
+  for (const l of lists) { if (l) { const f = l.find(x=>x.id===commentId); if (f) { c = f; break; } } }
+  if (!c) return;
+  c.likedBy = c.likedBy || [];
+  const liked = c.likedBy.includes(user.uid);
+  if (liked) { c.likedBy = c.likedBy.filter(u=>u!==user.uid); c.likeCount = Math.max(0,(c.likeCount||0)-1); }
+  else { c.likedBy.push(user.uid); c.likeCount = (c.likeCount||0)+1; }
+  // Re-render whichever view is open
+  if (commentsCache[commentsProofId]) _renderComments(commentsCache[commentsProofId]);
+  if (_shortsComments && _shortsCommentsProofId) _renderShortsCommentsList();
+  try {
+    await db.collection('comments').doc(commentId).update({
+      likedBy:  liked ? firebase.firestore.FieldValue.arrayRemove(user.uid) : firebase.firestore.FieldValue.arrayUnion(user.uid),
+      likeCount: firebase.firestore.FieldValue.increment(liked ? -1 : 1)
+    });
+  } catch(e) {}
+}
+function startReply(commentId, userName) {
+  replyingToCommentId = commentId;
+  const bar = document.getElementById('vdReplyBar');
+  const nm  = document.getElementById('vdReplyName');
+  if (nm) nm.textContent = '@' + userName;
+  if (bar) bar.style.display = 'flex';
+  const inp = document.getElementById('vdCommentInput'); if (inp) inp.focus();
+}
+function cancelReply() {
+  replyingToCommentId = null;
+  const bar = document.getElementById('vdReplyBar'); if (bar) bar.style.display = 'none';
 }
 
 function _renderNotifications() {
@@ -3651,7 +3712,7 @@ async function submitComment() {
   if(!text) return; if(text.length>500){showToast('Too long (max 500 chars)');return;}
   const newComment={proofId:commentsProofId,userId:user.uid,userName:user.name,userPhotoURL:user.picture||'',text,likeCount:0,likedBy:[],parentId:(replyingToCommentId||null),createdAt:firebase.firestore.Timestamp.now()};
   try{
-    await db.collection('comments').add(newComment); input.value='';
+    await db.collection('comments').add(newComment); input.value=''; cancelReply();
     const cached=commentsCache[commentsProofId]||[];
     commentsCache[commentsProofId]=[{...newComment,id:'tmp_'+Date.now()},...cached];
     _renderComments(commentsCache[commentsProofId]);
@@ -3919,41 +3980,77 @@ function shortsToggleComments() {
   }
 }
 
+let _shortsComments = [];
+let _shortsCommentsProofId = null;
+
 async function loadShortsComments(proofId) {
   const box = document.getElementById('shortsCommentsList');
   box.innerHTML = '<div style="color:var(--t3);text-align:center;padding:20px;">Loading...</div>';
   try {
-    const snap = await db.collection('comments').where('proofId','==',proofId).limit(50).get();
-    let comments = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-    // Most-liked + pinned on top
-    comments.sort((a,b) => {
-      if (a.pinned && !b.pinned) return -1;
-      if (!a.pinned && b.pinned) return 1;
-      return (b.likes||0) - (a.likes||0);
-    });
-    const ov = document.getElementById('shortsOverlay');
-    const isTaker = (typeof user !== 'undefined' && user && user.uid === ov.dataset.takerId);
-    document.getElementById('shortsCommentsCount').textContent = comments.length;
-    if (!comments.length) {
-      box.innerHTML = '<div style="color:var(--t3);text-align:center;padding:40px 20px;">No comments yet. Be the first!</div>';
-      return;
-    }
-    box.innerHTML = comments.map(c => `
-      <div class="shorts-comment ${c.pinned?'pinned':''}">
-        <div class="shorts-comment-av">${escHtml((c.userName||'U').charAt(0).toUpperCase())}</div>
-        <div class="shorts-comment-body">
-          <div class="shorts-comment-head">@${escHtml(c.userName||'user')} ${c.pinned?'<span class="shorts-pin-badge"><span class="mi" style="font-size:11px;">push_pin</span> Pinned</span>':''}</div>
-          <div class="shorts-comment-text">${escHtml(c.text||'')}</div>
-          <div class="shorts-comment-meta">
-            <span>${_fmtCount(c.likes||0)} likes</span>
-            ${isTaker ? `<span class="shorts-comment-pin" onclick="pinShortsComment('${proofId}','${c.id}',${!c.pinned})">${c.pinned?'Unpin':'Pin'}</span>` : ''}
-          </div>
-        </div>
-      </div>
-    `).join('');
+    const snap = await db.collection('comments').where('proofId','==',proofId).limit(80).get();
+    _shortsComments = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    _shortsCommentsProofId = proofId;
+    _renderShortsCommentsList();
   } catch(e) {
     box.innerHTML = '<div style="color:var(--t3);text-align:center;padding:20px;">Could not load comments</div>';
   }
+}
+function _renderShortsCommentsList() {
+  const box = document.getElementById('shortsCommentsList'); if (!box) return;
+  const comments = _shortsComments || [];
+  const ov = document.getElementById('shortsOverlay');
+  const isTaker = (typeof user !== 'undefined' && user && ov && user.uid === ov.dataset.takerId);
+  const cntEl = document.getElementById('shortsCommentsCount'); if (cntEl) cntEl.textContent = comments.length;
+  if (!comments.length) {
+    box.innerHTML = '<div style="color:var(--t3);text-align:center;padding:40px 20px;">No comments yet. Be the first!</div>';
+    return;
+  }
+  const tops = comments.filter(c => !c.parentId);
+  const byParent = {};
+  comments.forEach(c => { if (c.parentId) (byParent[c.parentId]=byParent[c.parentId]||[]).push(c); });
+  tops.sort((a,b)=>{ if(a.pinned&&!b.pinned)return -1; if(!a.pinned&&b.pinned)return 1; return (b.likeCount||b.likes||0)-(a.likeCount||a.likes||0); });
+  box.innerHTML = tops.map(c => _shortsCommentHtml(c, byParent[c.id]||[], isTaker)).join('');
+}
+function _shortsCommentHtml(c, replies, isTaker) {
+  const liked = (c.likedBy||[]).includes(user?.uid);
+  const likeN = c.likeCount || c.likes || 0;
+  return `<div class="shorts-comment ${c.pinned?'pinned':''}">
+    <div class="shorts-comment-av">${_avHtml(c.userPhotoURL, c.userName)}</div>
+    <div class="shorts-comment-body">
+      <div class="shorts-comment-head">@${escHtml(c.userName||'user')} ${c.pinned?'<span class="shorts-pin-badge"><span class="mi" style="font-size:11px;">push_pin</span> Pinned</span>':''}</div>
+      <div class="shorts-comment-text">${escHtml(c.text||'')}</div>
+      <div class="shorts-comment-acts">
+        <button class="cmt-act ${liked?'liked':''}" onclick="likeComment('${c.id}')"><span class="mi">thumb_up</span>${likeN>0?' '+_fmtCount(likeN):''}</button>
+        <button class="cmt-act" onclick="startShortsReply('${c.id}','${escHtml((c.userName||'').replace(/'/g,''))}')">Reply</button>
+        ${isTaker?`<span class="shorts-comment-pin" onclick="pinShortsComment('${_shortsCommentsProofId}','${c.id}',${!c.pinned})">${c.pinned?'Unpin':'Pin'}</span>`:''}
+      </div>
+      ${replies.length?`<div class="shorts-replies">${replies.map(r=>_shortsReplyHtml(r)).join('')}</div>`:''}
+    </div>
+  </div>`;
+}
+function _shortsReplyHtml(c) {
+  const liked = (c.likedBy||[]).includes(user?.uid);
+  const likeN = c.likeCount || c.likes || 0;
+  return `<div class="shorts-comment">
+    <div class="shorts-comment-av" style="width:26px;height:26px;font-size:11px;">${_avHtml(c.userPhotoURL, c.userName)}</div>
+    <div class="shorts-comment-body">
+      <div class="shorts-comment-head">@${escHtml(c.userName||'user')}</div>
+      <div class="shorts-comment-text">${escHtml(c.text||'')}</div>
+      <div class="shorts-comment-acts">
+        <button class="cmt-act ${liked?'liked':''}" onclick="likeComment('${c.id}')"><span class="mi">thumb_up</span>${likeN>0?' '+_fmtCount(likeN):''}</button>
+      </div>
+    </div>
+  </div>`;
+}
+function startShortsReply(commentId, userName) {
+  shortsReplyingTo = commentId;
+  const nm = document.getElementById('shortsReplyName'); if (nm) nm.textContent = '@'+userName;
+  const bar = document.getElementById('shortsReplyBar'); if (bar) bar.style.display='flex';
+  const inp = document.getElementById('shortsCommentInput'); if (inp) inp.focus();
+}
+function cancelShortsReply() {
+  shortsReplyingTo = null;
+  const bar = document.getElementById('shortsReplyBar'); if (bar) bar.style.display='none';
 }
 
 async function submitShortsComment() {
@@ -3969,6 +4066,7 @@ async function submitShortsComment() {
       proofId: pid, userId: user.uid, userName: user.name || 'user', userPhotoURL: user.picture || '', text,
       likes: 0, likeCount: 0, likedBy: [], parentId: (shortsReplyingTo || null), pinned: false, createdAt: firebase.firestore.Timestamp.now()
     });
+    cancelShortsReply();
     await db.collection('proofs').doc(pid).update({ commentCount: firebase.firestore.FieldValue.increment(1) }).catch(()=>{});
     const p = shortsFeed[shortsIndex];
     if (p) { p.commentCount = (p.commentCount||0)+1; document.getElementById('shortsCommentCount').textContent = _fmtCount(p.commentCount); }

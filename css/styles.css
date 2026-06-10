@@ -1888,6 +1888,28 @@ textarea.f-input{resize:vertical;min-height:84px;}
 .vd-comment-author { font-size: 13px; font-weight: 600; display: flex; align-items: center; gap: 8px; margin-bottom: 4px; }
 .vd-comment-time { font-size: 11px; color: var(--t3); font-weight: 400; }
 .vd-comment-text { font-size: 13px; color: var(--t2); line-height: 1.6; }
+/* Comment like / reply actions + nested replies + reply bar */
+.vd-comment-acts, .shorts-comment-acts { display:flex; align-items:center; gap:14px; margin-top:6px; }
+.cmt-act {
+  background:none; border:none; cursor:pointer; color:var(--t3);
+  font-family:inherit; font-size:12px; font-weight:600; padding:0;
+  display:flex; align-items:center; gap:4px;
+}
+.cmt-act .mi { font-size:15px; }
+.cmt-act:hover { color:var(--t1); }
+.cmt-act.liked { color:var(--blue); }
+.cmt-act.liked .mi { color:var(--blue); }
+.vd-replies { margin-top:10px; padding-left:14px; border-left:2px solid var(--border); display:flex; flex-direction:column; gap:12px; }
+.vd-reply .vd-comment-av { width:28px; height:28px; font-size:12px; }
+.shorts-replies { margin-top:10px; padding-left:12px; border-left:2px solid rgba(255,255,255,.12); display:flex; flex-direction:column; gap:12px; }
+.cmt-reply-bar {
+  display:flex; align-items:center; justify-content:space-between;
+  padding:8px 14px; font-size:12px; color:var(--t2);
+  background:rgba(255,255,255,.05); border-top:1px solid var(--border);
+}
+.cmt-reply-bar b { color:var(--t1); }
+.cmt-reply-bar button { background:none; border:none; color:var(--t3); cursor:pointer; display:flex; }
+.cmt-reply-bar .mi { font-size:18px; }
 .vd-no-comments { text-align: center; padding: 32px 16px; color: var(--t3); }
 .vd-no-comments .mi { font-size: 36px; display: block; margin-bottom: 8px; opacity: .3; }
 .vd-related-card { display: flex; gap: 10px; cursor: pointer; border-radius: 12px; padding: 8px; margin-bottom: 10px; transition: background .15s; }
