@@ -3825,13 +3825,16 @@ async function renderShort() {
   }
   _shortsSyncPlayIcon();
 
-  // Caption with 5-word truncation
+  // Caption (5-word preview) — "more" reveals full caption + description (merged, YouTube-style)
   const words = caption.split(' ');
+  const desc  = escHtml(d.desc || d.description || '');
+  const hasMore = words.length > 5 || !!desc;
   let capHtml;
-  if (words.length > 5 && !shortsCaptionExpanded) {
-    capHtml = words.slice(0,5).join(' ') + '... <span class="shorts-cap-toggle" onclick="shortsToggleCaption(true)">more</span>';
-  } else if (words.length > 5) {
-    capHtml = caption + ' <span class="shorts-cap-toggle" onclick="shortsToggleCaption(false)">less</span>';
+  if (!shortsCaptionExpanded && hasMore) {
+    const preview = words.length > 5 ? words.slice(0,5).join(' ') + '...' : caption;
+    capHtml = preview + ' <span class="shorts-cap-toggle" onclick="shortsToggleCaption(true)">more</span>';
+  } else if (shortsCaptionExpanded) {
+    capHtml = caption + (desc ? `<span class="shorts-desc">${desc}</span>` : '') + ' <span class="shorts-cap-toggle" onclick="shortsToggleCaption(false)">less</span>';
   } else {
     capHtml = caption;
   }
@@ -3858,14 +3861,10 @@ async function renderShort() {
   ov.dataset.creatorId = creatorId;
   ov.dataset.takerId = takerId;
 
-  // 3-dots menu content (hidden until opened)
+  // 3-dots menu — creator/taker/caption/description now live on the left, so keep this lean
   document.getElementById('shortsMenuBody').innerHTML = `
-    <div class="shorts-menu-row"><span class="shorts-menu-label">Caption</span><span>${caption}</span></div>
     <div class="shorts-menu-row"><span class="shorts-menu-label">Winning Amount</span><span style="color:var(--blue);font-weight:700;">Rs. ${bounty.toLocaleString('en-IN')}</span></div>
-    ${d.desc ? `<div class="shorts-menu-row"><span class="shorts-menu-label">Description</span><span>${escHtml(d.desc)}</span></div>` : ''}
     ${(d.rules && d.rules.length) ? `<div class="shorts-menu-row"><span class="shorts-menu-label">Rules</span><span>${d.rules.map(r=>escHtml(r)).join(' • ')}</span></div>` : ''}
-    <div class="shorts-menu-row"><span class="shorts-menu-label">Creator</span><span>@${creatorName} <button class="shorts-follow-mini" onclick="toggleFollow('${creatorId}','creator')">Follow</button></span></div>
-    <div class="shorts-menu-row"><span class="shorts-menu-label">Taker</span><span>@${takerName} <button class="shorts-follow-mini" onclick="toggleFollow('${takerId}','taker')">Follow</button></span></div>
     <button class="shorts-menu-action" onclick="shortsDownload()"><span class="mi">download</span> Download</button>
     <button class="shorts-menu-action" onclick="shortsCycleSpeed()"><span class="mi">slow_motion_video</span> Playback speed <span id="shortsSpeedLbl" style="margin-left:auto;color:var(--t3);">${_SHORTS_SPEEDS[_shortsSpeedIdx]}x</span></button>
     <button class="shorts-menu-action" onclick="shortsPiP()"><span class="mi">picture_in_picture_alt</span> Picture-in-picture</button>
