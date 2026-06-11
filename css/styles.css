@@ -2094,6 +2094,14 @@ textarea.f-input{resize:vertical;min-height:84px;}
 }
 .shorts-menu-action:hover{background:rgba(255,255,255,.12);}
 .shorts-menu-action .mi{font-size:20px;}
+/* "Details" expandable block (caption + description + rules) */
+.shorts-details-block{
+  margin:8px 0;padding:4px 12px;border-radius:10px;
+  background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.08);
+}
+.shorts-details-block .shorts-menu-row{border-bottom:1px solid rgba(255,255,255,.06);}
+.shorts-details-block .shorts-menu-row:last-child{border-bottom:none;}
+.shorts-rule-item{font-size:13px;color:var(--t1);line-height:1.5;}
 .shorts-menu-report{
   width:100%;margin-top:12px;padding:10px;border-radius:8px;cursor:pointer;
   background:rgba(255,0,51,0.1);border:1px solid rgba(255,0,51,0.3);color:#FF4E45;
