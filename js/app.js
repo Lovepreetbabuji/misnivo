@@ -3779,7 +3779,8 @@ function openShorts(proofId) {
   document.getElementById('shortsOverlay').classList.add('open');
   document.getElementById('shortsOverlay').classList.remove('comments-open');
   document.body.style.overflow = 'hidden';
-  renderShort();
+  _renderShortsSnapStack();   // build the native scroll-snap video stack
+  renderShort();              // fill the fixed overlay for the current short
 }
 
 function closeShorts() {
@@ -3794,17 +3795,11 @@ function closeShorts() {
 function shortsNav(dir) {
   const ni = shortsIndex + dir;
   if (ni < 0 || ni >= shortsFeed.length) return;
-  shortsIndex = ni;
-  shortsCaptionExpanded = false;
-  renderShort();
-  // Slide transition: next (dir>0) slides up from the bottom; prev (dir<0) slides down from the top
-  const wrap = document.getElementById('shortsVideoWrapLegacy');
-  if (wrap) {
-    wrap.classList.remove('slide-up','slide-down');
-    void wrap.offsetWidth;                 // force reflow so the animation restarts
-    wrap.classList.add(dir > 0 ? 'slide-up' : 'slide-down');
-    setTimeout(() => wrap.classList.remove('slide-up','slide-down'), 750);
-  }
+  // Smooth-scroll the snap container to the target; the scroll listener updates the rest
+  const c = document.getElementById('shortsSnapContainer');
+  if (!c) return;
+  const items = c.querySelectorAll('.shorts-snap-item');
+  if (items[ni]) items[ni].scrollIntoView({ behavior:'smooth', block:'start' });
 }
 
 async function renderShort() {
@@ -3818,13 +3813,8 @@ async function renderShort() {
   const takerId = p.takerId || '';
   const bounty = (d.bounty || p.dareBounty || 0);
 
-  // Video
-  const v = document.getElementById('shortsVideo');
-  if (v.getAttribute('src') !== p.videoURL) {
-    v.src = p.videoURL;
-    _shortsSpeedIdx = 0;            // new clip → reset playback speed
-    v.play().catch(()=>{});
-  }
+  // Video now lives in the scroll-snap stack; just reset speed + sync the play icon
+  _shortsSpeedIdx = 0;
   _shortsSyncPlayIcon();
 
   // Left caption: caption only (5-word preview + more/less). Description & rules
@@ -3905,30 +3895,36 @@ function _fmtCount(n) {
   return String(n || 0);
 }
 
-// ── Shorts custom video controls (top bar) ──────────────────────────────────
+// ── Shorts custom video controls (operate on the current snap-stack video) ───
+function _shortsCurrentVideo() {
+  const c = document.getElementById('shortsSnapContainer'); if (!c) return null;
+  const items = c.querySelectorAll('.shorts-snap-item');
+  const cur = items[shortsIndex];
+  return cur ? cur.querySelector('video') : null;
+}
 function shortsTogglePlay() {
-  const v = document.getElementById('shortsVideo'); if (!v) return;
+  const v = _shortsCurrentVideo(); if (!v) return;
   if (v.paused) v.play().catch(()=>{}); else v.pause();
   _shortsSyncPlayIcon();
 }
 function _shortsSyncPlayIcon() {
-  const v = document.getElementById('shortsVideo');
+  const v = _shortsCurrentVideo();
   const b = document.getElementById('shortsPlayBtn');
   if (v && b) b.querySelector('.mi').textContent = v.paused ? 'play_arrow' : 'pause';
 }
 function shortsToggleMute() {
-  const v = document.getElementById('shortsVideo');
+  const v = _shortsCurrentVideo();
   const b = document.getElementById('shortsMuteBtn');
   if (!v) return;
   v.muted = !v.muted;
   if (b) b.querySelector('.mi').textContent = v.muted ? 'volume_off' : 'volume_up';
 }
 function shortsSeekTo(val) {
-  const v = document.getElementById('shortsVideo');
+  const v = _shortsCurrentVideo();
   if (v && v.duration) v.currentTime = (val/1000) * v.duration;
 }
 function shortsOnTime() {
-  const v = document.getElementById('shortsVideo'); if (!v || !v.duration) return;
+  const v = _shortsCurrentVideo(); if (!v || !v.duration) return;
   const seek = document.getElementById('shortsSeek');
   const time = document.getElementById('shortsTime');
   if (seek) seek.value = Math.round((v.currentTime / v.duration) * 1000);
@@ -3949,7 +3945,7 @@ function shortsDownload() {
 let _shortsSpeedIdx = 0;
 const _SHORTS_SPEEDS = [1, 1.25, 1.5, 2, 0.5];
 function shortsCycleSpeed() {
-  const v = document.getElementById('shortsVideo'); if (!v) return;
+  const v = _shortsCurrentVideo(); if (!v) return;
   _shortsSpeedIdx = (_shortsSpeedIdx + 1) % _SHORTS_SPEEDS.length;
   v.playbackRate = _SHORTS_SPEEDS[_shortsSpeedIdx];
   const lbl = document.getElementById('shortsSpeedLbl');
@@ -3957,7 +3953,7 @@ function shortsCycleSpeed() {
   showToast('Speed: ' + _SHORTS_SPEEDS[_shortsSpeedIdx] + 'x');
 }
 async function shortsPiP() {
-  const v = document.getElementById('shortsVideo'); if (!v) return;
+  const v = _shortsCurrentVideo(); if (!v) return;
   try {
     if (document.pictureInPictureElement) await document.exitPictureInPicture();
     else if (v.requestPictureInPicture) await v.requestPictureInPicture();
@@ -4325,13 +4321,14 @@ function _renderShortsSnapStack() {
   if (!c) return;
   c.innerHTML = shortsFeed.map((p,i) => `
     <div class="shorts-snap-item" data-idx="${i}" data-proof-id="${p.id}">
-      <video class="shorts-snap-video" src="${p.videoURL}" loop playsinline preload="metadata" muted="${i!==shortsIndex}"></video>
+      <video class="shorts-snap-video" src="${p.videoURL}" loop playsinline preload="metadata"
+        onclick="shortsTogglePlay()" ontimeupdate="shortsOnTime()"></video>
     </div>
   `).join('');
-  // Scroll to current index
+  // Jump to current index, then play it
   setTimeout(() => {
     const items = c.querySelectorAll('.shorts-snap-item');
-    if (items[shortsIndex]) items[shortsIndex].scrollIntoView({ behavior:'instant', block:'start' });
+    if (items[shortsIndex]) items[shortsIndex].scrollIntoView({ behavior:'auto', block:'start' });
     _shortsPlayCurrent();
   }, 30);
   // On scroll-end, detect current index and play it
@@ -4341,11 +4338,11 @@ function _renderShortsSnapStack() {
     c.addEventListener('scroll', () => {
       clearTimeout(_snapTimer);
       _snapTimer = setTimeout(() => {
+        const cTop = c.getBoundingClientRect().top;   // compare item tops to the container top
         const items = c.querySelectorAll('.shorts-snap-item');
         let bestIdx = 0, bestDelta = Infinity;
         items.forEach((it, i) => {
-          const rect = it.getBoundingClientRect();
-          const delta = Math.abs(rect.top);
+          const delta = Math.abs(it.getBoundingClientRect().top - cTop);
           if (delta < bestDelta) { bestDelta = delta; bestIdx = i; }
         });
         if (bestIdx !== shortsIndex) {
@@ -4366,8 +4363,12 @@ function _shortsPlayCurrent() {
   const cur = items[shortsIndex];
   if (cur) {
     const v = cur.querySelector('video');
-    if (v) { v.muted = false; v.currentTime = 0; v.play().catch(()=>{}); }
+    if (v) { v.muted = false; v.currentTime = 0; v.playbackRate = _SHORTS_SPEEDS[_shortsSpeedIdx] || 1; v.play().catch(()=>{}); }
   }
+  // sync the control icons to the now-current video
+  _shortsSyncPlayIcon();
+  const mb = document.getElementById('shortsMuteBtn');
+  if (mb) mb.querySelector('.mi').textContent = 'volume_up';
 }
 
 // Cloudinary auto-thumbnail: video URL → static JPG frame (YouTube-style)

@@ -11,7 +11,7 @@
 <link href="https://fonts.googleapis.com/icon?family=Material+Icons+Round" rel="stylesheet"/>
 
 <!-- App Styles -->
-<link rel="stylesheet" href="css/styles.css?v=20260610e"/>
+<link rel="stylesheet" href="css/styles.css?v=20260611a"/>
 
 <!-- Firebase CDN -->
 <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
@@ -799,7 +799,7 @@
 <div class="toast" id="toast"></div>
 
 <!-- App Logic -->
-<script src="js/app.js?v=20260610e"></script>
+<script src="js/app.js?v=20260611a"></script>
 
 <!-- ══ v0.19 NEW MODALS ══ -->
 
@@ -982,19 +982,17 @@
 </div>
 
 <!-- ═══ YOUTUBE SHORTS PLAYER OVERLAY ═══ -->
-<div class="shorts-overlay" id="shortsOverlay"
-     onwheel="shortsWheel(event)" ontouchstart="shortsTouchStart(event)" ontouchend="shortsTouchEnd(event)">
+<div class="shorts-overlay" id="shortsOverlay">
   <button class="shorts-close" onclick="closeShorts()"><span class="mi">arrow_back</span></button>
 
   <div class="shorts-stage">
-    <!-- Video column -->
+    <!-- Video column: native scroll-snap stack of videos + a fixed overlay on top -->
     <div class="shorts-video-col">
-      <div class="shorts-snap-container" id="shortsSnapContainer" style="display:none;"></div>
-      <div class="shorts-video-wrap" id="shortsVideoWrapLegacy">
-        <video class="shorts-video" id="shortsVideo" loop playsinline
-          onclick="shortsTogglePlay()" ontimeupdate="shortsOnTime()"></video>
+      <div class="shorts-snap-container" id="shortsSnapContainer"></div>
 
-        <!-- Top-left controls — play/pause, mute, time (left-aligned, never over the 3-dots) -->
+      <!-- Fixed overlay over the centered video (pointer-events:none; only controls click) -->
+      <div class="shorts-overlay-layer" id="shortsOverlayLayer">
+        <!-- Top-left controls -->
         <div class="shorts-top-ctrl">
           <button onclick="shortsTogglePlay()" id="shortsPlayBtn" title="Play/Pause"><span class="mi">pause</span></button>
           <button onclick="shortsToggleMute()" id="shortsMuteBtn" title="Mute"><span class="mi">volume_up</span></button>
@@ -1019,7 +1017,7 @@
           <div class="shorts-menu-body" id="shortsMenuBody"></div>
         </div>
 
-        <!-- Bottom-left info: creator + taker + caption (YouTube Shorts style) -->
+        <!-- Bottom-left info: creator + taker + caption -->
         <div class="shorts-info">
           <div class="shorts-creator-row">
             <div class="shorts-creator-av" id="shortsCreatorAv">C</div>
