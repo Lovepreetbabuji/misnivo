@@ -3796,13 +3796,15 @@ function shortsNav(dir) {
   if (ni < 0 || ni >= shortsFeed.length) return;
   shortsIndex = ni;
   shortsCaptionExpanded = false;
-  // Scroll the snap container — animation handled by CSS scroll-behavior:smooth
-  const c = document.getElementById('shortsSnapContainer');
-  if (c) {
-    const items = c.querySelectorAll('.shorts-snap-item');
-    if (items[shortsIndex]) items[shortsIndex].scrollIntoView({ behavior:'smooth', block:'start' });
-  }
   renderShort();
+  // Slide transition: next (dir>0) slides up from the bottom; prev (dir<0) slides down from the top
+  const wrap = document.getElementById('shortsVideoWrapLegacy');
+  if (wrap) {
+    wrap.classList.remove('slide-up','slide-down');
+    void wrap.offsetWidth;                 // force reflow so the animation restarts
+    wrap.classList.add(dir > 0 ? 'slide-up' : 'slide-down');
+    setTimeout(() => wrap.classList.remove('slide-up','slide-down'), 400);
+  }
 }
 
 async function renderShort() {

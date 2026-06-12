@@ -2261,15 +2261,15 @@ html{scroll-behavior:smooth;}
 
 /* #10: Shorts swipe animation */
 @keyframes shortsSlideUp {
-  from { transform: translateY(60px); opacity: 0; }
+  from { transform: translateY(90px); opacity: 0; }
   to   { transform: translateY(0); opacity: 1; }
 }
 @keyframes shortsSlideDown {
-  from { transform: translateY(-60px); opacity: 0; }
+  from { transform: translateY(-90px); opacity: 0; }
   to   { transform: translateY(0); opacity: 1; }
 }
-.shorts-video-wrap.slide-up   { animation: shortsSlideUp .35s cubic-bezier(.22,1,.36,1); }
-.shorts-video-wrap.slide-down { animation: shortsSlideDown .35s cubic-bezier(.22,1,.36,1); }
+.shorts-video-wrap.slide-up   { animation: shortsSlideUp .38s cubic-bezier(.22,1,.36,1); }
+.shorts-video-wrap.slide-down { animation: shortsSlideDown .38s cubic-bezier(.22,1,.36,1); }
 
 /* YouTube thumbnail ratios: long 16:9, shorts 9:16 */
 /* width/height forced so legacy fixed-height mobile rules (.yt-thumb{height:100px})
