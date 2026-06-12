@@ -973,10 +973,10 @@ function renderDaresPage() {
     }
 
     const thumbHTML = thumb
-      ? `<div class="dare-list-thumb" style="background:#000;overflow:hidden;">
+      ? `<div class="dare-list-thumb" style="background:#000;overflow:hidden;cursor:pointer;" onclick="openDareDetail('${d.id}')">
            <img src="${thumb}" style="width:100%;height:100%;object-fit:cover;" loading="lazy"/>
          </div>`
-      : `<div class="dare-list-thumb" style="background:linear-gradient(135deg,${color}22,${color}55);">
+      : `<div class="dare-list-thumb" style="background:linear-gradient(135deg,${color}22,${color}55);cursor:pointer;" onclick="openDareDetail('${d.id}')">
            <span class="mi" style="color:${color};font-size:40px;">${icon}</span>
          </div>`;
 
@@ -993,7 +993,7 @@ function renderDaresPage() {
           <div style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:6px;align-items:center;">
             ${tagsHTML}${expiryBadge}
           </div>
-          <div class="dare-list-title">${escHtml(title)}</div>
+          <div class="dare-list-title" style="cursor:pointer;" onclick="openDareDetail('${d.id}')">${escHtml(title)}</div>
           <div class="dare-list-desc">${escHtml(desc)}</div>
         </div>
         <div class="dare-list-bottom">
@@ -3561,6 +3561,180 @@ function closeVideoDetail() {
   document.body.style.overflow='';
   const player=document.getElementById('vdPlayer'); player.pause(); player.src='';
   activeProof=null;
+}
+
+// ════════════════════════════════════════════════════════════════════
+//  ACTIVE DARE DETAIL PAGE — like / dislike / comment / report (2c)
+// ════════════════════════════════════════════════════════════════════
+let _ddCurrentId = null;
+
+function openDareDetail(dareId){
+  const d = dares.find(x=>x.id===dareId);
+  if (!d) { showToast('Dare not found'); return; }
+  _ddCurrentId = dareId;
+  const cat = d.tags?.[0] || d.cat || 'fitness';
+  const title = d.caption || d.title || 'Untitled Dare';
+  const reward = d.rewardAmount ?? d.bounty ?? 0;
+  const thumb = d.thumbnailURL || '';
+  const color = CAT_C[cat] || '#FF2D4A', icon = CAT_I[cat] || 'bolt';
+
+  document.getElementById('ddTopTitle').textContent = title;
+  document.getElementById('ddName').textContent = title;
+  document.getElementById('ddBounty').textContent = 'Rs. ' + reward.toLocaleString('en-IN');
+  document.getElementById('ddMeta').textContent = `${d.creator||'—'} · ${d.takers||0} ${d.takerSelectionMode==='creator_picks'?'applicants':'takers'} · ${_relTimeStr(d.date)}`;
+
+  document.getElementById('ddHero').innerHTML = thumb
+    ? `<img src="${thumb}" alt="" style="width:100%;height:100%;object-fit:cover;display:block;"/>`
+    : `<div class="dd-hero-bg" style="background:linear-gradient(135deg,${color}22,${color}55);"><span class="mi" style="color:${color};font-size:72px;">${icon}</span></div>`;
+
+  document.getElementById('ddTags').innerHTML = (d.tags?.length ? d.tags : [cat]).map(t=>`<span class="dare-tag-pill">#${escHtml(t)}</span>`).join('');
+
+  document.getElementById('ddCreator').innerHTML = `
+    <div class="dd-creator-av">${_avHtml(d.creatorPhotoURL, d.creator)}</div>
+    <div class="dd-creator-info">
+      <div class="dd-creator-name">${escHtml(d.creator||'Creator')}</div>
+      <div class="dd-creator-sub">@${escHtml(d.creatorUsername || (d.creator||'creator'))}</div>
+    </div>`;
+
+  const desc = d.description || d.desc || '';
+  document.getElementById('ddDesc').innerHTML = desc ? `<div class="dd-sec-label">Description</div><p class="dd-desc-text">${escHtml(desc)}</p>` : '';
+  const rules = (d.rules||[]).filter(r=>r && r.trim());
+  document.getElementById('ddRules').innerHTML = rules.length
+    ? `<div class="dd-sec-label">Rules</div>${rules.map(r=>`<div class="dd-rule">• ${escHtml(r)}</div>`).join('')}` : '';
+
+  document.getElementById('ddCta').innerHTML = _ddCtaHtml(d);
+  _ddUpdateLikeUI(d);
+
+  const av = document.getElementById('ddInputAv');
+  if (user?.picture) av.innerHTML = `<img src="${user.picture}" style="width:100%;height:100%;object-fit:cover;border-radius:50%;" alt="av"/>`;
+  else if (user) av.textContent = user.name[0].toUpperCase();
+
+  loadDareTopComment(dareId);
+  renderDareMore(dareId);
+
+  const ov = document.getElementById('dareDetailOverlay');
+  ov.classList.add('open');
+  ov.scrollTop = 0;
+  document.body.style.overflow = 'hidden';
+}
+function closeDareDetail(){
+  document.getElementById('dareDetailOverlay').classList.remove('open');
+  document.body.style.overflow = '';
+  _ddCurrentId = null;
+}
+function _ddReport(){
+  const d = dares.find(x=>x.id===_ddCurrentId); if (!d) return;
+  openReportModal('dare', _ddCurrentId, d.caption || d.title || 'this dare');
+}
+function _ddCtaHtml(d){
+  const isMine = d.creatorUid === user?.uid;
+  const myEntry = (acceptedDares||[]).find(a=>a.dareId===d.id);
+  if (isMine) return `<button class="btn-yours" style="padding:11px 22px;border-radius:50px;width:auto;">Your Dare</button>`;
+  if (myEntry){
+    if (myEntry.proofStatus==='submitted' || myEntry.proofStatus==='approved')
+      return `<button class="btn-proof-done" style="padding:11px 18px;border-radius:50px;"><span class="mi">check_circle</span>Submitted</button>`;
+    if (myEntry.applicantStatus==='pending')
+      return `<button class="btn-proof-done" style="padding:11px 18px;border-radius:50px;"><span class="mi">hourglass_empty</span>Applied</button>`;
+    return `<button class="btn-proof" style="padding:11px 18px;border-radius:50px;" onclick="closeDareDetail();openProof('${d.id}')"><span class="mi">video_call</span>Submit Proof</button>`;
+  }
+  return `<button class="btn-accept" style="padding:11px 26px;border-radius:50px;" onclick="acceptDare('${d.id}')">${d.takerSelectionMode==='creator_picks'?'Apply':'Accept'}</button>`;
+}
+function _ddUpdateLikeUI(d){
+  const liked = user && (d.likedBy||[]).includes(user.uid);
+  const disliked = user && (d.dislikedBy||[]).includes(user.uid);
+  document.getElementById('ddLikeBtn').classList.toggle('liked', !!liked);
+  document.getElementById('ddDislikeBtn').classList.toggle('liked', !!disliked);
+  document.getElementById('ddLikeCount').textContent = _fmtCount(d.likeCount||0);
+  document.getElementById('ddDislikeCount').textContent = _fmtCount(d.dislikeCount||0);
+}
+async function likeDare(){
+  if (!user) { showToast('Sign in to like'); return; }
+  const d = dares.find(x=>x.id===_ddCurrentId); if (!d) return;
+  d.likedBy = d.likedBy||[]; d.dislikedBy = d.dislikedBy||[];
+  const liked = d.likedBy.includes(user.uid);
+  const upd = {};
+  if (liked){
+    d.likedBy = d.likedBy.filter(u=>u!==user.uid); d.likeCount = Math.max(0,(d.likeCount||0)-1);
+    upd.likedBy = firebase.firestore.FieldValue.arrayRemove(user.uid); upd.likeCount = firebase.firestore.FieldValue.increment(-1);
+  } else {
+    d.likedBy.push(user.uid); d.likeCount = (d.likeCount||0)+1;
+    upd.likedBy = firebase.firestore.FieldValue.arrayUnion(user.uid); upd.likeCount = firebase.firestore.FieldValue.increment(1);
+    if (d.dislikedBy.includes(user.uid)){ d.dislikedBy = d.dislikedBy.filter(u=>u!==user.uid); d.dislikeCount = Math.max(0,(d.dislikeCount||0)-1);
+      upd.dislikedBy = firebase.firestore.FieldValue.arrayRemove(user.uid); upd.dislikeCount = firebase.firestore.FieldValue.increment(-1); }
+  }
+  _ddUpdateLikeUI(d);
+  db.collection('dares').doc(d.id).update(upd).catch(()=>{});
+}
+async function dislikeDare(){
+  if (!user) { showToast('Sign in to dislike'); return; }
+  const d = dares.find(x=>x.id===_ddCurrentId); if (!d) return;
+  d.likedBy = d.likedBy||[]; d.dislikedBy = d.dislikedBy||[];
+  const disliked = d.dislikedBy.includes(user.uid);
+  const upd = {};
+  if (disliked){
+    d.dislikedBy = d.dislikedBy.filter(u=>u!==user.uid); d.dislikeCount = Math.max(0,(d.dislikeCount||0)-1);
+    upd.dislikedBy = firebase.firestore.FieldValue.arrayRemove(user.uid); upd.dislikeCount = firebase.firestore.FieldValue.increment(-1);
+  } else {
+    d.dislikedBy.push(user.uid); d.dislikeCount = (d.dislikeCount||0)+1;
+    upd.dislikedBy = firebase.firestore.FieldValue.arrayUnion(user.uid); upd.dislikeCount = firebase.firestore.FieldValue.increment(1);
+    if (d.likedBy.includes(user.uid)){ d.likedBy = d.likedBy.filter(u=>u!==user.uid); d.likeCount = Math.max(0,(d.likeCount||0)-1);
+      upd.likedBy = firebase.firestore.FieldValue.arrayRemove(user.uid); upd.likeCount = firebase.firestore.FieldValue.increment(-1); }
+  }
+  _ddUpdateLikeUI(d);
+  db.collection('dares').doc(d.id).update(upd).catch(()=>{});
+}
+// Dare comments reuse the comments collection (proofId = dareId)
+async function loadDareTopComment(dareId){
+  const el = document.getElementById('ddTopComment');
+  el.innerHTML = '<div style="color:var(--t3);font-size:13px;padding:10px 0;">Loading...</div>';
+  try {
+    const snap = await db.collection('comments').where('proofId','==',dareId).limit(50).get();
+    let cs = snap.docs.map(doc=>({id:doc.id,...doc.data()})).filter(c=>!c.parentId);
+    if (!cs.length){ el.innerHTML = '<div class="vd-no-comments"><span class="mi">chat_bubble_outline</span><div>No comments yet — be the first!</div></div>'; return; }
+    cs.sort((a,b)=>(b.likeCount||b.likes||0)-(a.likeCount||a.likes||0));
+    const c = cs[0];
+    const extra = cs.length>1 ? `<div class="dd-more-comments">+ ${cs.length-1} more comment${cs.length-1>1?'s':''}</div>` : '';
+    el.innerHTML = `<div class="vd-comment">
+      <div class="vd-comment-av">${_avHtml(c.userPhotoURL, c.userName)}</div>
+      <div class="vd-comment-body">
+        <div class="vd-comment-author">${escHtml(c.userName||'—')}<span class="vd-comment-time">${c.createdAt&&c.createdAt.toDate?_timeAgo(c.createdAt.toDate()):''}</span></div>
+        <div class="vd-comment-text">${escHtml(c.text||'')}</div>
+      </div></div>${extra}`;
+  } catch(e){ el.innerHTML = '<div style="color:var(--t3);font-size:13px;">Could not load comment</div>'; }
+}
+async function submitDareComment(){
+  if (!user) { showToast('Sign in to comment'); return; }
+  const inp = document.getElementById('ddCommentInput'); const text = (inp.value||'').trim();
+  if (!text) return; if (text.length>500){ showToast('Too long (max 500 chars)'); return; }
+  try {
+    await db.collection('comments').add({
+      proofId: _ddCurrentId, userId: user.uid, userName: user.name, userPhotoURL: user.picture||'',
+      text, likeCount: 0, likedBy: [], parentId: null, createdAt: firebase.firestore.Timestamp.now()
+    });
+    inp.value = '';
+    loadDareTopComment(_ddCurrentId);
+  } catch(e){ showToast('Could not post comment'); }
+}
+function renderDareMore(excludeId){
+  const el = document.getElementById('ddMoreDares'); if (!el) return;
+  const now = new Date();
+  const active = (dares||[]).filter(d=>{
+    if (d.id===excludeId || d.completed) return false;
+    if (d.expiresAt){ const exp = d.expiresAt.toDate?d.expiresAt.toDate():new Date(d.expiresAt); if (exp<now) return false; }
+    return true;
+  }).slice(0, 12);
+  if (!active.length){ el.innerHTML = '<div class="exp-empty">No other active dares.</div>'; return; }
+  el.innerHTML = active.map(d=>{
+    const cat=d.tags?.[0]||d.cat||'fitness'; const title=d.caption||d.title||'Untitled'; const reward=d.rewardAmount??d.bounty??0;
+    const color=CAT_C[cat]||'#717171'; const icon=CAT_I[cat]||'bolt'; const thumb=d.thumbnailURL||'';
+    const thumbHTML = thumb
+      ? `<div class="dare-list-thumb" style="background:#000;overflow:hidden;"><img src="${thumb}" style="width:100%;height:100%;object-fit:cover;" loading="lazy"/></div>`
+      : `<div class="dare-list-thumb" style="background:linear-gradient(135deg,${color}22,${color}55);"><span class="mi" style="color:${color};font-size:36px;">${icon}</span></div>`;
+    return `<div class="dare-list-card" style="cursor:pointer;" onclick="openDareDetail('${d.id}')">${thumbHTML}
+      <div class="dare-list-body"><div><div class="dare-list-title">${escHtml(title)}</div>
+        <div style="font-size:12px;color:var(--t3);margin-top:3px;">${d.creator||'—'} · ${d.takers||0} takers</div></div>
+        <div class="dare-list-bottom"><span class="dare-list-bounty">Rs.${reward.toLocaleString('en-IN')}</span></div></div></div>`;
+  }).join('');
 }
 
 function doTrendingSearch(term){document.getElementById('searchInput').value=term;searchType='dares';handleSearchImmediate();}

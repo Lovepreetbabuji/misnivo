@@ -1923,6 +1923,24 @@ textarea.f-input{resize:vertical;min-height:84px;}
 .vd-related-meta   { font-size: 11px; color: var(--t3); }
 .vd-related-bounty { font-size: 11px; color: var(--blue2); font-weight: 600; margin-top: 3px; }
 
+/* ─── ACTIVE DARE DETAIL PAGE (2c) ───────────────────────────── */
+.dd-wrap { max-width: 760px; margin: 0 auto; padding: 0 16px 80px; }
+.dd-hero { width: 100%; aspect-ratio: 16/9; border-radius: 14px; overflow: hidden; background: #1f1f1f; margin-bottom: 16px; }
+.dd-hero-bg { width:100%; height:100%; display:flex; align-items:center; justify-content:center; }
+.dd-body { }
+.dd-tags { display:flex; flex-wrap:wrap; gap:6px; margin-bottom:10px; }
+.dd-creator { display:flex; align-items:center; gap:12px; padding:12px 0; border-top:1px solid var(--border); border-bottom:1px solid var(--border); margin:14px 0; }
+.dd-creator-av { width:42px; height:42px; border-radius:50%; background:#373737; display:flex; align-items:center; justify-content:center; font-weight:700; color:#fff; font-size:17px; flex-shrink:0; overflow:hidden; }
+.dd-creator-name { font-size:14px; font-weight:600; color:var(--t1); }
+.dd-creator-sub { font-size:12px; color:var(--t3); margin-top:2px; }
+.dd-cta { margin: 4px 0 16px; }
+.dd-sec-label { font-size:11px; font-weight:700; color:var(--blue2); text-transform:uppercase; letter-spacing:.6px; margin:14px 0 8px; }
+.dd-desc-text { font-size:14px; color:var(--t2); line-height:1.6; white-space:pre-wrap; }
+.dd-rule { font-size:13px; color:var(--t2); line-height:1.6; padding:2px 0; }
+.dd-comments { margin-top:22px; padding-top:18px; border-top:1px solid var(--border); }
+.dd-more-comments { font-size:12px; color:var(--blue2); font-weight:600; margin-top:10px; padding-left:46px; }
+.dd-more { margin-top:30px; padding-top:20px; border-top:1px solid var(--border); }
+
 /* ─── EXPLORER / TRENDING PAGE ───────────────────────────────── */
 .exp-tabs { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 16px; scrollbar-width: none; margin-bottom: 8px; }
 .exp-tabs::-webkit-scrollbar { display: none; }
