@@ -3803,7 +3803,7 @@ function shortsNav(dir) {
     wrap.classList.remove('slide-up','slide-down');
     void wrap.offsetWidth;                 // force reflow so the animation restarts
     wrap.classList.add(dir > 0 ? 'slide-up' : 'slide-down');
-    setTimeout(() => wrap.classList.remove('slide-up','slide-down'), 400);
+    setTimeout(() => wrap.classList.remove('slide-up','slide-down'), 750);
   }
 }
 
