@@ -2220,14 +2220,16 @@ textarea.f-input{resize:vertical;min-height:84px;}
 
 /* ─── MOBILE: full-screen YouTube Shorts style ─── */
 @media(max-width:768px){
-  .shorts-video-col{height:100vh;width:100vw;max-width:100vw;aspect-ratio:auto;border-radius:0;}
+  /* height:100% (of the fixed overlay = real viewport) avoids the 100vh mobile
+     URL-bar overshoot that pushed slides/overlay off-screen */
+  .shorts-video-col{height:100%;width:100vw;max-width:100vw;aspect-ratio:auto;border-radius:0;}
   .shorts-snap-container{border-radius:0;}
   .shorts-video{object-fit:contain;}
-  .shorts-stage{gap:0;}
+  .shorts-stage{gap:0;width:100%;}
   .shorts-nav{display:none;}
-  .shorts-actions{position:absolute;right:8px;bottom:90px;z-index:8;background:none;}
+  .shorts-slide-box .shorts-actions{right:8px;bottom:96px;}
   .shorts-act{background:rgba(0,0,0,0.3);}
-  .shorts-info{right:72px;bottom:80px;}
+  .shorts-info{right:72px;bottom:90px;}
   .shorts-comments{width:100%;top:auto;bottom:0;height:70%;border-radius:16px 16px 0 0;transform:translateY(100%);}
   .shorts-overlay.comments-open .shorts-comments{transform:translateY(0);}
   .shorts-overlay.comments-open .shorts-stage{transform:none;}
