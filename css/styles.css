@@ -2199,6 +2199,32 @@ textarea.f-input{resize:vertical;min-height:84px;}
 .shorts-nav-btn.disabled{opacity:.3;pointer-events:none;}
 .shorts-nav-btn .mi{font-size:28px;}
 
+/* ── (D) Desktop layout: rail right of video + info below, all OUTSIDE (YouTube desktop) ── */
+.shorts-center{ display:flex; flex-direction:column; align-items:flex-start; }
+.shorts-watch{ display:flex; align-items:flex-end; gap:14px; }
+.shorts-info-fixed{ display:none; }   /* desktop-only */
+.shorts-fixed-rail{ display:none; }   /* desktop-only */
+@media(min-width:769px){
+  .shorts-video-col{ height:80vh; }
+  .shorts-info-fixed{
+    display:block; width:100%; max-width:500px; padding:14px 6px 0; color:#fff;
+  }
+  .shorts-info-fixed .shorts-caption{ text-shadow:none; }
+  .shorts-fixed-rail{
+    display:flex !important; position:static; align-self:flex-end;
+    background:none; padding-bottom:8px; margin:0;
+  }
+  .shorts-fixed-rail .shorts-act{ background:rgba(255,255,255,0.1); }
+  /* on desktop use the fixed rail/info — hide the per-slide overlay versions */
+  .shorts-slide-box .shorts-actions,
+  .shorts-slide-box .shorts-info,
+  .shorts-slide-box .shorts-dots{ display:none !important; }
+}
+@media(max-width:768px){
+  /* wrappers collapse so the video-col stays full-screen */
+  .shorts-center, .shorts-watch{ display:contents; }
+}
+
 /* Comments panel */
 .shorts-comments{
   position:absolute;top:0;right:0;bottom:0;width:400px;

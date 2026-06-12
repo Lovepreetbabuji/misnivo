@@ -4081,7 +4081,48 @@ async function renderShort() {
   }
 
   if (shortsCommentsOpen) loadShortsComments(p.id);
+
+  // Desktop-only fixed rail + info beside/below the video (hidden on mobile via CSS)
+  _shortsFillFixed(p, d);
 }
+
+// Populate the desktop fixed info + rail for the current short
+function _shortsFillFixed(p, d){
+  const info = document.getElementById('shortsFixedInfo');
+  if (info){
+    const creatorName = escHtml(d.creator || p.posterName || 'Creator');
+    const takerName = escHtml(p.takerName || 'Taker');
+    const creatorId = d.creatorUid || p.posterId || '';
+    const caption = escHtml(d.caption || d.title || p.dareTitle || 'Dare Video');
+    const words = caption.split(' ');
+    const capPreview = words.length>5 ? words.slice(0,5).join(' ')+'...' : caption;
+    const capToggle = words.length>5 ? ` <span class="shorts-cap-toggle" onclick="shortsCapToggleSlide(this)">more</span>` : '';
+    info.innerHTML = `
+      <div class="shorts-creator-row">
+        <div class="shorts-creator-av">${_avHtml(d.creatorPhotoURL||p.posterPhotoURL, creatorName)}</div>
+        <span class="shorts-creator-name">@${creatorName}</span>
+        <button class="shorts-follow" onclick="toggleFollow('${creatorId}','creator')">Follow</button>
+      </div>
+      <div class="shorts-taker-row"><span class="shorts-taker-label">Taker</span><span class="shorts-taker-name">@${takerName}</span></div>
+      <div class="shorts-caption" data-preview="${capPreview}" data-full="${caption}">${capPreview}${capToggle}</div>`;
+  }
+  const liked = (typeof userLikes!=='undefined' && userLikes.includes(p.id));
+  const lb = document.getElementById('shortsFxLikeBtn'); if (lb) lb.classList.toggle('liked', liked);
+  const lc = document.getElementById('shortsFxLikeCount'); if (lc) lc.textContent = _fmtCount(p.likeCount||0);
+  const cc = document.getElementById('shortsFxCommentCount'); if (cc) cc.textContent = _fmtCount(p.commentCount||0);
+  const vc = document.getElementById('shortsFxViewCount'); if (vc) vc.textContent = _fmtCount(p.viewCount||0);
+}
+async function shortsFxLike(){
+  const p = shortsFeed[shortsIndex]; if (!p) return;
+  if (typeof guestCheck==='function' && guestCheck()) return;
+  if (typeof toggleLike==='function') await toggleLike(p.id);
+  const liked = userLikes.includes(p.id);
+  const lb = document.getElementById('shortsFxLikeBtn'); if (lb) lb.classList.toggle('liked', liked);
+  const lc = document.getElementById('shortsFxLikeCount'); if (lc) lc.textContent = _fmtCount(p.likeCount||0);
+  const sb = document.querySelector('.shorts-snap-item.active .shorts-like-btn'); if (sb) sb.classList.toggle('liked', liked);
+}
+function shortsFxComments(){ const p = shortsFeed[shortsIndex]; if (p) shortsOpenComments(p.id); }
+function shortsFxMenu(){ const p = shortsFeed[shortsIndex]; if (p) shortsOpenMenu(p.id); }
 
 // ── Per-slide control handlers (each slide operates on its own video) ──
 function _shortsSlideVid(el){ const it = el.closest('.shorts-snap-item'); return it ? it.querySelector('video') : null; }
