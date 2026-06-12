@@ -3135,16 +3135,33 @@ const GUEST_ACTION_MSGS = {
   default:     { icon:'🔐', title:'Create a free account', msg:'Sign up to unlock all features — post dares, accept challenges, and earn money.' },
 };
 const GUEST_BLOCKED_PAGES = ['profile', 'accepted'];
-const COMMENT_MILESTONES = [1,100,1000,10000,100000];
-const LIKE_MILESTONES    = [1,100,1000,10000,100000];
-const VIEW_MILESTONES    = [1,10,100,1000,10000];
+const COMMENT_MILESTONES = [1,5,10,100,1000,10000,100000];
+const LIKE_MILESTONES    = [1,5,10,100,1000,10000,100000];
+const VIEW_MILESTONES    = [1000,2000,10000,50000,100000];
 
 // ═══════ ENGAGEMENT FUNCTIONS ═══════
-async function _checkCommentMilestone(proofId,newCount,takerId,dareTitle){if(!takerId||takerId===user?.uid||!COMMENT_MILESTONES.includes(newCount))return;const label=newCount===1?'first comment':`${newCount.toLocaleString('en-IN')} comments`;await _sendNotification(takerId,'comment_milestone',`💬 ${label}!`,`Your video "${(dareTitle||'').slice(0,30)}" got its ${label}!`,proofId);}
-
-async function _checkLikeMilestone(proofId,newCount,takerId,dareTitle){if(!takerId||takerId===user?.uid||!LIKE_MILESTONES.includes(newCount))return;const label=newCount===1?'first like':`${newCount.toLocaleString('en-IN')} likes`;await _sendNotification(takerId,'like_milestone',` ${label}!`,`Your video "${(dareTitle||'').slice(0,30)}" got its ${label}!`,proofId);}
-
-async function _checkViewMilestone(proofId,newCount,takerId,dareTitle){if(!takerId||takerId===user?.uid||!VIEW_MILESTONES.includes(newCount))return;const label=`${newCount.toLocaleString('en-IN')} ${newCount===1?'view':'views'}`;await _sendNotification(takerId,'view_milestone',` ${label}!`,`"${(dareTitle||'').slice(0,30)}" just hit ${label}!`,proofId);}
+function _findProof(proofId){
+  return (typeof allProofs!=='undefined' && allProofs.find(x=>x.id===proofId))
+      || (typeof homeProofs!=='undefined' && homeProofs.find(x=>x.id===proofId)) || null;
+}
+// Send a "Congratulations" milestone notification at most ONCE per milestone.
+// Tracks sent milestones in proof.milestonesSent (e.g. { like_5:true, view_1000:true }).
+async function _checkMilestone(proofId, kind, newCount, milestones){
+  const p = _findProof(proofId);
+  if (!p || !p.takerId || p.takerId === user?.uid) return;
+  const sent = p.milestonesSent || (p.milestonesSent = {});
+  const newly = milestones.filter(m => newCount >= m && !sent[kind+'_'+m]);
+  if (!newly.length) return;
+  const m = Math.max(...newly);                 // notify for the highest newly-reached milestone
+  sent[kind+'_'+m] = true;
+  db.collection('proofs').doc(proofId).update({ ['milestonesSent.'+kind+'_'+m]: true }).catch(()=>{});
+  const noun = kind==='like' ? 'likes' : kind==='comment' ? 'comments' : 'views';
+  await _sendNotification(p.takerId, kind+'_milestone', '🎉 Congratulations!',
+    `Your video "${(p.dareTitle||'').slice(0,30)}" reached ${m.toLocaleString('en-IN')} ${noun}!`, proofId);
+}
+async function _checkCommentMilestone(proofId,newCount){ await _checkMilestone(proofId,'comment',newCount,COMMENT_MILESTONES); }
+async function _checkLikeMilestone(proofId,newCount){    await _checkMilestone(proofId,'like',   newCount,LIKE_MILESTONES); }
+async function _checkViewMilestone(proofId,newCount){    await _checkMilestone(proofId,'view',   newCount,VIEW_MILESTONES); }
 
 function _clearGuestSession() {
   if (guestTimer)    { clearTimeout(guestTimer);    guestTimer    = null; }
@@ -3886,6 +3903,7 @@ async function renderShort() {
     const cur = items[shortsIndex];
     const vc = cur ? cur.querySelector('.shorts-views-count') : null;
     if (vc) vc.textContent = _fmtCount(p.viewCount);
+    _checkViewMilestone(p.id, p.viewCount);
   }
 
   if (shortsCommentsOpen) loadShortsComments(p.id);
@@ -4157,6 +4175,7 @@ async function submitShortsComment() {
     const p = (allProofs.find(x=>x.id===pid)) || (homeProofs.find(x=>x.id===pid)) || shortsFeed[shortsIndex];
     if (p) {
       p.commentCount = (p.commentCount||0)+1;
+      _checkCommentMilestone(pid, p.commentCount);
       const cc = document.querySelector('.shorts-snap-item.active .shorts-comment-count');
       if (cc) cc.textContent = _fmtCount(p.commentCount);
     }
