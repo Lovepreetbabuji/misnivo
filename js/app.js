@@ -4166,9 +4166,12 @@ async function shortsLikeSlide(proofId, btn){
   if (lc && p) lc.textContent = _fmtCount(p.likeCount || 0);
 }
 function shortsOpenMenu(proofId){
+  const menu = document.getElementById('shortsMenu');
+  if (menu.classList.contains('open')){ menu.classList.remove('open'); _shortsSetDotsIcon(false); return; }
   const p = (allProofs.find(x=>x.id===proofId)) || (homeProofs.find(x=>x.id===proofId)); if (!p) return;
   _shortsBuildMenu(p);
-  document.getElementById('shortsMenu').classList.add('open');
+  menu.classList.add('open');
+  _shortsSetDotsIcon(true);
 }
 function shortsOpenComments(proofId){
   const ov = document.getElementById('shortsOverlay');
@@ -4408,12 +4411,38 @@ async function pinShortsComment(proofId, commentId, pin) {
 
 // 3-dots menu toggle
 function shortsToggleMenu() {
-  document.getElementById('shortsMenu').classList.toggle('open');
+  const open = document.getElementById('shortsMenu').classList.toggle('open');
+  _shortsSetDotsIcon(open);
 }
-// "Details" inside the 3-dots menu → caption + description + rules
+// Toggle the 3-dots icon → "close" (X) while the menu is open
+function _shortsSetDotsIcon(open){
+  const icon = open ? 'close' : 'more_vert';
+  document.querySelectorAll('.shorts-dots .mi').forEach(el=>el.textContent=icon);
+  const more = document.querySelector('#shortsFxMoreBtn .mi'); if (more) more.textContent = icon;
+}
+// "Details": desktop → show in the left info area (above usernames); mobile → expand in the menu box
 function shortsToggleDetails() {
-  const b = document.getElementById('shortsDetailsBlock');
-  if (b) b.style.display = (b.style.display === 'none' || !b.style.display) ? 'block' : 'none';
+  if (window.innerWidth >= 769){
+    _shortsShowDetailsLeft();
+    document.getElementById('shortsMenu').classList.remove('open');
+    _shortsSetDotsIcon(false);
+  } else {
+    const b = document.getElementById('shortsDetailsBlock');
+    if (b) b.style.display = (b.style.display === 'none' || !b.style.display) ? 'block' : 'none';
+  }
+}
+function _shortsShowDetailsLeft(){
+  const p = shortsFeed[shortsIndex]; if (!p) return;
+  const d = (typeof dares!=='undefined' ? dares.find(x=>x.id===p.dareId) : null) || {};
+  const desc = escHtml(d.desc || d.description || '');
+  const rules = (d.rules||[]).filter(r=>r && r.trim());
+  const info = document.getElementById('shortsFixedInfo'); if (!info) return;
+  let block = document.getElementById('shortsDetailsLeft');
+  if (!block){ block = document.createElement('div'); block.id='shortsDetailsLeft'; block.className='shorts-details-left'; info.prepend(block); }
+  block.innerHTML = `
+    <div class="dd-sec-label">Description</div><p class="dd-desc-text">${desc || '—'}</p>
+    ${rules.length ? `<div class="dd-sec-label">Rules</div>${rules.map(r=>`<div class="dd-rule">• ${escHtml(r)}</div>`).join('')}` : ''}
+    <button class="shorts-cap-toggle" style="margin-top:8px;" onclick="document.getElementById('shortsDetailsLeft')?.remove()">Hide details</button>`;
 }
 
 // Simple follow (creator/taker) — reuse if toggleFollow exists, else basic
