@@ -11,7 +11,7 @@
 <link href="https://fonts.googleapis.com/icon?family=Material+Icons+Round" rel="stylesheet"/>
 
 <!-- App Styles -->
-<link rel="stylesheet" href="css/styles.css?v=20260611a"/>
+<link rel="stylesheet" href="css/styles.css?v=20260611b"/>
 
 <!-- Firebase CDN -->
 <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
@@ -799,7 +799,7 @@
 <div class="toast" id="toast"></div>
 
 <!-- App Logic -->
-<script src="js/app.js?v=20260611a"></script>
+<script src="js/app.js?v=20260611b"></script>
 
 <!-- ══ v0.19 NEW MODALS ══ -->
 
@@ -986,79 +986,18 @@
   <button class="shorts-close" onclick="closeShorts()"><span class="mi">arrow_back</span></button>
 
   <div class="shorts-stage">
-    <!-- Video column: native scroll-snap stack of videos + a fixed overlay on top -->
+    <!-- Native scroll-snap stack; each slide carries its own overlay (built in JS) -->
     <div class="shorts-video-col">
       <div class="shorts-snap-container" id="shortsSnapContainer"></div>
-
-      <!-- Fixed overlay over the centered video (pointer-events:none; only controls click) -->
-      <div class="shorts-overlay-layer" id="shortsOverlayLayer">
-        <!-- Top-left controls -->
-        <div class="shorts-top-ctrl">
-          <button onclick="shortsTogglePlay()" id="shortsPlayBtn" title="Play/Pause"><span class="mi">pause</span></button>
-          <button onclick="shortsToggleMute()" id="shortsMuteBtn" title="Mute"><span class="mi">volume_up</span></button>
-          <span class="shorts-time" id="shortsTime">0:00</span>
-        </div>
-
-        <!-- 3-dots button -->
-        <button class="shorts-dots" onclick="shortsToggleMenu()"><span class="mi">more_vert</span></button>
-
-        <!-- Seek bar (BOTTOM, full-width, red) -->
-        <div class="shorts-seek-wrap">
-          <input type="range" id="shortsSeek" class="shorts-seek" min="0" max="1000" value="0"
-            oninput="shortsSeekTo(this.value)"/>
-        </div>
-
-        <!-- 3-dots menu -->
-        <div class="shorts-menu" id="shortsMenu">
-          <div class="shorts-menu-hdr">
-            <span>Details</span>
-            <button onclick="shortsToggleMenu()"><span class="mi">close</span></button>
-          </div>
-          <div class="shorts-menu-body" id="shortsMenuBody"></div>
-        </div>
-
-        <!-- Bottom-left info: creator + taker + caption -->
-        <div class="shorts-info">
-          <div class="shorts-creator-row">
-            <div class="shorts-creator-av" id="shortsCreatorAv">C</div>
-            <span class="shorts-creator-name" id="shortsCreatorName">@creator</span>
-            <button class="shorts-follow" onclick="toggleFollow(document.getElementById('shortsOverlay').dataset.creatorId,'creator')">Follow</button>
-          </div>
-          <div class="shorts-taker-row">
-            <span class="shorts-taker-label">Taker</span>
-            <span class="shorts-taker-name" id="shortsTakerName">@taker</span>
-          </div>
-          <div class="shorts-caption" id="shortsCaption"></div>
-        </div>
-      </div>
     </div>
 
-    <!-- Right action rail -->
-    <div class="shorts-actions">
-      <button class="shorts-act" id="shortsLikeBtn" onclick="shortsLike()">
-        <span class="mi">thumb_up</span>
-      </button>
-      <span class="shorts-act-lbl" id="shortsLikeCount">0</span>
-
-      <button class="shorts-act" onclick="showToast('Disliked')">
-        <span class="mi">thumb_down</span>
-      </button>
-      <span class="shorts-act-lbl">Dislike</span>
-
-      <button class="shorts-act" onclick="shortsToggleComments()">
-        <span class="mi">comment</span>
-      </button>
-      <span class="shorts-act-lbl" id="shortsCommentCount">0</span>
-
-      <button class="shorts-act" onclick="showToast('Share link copied!')">
-        <span class="mi">share</span>
-      </button>
-      <span class="shorts-act-lbl">Share</span>
-
-      <div class="shorts-act-views">
-        <span class="mi">visibility</span>
-        <span id="shortsViewCount">0</span>
+    <!-- 3-dots menu popup (shared singleton, centered glassy) -->
+    <div class="shorts-menu" id="shortsMenu">
+      <div class="shorts-menu-hdr">
+        <span>Details</span>
+        <button onclick="shortsToggleMenu()"><span class="mi">close</span></button>
       </div>
+      <div class="shorts-menu-body" id="shortsMenuBody"></div>
     </div>
 
     <!-- Desktop up/down nav -->

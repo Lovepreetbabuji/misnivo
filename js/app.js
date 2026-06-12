@@ -3802,57 +3802,155 @@ function shortsNav(dir) {
   if (items[ni]) items[ni].scrollIntoView({ behavior:'smooth', block:'start' });
 }
 
-async function renderShort() {
-  const p = shortsFeed[shortsIndex];
-  if (!p) return;
+// Build ONE self-contained slide (video + its own overlay: controls, info, action rail)
+function _shortsSlideHtml(p, i) {
   const d = (typeof dares !== 'undefined' ? dares.find(x => x.id === p.dareId) : null) || {};
   const caption = escHtml(d.caption || d.title || p.dareTitle || 'Dare Video');
   const creatorName = escHtml(d.creator || p.posterName || 'Creator');
   const creatorId = d.creatorUid || p.posterId || '';
   const takerName = escHtml(p.takerName || 'Taker');
-  const takerId = p.takerId || '';
-  const bounty = (d.bounty || p.dareBounty || 0);
-
-  // Video now lives in the scroll-snap stack; just reset speed + sync the play icon
-  _shortsSpeedIdx = 0;
-  _shortsSyncPlayIcon();
-
-  // Left caption: caption only (5-word preview + more/less). Description & rules
-  // live inside the 3-dots "Details" panel, not here.
-  const words = caption.split(' ');
-  const desc  = escHtml(d.desc || d.description || '');
-  let capHtml;
-  if (words.length > 5 && !shortsCaptionExpanded) {
-    capHtml = words.slice(0,5).join(' ') + '... <span class="shorts-cap-toggle" onclick="shortsToggleCaption(true)">more</span>';
-  } else if (words.length > 5) {
-    capHtml = caption + ' <span class="shorts-cap-toggle" onclick="shortsToggleCaption(false)">less</span>';
-  } else {
-    capHtml = caption;
-  }
-  document.getElementById('shortsCaption').innerHTML = capHtml;
-
-  // Creator + Taker info (left bottom)
-  document.getElementById('shortsCreatorName').textContent = '@' + creatorName;
-  const cAv = document.getElementById('shortsCreatorAv');
-  cAv.innerHTML = _avHtml(d.creatorPhotoURL || p.posterPhotoURL, creatorName);
-  const takerNameEl = document.getElementById('shortsTakerName');
-  if (takerNameEl) takerNameEl.textContent = '@' + (p.takerName || 'taker');
-
-  // Like state + count
   const liked = (typeof userLikes !== 'undefined' && userLikes.includes(p.id));
-  document.getElementById('shortsLikeBtn').classList.toggle('liked', liked);
-  document.getElementById('shortsLikeCount').textContent = _fmtCount(p.likeCount || 0);
-  document.getElementById('shortsCommentCount').textContent = _fmtCount(p.commentCount || 0);
-  document.getElementById('shortsViewCount').textContent = _fmtCount(p.viewCount || 0);
+  const words = caption.split(' ');
+  const capPreview = words.length > 5 ? words.slice(0,5).join(' ') + '...' : caption;
+  const capToggle = words.length > 5 ? ` <span class="shorts-cap-toggle" onclick="shortsCapToggleSlide(this)">more</span>` : '';
+  const cAv = _avHtml(d.creatorPhotoURL || p.posterPhotoURL, creatorName);
+  return `
+  <div class="shorts-snap-item" data-idx="${i}" data-proof-id="${p.id}">
+    <div class="shorts-slide-box">
+      <video class="shorts-snap-video" src="${p.videoURL}" loop playsinline preload="metadata"
+        onclick="shortsSlideTogglePlay(this)" ontimeupdate="shortsSlideOnTime(this)"></video>
 
-  // Store ids on the overlay for menu/actions
+      <div class="shorts-top-ctrl">
+        <button class="shorts-play-btn" onclick="shortsSlideTogglePlay(this)" title="Play/Pause"><span class="mi">pause</span></button>
+        <button class="shorts-mute-btn" onclick="shortsSlideToggleMute(this)" title="Mute"><span class="mi">volume_up</span></button>
+        <span class="shorts-time">0:00</span>
+      </div>
+      <button class="shorts-dots" onclick="shortsOpenMenu('${p.id}')"><span class="mi">more_vert</span></button>
+      <div class="shorts-seek-wrap">
+        <input type="range" class="shorts-seek" min="0" max="1000" value="0" oninput="shortsSlideSeek(this)"/>
+      </div>
+
+      <div class="shorts-actions">
+        <button class="shorts-act shorts-like-btn ${liked?'liked':''}" onclick="shortsLikeSlide('${p.id}', this)"><span class="mi">thumb_up</span></button>
+        <span class="shorts-act-lbl shorts-like-count">${_fmtCount(p.likeCount || 0)}</span>
+        <button class="shorts-act" onclick="showToast('Disliked')"><span class="mi">thumb_down</span></button>
+        <span class="shorts-act-lbl">Dislike</span>
+        <button class="shorts-act" onclick="shortsOpenComments('${p.id}')"><span class="mi">comment</span></button>
+        <span class="shorts-act-lbl shorts-comment-count">${_fmtCount(p.commentCount || 0)}</span>
+        <button class="shorts-act" onclick="showToast('Share link copied!')"><span class="mi">share</span></button>
+        <span class="shorts-act-lbl">Share</span>
+        <div class="shorts-act-views"><span class="mi">visibility</span><span class="shorts-views-count">${_fmtCount(p.viewCount || 0)}</span></div>
+      </div>
+
+      <div class="shorts-info">
+        <div class="shorts-creator-row">
+          <div class="shorts-creator-av">${cAv}</div>
+          <span class="shorts-creator-name">@${creatorName}</span>
+          <button class="shorts-follow" onclick="toggleFollow('${creatorId}','creator')">Follow</button>
+        </div>
+        <div class="shorts-taker-row">
+          <span class="shorts-taker-label">Taker</span>
+          <span class="shorts-taker-name">@${takerName}</span>
+        </div>
+        <div class="shorts-caption" data-preview="${capPreview}" data-full="${caption}">${capPreview}${capToggle}</div>
+      </div>
+    </div>
+  </div>`;
+}
+
+// Called when a short becomes the centered slide: ids for shared menu/comments,
+// nav arrows, fade-in this slide's overlay, view++. Overlays are per-slide (no rebuild).
+async function renderShort() {
+  const p = shortsFeed[shortsIndex];
+  if (!p) return;
+  const d = (typeof dares !== 'undefined' ? dares.find(x => x.id === p.dareId) : null) || {};
   const ov = document.getElementById('shortsOverlay');
   ov.dataset.proofId = p.id;
   ov.dataset.dareId = p.dareId || '';
-  ov.dataset.creatorId = creatorId;
-  ov.dataset.takerId = takerId;
+  ov.dataset.creatorId = d.creatorUid || p.posterId || '';
+  ov.dataset.takerId = p.takerId || '';
 
-  // 3-dots menu — a "Details" button opens caption + description + rules; creator/taker stay on the left
+  const up = document.getElementById('shortsNavUp'), dn = document.getElementById('shortsNavDown');
+  if (up) up.classList.toggle('disabled', shortsIndex === 0);
+  if (dn) dn.classList.toggle('disabled', shortsIndex === shortsFeed.length - 1);
+
+  // Mark current slide active (drives the fade-in)
+  const c = document.getElementById('shortsSnapContainer');
+  const items = c ? c.querySelectorAll('.shorts-snap-item') : [];
+  items.forEach((it, i) => it.classList.toggle('active', i === shortsIndex));
+
+  // View++ (once per activation) + update this slide's view label
+  if (typeof user !== 'undefined' && user) {
+    db.collection('proofs').doc(p.id).update({ viewCount: firebase.firestore.FieldValue.increment(1) }).catch(()=>{});
+    p.viewCount = (p.viewCount || 0) + 1;
+    const cur = items[shortsIndex];
+    const vc = cur ? cur.querySelector('.shorts-views-count') : null;
+    if (vc) vc.textContent = _fmtCount(p.viewCount);
+  }
+
+  if (shortsCommentsOpen) loadShortsComments(p.id);
+}
+
+// ── Per-slide control handlers (each slide operates on its own video) ──
+function _shortsSlideVid(el){ const it = el.closest('.shorts-snap-item'); return it ? it.querySelector('video') : null; }
+function shortsSlideTogglePlay(el){
+  const v = (el.tagName === 'VIDEO') ? el : _shortsSlideVid(el); if (!v) return;
+  if (v.paused) v.play().catch(()=>{}); else v.pause();
+  _shortsSlideSyncIcons(v);
+}
+function _shortsSlideSyncIcons(v){
+  const it = v.closest('.shorts-snap-item'); if (!it) return;
+  const pb = it.querySelector('.shorts-play-btn .mi'); if (pb) pb.textContent = v.paused ? 'play_arrow' : 'pause';
+  const mb = it.querySelector('.shorts-mute-btn .mi'); if (mb) mb.textContent = v.muted ? 'volume_off' : 'volume_up';
+}
+function shortsSlideToggleMute(el){ const v = _shortsSlideVid(el); if (!v) return; v.muted = !v.muted; _shortsSlideSyncIcons(v); }
+function shortsSlideSeek(input){ const v = _shortsSlideVid(input); if (v && v.duration) v.currentTime = (input.value/1000)*v.duration; }
+function shortsSlideOnTime(v){
+  if (!v.duration) return;
+  const it = v.closest('.shorts-snap-item'); if (!it) return;
+  const seek = it.querySelector('.shorts-seek'); const time = it.querySelector('.shorts-time');
+  if (seek) seek.value = Math.round((v.currentTime/v.duration)*1000);
+  if (time) time.textContent = _fmtTimeS(v.currentTime);
+  _shortsSlideSyncIcons(v);
+}
+function shortsCapToggleSlide(span){
+  const cap = span.closest('.shorts-caption'); if (!cap) return;
+  if (cap.dataset.expanded === '1') {
+    cap.innerHTML = cap.dataset.preview + ` <span class="shorts-cap-toggle" onclick="shortsCapToggleSlide(this)">more</span>`;
+    cap.dataset.expanded = '0';
+  } else {
+    cap.innerHTML = cap.dataset.full + ` <span class="shorts-cap-toggle" onclick="shortsCapToggleSlide(this)">less</span>`;
+    cap.dataset.expanded = '1';
+  }
+}
+async function shortsLikeSlide(proofId, btn){
+  if (typeof guestCheck === 'function' && guestCheck()) return;
+  if (typeof toggleLike === 'function') await toggleLike(proofId);
+  const p = (allProofs.find(x=>x.id===proofId)) || (homeProofs.find(x=>x.id===proofId));
+  btn.classList.toggle('liked', (typeof userLikes!=='undefined') && userLikes.includes(proofId));
+  const it = btn.closest('.shorts-snap-item');
+  const lc = it ? it.querySelector('.shorts-like-count') : null;
+  if (lc && p) lc.textContent = _fmtCount(p.likeCount || 0);
+}
+function shortsOpenMenu(proofId){
+  const p = (allProofs.find(x=>x.id===proofId)) || (homeProofs.find(x=>x.id===proofId)); if (!p) return;
+  _shortsBuildMenu(p);
+  document.getElementById('shortsMenu').classList.add('open');
+}
+function shortsOpenComments(proofId){
+  const ov = document.getElementById('shortsOverlay');
+  ov.dataset.proofId = proofId;
+  const p = (allProofs.find(x=>x.id===proofId)) || (homeProofs.find(x=>x.id===proofId));
+  if (p) ov.dataset.takerId = p.takerId || '';
+  shortsCommentsOpen = true;
+  ov.classList.add('comments-open');
+  loadShortsComments(proofId);
+}
+function _shortsBuildMenu(p){
+  const d = (typeof dares !== 'undefined' ? dares.find(x => x.id === p.dareId) : null) || {};
+  const caption = escHtml(d.caption || d.title || p.dareTitle || 'Dare Video');
+  const desc = escHtml(d.desc || d.description || '');
+  const bounty = (d.bounty || p.dareBounty || 0);
   const rulesHtml = (d.rules && d.rules.length)
     ? d.rules.map(r=>`<div class="shorts-rule-item">• ${escHtml(r)}</div>`).join('')
     : '<div class="shorts-rule-item" style="color:var(--t3);">No specific rules.</div>';
@@ -3869,24 +3967,6 @@ async function renderShort() {
     <button class="shorts-menu-action" onclick="shortsPiP()"><span class="mi">picture_in_picture_alt</span> Picture-in-picture</button>
     <button class="shorts-menu-report" onclick="openReportModal('proof','${p.id}')"><span class="mi">flag</span> Report</button>
   `;
-
-  // Nav arrow states
-  document.getElementById('shortsNavUp').classList.toggle('disabled', shortsIndex === 0);
-  document.getElementById('shortsNavDown').classList.toggle('disabled', shortsIndex === shortsFeed.length - 1);
-
-  // Increment view
-  if (typeof user !== 'undefined' && user) {
-    db.collection('proofs').doc(p.id).update({ viewCount: firebase.firestore.FieldValue.increment(1) }).catch(()=>{});
-    p.viewCount = (p.viewCount || 0) + 1;
-  }
-
-  // If comments open, refresh them
-  if (shortsCommentsOpen) loadShortsComments(p.id);
-}
-
-function shortsToggleCaption(expand) {
-  shortsCaptionExpanded = expand;
-  renderShort();
 }
 
 function _fmtCount(n) {
@@ -4074,8 +4154,12 @@ async function submitShortsComment() {
     });
     cancelShortsReply();
     await db.collection('proofs').doc(pid).update({ commentCount: firebase.firestore.FieldValue.increment(1) }).catch(()=>{});
-    const p = shortsFeed[shortsIndex];
-    if (p) { p.commentCount = (p.commentCount||0)+1; document.getElementById('shortsCommentCount').textContent = _fmtCount(p.commentCount); }
+    const p = (allProofs.find(x=>x.id===pid)) || (homeProofs.find(x=>x.id===pid)) || shortsFeed[shortsIndex];
+    if (p) {
+      p.commentCount = (p.commentCount||0)+1;
+      const cc = document.querySelector('.shorts-snap-item.active .shorts-comment-count');
+      if (cc) cc.textContent = _fmtCount(p.commentCount);
+    }
     loadShortsComments(pid);
   } catch(e) { showToast('Could not post comment'); }
 }
@@ -4319,12 +4403,7 @@ function _shortsRowHtml(shorts) {
 function _renderShortsSnapStack() {
   const c = document.getElementById('shortsSnapContainer');
   if (!c) return;
-  c.innerHTML = shortsFeed.map((p,i) => `
-    <div class="shorts-snap-item" data-idx="${i}" data-proof-id="${p.id}">
-      <video class="shorts-snap-video" src="${p.videoURL}" loop playsinline preload="metadata"
-        onclick="shortsTogglePlay()" ontimeupdate="shortsOnTime()"></video>
-    </div>
-  `).join('');
+  c.innerHTML = shortsFeed.map((p,i) => _shortsSlideHtml(p,i)).join('');
   // Jump to current index, then play it
   setTimeout(() => {
     const items = c.querySelectorAll('.shorts-snap-item');
@@ -4363,12 +4442,8 @@ function _shortsPlayCurrent() {
   const cur = items[shortsIndex];
   if (cur) {
     const v = cur.querySelector('video');
-    if (v) { v.muted = false; v.currentTime = 0; v.playbackRate = _SHORTS_SPEEDS[_shortsSpeedIdx] || 1; v.play().catch(()=>{}); }
+    if (v) { v.muted = false; v.currentTime = 0; v.playbackRate = _SHORTS_SPEEDS[_shortsSpeedIdx] || 1; v.play().catch(()=>{}); _shortsSlideSyncIcons(v); }
   }
-  // sync the control icons to the now-current video
-  _shortsSyncPlayIcon();
-  const mb = document.getElementById('shortsMuteBtn');
-  if (mb) mb.querySelector('.mi').textContent = 'volume_up';
 }
 
 // Cloudinary auto-thumbnail: video URL → static JPG frame (YouTube-style)
