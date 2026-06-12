@@ -11,7 +11,7 @@
 <link href="https://fonts.googleapis.com/icon?family=Material+Icons+Round" rel="stylesheet"/>
 
 <!-- App Styles -->
-<link rel="stylesheet" href="css/styles.css?v=20260611e"/>
+<link rel="stylesheet" href="css/styles.css?v=20260611f"/>
 
 <!-- Firebase CDN -->
 <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
@@ -157,10 +157,6 @@
       <button class="btn-post" id="btnPostTop" onclick="openPost()"><span class="mi">add_circle</span><span>Post Dare</span></button>
       <div class="notif-wrap">
         <button class="icon-btn notif-btn" onclick="toggleNotifPanel()"><span class="mi">notifications</span><div class="notif-badge" id="notifBadge" style="display:none;">0</div></button>
-        <div class="notif-panel" id="notifPanel">
-          <div class="notif-panel-hdr"><div class="notif-panel-title">Notifications</div><button class="notif-panel-close" onclick="closeNotifPanel()"><span class="mi">close</span></button></div>
-          <div class="notif-list" id="notifList"><div class="notif-empty"><span class="mi">notifications_none</span><div>No notifications yet</div></div></div>
-        </div>
       </div>
       <div class="user-menu">
         <div class="user-av" id="topAv" onclick="toggleDD()"></div>
@@ -799,7 +795,7 @@
 <div class="toast" id="toast"></div>
 
 <!-- App Logic -->
-<script src="js/app.js?v=20260611e"></script>
+<script src="js/app.js?v=20260611f"></script>
 
 <!-- ══ v0.19 NEW MODALS ══ -->
 
@@ -979,6 +975,12 @@
     <button class="btn-ghost-sm" onclick="leaveGuestMode('login')">Already have an account? Sign In</button>
     <button class="btn-ghost-sm btn-tiny" id="guestPromptDismiss" onclick="closeGuestPrompt()" style="margin-top:4px;">Continue browsing</button>
   </div>
+</div>
+
+<!-- Notifications panel (top-level so position:fixed is viewport-relative, not clipped by the topbar's backdrop-filter) -->
+<div class="notif-panel" id="notifPanel">
+  <div class="notif-panel-hdr"><div class="notif-panel-title">Notifications</div><button class="notif-panel-close" onclick="closeNotifPanel()"><span class="mi">close</span></button></div>
+  <div class="notif-list" id="notifList"><div class="notif-empty"><span class="mi">notifications_none</span><div>No notifications yet</div></div></div>
 </div>
 
 <!-- ═══ YOUTUBE SHORTS PLAYER OVERLAY ═══ -->

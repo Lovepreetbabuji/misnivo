@@ -1788,12 +1788,13 @@ textarea.f-input{resize:vertical;min-height:84px;}
   animation: bounceIn .3s cubic-bezier(.34,1.56,.64,1) both; padding: 0 3px;
 }
 .notif-panel {
-  /* Desktop: taller panel (nearly full height) */
-  position: absolute; top: 52px; right: 0; width: 420px; max-height: calc(100vh - 76px);
+  /* Desktop: fixed (viewport-relative, top-level) dropdown near the bell, tall */
+  position: fixed; top: 56px; right: 16px; width: 420px;
+  height: calc(100vh - 76px);
   background: #1f1f1f;
   border: 1px solid var(--border); border-radius: 12px;
   box-shadow: 0 8px 28px rgba(0,0,0,0.5);
-  display: none; flex-direction: column; overflow: hidden; z-index: 200;
+  display: none; flex-direction: column; overflow: hidden; z-index: 300;
 }
 .notif-panel.open { display: flex; animation: scaleIn .22s cubic-bezier(.34,1.56,.64,1) both; }
 .notif-panel-hdr {
