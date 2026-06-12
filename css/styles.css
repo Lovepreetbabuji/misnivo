@@ -1795,6 +1795,18 @@ textarea.f-input{resize:vertical;min-height:84px;}
   display: none; flex-direction: column; overflow: hidden; z-index: 200;
 }
 .notif-panel.open { display: flex; animation: scaleIn .22s cubic-bezier(.34,1.56,.64,1) both; }
+/* 2(a): glassy / frosted notification panel (overrides the flat minimalism rules) */
+#notifPanel.notif-panel{
+  background: rgba(20,20,26,0.72) !important;
+  backdrop-filter: blur(22px) saturate(150%) !important;
+  -webkit-backdrop-filter: blur(22px) saturate(150%) !important;
+  border: 1px solid rgba(255,255,255,0.12) !important;
+  box-shadow: 0 16px 48px rgba(0,0,0,0.55) !important;
+}
+#notifPanel .notif-panel-hdr{ background: transparent; border-bottom: 1px solid rgba(255,255,255,0.08); }
+#notifPanel .notif-item:hover{ background: rgba(255,255,255,0.10) !important; }
+#notifPanel .notif-item.unread{ background: rgba(58,166,255,0.12) !important; }
+#notifPanel .notif-ic{ background: rgba(255,255,255,0.10); }
 .notif-panel-hdr {
   display: flex; align-items: center; justify-content: space-between;
   padding: 16px 18px 14px; border-bottom: 1px solid var(--border); flex-shrink: 0;
