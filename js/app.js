@@ -3617,6 +3617,7 @@ function openDareDetail(dareId){
   const rules = (d.rules||[]).filter(r=>r && r.trim());
   document.getElementById('ddRules').innerHTML = rules.length
     ? `<div class="dd-sec-label">Rules</div>${rules.map(r=>`<div class="dd-rule">• ${escHtml(r)}</div>`).join('')}` : '';
+  const rulesBar = document.getElementById('ddRulesBar'); if (rulesBar) rulesBar.style.display = rules.length ? '' : 'none';
 
   document.getElementById('ddCta').innerHTML = _ddCtaHtml(d);
   _ddUpdateLikeUI(d);
@@ -3699,25 +3700,39 @@ async function dislikeDare(){
   _ddUpdateLikeUI(d);
   db.collection('dares').doc(d.id).update(upd).catch(()=>{});
 }
-// Dare comments reuse the comments collection (proofId = dareId)
+// Dare comments reuse the comments collection (proofId = dareId).
+// Desktop: show ALL comments. Mobile: show the top (most-liked) one + "View all".
+let _ddComments = [];
 async function loadDareTopComment(dareId){
   const el = document.getElementById('ddTopComment');
   el.innerHTML = '<div style="color:var(--t3);font-size:13px;padding:10px 0;">Loading...</div>';
   try {
-    const snap = await db.collection('comments').where('proofId','==',dareId).limit(50).get();
+    const snap = await db.collection('comments').where('proofId','==',dareId).limit(80).get();
     const ccEl = document.getElementById('ddCommentCount'); if (ccEl) ccEl.textContent = _fmtCount(snap.size);
-    let cs = snap.docs.map(doc=>({id:doc.id,...doc.data()})).filter(c=>!c.parentId);
-    if (!cs.length){ el.innerHTML = '<div class="vd-no-comments"><span class="mi">chat_bubble_outline</span><div>No comments yet — be the first!</div></div>'; return; }
-    cs.sort((a,b)=>(b.likeCount||b.likes||0)-(a.likeCount||a.likes||0));
-    const c = cs[0];
-    const extra = cs.length>1 ? `<div class="dd-more-comments">+ ${cs.length-1} more comment${cs.length-1>1?'s':''}</div>` : '';
-    el.innerHTML = `<div class="vd-comment">
-      <div class="vd-comment-av">${_avHtml(c.userPhotoURL, c.userName)}</div>
-      <div class="vd-comment-body">
-        <div class="vd-comment-author">${escHtml(c.userName||'—')}<span class="vd-comment-time">${c.createdAt&&c.createdAt.toDate?_timeAgo(c.createdAt.toDate()):''}</span></div>
-        <div class="vd-comment-text">${escHtml(c.text||'')}</div>
-      </div></div>${extra}`;
-  } catch(e){ el.innerHTML = '<div style="color:var(--t3);font-size:13px;">Could not load comment</div>'; }
+    _ddComments = snap.docs.map(doc=>({id:doc.id,...doc.data()})).filter(c=>!c.parentId)
+      .sort((a,b)=>(b.likeCount||b.likes||0)-(a.likeCount||a.likes||0));
+    _renderDareComments(false);
+  } catch(e){ el.innerHTML = '<div style="color:var(--t3);font-size:13px;">Could not load comments</div>'; }
+}
+function _ddCommentHtml(c){
+  return `<div class="vd-comment">
+    <div class="vd-comment-av">${_avHtml(c.userPhotoURL, c.userName)}</div>
+    <div class="vd-comment-body">
+      <div class="vd-comment-author">${escHtml(c.userName||'—')}<span class="vd-comment-time">${c.createdAt&&c.createdAt.toDate?_timeAgo(c.createdAt.toDate()):''}</span></div>
+      <div class="vd-comment-text">${escHtml(c.text||'')}</div>
+    </div></div>`;
+}
+function _renderDareComments(showAll){
+  const el = document.getElementById('ddTopComment'); if (!el) return;
+  const cs = _ddComments || [];
+  if (!cs.length){ el.innerHTML = '<div class="vd-no-comments"><span class="mi">chat_bubble_outline</span><div>No comments yet — be the first!</div></div>'; return; }
+  const isMobile = window.innerWidth <= 768;
+  const list = (isMobile && !showAll) ? cs.slice(0,1) : cs;
+  let html = list.map(_ddCommentHtml).join('');
+  if (isMobile && !showAll && cs.length > 1){
+    html += `<button class="dd-viewall" onclick="_renderDareComments(true)">View all ${cs.length} comments</button>`;
+  }
+  el.innerHTML = html;
 }
 async function submitDareComment(){
   if (!user) { showToast('Sign in to comment'); return; }

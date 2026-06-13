@@ -11,7 +11,7 @@
 <link href="https://fonts.googleapis.com/icon?family=Material+Icons+Round" rel="stylesheet"/>
 
 <!-- App Styles -->
-<link rel="stylesheet" href="css/styles.css?v=20260613d"/>
+<link rel="stylesheet" href="css/styles.css?v=20260613e"/>
 
 <!-- Firebase CDN -->
 <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
@@ -795,7 +795,7 @@
 <div class="toast" id="toast"></div>
 
 <!-- App Logic -->
-<script src="js/app.js?v=20260613d"></script>
+<script src="js/app.js?v=20260613e"></script>
 
 <!-- ══ v0.19 NEW MODALS ══ -->
 
@@ -911,51 +911,58 @@
       <button class="vd-share-top-btn" onclick="shareDare(_ddCurrentId, document.getElementById('ddName').textContent)"><span class="mi">share</span></button>
     </div>
 
-    <!-- ═══ BAR 1: thumbnail · reward · title · creator · expiry · actions ═══ -->
-    <div class="dd-bar dd-bar1">
-      <div class="dd-hero" id="ddHero"></div>
-      <div class="dd-reward" id="ddBounty">Rs. 0</div>
-      <div class="dd-title" id="ddName">—</div>
-      <div class="dd-creator" id="ddCreator"></div>
-      <div class="dd-expiry" id="ddExpiry" style="display:none;"></div>
-      <div class="dd-actions">
-        <button class="vd-action-btn" id="ddLikeBtn" onclick="likeDare()"><span class="mi">thumb_up</span> <span id="ddLikeCount">0</span></button>
-        <button class="vd-action-btn" id="ddDislikeBtn" onclick="dislikeDare()"><span class="mi">thumb_down</span> <span id="ddDislikeCount">0</span></button>
-        <button class="vd-action-btn" onclick="document.getElementById('ddCommentInput')?.focus()"><span class="mi">comment</span> <span id="ddCommentCount">0</span></button>
-        <span class="vd-action-btn dd-stat"><span class="mi">visibility</span> <span id="ddViewCount">0</span></span>
-        <button class="vd-action-btn" onclick="_ddReport()"><span class="mi">flag</span> Report</button>
-        <button class="vd-action-btn" onclick="shareDare(_ddCurrentId, document.getElementById('ddName').textContent)"><span class="mi">share</span> Share</button>
-        <span class="dd-cta-inline" id="ddCta"></span>
-      </div>
-    </div>
-
-    <div class="dd-body">
-      <!-- ═══ BAR 2: description + tags ═══ -->
-      <div class="dd-bar dd-bar2">
-        <div class="dd-desc" id="ddDesc"></div>
-        <div class="dd-tags" id="ddTags"></div>
-      </div>
-
-      <!-- ═══ BAR 3: rules (next step) ═══ -->
-      <div class="dd-rules" id="ddRules"></div>
-
-      <div class="dd-comments">
-        <div class="vd-sec-title"><span class="mi">chat_bubble</span> Top comment</div>
-        <div class="vd-comment-input-row">
-          <div class="vd-input-av" id="ddInputAv">?</div>
-          <div class="vd-comment-field">
-            <input class="vd-comment-input" id="ddCommentInput" placeholder="Add a comment..." maxlength="500"
-                   onkeydown="if(event.key==='Enter'){event.preventDefault();submitDareComment();}"/>
-            <button class="vd-comment-send-btn" onclick="submitDareComment()"><span class="mi">send</span></button>
+    <div class="dd-layout">
+      <!-- LEFT: 3 bars + comments -->
+      <div class="dd-left">
+        <!-- ═══ BAR 1: thumbnail · reward · title · creator · expiry · actions ═══ -->
+        <div class="dd-bar dd-bar1">
+          <div class="dd-hero" id="ddHero"></div>
+          <div class="dd-reward" id="ddBounty">Rs. 0</div>
+          <div class="dd-title" id="ddName">—</div>
+          <div class="dd-creator" id="ddCreator"></div>
+          <div class="dd-expiry" id="ddExpiry" style="display:none;"></div>
+          <div class="dd-actions">
+            <button class="vd-action-btn" id="ddLikeBtn" onclick="likeDare()"><span class="mi">thumb_up</span> <span id="ddLikeCount">0</span></button>
+            <button class="vd-action-btn" id="ddDislikeBtn" onclick="dislikeDare()"><span class="mi">thumb_down</span> <span id="ddDislikeCount">0</span></button>
+            <button class="vd-action-btn" onclick="document.getElementById('ddCommentInput')?.focus()"><span class="mi">comment</span> <span id="ddCommentCount">0</span></button>
+            <span class="vd-action-btn dd-stat"><span class="mi">visibility</span> <span id="ddViewCount">0</span></span>
+            <button class="vd-action-btn" onclick="_ddReport()"><span class="mi">flag</span> Report</button>
+            <button class="vd-action-btn" onclick="shareDare(_ddCurrentId, document.getElementById('ddName').textContent)"><span class="mi">share</span> Share</button>
+            <span class="dd-cta-inline" id="ddCta"></span>
           </div>
         </div>
-        <div id="ddTopComment"></div>
-      </div>
-    </div>
 
-    <div class="dd-more">
-      <div class="vd-sec-title"><span class="mi">bolt</span> More Dares</div>
-      <div id="ddMoreDares" class="dare-list"></div>
+        <!-- ═══ BAR 2: description + tags ═══ -->
+        <div class="dd-bar dd-bar2">
+          <div class="dd-desc" id="ddDesc"></div>
+          <div class="dd-tags" id="ddTags"></div>
+        </div>
+
+        <!-- ═══ BAR 3: rules ═══ -->
+        <div class="dd-bar dd-bar3" id="ddRulesBar">
+          <div class="dd-rules" id="ddRules"></div>
+        </div>
+
+        <!-- Comments (desktop: all; mobile: 1 + View all) -->
+        <div class="dd-comments">
+          <div class="vd-sec-title"><span class="mi">chat_bubble</span> <span id="ddCommentsTitle">Comments</span></div>
+          <div class="vd-comment-input-row">
+            <div class="vd-input-av" id="ddInputAv">?</div>
+            <div class="vd-comment-field">
+              <input class="vd-comment-input" id="ddCommentInput" placeholder="Add a comment..." maxlength="500"
+                     onkeydown="if(event.key==='Enter'){event.preventDefault();submitDareComment();}"/>
+              <button class="vd-comment-send-btn" onclick="submitDareComment()"><span class="mi">send</span></button>
+            </div>
+          </div>
+          <div id="ddTopComment"></div>
+        </div>
+      </div>
+
+      <!-- RIGHT: more active dares -->
+      <div class="dd-right">
+        <div class="vd-sec-title"><span class="mi">bolt</span> More Dares</div>
+        <div id="ddMoreDares" class="dare-list"></div>
+      </div>
     </div>
   </div>
 </div>

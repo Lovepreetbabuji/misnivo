@@ -1959,6 +1959,21 @@ textarea.f-input{resize:vertical;min-height:84px;}
 /* BAR 2: description + tags */
 .dd-bar2 .dd-sec-label{ margin-top:0; }
 .dd-bar2 .dd-tags{ display:flex; flex-wrap:wrap; gap:6px; margin-top:12px; }
+/* BAR 3: rules */
+.dd-bar3 .dd-sec-label{ margin-top:0; }
+/* Comments inside a bar-like block; "View all" (mobile) */
+.dd-comments .vd-comment{ margin-top:14px; }
+.dd-viewall{ background:none; border:none; color:var(--blue2); font-weight:600; font-size:13px; cursor:pointer; margin-top:12px; padding:6px 0; font-family:inherit; }
+.dd-viewall:hover{ text-decoration:underline; }
+
+/* Desktop: 2-column — left bars + right "More Dares" rail */
+@media(min-width:769px){
+  .dd-wrap{ max-width:1200px; }
+  .dd-layout{ display:flex; gap:24px; align-items:flex-start; }
+  .dd-left{ flex:1; min-width:0; }
+  .dd-right{ width:340px; flex-shrink:0; }
+  .dd-right .dare-list-card{ margin-bottom:12px; }
+}
 
 /* ─── EXPLORER / TRENDING PAGE ───────────────────────────────── */
 .exp-tabs { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 16px; scrollbar-width: none; margin-bottom: 8px; }
