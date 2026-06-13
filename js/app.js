@@ -4005,6 +4005,10 @@ function _shortsSlideHtml(p, i) {
   const capPreview = words.length > 5 ? words.slice(0,5).join(' ') + '...' : caption;
   const capToggle = words.length > 5 ? ` <span class="shorts-cap-toggle" onclick="shortsCapToggleSlide(this)">more</span>` : '';
   const cAv = _avHtml(d.creatorPhotoURL || p.posterPhotoURL, creatorName);
+  const desc = escHtml(d.desc || d.description || '');
+  const rules = (d.rules||[]).filter(r=>r && r.trim());
+  const rulesHtml = rules.map(r=>`<div class="dd-rule">• ${escHtml(r)}</div>`).join('');
+  const bounty = (d.bounty || p.dareBounty || 0).toLocaleString('en-IN');
   return `
   <div class="shorts-snap-item" data-idx="${i}" data-proof-id="${p.id}">
     <div class="shorts-info">
@@ -4018,6 +4022,12 @@ function _shortsSlideHtml(p, i) {
         <span class="shorts-taker-name">@${takerName}</span>
       </div>
       <div class="shorts-caption" data-preview="${capPreview}" data-full="${caption}">${capPreview}${capToggle}</div>
+      <button class="shorts-details-btn" onclick="shortsToggleDetailsLeft(this)"><span class="mi">expand_more</span> Details</button>
+      <div class="shorts-details-panel" style="display:none;">
+        ${desc ? `<div class="dd-sec-label">Description</div><p class="dd-desc-text">${desc}</p>` : ''}
+        ${rules.length ? `<div class="dd-sec-label">Rules</div>${rulesHtml}` : ''}
+        <div class="dd-sec-label">Winning Amount</div><p class="dd-bounty">Rs. ${bounty}</p>
+      </div>
     </div>
 
     <div class="shorts-slide-box">
@@ -4188,7 +4198,7 @@ function _shortsBuildMenu(p){
     ? d.rules.map(r=>`<div class="shorts-rule-item">• ${escHtml(r)}</div>`).join('')
     : '<div class="shorts-rule-item" style="color:var(--t3);">No specific rules.</div>';
   document.getElementById('shortsMenuBody').innerHTML = `
-    <button class="shorts-menu-action" onclick="shortsToggleDetails()"><span class="mi">info</span> Details</button>
+    <button class="shorts-menu-action shorts-menu-details" onclick="shortsToggleDetails()"><span class="mi">info</span> Details</button>
     <div id="shortsDetailsBlock" class="shorts-details-block" style="display:none;">
       <div class="shorts-menu-row"><span class="shorts-menu-label">Caption</span><span>${caption}</span></div>
       ${desc ? `<div class="shorts-menu-row"><span class="shorts-menu-label">Description</span><span>${desc}</span></div>` : ''}
@@ -4417,29 +4427,18 @@ function _shortsSetDotsIcon(open){
   document.querySelectorAll('.shorts-dots .mi').forEach(el=>el.textContent=icon);
   const more = document.querySelector('#shortsFxMoreBtn .mi'); if (more) more.textContent = icon;
 }
-// "Details": desktop → show in the left info area (above usernames); mobile → expand in the menu box
+// Mobile: "Details" inside the 3-dots menu expands the caption/description/rules block
 function shortsToggleDetails() {
-  if (window.innerWidth >= 769){
-    _shortsShowDetailsLeft();
-    document.getElementById('shortsMenu').classList.remove('open');
-    _shortsSetDotsIcon(false);
-  } else {
-    const b = document.getElementById('shortsDetailsBlock');
-    if (b) b.style.display = (b.style.display === 'none' || !b.style.display) ? 'block' : 'none';
-  }
+  const b = document.getElementById('shortsDetailsBlock');
+  if (b) b.style.display = (b.style.display === 'none' || !b.style.display) ? 'block' : 'none';
 }
-function _shortsShowDetailsLeft(){
-  const p = shortsFeed[shortsIndex]; if (!p) return;
-  const d = (typeof dares!=='undefined' ? dares.find(x=>x.id===p.dareId) : null) || {};
-  const desc = escHtml(d.desc || d.description || '');
-  const rules = (d.rules||[]).filter(r=>r && r.trim());
-  const info = document.getElementById('shortsFixedInfo'); if (!info) return;
-  let block = document.getElementById('shortsDetailsLeft');
-  if (!block){ block = document.createElement('div'); block.id='shortsDetailsLeft'; block.className='shorts-details-left'; info.prepend(block); }
-  block.innerHTML = `
-    <div class="dd-sec-label">Description</div><p class="dd-desc-text">${desc || '—'}</p>
-    ${rules.length ? `<div class="dd-sec-label">Rules</div>${rules.map(r=>`<div class="dd-rule">• ${escHtml(r)}</div>`).join('')}` : ''}
-    <button class="shorts-cap-toggle" style="margin-top:8px;" onclick="document.getElementById('shortsDetailsLeft')?.remove()">Hide details</button>`;
+// Desktop: "Details" button under the caption → toggle the glassy details panel (info grows upward)
+function shortsToggleDetailsLeft(btn){
+  const info = btn.closest('.shorts-info'); if (!info) return;
+  const panel = info.querySelector('.shorts-details-panel'); if (!panel) return;
+  const open = panel.style.display === 'block';
+  panel.style.display = open ? 'none' : 'block';
+  btn.classList.toggle('open', !open);
 }
 
 // Simple follow (creator/taker) — reuse if toggleFollow exists, else basic

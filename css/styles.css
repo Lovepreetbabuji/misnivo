@@ -2461,6 +2461,46 @@ html{scroll-behavior:smooth;}
   .shorts-snap-item .shorts-actions .shorts-act{ background:rgba(255,255,255,0.10); }
 }
 
+/* Left "Details" button (desktop only) + glassy details panel */
+.shorts-details-btn{ display:none; }
+.shorts-details-btn .mi{ font-size:16px; transition:transform .2s; }
+@media(min-width:769px){
+  .shorts-details-btn{
+    display:inline-flex; align-items:center; gap:4px; margin-top:8px;
+    background:rgba(255,255,255,0.12); border:1px solid rgba(255,255,255,0.14);
+    color:#fff; font-family:inherit; font-size:13px; font-weight:600;
+    padding:6px 12px; border-radius:50px; cursor:pointer;
+  }
+  .shorts-details-btn:hover{ background:rgba(255,255,255,0.22); }
+  .shorts-details-btn.open .mi{ transform:rotate(180deg); }
+  /* on desktop the 3-dots "Details" is replaced by the left button */
+  #shortsMenu .shorts-menu-details, #shortsMenu #shortsDetailsBlock{ display:none !important; }
+}
+.shorts-details-panel{
+  margin-top:10px; padding:12px 14px; border-radius:14px; max-height:40vh; overflow-y:auto;
+  background:rgba(255,255,255,0.08) !important;
+  backdrop-filter:blur(16px) saturate(140%) !important;
+  -webkit-backdrop-filter:blur(16px) saturate(140%) !important;
+  border:1px solid rgba(255,255,255,0.14);
+}
+.shorts-details-panel .dd-sec-label{ font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.5px; color:#bbb; margin:8px 0 4px; }
+.shorts-details-panel .dd-sec-label:first-child{ margin-top:0; }
+.shorts-details-panel .dd-desc-text,
+.shorts-details-panel .dd-rule{ font-size:13px; color:#eee; line-height:1.5; margin:0; }
+.shorts-details-panel .dd-bounty{ font-size:14px; color:var(--blue); font-weight:700; margin:2px 0 0; }
+
+/* Comments panel — glassy + curved floating panel (desktop only) */
+@media(min-width:769px){
+  .shorts-comments{
+    top:16px; bottom:16px; right:16px; border-radius:18px;
+    background:rgba(22,22,28,0.72) !important;
+    backdrop-filter:blur(22px) saturate(150%) !important;
+    -webkit-backdrop-filter:blur(22px) saturate(150%) !important;
+    border:1px solid rgba(255,255,255,0.12);
+    box-shadow:0 16px 48px rgba(0,0,0,0.5);
+  }
+}
+
 /* ═══════════════════════════════════════════════════════════
    YOUTUBE MINIMALISM v2 — kill blur/shadow, except top/bottom
    ═══════════════════════════════════════════════════════════ */
