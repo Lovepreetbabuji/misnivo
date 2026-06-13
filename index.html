@@ -11,7 +11,7 @@
 <link href="https://fonts.googleapis.com/icon?family=Material+Icons+Round" rel="stylesheet"/>
 
 <!-- App Styles -->
-<link rel="stylesheet" href="css/styles.css?v=20260611k"/>
+<link rel="stylesheet" href="css/styles.css?v=20260613a"/>
 
 <!-- Firebase CDN -->
 <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
@@ -795,7 +795,7 @@
 <div class="toast" id="toast"></div>
 
 <!-- App Logic -->
-<script src="js/app.js?v=20260611k"></script>
+<script src="js/app.js?v=20260613a"></script>
 
 <!-- ══ v0.19 NEW MODALS ══ -->
 
@@ -1038,30 +1038,9 @@
   <button class="shorts-close" onclick="closeShorts()"><span class="mi">arrow_back</span></button>
 
   <div class="shorts-stage">
-    <!-- center column: [video + rail] row, then info below (desktop) -->
-    <div class="shorts-center">
-      <div class="shorts-watch">
-        <!-- Native scroll-snap stack; each slide carries its own overlay (built in JS) -->
-        <div class="shorts-video-col">
-          <div class="shorts-snap-container" id="shortsSnapContainer"></div>
-        </div>
-        <!-- Desktop-only: action rail OUTSIDE, to the right of the video -->
-        <div class="shorts-actions shorts-fixed-rail" id="shortsFixedRail">
-      <button class="shorts-act" id="shortsFxLikeBtn" onclick="shortsFxLike()"><span class="mi">thumb_up</span></button>
-      <span class="shorts-act-lbl" id="shortsFxLikeCount">0</span>
-      <button class="shorts-act" onclick="showToast('Disliked')"><span class="mi">thumb_down</span></button>
-      <span class="shorts-act-lbl">Dislike</span>
-      <button class="shorts-act" onclick="shortsFxComments()"><span class="mi">comment</span></button>
-      <span class="shorts-act-lbl" id="shortsFxCommentCount">0</span>
-      <button class="shorts-act" onclick="showToast('Share link copied!')"><span class="mi">share</span></button>
-      <span class="shorts-act-lbl">Share</span>
-      <button class="shorts-act" id="shortsFxMoreBtn" onclick="shortsFxMenu()"><span class="mi">more_vert</span></button>
-      <span class="shorts-act-lbl">More</span>
-      <div class="shorts-act-views"><span class="mi">visibility</span><span id="shortsFxViewCount">0</span></div>
-        </div>
-      </div>
-      <!-- Desktop-only: details BELOW the video (YouTube desktop style) -->
-      <div class="shorts-info-fixed" id="shortsFixedInfo"></div>
+    <!-- Native scroll-snap stack; each slide carries its own overlay (info left, rail right) -->
+    <div class="shorts-video-col">
+      <div class="shorts-snap-container" id="shortsSnapContainer"></div>
     </div>
 
     <!-- 3-dots menu popup (shared singleton) -->

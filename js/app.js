@@ -4007,6 +4007,19 @@ function _shortsSlideHtml(p, i) {
   const cAv = _avHtml(d.creatorPhotoURL || p.posterPhotoURL, creatorName);
   return `
   <div class="shorts-snap-item" data-idx="${i}" data-proof-id="${p.id}">
+    <div class="shorts-info">
+      <div class="shorts-creator-row">
+        <div class="shorts-creator-av">${cAv}</div>
+        <span class="shorts-creator-name">@${creatorName}</span>
+        <button class="shorts-follow" onclick="toggleFollow('${creatorId}','creator')">Follow</button>
+      </div>
+      <div class="shorts-taker-row">
+        <span class="shorts-taker-label">Taker</span>
+        <span class="shorts-taker-name">@${takerName}</span>
+      </div>
+      <div class="shorts-caption" data-preview="${capPreview}" data-full="${caption}">${capPreview}${capToggle}</div>
+    </div>
+
     <div class="shorts-slide-box">
       <video class="shorts-snap-video" src="${p.videoURL}" loop playsinline preload="metadata"
         onclick="shortsSlideTogglePlay(this)" ontimeupdate="shortsSlideOnTime(this)"></video>
@@ -4020,31 +4033,18 @@ function _shortsSlideHtml(p, i) {
       <div class="shorts-seek-wrap">
         <input type="range" class="shorts-seek" min="0" max="1000" value="0" oninput="shortsSlideSeek(this)"/>
       </div>
+    </div>
 
-      <div class="shorts-actions">
-        <button class="shorts-act shorts-like-btn ${liked?'liked':''}" onclick="shortsLikeSlide('${p.id}', this)"><span class="mi">thumb_up</span></button>
-        <span class="shorts-act-lbl shorts-like-count">${_fmtCount(p.likeCount || 0)}</span>
-        <button class="shorts-act" onclick="showToast('Disliked')"><span class="mi">thumb_down</span></button>
-        <span class="shorts-act-lbl">Dislike</span>
-        <button class="shorts-act" onclick="shortsOpenComments('${p.id}')"><span class="mi">comment</span></button>
-        <span class="shorts-act-lbl shorts-comment-count">${_fmtCount(p.commentCount || 0)}</span>
-        <button class="shorts-act" onclick="showToast('Share link copied!')"><span class="mi">share</span></button>
-        <span class="shorts-act-lbl">Share</span>
-        <div class="shorts-act-views"><span class="mi">visibility</span><span class="shorts-views-count">${_fmtCount(p.viewCount || 0)}</span></div>
-      </div>
-
-      <div class="shorts-info">
-        <div class="shorts-creator-row">
-          <div class="shorts-creator-av">${cAv}</div>
-          <span class="shorts-creator-name">@${creatorName}</span>
-          <button class="shorts-follow" onclick="toggleFollow('${creatorId}','creator')">Follow</button>
-        </div>
-        <div class="shorts-taker-row">
-          <span class="shorts-taker-label">Taker</span>
-          <span class="shorts-taker-name">@${takerName}</span>
-        </div>
-        <div class="shorts-caption" data-preview="${capPreview}" data-full="${caption}">${capPreview}${capToggle}</div>
-      </div>
+    <div class="shorts-actions">
+      <button class="shorts-act shorts-like-btn ${liked?'liked':''}" onclick="shortsLikeSlide('${p.id}', this)"><span class="mi">thumb_up</span></button>
+      <span class="shorts-act-lbl shorts-like-count">${_fmtCount(p.likeCount || 0)}</span>
+      <button class="shorts-act" onclick="showToast('Disliked')"><span class="mi">thumb_down</span></button>
+      <span class="shorts-act-lbl">Dislike</span>
+      <button class="shorts-act" onclick="shortsOpenComments('${p.id}')"><span class="mi">comment</span></button>
+      <span class="shorts-act-lbl shorts-comment-count">${_fmtCount(p.commentCount || 0)}</span>
+      <button class="shorts-act" onclick="showToast('Share link copied!')"><span class="mi">share</span></button>
+      <span class="shorts-act-lbl">Share</span>
+      <div class="shorts-act-views"><span class="mi">visibility</span><span class="shorts-views-count">${_fmtCount(p.viewCount || 0)}</span></div>
     </div>
   </div>`;
 }
@@ -4081,9 +4081,6 @@ async function renderShort() {
   }
 
   if (shortsCommentsOpen) loadShortsComments(p.id);
-
-  // Desktop-only fixed rail + info beside/below the video (hidden on mobile via CSS)
-  _shortsFillFixed(p, d);
 }
 
 // Populate the desktop fixed info + rail for the current short
