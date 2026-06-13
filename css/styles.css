@@ -1941,6 +1941,21 @@ textarea.f-input{resize:vertical;min-height:84px;}
 .dd-more-comments { font-size:12px; color:var(--blue2); font-weight:600; margin-top:10px; padding-left:46px; }
 .dd-more { margin-top:30px; padding-top:20px; border-top:1px solid var(--border); }
 
+/* ═══ Active-dare detail — BAR 1 (thumbnail · reward · title · creator · actions) ═══ */
+.dd-bar{ background:var(--bg2); border:1px solid var(--border); border-radius:16px; padding:16px; margin-bottom:16px; }
+.dd-bar1 .dd-hero{ margin-bottom:0; }
+.dd-reward{ font-size:30px; font-weight:800; color:var(--green); letter-spacing:.5px; margin:14px 0 6px; line-height:1; }
+.dd-title{ font-size:20px; font-weight:700; color:var(--t1); line-height:1.35; margin:0 0 6px; }
+.dd-bar1 .dd-creator{ border:none; padding:6px 0; margin:6px 0 2px; }
+.dd-expiry{
+  display:inline-flex; align-items:center; gap:4px; font-size:12px; font-weight:600;
+  color:var(--orange); background:rgba(255,159,10,.12); border:1px solid rgba(255,159,10,.3);
+  padding:3px 10px; border-radius:50px; margin:4px 0 2px; font-family:'IBM Plex Mono',monospace;
+}
+.dd-actions{ display:flex; flex-wrap:wrap; gap:8px; align-items:center; margin-top:12px; }
+.dd-actions .dd-stat{ cursor:default; }
+.dd-cta-inline{ margin-left:auto; }
+
 /* ─── EXPLORER / TRENDING PAGE ───────────────────────────────── */
 .exp-tabs { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 16px; scrollbar-width: none; margin-bottom: 8px; }
 .exp-tabs::-webkit-scrollbar { display: none; }

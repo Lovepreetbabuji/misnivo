@@ -11,7 +11,7 @@
 <link href="https://fonts.googleapis.com/icon?family=Material+Icons+Round" rel="stylesheet"/>
 
 <!-- App Styles -->
-<link rel="stylesheet" href="css/styles.css?v=20260613b"/>
+<link rel="stylesheet" href="css/styles.css?v=20260613c"/>
 
 <!-- Firebase CDN -->
 <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
@@ -795,7 +795,7 @@
 <div class="toast" id="toast"></div>
 
 <!-- App Logic -->
-<script src="js/app.js?v=20260613b"></script>
+<script src="js/app.js?v=20260613c"></script>
 
 <!-- ══ v0.19 NEW MODALS ══ -->
 
@@ -911,23 +911,26 @@
       <button class="vd-share-top-btn" onclick="shareDare(_ddCurrentId, document.getElementById('ddName').textContent)"><span class="mi">share</span></button>
     </div>
 
-    <div class="dd-hero" id="ddHero"></div>
+    <!-- ═══ BAR 1: thumbnail · reward · title · creator · expiry · actions ═══ -->
+    <div class="dd-bar dd-bar1">
+      <div class="dd-hero" id="ddHero"></div>
+      <div class="dd-reward" id="ddBounty">Rs. 0</div>
+      <div class="dd-title" id="ddName">—</div>
+      <div class="dd-creator" id="ddCreator"></div>
+      <div class="dd-expiry" id="ddExpiry" style="display:none;"></div>
+      <div class="dd-actions">
+        <button class="vd-action-btn" id="ddLikeBtn" onclick="likeDare()"><span class="mi">thumb_up</span> <span id="ddLikeCount">0</span></button>
+        <button class="vd-action-btn" id="ddDislikeBtn" onclick="dislikeDare()"><span class="mi">thumb_down</span> <span id="ddDislikeCount">0</span></button>
+        <button class="vd-action-btn" onclick="document.getElementById('ddCommentInput')?.focus()"><span class="mi">comment</span> <span id="ddCommentCount">0</span></button>
+        <span class="vd-action-btn dd-stat"><span class="mi">visibility</span> <span id="ddViewCount">0</span></span>
+        <button class="vd-action-btn" onclick="_ddReport()"><span class="mi">flag</span> Report</button>
+        <button class="vd-action-btn" onclick="shareDare(_ddCurrentId, document.getElementById('ddName').textContent)"><span class="mi">share</span> Share</button>
+        <span class="dd-cta-inline" id="ddCta"></span>
+      </div>
+    </div>
 
     <div class="dd-body">
       <div class="dd-tags" id="ddTags"></div>
-      <div class="vd-title" id="ddName">—</div>
-      <div class="vd-views-date" id="ddMeta"></div>
-
-      <div class="vd-action-bar">
-        <button class="vd-action-btn" id="ddLikeBtn" onclick="likeDare()"><span class="mi">thumb_up</span> <span id="ddLikeCount">0</span></button>
-        <button class="vd-action-btn" id="ddDislikeBtn" onclick="dislikeDare()"><span class="mi">thumb_down</span> <span id="ddDislikeCount">0</span></button>
-        <button class="vd-action-btn" onclick="document.getElementById('ddCommentInput').focus()"><span class="mi">comment</span> Comment</button>
-        <button class="vd-action-btn" id="ddReportBtn" onclick="_ddReport()"><span class="mi">flag</span> Report</button>
-        <span class="vd-bounty-pill" id="ddBounty">Rs. 0</span>
-      </div>
-
-      <div class="dd-creator" id="ddCreator"></div>
-      <div class="dd-cta" id="ddCta"></div>
       <div class="dd-desc" id="ddDesc"></div>
       <div class="dd-rules" id="ddRules"></div>
 

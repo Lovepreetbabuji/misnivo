@@ -3581,7 +3581,22 @@ function openDareDetail(dareId){
   document.getElementById('ddTopTitle').textContent = title;
   document.getElementById('ddName').textContent = title;
   document.getElementById('ddBounty').textContent = 'Rs. ' + reward.toLocaleString('en-IN');
-  document.getElementById('ddMeta').textContent = `${d.creator||'—'} · ${d.takers||0} ${d.takerSelectionMode==='creator_picks'?'applicants':'takers'} · ${_relTimeStr(d.date)}`;
+
+  // View count (increment once per open, like proofs)
+  if (user) {
+    db.collection('dares').doc(dareId).update({ viewCount: firebase.firestore.FieldValue.increment(1) }).catch(()=>{});
+    d.viewCount = (d.viewCount||0) + 1;
+  }
+  document.getElementById('ddViewCount').textContent = _fmtCount(d.viewCount||0);
+
+  // Expiry countdown (urgency)
+  const exEl = document.getElementById('ddExpiry');
+  if (d.expiresAt){
+    const exp = d.expiresAt.toDate ? d.expiresAt.toDate() : new Date(d.expiresAt);
+    const ms = exp - new Date();
+    if (ms > 0){ const hrs = Math.floor(ms/3600000); exEl.textContent = '⏱ ' + (hrs>=24 ? Math.floor(hrs/24)+'d left' : hrs+'h left'); exEl.style.display=''; }
+    else exEl.style.display = 'none';
+  } else exEl.style.display = 'none';
 
   document.getElementById('ddHero').innerHTML = thumb
     ? `<img src="${thumb}" alt="" style="width:100%;height:100%;object-fit:cover;display:block;"/>`
@@ -3689,6 +3704,7 @@ async function loadDareTopComment(dareId){
   el.innerHTML = '<div style="color:var(--t3);font-size:13px;padding:10px 0;">Loading...</div>';
   try {
     const snap = await db.collection('comments').where('proofId','==',dareId).limit(50).get();
+    const ccEl = document.getElementById('ddCommentCount'); if (ccEl) ccEl.textContent = _fmtCount(snap.size);
     let cs = snap.docs.map(doc=>({id:doc.id,...doc.data()})).filter(c=>!c.parentId);
     if (!cs.length){ el.innerHTML = '<div class="vd-no-comments"><span class="mi">chat_bubble_outline</span><div>No comments yet — be the first!</div></div>'; return; }
     cs.sort((a,b)=>(b.likeCount||b.likes||0)-(a.likeCount||a.likes||0));
