@@ -1955,6 +1955,10 @@ textarea.f-input{resize:vertical;min-height:84px;}
 .dd-actions{ display:flex; flex-wrap:wrap; gap:8px; align-items:center; margin-top:12px; }
 .dd-actions .dd-stat{ cursor:default; }
 .dd-cta-inline{ margin-left:auto; }
+.dd-follow{ margin-left:auto; flex-shrink:0; }
+/* BAR 2: description + tags */
+.dd-bar2 .dd-sec-label{ margin-top:0; }
+.dd-bar2 .dd-tags{ display:flex; flex-wrap:wrap; gap:6px; margin-top:12px; }
 
 /* ─── EXPLORER / TRENDING PAGE ───────────────────────────────── */
 .exp-tabs { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 16px; scrollbar-width: none; margin-bottom: 8px; }

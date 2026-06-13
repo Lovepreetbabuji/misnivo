@@ -3609,7 +3609,8 @@ function openDareDetail(dareId){
     <div class="dd-creator-info">
       <div class="dd-creator-name">${escHtml(d.creator||'Creator')}</div>
       <div class="dd-creator-sub">@${escHtml(d.creatorUsername || (d.creator||'creator'))}</div>
-    </div>`;
+    </div>
+    ${d.creatorUid !== user?.uid ? `<button class="shorts-follow dd-follow" onclick="toggleFollow('${d.creatorUid||''}','creator')">Follow</button>` : ''}`;
 
   const desc = d.description || d.desc || '';
   document.getElementById('ddDesc').innerHTML = desc ? `<div class="dd-sec-label">Description</div><p class="dd-desc-text">${escHtml(desc)}</p>` : '';
