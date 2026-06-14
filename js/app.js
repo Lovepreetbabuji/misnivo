@@ -3380,25 +3380,38 @@ function _renderNotifications() {
     </div>`).join('');
 }
 
+function _vdRelLongCard(p){
+  const cat=p.cat||'fitness';const color=CAT_C[cat]||'#717171';const t=vidThumb(p,320);
+  const badge=`<span class="dd-rel-badge">$${(p.dareBounty||0).toLocaleString('en-IN')}</span>`;
+  const thumb = t
+    ? `<div class="dd-rel-thumb"><img src="${t}" loading="lazy"/>${badge}</div>`
+    : `<div class="dd-rel-thumb dd-rel-thumb-bg" style="background:linear-gradient(135deg,${color}22,${color}55);"><span class="mi" style="color:${color};">play_circle</span>${badge}</div>`;
+  return `<div class="dd-rel-card" onclick="openVideo('${p.id}')">${thumb}
+    <div class="dd-rel-title">${escHtml(p.dareTitle||'Dare Video')}</div>
+    <div class="dd-rel-meta">${escHtml(p.takerName||'—')} · ${_fmtCount(p.viewCount||0)} views</div></div>`;
+}
+function _vdRelShortCard(p){
+  const cat=p.cat||'fitness';const color=CAT_C[cat]||'#717171';const t=vidThumb(p,240);
+  const inner = t ? `<img src="${t}" loading="lazy"/>` : `<div class="dd-rel-short-bg" style="background:linear-gradient(135deg,${color}22,${color}55);"><span class="mi" style="color:${color};">play_circle</span></div>`;
+  return `<div class="dd-rel-short" onclick="openVideo('${p.id}')">
+    <div class="dd-rel-short-thumb">${inner}<span class="dd-rel-badge">$${(p.dareBounty||0).toLocaleString('en-IN')}</span></div>
+    <div class="dd-rel-short-title">${escHtml(p.dareTitle||'')}</div></div>`;
+}
+// Related column = mobile-home-style feed: long 16:9 cards + a horizontal Shorts row
 function _renderRelatedVideos(currentProof) {
   const el=document.getElementById('vdRelated'); if(!el) return;
-  const pool=[...homeProofs,...allProofs].filter((p,i,arr)=>arr.findIndex(x=>x.id===p.id)===i);
-  let related=pool.filter(p=>p.id!==currentProof.id&&(p.cat===currentProof.cat||p.tags?.includes(currentProof.cat))).slice(0,8);
-  if(!related.length) related=pool.filter(p=>p.id!==currentProof.id).slice(0,5);
-  if(!related.length){el.innerHTML='<div style="color:var(--t3);font-size:13px;">No related videos yet</div>';return;}
-  el.innerHTML=related.map(p=>{
-    const cat=p.cat||'fitness';const color=CAT_C[cat]||'#717171';const t=vidThumb(p,320);
-    const sc = _isShortVideo(p) ? ' dd-rel-thumb-short' : '';  // shorts → 9:16, long → 16:9
-    const badge=`<span class="dd-rel-badge">$${(p.dareBounty||0).toLocaleString('en-IN')}</span>`;
-    const thumb = t
-      ? `<div class="dd-rel-thumb${sc}"><img src="${t}" loading="lazy"/>${badge}</div>`
-      : `<div class="dd-rel-thumb dd-rel-thumb-bg${sc}" style="background:linear-gradient(135deg,${color}22,${color}55);"><span class="mi" style="color:${color};">play_circle</span>${badge}</div>`;
-    return `<div class="dd-rel-card" onclick="openVideo('${p.id}')">
-      ${thumb}
-      <div class="dd-rel-title">${escHtml(p.dareTitle||'Dare Video')}</div>
-      <div class="dd-rel-meta">${escHtml(p.takerName||'—')} · ${_fmtCount(p.viewCount||0)} views</div>
-    </div>`;
-  }).join('');
+  const pool=[...homeProofs,...allProofs].filter((p,i,arr)=>arr.findIndex(x=>x.id===p.id)===i).filter(p=>p.id!==currentProof.id);
+  let related=pool.filter(p=>p.cat===currentProof.cat||p.tags?.includes(currentProof.cat));
+  if(related.length<4) related=pool;
+  const shorts=related.filter(p=>_isShortVideo(p)).slice(0,10);
+  const longs =related.filter(p=>!_isShortVideo(p)).slice(0,8);
+  if(!shorts.length&&!longs.length){el.innerHTML='<div style="color:var(--t3);font-size:13px;">No related videos yet</div>';return;}
+  let html=longs.map(_vdRelLongCard).join('');
+  if(shorts.length){
+    html+=`<div class="dd-rel-shortsrow-label"><span class="mi">bolt</span> Shorts</div>
+      <div class="dd-rel-shortsrow">${shorts.map(_vdRelShortCard).join('')}</div>`;
+  }
+  el.innerHTML=html;
 }
 
 async function _renderVideoDetail(p) {
@@ -3424,13 +3437,14 @@ async function _renderVideoDetail(p) {
   document.getElementById('vdBounty').textContent  = `Rs. ${(p.dareBounty||0).toLocaleString('en-IN')} bounty won`;
   // Follow the video's taker (hidden on your own video)
   const fb=document.getElementById('vdFollowBtn');
-  if(fb){ if(p.takerId && p.takerId!==user?.uid){ fb.style.display=''; fb.onclick=function(e){ e.stopPropagation(); toggleFollow(p.takerId,'taker'); }; } else { fb.style.display='none'; } }
+  if(fb){ fb.style.display=''; fb.onclick=function(e){ e.stopPropagation(); openCollabModal(); }; } // opens the box with both ids + per-id follow
   // Stash ids for collab modal
   const cm = document.getElementById('collabModal');
   if (cm) { cm.dataset.creatorId = creatorId; cm.dataset.takerId = p.takerId||''; }
   const ov = document.getElementById('videoDetailOverlay');
   ov.dataset.creatorName='@'+creatorUser; ov.dataset.takerName='@'+takerUser;
   ov.dataset.creatorAv=creatorName[0].toUpperCase(); ov.dataset.takerAv=(p.takerName||'T')[0].toUpperCase();
+  ov.dataset.creatorPhoto=(_dare?.creatorPhotoURL||p.posterPhotoURL||''); ov.dataset.takerPhoto=(p.takerPhotoURL||'');
   // Description + rules + tags (column 2 — hidden until "Description & rules")
   const _d = _dare || {};
   const desc = p.description || _d.description || _d.desc || '';
@@ -3448,7 +3462,7 @@ async function _renderVideoDetail(p) {
   if(vdAv){if(user?.picture)vdAv.innerHTML=`<img src="${user.picture}" style="width:100%;height:100%;object-fit:cover;border-radius:50%;" alt="av"/>`;else if(user)vdAv.textContent=user.name[0].toUpperCase();}
   // Comments use the shared box (proofId = proof.id)
   _ddCurrentId = p.id;
-  _ddCanPin = (p.takerId === user?.uid); // the video's taker can pin comments
+  _ddCanPin = (p.takerId === user?.uid) || (creatorId === user?.uid); // taker AND creator can pin
   loadDareTopComment(p.id, { previewEl:'vdTopComment', countEl:'vdCommentCount', host:'videoDetailOverlay' });
   _renderRelatedVideos(p);
 }
@@ -3916,18 +3930,27 @@ function _ddSortComments(arr){
 }
 async function pinDareComment(id){
   const c=(_ddComments||[]).find(x=>x.id===id); if(!c) return;
-  const np=!c.pinned; c.pinned=np;
   document.querySelectorAll('#ddBoxList .cmt-menu.open').forEach(m=>m.classList.remove('open'));
+  if (c.pinned){
+    if (c.pinnedBy && c.pinnedBy !== user?.uid){ showToast("Only the person who pinned this can unpin it"); return; }
+    c.pinned=false; c.pinnedBy=null;
+    db.collection('comments').doc(id).update({ pinned:false, pinnedBy:firebase.firestore.FieldValue.delete() }).catch(()=>{});
+  } else {
+    c.pinned=true; c.pinnedBy=user?.uid||null;
+    db.collection('comments').doc(id).update({ pinned:true, pinnedBy:user?.uid||null }).catch(()=>{});
+  }
   _renderDareComments();
-  db.collection('comments').doc(id).update({pinned:np}).catch(()=>{});
 }
 function _ddCommentHtml(c, replies){
   const liked = (c.likedBy||[]).includes(user&&user.uid);
   const likeN = c.likeCount||c.likes||0;
   const safeName = (c.userName||'').replace(/[\\'"<>]/g,'');
-  // The dare creator / video taker can pin top-level comments
-  const pinItem = (_ddCanPin && replies!==null)
-    ? `<button onclick="event.stopPropagation();pinDareComment('${c.id}')"><span class="mi">push_pin</span> ${c.pinned?'Unpin':'Pin'}</button>` : '';
+  // Creator AND taker can pin top-level comments — but only the person who pinned can unpin
+  let pinItem = '';
+  if (_ddCanPin && replies!==null){
+    if (!c.pinned) pinItem = `<button onclick="event.stopPropagation();pinDareComment('${c.id}')"><span class="mi">push_pin</span> Pin</button>`;
+    else if (c.pinnedBy === (user&&user.uid)) pinItem = `<button onclick="event.stopPropagation();pinDareComment('${c.id}')"><span class="mi">push_pin</span> Unpin</button>`;
+  }
   const acts = `<div class="vd-comment-acts">
       <button class="cmt-act${liked?' liked':''}" onclick="event.stopPropagation();likeDareComment('${c.id}')"><span class="mi">thumb_up</span>${likeN>0?' '+_fmtCount(likeN):''}</button>
       <button class="cmt-act" onclick="event.stopPropagation();startDareReply('${c.id}','${safeName}')">Reply</button>
@@ -4910,13 +4933,14 @@ function openCollabModal() {
   if (!cm) return;
   document.getElementById('cmCreatorName').textContent = ov.dataset.creatorName||'@creator';
   document.getElementById('cmTakerName').textContent   = ov.dataset.takerName||'@taker';
-  document.getElementById('cmCreatorAv').textContent   = ov.dataset.creatorAv||'C';
-  document.getElementById('cmTakerAv').textContent     = ov.dataset.takerAv||'T';
+  document.getElementById('cmCreatorAv').innerHTML = _avHtml(ov.dataset.creatorPhoto||'', ov.dataset.creatorName||'C');
+  document.getElementById('cmTakerAv').innerHTML   = _avHtml(ov.dataset.takerPhoto||'', ov.dataset.takerName||'T');
   cm.style.display = 'flex';
+  cm.classList.add('open');   // .overlay needs .open or it stays invisible (opacity:0)
 }
 function closeCollabModal() {
   const cm = document.getElementById('collabModal');
-  if (cm) cm.style.display = 'none';
+  if (cm) { cm.classList.remove('open'); cm.style.display = 'none'; }
 }
 
 // #7: Interleaved infinite feed — mixes long videos & shorts rows in random chunks
