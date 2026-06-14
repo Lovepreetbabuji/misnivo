@@ -3,11 +3,11 @@
    Glass + Neumorphism + Minimalism · Blackish-Red bg
 ═══════════════════════════════════════════════════════ */
 :root{
-  /* ── Background palette (warm black, NOT bluish) ── */
-  --bg:     #0f0f0f;
-  --bg2:    #1f1f1f;
-  --bg3:    #272727;
-  --bg4:    #383838;
+  /* ── Background palette (deep black) ── */
+  --bg:     #050505;
+  --bg2:    #121212;
+  --bg3:    #1a1a1a;
+  --bg4:    #262626;
 
   /* ── Glass surfaces ── */
   --glass:  rgba(22,10,10,0.70);
@@ -49,7 +49,7 @@
 *{margin:0;padding:0;box-sizing:border-box;}
 html{scroll-behavior:smooth;}
 body{
-  background:#0f0f0f;color:var(--t1);
+  background:#050505;color:var(--t1);
 }
 .mi{font-family:'Material Icons Round';font-style:normal;font-size:20px;line-height:1;user-select:none;}
 ::-webkit-scrollbar{width:4px;height:4px;}
@@ -1215,7 +1215,7 @@ textarea.f-input{resize:vertical;min-height:84px;}
 
 .bottom-nav{
   display:none;position:fixed;bottom:0;left:0;right:0;z-index:100;
-  height:56px;background:#0f0f0f;
+  height:56px;background:#050505;
   border-top:1px solid rgba(255,255,255,.08);
   flex-direction:row;align-items:center;justify-content:space-around;
   padding:0 4px max(env(safe-area-inset-bottom,0px),4px);
@@ -1782,7 +1782,7 @@ textarea.f-input{resize:vertical;min-height:84px;}
 .notif-badge {
   position: absolute; top: -4px; right: -4px;
   min-width: 18px; height: 18px;
-  background: var(--red); border: 2px solid #0f0f0f; border-radius: 50%;
+  background: var(--red); border: 2px solid #050505; border-radius: 50%;
   font-size: 10px; font-weight: 800; color: #fff;
   display: flex; align-items: center; justify-content: center;
   animation: bounceIn .3s cubic-bezier(.34,1.56,.64,1) both; padding: 0 3px;
@@ -2093,7 +2093,7 @@ textarea.f-input{resize:vertical;min-height:84px;}
    YOUTUBE SHORTS PLAYER
    ═══════════════════════════════════════════════════════════ */
 .shorts-overlay{
-  position:fixed;inset:0;z-index:400;background:#0f0f0f;
+  position:fixed;inset:0;z-index:400;background:#050505;
   display:none;overflow:hidden;
 }
 .shorts-overlay.open{display:block;}
@@ -2648,7 +2648,7 @@ html{scroll-behavior:smooth;}
 
 /* Sidebar (desktop) flat solid */
 .sidebar {
-  background: #0f0f0f !important;
+  background: #050505 !important;
   border-right: 1px solid rgba(255,255,255,0.08) !important;
   box-shadow: none !important;
 }
