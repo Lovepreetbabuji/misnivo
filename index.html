@@ -11,7 +11,7 @@
 <link href="https://fonts.googleapis.com/icon?family=Material+Icons+Round" rel="stylesheet"/>
 
 <!-- App Styles -->
-<link rel="stylesheet" href="css/styles.css?v=20260613i"/>
+<link rel="stylesheet" href="css/styles.css?v=20260613j"/>
 
 <!-- Firebase CDN -->
 <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
@@ -137,7 +137,7 @@
     </div>
     <div class="search-wrap" style="position:relative;">
       <input type="text" id="searchInput" placeholder="Search"
-             oninput="handleSearch()" onfocus="if(this.value.trim().length>=2)handleSearchImmediate()"
+             oninput="handleSearch()" onfocus="if(this.value.trim().length>=2)_showSuggestions(this.value.toLowerCase().trim())"
              onkeydown="if(event.key==='Enter'){event.preventDefault();handleSearchImmediate();}"
              onblur="setTimeout(_hideSuggestions,200)"/>
       <button class="search-go" onclick="handleSearchImmediate()" aria-label="Search"><span class="mi">search</span></button>
@@ -795,7 +795,7 @@
 <div class="toast" id="toast"></div>
 
 <!-- App Logic -->
-<script src="js/app.js?v=20260613i"></script>
+<script src="js/app.js?v=20260613j"></script>
 
 <!-- ══ v0.19 NEW MODALS ══ -->
 
@@ -914,19 +914,16 @@
       <!-- ═══ COLUMN 1: thumbnail · bounty · creator+follow · actions · comments ═══ -->
       <div class="dd-bar dd-col1">
         <div class="dd-hero" id="ddHero"></div>
-        <div class="dd-title" id="ddName">—</div>
         <div class="dd-creator" id="ddCreator"></div>
         <div class="dd-expiry" id="ddExpiry" style="display:none;"></div>
-        <div class="dd-action-row">
-          <div class="dd-actions">
-            <span class="dd-cta-inline" id="ddCta"></span>
-            <button class="vd-action-btn" id="ddLikeBtn" onclick="likeDare()"><span class="mi">thumb_up</span> <span id="ddLikeCount">0</span></button>
-            <button class="vd-action-btn" id="ddDislikeBtn" onclick="dislikeDare()"><span class="mi">thumb_down</span> <span id="ddDislikeCount">0</span></button>
-          </div>
+        <div class="dd-actions">
+          <span class="dd-cta-inline" id="ddCta"></span>
+          <button class="vd-action-btn" id="ddLikeBtn" onclick="likeDare()"><span class="mi">thumb_up</span> <span id="ddLikeCount">0</span></button>
+          <button class="vd-action-btn" id="ddDislikeBtn" onclick="dislikeDare()"><span class="mi">thumb_down</span> <span id="ddDislikeCount">0</span></button>
           <span class="dd-more">
             <button class="vd-action-btn" onclick="_ddToggleActionMenu(this)"><span class="mi">more_horiz</span></button>
             <span class="dd-action-menu">
-              <button onclick="shareDare(_ddCurrentId, document.getElementById('ddName').textContent)"><span class="mi">share</span> Share</button>
+              <button onclick="shareDare(_ddCurrentId, document.getElementById('ddTopTitle').textContent)"><span class="mi">share</span> Share</button>
               <button onclick="_ddReport()"><span class="mi">flag</span> Report</button>
             </span>
           </span>
@@ -965,6 +962,7 @@
       </div>
     </div>
   </div>
+  <button class="dd-scrolltop" id="ddScrollTop" onclick="_ddScrollTop()" aria-label="Scroll to top"><span class="mi">arrow_upward</span></button>
 </div>
 
 <div class="video-detail-overlay" id="videoDetailOverlay">

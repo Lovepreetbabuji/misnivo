@@ -1973,11 +1973,8 @@ textarea.f-input{resize:vertical;min-height:84px;}
 }
 /* The dare's own back/title bar blends with the page (no separate black look) */
 .dd-topbar{ background:transparent; }
-/* Action row: scrollable buttons + a pinned 3-dots menu (not clipped) */
-.dd-action-row{ display:flex; align-items:center; gap:8px; margin-top:12px; }
-.dd-actions{ flex:1; min-width:0; display:flex; flex-wrap:nowrap; overflow-x:auto; gap:8px; align-items:center; padding-bottom:4px; scrollbar-width:none; }
-.dd-actions::-webkit-scrollbar{ display:none; }
-.dd-actions .vd-action-btn{ flex-shrink:0; }
+/* Action buttons — one line (Accept · Like · Dislike · 3-dots) */
+.dd-actions{ display:flex; flex-wrap:wrap; gap:8px; align-items:center; margin-top:12px; }
 .dd-cta-inline{ flex-shrink:0; }
 .dd-follow{ margin-left:auto; flex-shrink:0; }
 /* creator row: photo · name · Follow · "X ago · N views" */
@@ -2019,20 +2016,38 @@ textarea.f-input{resize:vertical;min-height:84px;}
 
 /* Keep the main topbar visible — the dare page opens BELOW it */
 #dareDetailOverlay{ top:56px; }
+/* Topbar turns solid (not transparent) while a detail overlay is open */
+body.detail-open .topbar{ background:#050505 !important; backdrop-filter:none !important; -webkit-backdrop-filter:none !important; }
 
-/* Desktop: 3 columns — [thumbnail+actions+comments] · [desc+rules] · [related] */
+/* Scroll-to-top arrow (appears after scrolling the comments/columns down) */
+.dd-scrolltop{ position:fixed; right:22px; bottom:22px; width:46px; height:46px; border-radius:50%; border:1px solid var(--border2); background:#1a1a1a; color:var(--t1); cursor:pointer; display:none; align-items:center; justify-content:center; z-index:170; box-shadow:0 6px 20px rgba(0,0,0,.55); }
+.dd-scrolltop.show{ display:flex; }
+.dd-scrolltop:hover{ background:#262626; }
+
+/* Desktop: 3 columns, each scrolls independently; page opens beside the rail */
 @media(min-width:769px){
-  .dd-wrap{ max-width:1320px; }
-  .dd-layout{ display:flex; gap:18px; align-items:flex-start; }
+  #dareDetailOverlay{ left:72px; overflow:hidden; transition:left .28s cubic-bezier(.4,0,.2,1); }
+  body.sidebar-expanded #dareDetailOverlay{ left:240px; }
+  #dareDetailOverlay .dd-wrap{ height:100%; max-width:1320px; display:flex; flex-direction:column; padding:0 16px; }
+  #dareDetailOverlay .dd-layout{ display:flex; gap:18px; align-items:stretch; flex:1; min-height:0; padding-bottom:16px; }
+  #dareDetailOverlay .dd-layout > .dd-bar{ margin-bottom:0; overflow-y:auto; }
   .dd-col1{ flex:1.5; min-width:0; }
   .dd-col2{ flex:1; min-width:0; }
   .dd-col3{ width:300px; flex-shrink:0; }
+  /* slim scrollbars inside the columns */
+  #dareDetailOverlay .dd-bar::-webkit-scrollbar{ width:8px; }
+  #dareDetailOverlay .dd-bar::-webkit-scrollbar-thumb{ background:#333; border-radius:8px; }
 }
 /* Mobile: columns stack; related grid = 2-up 16:9 */
 @media(max-width:768px){
   .dd-related-grid{ display:grid; grid-template-columns:1fr 1fr; gap:14px; }
   .dd-creator{ flex-wrap:wrap; }
   .dd-creator-meta{ width:100%; margin-left:0 !important; margin-top:4px; }
+}
+/* Mobile hamburger drawer must sit ABOVE the dare/video overlay (z 150) */
+@media(max-width:599px){
+  .sb-overlay{ z-index:160; }
+  .sidebar{ z-index:210 !important; }
 }
 
 /* ─── EXPLORER / TRENDING PAGE ───────────────────────────────── */
@@ -2065,6 +2080,9 @@ textarea.f-input{resize:vertical;min-height:84px;}
 .sug-item { display: flex; align-items: center; gap: 10px; padding: 11px 16px; cursor: pointer; font-size: 13px; color: var(--t2); transition: background .12s; }
 .sug-item:hover { background: var(--glass2); color: var(--t1); }
 .sug-type { margin-left: auto; font-size: 10px; font-weight: 700; color: rgba(255,255,255,.25); text-transform: uppercase; letter-spacing: .5px; background: rgba(255,255,255,.06); padding: 2px 7px; border-radius: 6px; }
+.search-back-btn { display:inline-flex; align-items:center; gap:6px; background:var(--bg3); border:1px solid var(--border); color:var(--t1); font-size:13px; font-weight:600; padding:8px 16px; border-radius:50px; cursor:pointer; font-family:inherit; margin-bottom:14px; }
+.search-back-btn:hover { background:var(--glass3); }
+.search-back-btn .mi { font-size:18px; }
 .search-type-bar { display: flex; gap: 8px; margin-bottom: 18px; }
 .search-type-btn { display: flex; align-items: center; gap: 6px; padding: 8px 18px; background: var(--glass); border: 1px solid var(--border); border-radius: 50px; font-size: 13px; font-weight: 600; color: var(--t3); cursor: pointer; font-family: inherit; transition: all .2s ease; }
 .search-type-btn .mi { font-size: 16px; }
@@ -2654,11 +2672,13 @@ html{scroll-behavior:smooth;}
 }
 
 /* Modals: ONE drop shadow only */
-.modal, .pe-modal, .notif-panel, .video-detail-overlay,
+.modal, .pe-modal, .notif-panel,
 .user-dropdown, .dd-menu, .auth-box, .shorts-menu, .collab-sheet {
   box-shadow: 0 8px 28px rgba(0,0,0,0.5) !important;
   background: #1f1f1f !important;
 }
+/* Full-screen detail overlays = near-black page bg (rows/cards stay lighter) */
+.video-detail-overlay { background: #050505 !important; box-shadow: none !important; }
 
 /* Remove all transition: all (performance) */
 .yt-card, .dare-list-card, .chip, .nav-item, .bn-item, .btn-post, .icon-btn {

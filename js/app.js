@@ -539,6 +539,7 @@ async function logout() {
 //  NAVIGATION
 // ════════════════════════════
 function goPage(pg) {
+  _searchReturn = null;
   if (typeof _closeDetailOverlays === 'function') _closeDetailOverlays();
   document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
   const el = document.getElementById('page' + pg.charAt(0).toUpperCase() + pg.slice(1));
@@ -1081,9 +1082,13 @@ function renderAcceptedPage() {
 //  SEARCH (BUG FIX: was referencing missing #dareFeed)
 // ════════════════════════════
 function handleSearch() {
-  // #5: Debounce — wait 350ms after typing stops before searching
+  // Typing only updates the suggestions dropdown — it never navigates.
+  // Actual search runs ONLY on Enter / search button (handleSearchImmediate).
   if (searchDebounceTimer) clearTimeout(searchDebounceTimer);
-  searchDebounceTimer = setTimeout(_handleSearchNow, 350);
+  searchDebounceTimer = setTimeout(()=>{
+    const q = (document.getElementById('searchInput').value||'').toLowerCase().trim();
+    if (q.length >= 2) _showSuggestions(q); else _hideSuggestions();
+  }, 200);
 }
 function handleSearchImmediate() {
   // Immediate search (for Enter key, button click, suggestion tap)
@@ -3043,8 +3048,6 @@ let _sidebarOpen = false;
 //   Mobile  (<600px) → slides in as overlay
 //   Tablet/Desktop   → collapse/expand (icons ↔ full)
 function toggleSidebar() {
-  // Detail overlays sit above the page — close them so the sidebar is visible
-  if (typeof _closeDetailOverlays === 'function') _closeDetailOverlays();
   // ≤768 = mobile/tablet slide-in overlay; ≥769 = desktop narrow rail ↔ expanded drawer
   const isMobile = window.innerWidth <= 768;
   const sb       = document.getElementById('sidebar');
@@ -3172,7 +3175,15 @@ function _clearGuestSession() {
   if (guestInterval) { clearInterval(guestInterval); guestInterval = null; }
 }
 
+let _searchReturn = null; // where to go back to after a search
 function _doSearch(q) {
+  // Remember where the user was so search gets a "back" — a dare they were
+  // viewing, else the page they were on.
+  if (!_searchReturn) {
+    const ddOpen = document.getElementById('dareDetailOverlay')?.classList.contains('open');
+    if (ddOpen && _ddCurrentId) _searchReturn = { dareId: _ddCurrentId };
+    else { const ap = document.querySelector('.page.active'); _searchReturn = { page: ap ? ap.id.replace(/^page/,'').toLowerCase() : 'home' }; }
+  }
   if (typeof _closeDetailOverlays === 'function') _closeDetailOverlays();
   // Show dares page as search results container
   document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
@@ -3183,6 +3194,7 @@ function _doSearch(q) {
   const feed=document.getElementById('daresPageFeed');
 
   const typeBar=`
+    <button class="search-back-btn" onclick="_searchBack()"><span class="mi">arrow_back</span> Back</button>
     <div class="search-type-bar">
       <button class="search-type-btn ${searchType==='dares'?'active':''}" onclick="setSearchType('dares')">
         <span class="mi">bolt</span> Dares
@@ -3564,6 +3576,7 @@ function closeNotifPanel() { document.getElementById('notifPanel')?.classList.re
 function closeVideoDetail() {
   document.getElementById('videoDetailOverlay').classList.remove('open');
   document.body.style.overflow='';
+  document.body.classList.remove('detail-open');
   const player=document.getElementById('vdPlayer'); player.pause(); player.src='';
   activeProof=null;
 }
@@ -3576,6 +3589,7 @@ let _ddCurrentId = null;
 function openDareDetail(dareId){
   const d = dares.find(x=>x.id===dareId);
   if (!d) { showToast('Dare not found'); return; }
+  if (typeof _searchReturn !== 'undefined') _searchReturn = null;
   _ddCurrentId = dareId;
   const cat = d.tags?.[0] || d.cat || 'fitness';
   const title = d.caption || d.title || 'Untitled Dare';
@@ -3584,7 +3598,6 @@ function openDareDetail(dareId){
   const color = CAT_C[cat] || '#FF2D4A', icon = CAT_I[cat] || 'bolt';
 
   document.getElementById('ddTopTitle').textContent = title;
-  document.getElementById('ddName').textContent = title;
 
   // View count (increment once per open, like proofs)
   if (user) {
@@ -3641,12 +3654,34 @@ function openDareDetail(dareId){
   const ov = document.getElementById('dareDetailOverlay');
   ov.classList.add('open');
   ov.scrollTop = 0;
+  const col1 = ov.querySelector('.dd-col1'); if (col1) col1.scrollTop = 0;
   document.body.style.overflow = 'hidden';
+  document.body.classList.add('detail-open'); // makes the topbar opaque
+  _ddBindScrollTop();
 }
 function closeDareDetail(){
   document.getElementById('dareDetailOverlay').classList.remove('open');
   document.body.style.overflow = '';
+  document.body.classList.remove('detail-open');
   _ddCurrentId = null;
+}
+// Which element actually scrolls? desktop = column 1; mobile = the overlay itself.
+function _ddScroller(){
+  const ov = document.getElementById('dareDetailOverlay'); if (!ov) return null;
+  if (window.innerWidth >= 769){ const c = ov.querySelector('.dd-col1'); if (c) return c; }
+  return ov;
+}
+function _ddBindScrollTop(){
+  const sc = _ddScroller(); const btn = document.getElementById('ddScrollTop');
+  if (!sc || !btn) return;
+  const onScroll = ()=>{ btn.classList.toggle('show', sc.scrollTop > 500); };
+  // rebind cleanly each open
+  if (sc._ddScrollHandler) sc.removeEventListener('scroll', sc._ddScrollHandler);
+  sc._ddScrollHandler = onScroll; sc.addEventListener('scroll', onScroll);
+  btn.classList.remove('show');
+}
+function _ddScrollTop(){
+  const sc = _ddScroller(); if (sc) sc.scrollTo({ top:0, behavior:'smooth' });
 }
 // Close any open dare/video detail overlay so the underlying page (sidebar,
 // search results, navigation) is visible & clickable — not stuck behind it.
@@ -3665,12 +3700,19 @@ function _ddToggleActionMenu(btn){
   document.querySelectorAll('.dd-action-menu.open').forEach(m=>m.classList.remove('open'));
   if (!open) menu.classList.add('open');
 }
-// Click a #tag → run a search for that tag (closes the dare page first)
+// Click a #tag → run a search for that tag (return-context captured in _doSearch)
 function searchTag(tag){
-  _closeDetailOverlays();
   const inp = document.getElementById('searchInput'); if (inp) inp.value = '#'+tag;
   try { searchType = 'dares'; } catch(e){}
   _doSearch(tag);
+}
+// "Back" from search results → reopen the dare you were on, else the page you left
+function _searchBack(){
+  const r = _searchReturn; _searchReturn = null;
+  const inp = document.getElementById('searchInput'); if (inp) inp.value = '';
+  _hideSuggestions();
+  if (r && r.dareId && (dares||[]).some(d=>d.id===r.dareId)) { openDareDetail(r.dareId); return; }
+  goPage((r && r.page) ? r.page : 'home');
 }
 function _ddReport(){
   const d = dares.find(x=>x.id===_ddCurrentId); if (!d) return;
@@ -3944,6 +3986,7 @@ async function openVideoDetail(proofId) {
   _renderVideoDetail(p);
   document.getElementById('videoDetailOverlay').classList.add('open');
   document.body.style.overflow='hidden';
+  document.body.classList.add('detail-open');
   // Then show ad IN the video area, then play
   const player = document.getElementById('vdPlayer');
   const dur = p.videoDuration || 0;
