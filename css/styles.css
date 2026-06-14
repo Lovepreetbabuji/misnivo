@@ -1952,27 +1952,46 @@ textarea.f-input{resize:vertical;min-height:84px;}
   color:var(--orange); background:rgba(255,159,10,.12); border:1px solid rgba(255,159,10,.3);
   padding:3px 10px; border-radius:50px; margin:4px 0 2px; font-family:'IBM Plex Mono',monospace;
 }
-.dd-actions{ display:flex; flex-wrap:wrap; gap:8px; align-items:center; margin-top:12px; }
+/* Action buttons: one line, horizontally scrollable (right-to-left) */
+.dd-actions{ display:flex; flex-wrap:nowrap; overflow-x:auto; gap:8px; align-items:center; margin-top:12px; padding-bottom:4px; scrollbar-width:none; }
+.dd-actions::-webkit-scrollbar{ display:none; }
+.dd-actions .vd-action-btn{ flex-shrink:0; }
 .dd-actions .dd-stat{ cursor:default; }
-.dd-cta-inline{ margin-left:auto; }
+.dd-cta-inline{ flex-shrink:0; }
 .dd-follow{ margin-left:auto; flex-shrink:0; }
-/* BAR 2: description + tags */
-.dd-bar2 .dd-sec-label{ margin-top:0; }
-.dd-bar2 .dd-tags{ display:flex; flex-wrap:wrap; gap:6px; margin-top:12px; }
-/* BAR 3: rules */
-.dd-bar3 .dd-sec-label{ margin-top:0; }
-/* Comments inside a bar-like block; "View all" (mobile) */
+.dd-col1 .dd-tags{ display:flex; flex-wrap:wrap; gap:6px; margin:2px 0 4px; }
+.dd-col2 .dd-sec-label{ margin-top:0; }
+.dd-col2 #ddRulesBar .dd-sec-label{ margin-top:16px; }
+/* Comments + "View all" (mobile) */
 .dd-comments .vd-comment{ margin-top:14px; }
-.dd-viewall{ background:none; border:none; color:var(--blue2); font-weight:600; font-size:13px; cursor:pointer; margin-top:12px; padding:6px 0; font-family:inherit; }
-.dd-viewall:hover{ text-decoration:underline; }
+.dd-viewall{ background:var(--bg3); border:1px solid var(--border); color:var(--t1); font-weight:600; font-size:13px; cursor:pointer; margin-top:14px; padding:9px 16px; border-radius:50px; font-family:inherit; width:100%; }
+.dd-viewall:hover{ background:var(--glass3); }
 
-/* Desktop: 2-column — left bars + right "More Dares" rail */
+/* Related-dare cards (Col 3) — 16:9 thumb + caption + meta + bounty */
+.dd-related-grid{ display:flex; flex-direction:column; gap:0; }
+.dd-rel-card{ cursor:pointer; margin-bottom:16px; }
+.dd-rel-thumb{ width:100%; aspect-ratio:16/9; border-radius:10px; overflow:hidden; background:#1f1f1f; }
+.dd-rel-thumb img{ width:100%; height:100%; object-fit:cover; display:block; }
+.dd-rel-thumb-bg{ display:flex; align-items:center; justify-content:center; }
+.dd-rel-thumb-bg .mi{ font-size:36px; }
+.dd-rel-title{ font-size:14px; font-weight:600; color:var(--t1); margin-top:8px; line-height:1.3; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; }
+.dd-rel-meta{ font-size:12px; color:var(--t3); margin-top:3px; }
+.dd-rel-bounty{ font-size:13px; color:var(--green); font-weight:700; margin-top:3px; }
+
+/* Keep the main topbar visible — the dare page opens BELOW it */
+#dareDetailOverlay{ top:56px; }
+
+/* Desktop: 3 columns — [thumbnail+actions+comments] · [desc+rules] · [related] */
 @media(min-width:769px){
-  .dd-wrap{ max-width:1200px; }
-  .dd-layout{ display:flex; gap:24px; align-items:flex-start; }
-  .dd-left{ flex:1; min-width:0; }
-  .dd-right{ width:340px; flex-shrink:0; }
-  .dd-right .dare-list-card{ margin-bottom:12px; }
+  .dd-wrap{ max-width:1320px; }
+  .dd-layout{ display:flex; gap:18px; align-items:flex-start; }
+  .dd-col1{ flex:1.5; min-width:0; }
+  .dd-col2{ flex:1; min-width:0; }
+  .dd-col3{ width:300px; flex-shrink:0; }
+}
+/* Mobile: columns stack; related grid = 2-up 16:9 */
+@media(max-width:768px){
+  .dd-related-grid{ display:grid; grid-template-columns:1fr 1fr; gap:14px; }
 }
 
 /* ─── EXPLORER / TRENDING PAGE ───────────────────────────────── */

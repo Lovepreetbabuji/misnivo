@@ -11,7 +11,7 @@
 <link href="https://fonts.googleapis.com/icon?family=Material+Icons+Round" rel="stylesheet"/>
 
 <!-- App Styles -->
-<link rel="stylesheet" href="css/styles.css?v=20260613e"/>
+<link rel="stylesheet" href="css/styles.css?v=20260613f"/>
 
 <!-- Firebase CDN -->
 <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
@@ -795,7 +795,7 @@
 <div class="toast" id="toast"></div>
 
 <!-- App Logic -->
-<script src="js/app.js?v=20260613e"></script>
+<script src="js/app.js?v=20260613f"></script>
 
 <!-- ══ v0.19 NEW MODALS ══ -->
 
@@ -912,35 +912,22 @@
     </div>
 
     <div class="dd-layout">
-      <!-- LEFT: 3 bars + comments -->
-      <div class="dd-left">
-        <!-- ═══ BAR 1: thumbnail · reward · title · creator · expiry · actions ═══ -->
-        <div class="dd-bar dd-bar1">
-          <div class="dd-hero" id="ddHero"></div>
-          <div class="dd-reward" id="ddBounty">Rs. 0</div>
-          <div class="dd-title" id="ddName">—</div>
-          <div class="dd-creator" id="ddCreator"></div>
-          <div class="dd-expiry" id="ddExpiry" style="display:none;"></div>
-          <div class="dd-actions">
-            <button class="vd-action-btn" id="ddLikeBtn" onclick="likeDare()"><span class="mi">thumb_up</span> <span id="ddLikeCount">0</span></button>
-            <button class="vd-action-btn" id="ddDislikeBtn" onclick="dislikeDare()"><span class="mi">thumb_down</span> <span id="ddDislikeCount">0</span></button>
-            <button class="vd-action-btn" onclick="document.getElementById('ddCommentInput')?.focus()"><span class="mi">comment</span> <span id="ddCommentCount">0</span></button>
-            <span class="vd-action-btn dd-stat"><span class="mi">visibility</span> <span id="ddViewCount">0</span></span>
-            <button class="vd-action-btn" onclick="_ddReport()"><span class="mi">flag</span> Report</button>
-            <button class="vd-action-btn" onclick="shareDare(_ddCurrentId, document.getElementById('ddName').textContent)"><span class="mi">share</span> Share</button>
-            <span class="dd-cta-inline" id="ddCta"></span>
-          </div>
-        </div>
-
-        <!-- ═══ BAR 2: description + tags ═══ -->
-        <div class="dd-bar dd-bar2">
-          <div class="dd-desc" id="ddDesc"></div>
-          <div class="dd-tags" id="ddTags"></div>
-        </div>
-
-        <!-- ═══ BAR 3: rules ═══ -->
-        <div class="dd-bar dd-bar3" id="ddRulesBar">
-          <div class="dd-rules" id="ddRules"></div>
+      <!-- ═══ COLUMN 1: thumbnail · bounty · creator+follow · actions · comments ═══ -->
+      <div class="dd-bar dd-col1">
+        <div class="dd-hero" id="ddHero"></div>
+        <div class="dd-reward" id="ddBounty">Rs. 0</div>
+        <div class="dd-title" id="ddName">—</div>
+        <div class="dd-tags" id="ddTags"></div>
+        <div class="dd-creator" id="ddCreator"></div>
+        <div class="dd-expiry" id="ddExpiry" style="display:none;"></div>
+        <div class="dd-actions">
+          <button class="vd-action-btn" id="ddLikeBtn" onclick="likeDare()"><span class="mi">thumb_up</span> <span id="ddLikeCount">0</span></button>
+          <button class="vd-action-btn" id="ddDislikeBtn" onclick="dislikeDare()"><span class="mi">thumb_down</span> <span id="ddDislikeCount">0</span></button>
+          <button class="vd-action-btn" onclick="document.getElementById('ddCommentInput')?.focus()"><span class="mi">comment</span> <span id="ddCommentCount">0</span></button>
+          <span class="vd-action-btn dd-stat"><span class="mi">visibility</span> <span id="ddViewCount">0</span></span>
+          <button class="vd-action-btn" onclick="_ddReport()"><span class="mi">flag</span> Report</button>
+          <button class="vd-action-btn" onclick="shareDare(_ddCurrentId, document.getElementById('ddName').textContent)"><span class="mi">share</span> Share</button>
+          <span class="dd-cta-inline" id="ddCta"></span>
         </div>
 
         <!-- Comments (desktop: all; mobile: 1 + View all) -->
@@ -958,10 +945,16 @@
         </div>
       </div>
 
-      <!-- RIGHT: more active dares -->
-      <div class="dd-right">
+      <!-- ═══ COLUMN 2: description + rules ═══ -->
+      <div class="dd-bar dd-col2">
+        <div class="dd-desc" id="ddDesc"></div>
+        <div id="ddRulesBar"><div class="dd-rules" id="ddRules"></div></div>
+      </div>
+
+      <!-- ═══ COLUMN 3: related dares (16:9) ═══ -->
+      <div class="dd-bar dd-col3">
         <div class="vd-sec-title"><span class="mi">bolt</span> More Dares</div>
-        <div id="ddMoreDares" class="dare-list"></div>
+        <div id="ddMoreDares" class="dd-related-grid"></div>
       </div>
     </div>
   </div>

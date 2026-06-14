@@ -3760,12 +3760,14 @@ function renderDareMore(excludeId){
     const cat=d.tags?.[0]||d.cat||'fitness'; const title=d.caption||d.title||'Untitled'; const reward=d.rewardAmount??d.bounty??0;
     const color=CAT_C[cat]||'#717171'; const icon=CAT_I[cat]||'bolt'; const thumb=d.thumbnailURL||'';
     const thumbHTML = thumb
-      ? `<div class="dare-list-thumb" style="background:#000;overflow:hidden;"><img src="${thumb}" style="width:100%;height:100%;object-fit:cover;" loading="lazy"/></div>`
-      : `<div class="dare-list-thumb" style="background:linear-gradient(135deg,${color}22,${color}55);"><span class="mi" style="color:${color};font-size:36px;">${icon}</span></div>`;
-    return `<div class="dare-list-card" style="cursor:pointer;" onclick="openDareDetail('${d.id}')">${thumbHTML}
-      <div class="dare-list-body"><div><div class="dare-list-title">${escHtml(title)}</div>
-        <div style="font-size:12px;color:var(--t3);margin-top:3px;">${d.creator||'—'} · ${d.takers||0} takers</div></div>
-        <div class="dare-list-bottom"><span class="dare-list-bounty">Rs.${reward.toLocaleString('en-IN')}</span></div></div></div>`;
+      ? `<div class="dd-rel-thumb"><img src="${thumb}" loading="lazy"/></div>`
+      : `<div class="dd-rel-thumb dd-rel-thumb-bg" style="background:linear-gradient(135deg,${color}22,${color}55);"><span class="mi" style="color:${color};">${icon}</span></div>`;
+    return `<div class="dd-rel-card" onclick="openDareDetail('${d.id}')">
+      ${thumbHTML}
+      <div class="dd-rel-title">${escHtml(title)}</div>
+      <div class="dd-rel-meta">${escHtml(d.creator||'—')} · ${_relTimeStr(d.date)} · ${_fmtCount(d.viewCount||0)} views</div>
+      <div class="dd-rel-bounty">Rs.${reward.toLocaleString('en-IN')}</div>
+    </div>`;
   }).join('');
 }
 
