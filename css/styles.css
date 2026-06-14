@@ -2134,6 +2134,10 @@ body.detail-open .topbar{ background:#050505 !important; backdrop-filter:none !i
 .dd-cbox-foot .vd-comment-input-row{ margin:0; }
 /* Desktop: the box is positioned by JS to exactly overlap column 1 (rounded) */
 @media(min-width:769px){ .dd-cbox{ border-radius:16px; } }
+/* Mobile + video page: comment sheet starts at the video's bottom edge (never covers it) */
+@media(max-width:768px){
+  .dd-cbox-overlay.cbox-under-video .dd-cbox{ top:calc(56px + 56.25vw); bottom:0; height:auto; }
+}
 /* Show/hide-replies toggle inside the box */
 .cmt-reptoggle{ display:inline-flex; align-items:center; gap:5px; background:none; border:none; color:var(--blue2); font-size:13px; font-weight:600; cursor:pointer; padding:6px 0; margin-top:4px; font-family:inherit; }
 .cmt-reptoggle .mi{ font-size:18px; }
@@ -2588,8 +2592,17 @@ html{scroll-behavior:smooth;}
 
 /* #5: Collaborators modal */
 .collab-sheet{
-  background:#212121;border-radius:16px;max-width:420px;width:100%;margin:auto;
+  background:rgba(20,20,20,.82) !important;
+  backdrop-filter:blur(22px) saturate(140%) !important; -webkit-backdrop-filter:blur(22px) saturate(140%) !important;
+  border:1px solid rgba(255,255,255,.10);
+  border-radius:16px;max-width:420px;width:100%;margin:auto;
   box-shadow:0 8px 28px rgba(0,0,0,.6);overflow:hidden;
+}
+/* Collaborators box: no full-screen dim; docked over column 1 (JS sets rect on desktop) */
+#collabModal{ background:transparent !important; }
+@media(max-width:768px){
+  #collabModal{ align-items:flex-end; }
+  #collabModal .collab-sheet{ max-width:none; border-radius:16px 16px 0 0; margin:0; }
 }
 .collab-sheet-hdr{
   display:flex;align-items:center;justify-content:space-between;padding:16px 20px;

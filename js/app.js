@@ -3388,7 +3388,8 @@ function _vdRelLongCard(p){
     : `<div class="dd-rel-thumb dd-rel-thumb-bg" style="background:linear-gradient(135deg,${color}22,${color}55);"><span class="mi" style="color:${color};">play_circle</span>${badge}</div>`;
   return `<div class="dd-rel-card" onclick="openVideo('${p.id}')">${thumb}
     <div class="dd-rel-title">${escHtml(p.dareTitle||'Dare Video')}</div>
-    <div class="dd-rel-meta">${escHtml(p.takerName||'—')} · ${_fmtCount(p.viewCount||0)} views</div></div>`;
+    <div class="dd-rel-meta">${escHtml(p.takerName||'—')}</div>
+    <div class="dd-rel-meta">${_fmtCount(p.viewCount||0)} views · ${_relTime(p)}</div></div>`;
 }
 function _vdRelShortCard(p){
   const cat=p.cat||'fitness';const color=CAT_C[cat]||'#717171';const t=vidThumb(p,240);
@@ -4015,19 +4016,26 @@ function _renderDareCommentsBox(){
   if (!tops.length){ el.innerHTML = '<div class="vd-no-comments"><span class="mi">chat_bubble_outline</span><div>No comments yet — be the first!</div></div>'; return; }
   el.innerHTML = tops.map(c=>_ddCommentHtml(c, byParent[c.id]||[])).join('');
 }
+// Desktop: dock a floating box exactly over column 1 of the given overlay.
+// Mobile: clear inline styles so the CSS bottom-sheet rules apply.
+function _dockToCol1(boxEl, hostId, fullHeight){
+  if (!boxEl) return;
+  if (window.innerWidth >= 769){
+    const col1 = document.querySelector('#'+hostId+' .dd-col1');
+    if (col1){ const r = col1.getBoundingClientRect();
+      const h = fullHeight ? `height:${r.height}px;` : `max-height:${r.height}px;`;
+      boxEl.style.cssText = `position:fixed;left:${r.left}px;top:${r.top}px;width:${r.width}px;${h}right:auto;bottom:auto;margin:0;`;
+    }
+  } else { boxEl.style.cssText = ''; }
+}
 function openDareComments(){
   _renderDareCommentsBox();
   const box = document.getElementById('ddCommentsBox'); if (!box) return;
   box.classList.add('open');
+  // Mobile + video page: the sheet sits just below the fixed video (doesn't cover it)
+  box.classList.toggle('cbox-under-video', _ddHostOverlayId==='videoDetailOverlay');
   _dmPush();
-  const cb = box.querySelector('.dd-cbox'); if (!cb) return;
-  // Desktop: dock the box exactly over column 1 (same size/position). Mobile: CSS sheet.
-  if (window.innerWidth >= 769){
-    const col1 = document.querySelector('#'+_ddHostOverlayId+' .dd-col1');
-    if (col1){ const r = col1.getBoundingClientRect();
-      cb.style.cssText = `position:absolute;left:${r.left}px;top:${r.top}px;width:${r.width}px;height:${r.height}px;right:auto;bottom:auto;`;
-    }
-  } else { cb.style.cssText = ''; }
+  _dockToCol1(box.querySelector('.dd-cbox'), _ddHostOverlayId, true);
 }
 function closeDareComments(){
   const box = document.getElementById('ddCommentsBox'); if (box) box.classList.remove('open');
@@ -4937,10 +4945,11 @@ function openCollabModal() {
   document.getElementById('cmTakerAv').innerHTML   = _avHtml(ov.dataset.takerPhoto||'', ov.dataset.takerName||'T');
   cm.style.display = 'flex';
   cm.classList.add('open');   // .overlay needs .open or it stays invisible (opacity:0)
+  _dockToCol1(cm.querySelector('.collab-sheet'), 'videoDetailOverlay', false); // align with column 1 (auto height)
 }
 function closeCollabModal() {
   const cm = document.getElementById('collabModal');
-  if (cm) { cm.classList.remove('open'); cm.style.display = 'none'; }
+  if (cm) { cm.classList.remove('open'); cm.style.display = 'none'; const s=cm.querySelector('.collab-sheet'); if(s) s.style.cssText=''; }
 }
 
 // #7: Interleaved infinite feed — mixes long videos & shorts rows in random chunks
