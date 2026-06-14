@@ -1903,14 +1903,15 @@ textarea.f-input{resize:vertical;min-height:84px;}
 .cmt-act.liked .mi { color:var(--blue); }
 .vd-replies { margin-top:10px; padding-left:14px; border-left:2px solid var(--border); display:flex; flex-direction:column; gap:12px; }
 .vd-reply .vd-comment-av { width:28px; height:28px; font-size:12px; }
-/* per-comment 3-dots → Report menu */
+/* per-comment 3-dots → Report menu (pinned to the comment's right edge) */
+.vd-comment-acts .cmt-more { margin-left:auto; }
 .cmt-more { position:relative; display:inline-flex; }
 .cmt-3dots { background:none; border:none; color:var(--t3); cursor:pointer; padding:2px; display:inline-flex; align-items:center; border-radius:50%; font-family:inherit; }
 .cmt-3dots .mi { font-size:18px; }
 .cmt-3dots:hover { color:var(--t1); background:var(--glass3); }
-.cmt-menu { display:none; position:absolute; top:24px; right:0; background:var(--bg3); border:1px solid var(--border); border-radius:10px; padding:4px; z-index:30; box-shadow:0 6px 20px rgba(0,0,0,.4); }
+.cmt-menu { display:none; position:absolute; top:26px; right:0; background:#282828; border:1px solid var(--border); border-radius:10px; padding:4px; z-index:60; box-shadow:0 8px 24px rgba(0,0,0,.55); }
 .cmt-menu.open { display:block; }
-.cmt-menu button { display:flex; align-items:center; gap:8px; background:none; border:none; color:var(--t1); font-size:13px; font-weight:600; padding:8px 14px; white-space:nowrap; cursor:pointer; border-radius:7px; font-family:inherit; }
+.cmt-menu button { display:flex; align-items:center; gap:8px; background:none; border:none; color:var(--t1); font-size:13px; font-weight:600; padding:9px 16px; white-space:nowrap; cursor:pointer; border-radius:7px; font-family:inherit; }
 .cmt-menu button:hover { background:var(--glass3); color:var(--red); }
 .cmt-menu button .mi { font-size:16px; }
 /* "Replying to @user" bar above the input */
@@ -1941,7 +1942,9 @@ textarea.f-input{resize:vertical;min-height:84px;}
 
 /* ─── ACTIVE DARE DETAIL PAGE (2c) ───────────────────────────── */
 .dd-wrap { max-width: 760px; margin: 0 auto; padding: 0 16px 80px; }
-.dd-hero { width: 100%; aspect-ratio: 16/9; border-radius: 14px; overflow: hidden; background: #1f1f1f; margin-bottom: 16px; }
+.dd-hero { position:relative; width: 100%; aspect-ratio: 16/9; border-radius: 14px; overflow: hidden; background: #1f1f1f; margin-bottom: 16px; }
+/* Bounty badge — top-right corner of the thumbnail, $ prefixed */
+.dd-bounty-badge { position:absolute; top:10px; right:10px; background:rgba(0,0,0,.72); color:var(--green); font-size:16px; font-weight:800; padding:5px 12px; border-radius:8px; letter-spacing:.3px; border:1px solid rgba(255,255,255,.12); }
 .dd-hero-bg { width:100%; height:100%; display:flex; align-items:center; justify-content:center; }
 .dd-body { }
 .dd-tags { display:flex; flex-wrap:wrap; gap:6px; margin-bottom:10px; }
@@ -1968,14 +1971,34 @@ textarea.f-input{resize:vertical;min-height:84px;}
   color:var(--orange); background:rgba(255,159,10,.12); border:1px solid rgba(255,159,10,.3);
   padding:3px 10px; border-radius:50px; margin:4px 0 2px; font-family:'IBM Plex Mono',monospace;
 }
-/* Action buttons: one line, horizontally scrollable (right-to-left) */
-.dd-actions{ display:flex; flex-wrap:nowrap; overflow-x:auto; gap:8px; align-items:center; margin-top:12px; padding-bottom:4px; scrollbar-width:none; }
+/* The dare's own back/title bar blends with the page (no separate black look) */
+.dd-topbar{ background:transparent; }
+/* Action row: scrollable buttons + a pinned 3-dots menu (not clipped) */
+.dd-action-row{ display:flex; align-items:center; gap:8px; margin-top:12px; }
+.dd-actions{ flex:1; min-width:0; display:flex; flex-wrap:nowrap; overflow-x:auto; gap:8px; align-items:center; padding-bottom:4px; scrollbar-width:none; }
 .dd-actions::-webkit-scrollbar{ display:none; }
 .dd-actions .vd-action-btn{ flex-shrink:0; }
-.dd-actions .dd-stat{ cursor:default; }
 .dd-cta-inline{ flex-shrink:0; }
 .dd-follow{ margin-left:auto; flex-shrink:0; }
+/* creator row: photo · name · Follow · "X ago · N views" */
+.dd-creator-info{ min-width:0; }
+.dd-creator-meta{ font-size:12px; color:var(--t3); white-space:nowrap; flex-shrink:0; margin-left:10px; }
+.dd-creator .dd-follow + .dd-creator-meta{ margin-left:10px; }
+.dd-creator:not(:has(.dd-follow)) .dd-creator-meta{ margin-left:auto; }
+/* 3-dots action menu (Share / Report) */
+.dd-more{ position:relative; flex-shrink:0; display:inline-flex; }
+.dd-action-menu{ display:none; position:absolute; bottom:46px; right:0; background:#282828; border:1px solid var(--border); border-radius:12px; padding:5px; z-index:60; box-shadow:0 8px 24px rgba(0,0,0,.5); }
+.dd-action-menu.open{ display:block; }
+.dd-action-menu button{ display:flex; align-items:center; gap:9px; width:100%; background:none; border:none; color:var(--t1); font-size:13px; font-weight:600; padding:9px 16px; white-space:nowrap; cursor:pointer; border-radius:8px; font-family:inherit; }
+.dd-action-menu button:hover{ background:var(--glass3); }
+.dd-action-menu button .mi{ font-size:18px; }
+/* comments-count chip beside the "Comments" heading */
+.dd-cmt-count{ font-size:13px; color:var(--t3); font-weight:600; }
+/* #tags below description+rules — always blue, clickable */
+.dd-tag-link{ font-size:13px; font-weight:600; color:var(--blue2); cursor:pointer; }
+.dd-tag-link:hover{ text-decoration:underline; }
 .dd-col1 .dd-tags{ display:flex; flex-wrap:wrap; gap:6px; margin:2px 0 4px; }
+.dd-col2 .dd-tags{ display:flex; flex-wrap:wrap; gap:12px; margin-top:18px; }
 .dd-col2 .dd-sec-label{ margin-top:0; }
 .dd-col2 #ddRulesBar .dd-sec-label{ margin-top:16px; }
 /* Comments + "View all" (mobile) */
@@ -2008,6 +2031,8 @@ textarea.f-input{resize:vertical;min-height:84px;}
 /* Mobile: columns stack; related grid = 2-up 16:9 */
 @media(max-width:768px){
   .dd-related-grid{ display:grid; grid-template-columns:1fr 1fr; gap:14px; }
+  .dd-creator{ flex-wrap:wrap; }
+  .dd-creator-meta{ width:100%; margin-left:0 !important; margin-top:4px; }
 }
 
 /* ─── EXPLORER / TRENDING PAGE ───────────────────────────────── */

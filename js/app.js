@@ -539,6 +539,7 @@ async function logout() {
 //  NAVIGATION
 // ════════════════════════════
 function goPage(pg) {
+  if (typeof _closeDetailOverlays === 'function') _closeDetailOverlays();
   document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
   const el = document.getElementById('page' + pg.charAt(0).toUpperCase() + pg.slice(1));
   if (el) el.classList.add('active');
@@ -1105,6 +1106,7 @@ function _handleSearchNow() {
 //  OPEN / CLOSE POST DARE MODAL
 // ════════════════════════════════════════════════════════════════════
 function openPost() {
+  if (typeof _closeDetailOverlays === 'function') _closeDetailOverlays();
   editingDareId = null;
   // Reset all state
   postTags = []; postRules = []; selectedThumb = null;
@@ -3041,6 +3043,8 @@ let _sidebarOpen = false;
 //   Mobile  (<600px) → slides in as overlay
 //   Tablet/Desktop   → collapse/expand (icons ↔ full)
 function toggleSidebar() {
+  // Detail overlays sit above the page — close them so the sidebar is visible
+  if (typeof _closeDetailOverlays === 'function') _closeDetailOverlays();
   // ≤768 = mobile/tablet slide-in overlay; ≥769 = desktop narrow rail ↔ expanded drawer
   const isMobile = window.innerWidth <= 768;
   const sb       = document.getElementById('sidebar');
@@ -3169,6 +3173,7 @@ function _clearGuestSession() {
 }
 
 function _doSearch(q) {
+  if (typeof _closeDetailOverlays === 'function') _closeDetailOverlays();
   // Show dares page as search results container
   document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
   const el=document.getElementById('pageDares'); if(el) el.classList.add('active');
@@ -3580,14 +3585,12 @@ function openDareDetail(dareId){
 
   document.getElementById('ddTopTitle').textContent = title;
   document.getElementById('ddName').textContent = title;
-  document.getElementById('ddBounty').textContent = 'Rs. ' + reward.toLocaleString('en-IN');
 
   // View count (increment once per open, like proofs)
   if (user) {
     db.collection('dares').doc(dareId).update({ viewCount: firebase.firestore.FieldValue.increment(1) }).catch(()=>{});
     d.viewCount = (d.viewCount||0) + 1;
   }
-  document.getElementById('ddViewCount').textContent = _fmtCount(d.viewCount||0);
 
   // Expiry countdown (urgency)
   const exEl = document.getElementById('ddExpiry');
@@ -3598,19 +3601,25 @@ function openDareDetail(dareId){
     else exEl.style.display = 'none';
   } else exEl.style.display = 'none';
 
-  document.getElementById('ddHero').innerHTML = thumb
+  const heroInner = thumb
     ? `<img src="${thumb}" alt="" style="width:100%;height:100%;object-fit:cover;display:block;"/>`
     : `<div class="dd-hero-bg" style="background:linear-gradient(135deg,${color}22,${color}55);"><span class="mi" style="color:${color};font-size:72px;">${icon}</span></div>`;
+  document.getElementById('ddHero').innerHTML = heroInner +
+    `<span class="dd-bounty-badge">$${reward.toLocaleString('en-IN')}</span>`;
 
-  document.getElementById('ddTags').innerHTML = (d.tags?.length ? d.tags : [cat]).map(t=>`<span class="dare-tag-pill">#${escHtml(t)}</span>`).join('');
+  // Tags live below description+rules (col 2): always blue, click = search that tag
+  document.getElementById('ddTags').innerHTML = (d.tags?.length ? d.tags : [cat])
+    .map(t=>`<span class="dd-tag-link" onclick="searchTag('${(''+t).replace(/[\\'"<>]/g,'')}')">#${escHtml(t)}</span>`).join('');
 
+  const ddMeta = `${_relTimeStr(d.date)} · ${_fmtCount(d.viewCount||0)} views`;
   document.getElementById('ddCreator').innerHTML = `
     <div class="dd-creator-av">${_avHtml(d.creatorPhotoURL, d.creator)}</div>
     <div class="dd-creator-info">
       <div class="dd-creator-name">${escHtml(d.creator||'Creator')}</div>
       <div class="dd-creator-sub">@${escHtml(d.creatorUsername || (d.creator||'creator'))}</div>
     </div>
-    ${d.creatorUid !== user?.uid ? `<button class="shorts-follow dd-follow" onclick="toggleFollow('${d.creatorUid||''}','creator')">Follow</button>` : ''}`;
+    ${d.creatorUid !== user?.uid ? `<button class="shorts-follow dd-follow" onclick="toggleFollow('${d.creatorUid||''}','creator')">Follow</button>` : ''}
+    <span class="dd-creator-meta">${ddMeta}</span>`;
 
   const desc = d.description || d.desc || '';
   document.getElementById('ddDesc').innerHTML = desc ? `<div class="dd-sec-label">Description</div><p class="dd-desc-text">${escHtml(desc)}</p>` : '';
@@ -3638,6 +3647,30 @@ function closeDareDetail(){
   document.getElementById('dareDetailOverlay').classList.remove('open');
   document.body.style.overflow = '';
   _ddCurrentId = null;
+}
+// Close any open dare/video detail overlay so the underlying page (sidebar,
+// search results, navigation) is visible & clickable — not stuck behind it.
+function _closeDetailOverlays(){
+  let closed = false;
+  ['dareDetailOverlay','videoDetailOverlay'].forEach(id=>{
+    const el = document.getElementById(id);
+    if (el && el.classList.contains('open')){ el.classList.remove('open'); closed = true; }
+  });
+  if (closed){ document.body.style.overflow = ''; _ddCurrentId = null; }
+}
+// 3-dots on the dare actions row → Share / Report menu
+function _ddToggleActionMenu(btn){
+  const menu = btn.nextElementSibling; if (!menu) return;
+  const open = menu.classList.contains('open');
+  document.querySelectorAll('.dd-action-menu.open').forEach(m=>m.classList.remove('open'));
+  if (!open) menu.classList.add('open');
+}
+// Click a #tag → run a search for that tag (closes the dare page first)
+function searchTag(tag){
+  _closeDetailOverlays();
+  const inp = document.getElementById('searchInput'); if (inp) inp.value = '#'+tag;
+  try { searchType = 'dares'; } catch(e){}
+  _doSearch(tag);
 }
 function _ddReport(){
   const d = dares.find(x=>x.id===_ddCurrentId); if (!d) return;
