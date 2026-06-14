@@ -3598,6 +3598,7 @@ function openDareDetail(dareId){
   const color = CAT_C[cat] || '#FF2D4A', icon = CAT_I[cat] || 'bolt';
 
   document.getElementById('ddTopTitle').textContent = title;
+  const ddTitleEl = document.getElementById('ddDareTitle'); if (ddTitleEl) ddTitleEl.textContent = title;
 
   // View count (increment once per open, like proofs)
   if (user) {
@@ -3691,12 +3692,17 @@ function _ddScroller(){
 }
 function _ddBindScrollTop(){
   const sc = _ddScroller(); const btn = document.getElementById('ddScrollTop');
-  if (!sc || !btn) return;
-  const onScroll = ()=>{ btn.classList.toggle('show', sc.scrollTop > 500); };
-  // rebind cleanly each open
+  const ov = document.getElementById('dareDetailOverlay');
+  if (!sc) return;
+  const onScroll = ()=>{
+    if (btn) btn.classList.toggle('show', sc.scrollTop > 500);
+    // Past the title → collapse it into the top bar (1 line) + show the 3-dots
+    if (ov) ov.classList.toggle('dd-scrolled', sc.scrollTop > 140);
+  };
   if (sc._ddScrollHandler) sc.removeEventListener('scroll', sc._ddScrollHandler);
   sc._ddScrollHandler = onScroll; sc.addEventListener('scroll', onScroll);
-  btn.classList.remove('show');
+  if (btn) btn.classList.remove('show');
+  if (ov) ov.classList.remove('dd-scrolled');
 }
 function _ddScrollTop(){
   const sc = _ddScroller(); if (sc) sc.scrollTo({ top:0, behavior:'smooth' });
@@ -3835,15 +3841,28 @@ function _ddCommentHtml(c, replies){
       <span class="cmt-more"><button class="cmt-3dots" onclick="event.stopPropagation();_ddToggleCmtMenu(this)"><span class="mi">more_vert</span></button>
         <span class="cmt-menu"><button onclick="event.stopPropagation();reportComment('${c.id}','${safeName}')"><span class="mi">flag</span> Report</button></span></span>
     </div>`;
-  const repHtml = (replies&&replies.length)
-    ? `<div class="vd-replies">${replies.map(r=>_ddCommentHtml(r,null)).join('')}</div>` : '';
+  // Replies are HIDDEN by default behind a "Show N replies" toggle
+  let repToggle = '', repHtml = '';
+  if (replies && replies.length){
+    repToggle = `<button class="cmt-reptoggle" onclick="event.stopPropagation();_ddToggleReplies('${c.id}',this)"><span class="mi">expand_more</span> Show ${replies.length} repl${replies.length>1?'ies':'y'}</button>`;
+    repHtml = `<div class="vd-replies" id="reps-${c.id}" style="display:none;">${replies.map(r=>_ddCommentHtml(r,null)).join('')}</div>`;
+  }
   return `<div class="vd-comment${replies===null?' vd-reply':''}">
     <div class="vd-comment-av">${_avHtml(c.userPhotoURL, c.userName)}</div>
     <div class="vd-comment-body">
       <div class="vd-comment-author">${escHtml(c.userName||'—')}<span class="vd-comment-time">${c.createdAt&&c.createdAt.toDate?_timeAgo(c.createdAt.toDate()):''}</span></div>
       <div class="vd-comment-text">${escHtml(c.text||'')}</div>
-      ${acts}${repHtml}
+      ${acts}${repToggle}${repHtml}
     </div></div>`;
+}
+function _ddToggleReplies(id, btn){
+  const box = document.getElementById('reps-'+id); if (!box) return;
+  const show = box.style.display === 'none';
+  box.style.display = show ? '' : 'none';
+  const n = box.children.length;
+  btn.innerHTML = show
+    ? '<span class="mi">expand_less</span> Hide replies'
+    : `<span class="mi">expand_more</span> Show ${n} repl${n>1?'ies':'y'}`;
 }
 // Re-render both the col-1 preview AND (if open) the comments box
 function _renderDareComments(){
@@ -3880,7 +3899,16 @@ function _renderDareCommentsBox(){
 }
 function openDareComments(){
   _renderDareCommentsBox();
-  const box = document.getElementById('ddCommentsBox'); if (box) box.classList.add('open');
+  const box = document.getElementById('ddCommentsBox'); if (!box) return;
+  box.classList.add('open');
+  const cb = box.querySelector('.dd-cbox'); if (!cb) return;
+  // Desktop: dock the box exactly over column 1 (same size/position). Mobile: CSS sheet.
+  if (window.innerWidth >= 769){
+    const col1 = document.querySelector('#dareDetailOverlay .dd-col1');
+    if (col1){ const r = col1.getBoundingClientRect();
+      cb.style.cssText = `position:absolute;left:${r.left}px;top:${r.top}px;width:${r.width}px;height:${r.height}px;right:auto;bottom:auto;`;
+    }
+  } else { cb.style.cssText = ''; }
 }
 function closeDareComments(){
   const box = document.getElementById('ddCommentsBox'); if (box) box.classList.remove('open');

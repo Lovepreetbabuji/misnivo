@@ -2070,8 +2070,11 @@ body.detail-open .topbar{ background:#050505 !important; backdrop-filter:none !i
 .dd-preview-comment{ margin-top:14px; }
 .dd-cbox-overlay{ position:fixed; inset:0; z-index:180; background:rgba(0,0,0,.55); display:none; }
 .dd-cbox-overlay.open{ display:block; }
-/* Mobile: tall bottom-sheet docked to column-1 (full width) — a "full box" */
-.dd-cbox{ position:absolute; left:0; right:0; bottom:0; background:#0f0f0f; border:1px solid var(--border); height:88vh; display:flex; flex-direction:column; border-radius:16px 16px 0 0; overflow:hidden; }
+/* Mobile: HALF-screen bottom-sheet (doesn't cover the top / bezels) — glassy */
+.dd-cbox{ position:absolute; left:0; right:0; bottom:0; height:62vh;
+  background:rgba(14,14,14,.82) !important;
+  backdrop-filter:blur(22px) saturate(140%) !important; -webkit-backdrop-filter:blur(22px) saturate(140%) !important;
+  border:1px solid rgba(255,255,255,.10); display:flex; flex-direction:column; border-radius:16px 16px 0 0; overflow:hidden; }
 .dd-cbox-head{ display:flex; align-items:center; justify-content:space-between; padding:14px 16px; border-bottom:1px solid var(--border); flex-shrink:0; }
 .dd-cbox-title{ display:flex; align-items:center; gap:8px; font-size:16px; font-weight:700; color:var(--t1); }
 .dd-cbox-title .mi{ font-size:20px; }
@@ -2081,10 +2084,19 @@ body.detail-open .topbar{ background:#050505 !important; backdrop-filter:none !i
 .dd-cbox-list{ flex:1; overflow-y:auto; padding:16px; display:flex; flex-direction:column; gap:18px; }
 .dd-cbox-foot{ flex-shrink:0; border-top:1px solid var(--border); padding:12px 16px; background:#0f0f0f; }
 .dd-cbox-foot .vd-comment-input-row{ margin:0; }
-/* Desktop: dock the box over COLUMN 1 (left), not centered */
-@media(min-width:769px){
-  .dd-cbox{ left:90px; right:auto; top:74px; bottom:18px; width:min(560px,42vw); height:auto; border-radius:16px; }
-}
+/* Desktop: the box is positioned by JS to exactly overlap column 1 (rounded) */
+@media(min-width:769px){ .dd-cbox{ border-radius:16px; } }
+/* Show/hide-replies toggle inside the box */
+.cmt-reptoggle{ display:inline-flex; align-items:center; gap:5px; background:none; border:none; color:var(--blue2); font-size:13px; font-weight:600; cursor:pointer; padding:6px 0; margin-top:4px; font-family:inherit; }
+.cmt-reptoggle .mi{ font-size:18px; }
+/* col-1 title (full caption, below thumbnail) */
+.dd-title2{ font-size:18px; font-weight:700; color:var(--t1); line-height:1.35; margin:10px 0 4px; }
+/* Dare top bar: title + 3-dots appear only after scrolling past the title */
+#dareDetailOverlay .vd-topbar-title{ opacity:0; transition:opacity .2s ease; }
+#dareDetailOverlay.dd-scrolled .vd-topbar-title{ opacity:1; }
+.dd-top-more{ display:none !important; }
+#dareDetailOverlay.dd-scrolled .dd-top-more{ display:inline-flex !important; }
+.dd-top-more .dd-action-menu{ top:46px; bottom:auto; }
 /* Mobile hamburger drawer must sit ABOVE the dare/video overlay (z 150) */
 @media(max-width:599px){
   .sb-overlay{ z-index:160; }
