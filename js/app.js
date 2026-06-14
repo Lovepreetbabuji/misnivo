@@ -3386,10 +3386,15 @@ function _renderRelatedVideos(currentProof) {
   if(!related.length) related=pool.filter(p=>p.id!==currentProof.id).slice(0,5);
   if(!related.length){el.innerHTML='<div style="color:var(--t3);font-size:13px;">No related videos yet</div>';return;}
   el.innerHTML=related.map(p=>{
-    const cat=p.cat||'fitness';const color=CAT_C[cat]||'#1a73e8';
-    return `<div class="vd-related-card" onclick="openShorts('${p.id}')">
-      <div class="vd-related-thumb">${vidThumb(p,320)?`<img src="${vidThumb(p,320)}" alt="" loading="lazy" style="width:100%;height:100%;object-fit:cover;display:block;"/>`:`<div style="width:100%;height:100%;background:#272727;display:flex;align-items:center;justify-content:center;"><span class="mi" style="color:${color};">play_circle</span></div>`}</div>
-      <div class="vd-related-info"><div class="vd-related-title">${escHtml(p.dareTitle||'Dare Video')}</div><div class="vd-related-meta">${escHtml(p.takerName||'—')} · ${(p.viewCount||0).toLocaleString('en-IN')} views</div><div class="vd-related-bounty">Rs.${(p.dareBounty||0).toLocaleString('en-IN')}</div></div>
+    const cat=p.cat||'fitness';const color=CAT_C[cat]||'#717171';const t=vidThumb(p,320);
+    const badge=`<span class="dd-rel-badge">$${(p.dareBounty||0).toLocaleString('en-IN')}</span>`;
+    const thumb = t
+      ? `<div class="dd-rel-thumb"><img src="${t}" loading="lazy"/>${badge}</div>`
+      : `<div class="dd-rel-thumb dd-rel-thumb-bg" style="background:linear-gradient(135deg,${color}22,${color}55);"><span class="mi" style="color:${color};">play_circle</span>${badge}</div>`;
+    return `<div class="dd-rel-card" onclick="openVideo('${p.id}')">
+      ${thumb}
+      <div class="dd-rel-title">${escHtml(p.dareTitle||'Dare Video')}</div>
+      <div class="dd-rel-meta">${escHtml(p.takerName||'—')} · ${_fmtCount(p.viewCount||0)} views</div>
     </div>`;
   }).join('');
 }
@@ -3397,12 +3402,13 @@ function _renderRelatedVideos(currentProof) {
 async function _renderVideoDetail(p) {
   if(user){
     db.collection('proofs').doc(p.id).update({viewCount:firebase.firestore.FieldValue.increment(1)})
-      .then(()=>{const n=(p.viewCount||0)+1;p.viewCount=n;document.getElementById('vdMeta').textContent=`${n.toLocaleString('en-IN')} views · ${_relTime(p)}`;_checkViewMilestone(p.id,n,p.takerId,p.dareTitle);}).catch(()=>{});
+      .then(()=>{const n=(p.viewCount||0)+1;p.viewCount=n;const m=document.getElementById('vdMeta');if(m)m.textContent=`${n.toLocaleString('en-IN')} views · ${_relTime(p)}`;_checkViewMilestone(p.id,n,p.takerId,p.dareTitle);}).catch(()=>{});
   }
   // video src is set by openVideoDetail (after ad) — not here
-  document.getElementById('vdTopbarTitle').textContent=p.dareTitle||'Dare Video';
-  document.getElementById('vdTitle').textContent      =p.dareTitle||'Dare Video';
-  document.getElementById('vdMeta').textContent       =`${(p.viewCount||0).toLocaleString('en-IN')} views · ${_relTime(p)}`;
+  document.getElementById('vdTitle').textContent = p.dareTitle||'Dare Video';
+  document.getElementById('vdMeta').textContent  = `${(p.viewCount||0).toLocaleString('en-IN')} views · ${_relTime(p)}`;
+  // Bounty badge on the video (top-right) — $ prefixed, no expiry
+  const bb=document.getElementById('vdBountyBadge'); if(bb) bb.textContent='$'+(p.dareBounty||0).toLocaleString('en-IN');
   // Creator + Taker dual profiles
   const _dare = (typeof dares!=='undefined') ? dares.find(x=>x.id===p.dareId) : null;
   const creatorName = (_dare?.creator || p.posterName || 'creator');
@@ -3413,23 +3419,67 @@ async function _renderVideoDetail(p) {
   document.getElementById('vdCreatorAv').innerHTML = _avHtml(_dare?.creatorPhotoURL || p.posterPhotoURL, creatorName);
   document.getElementById('vdCreatorName').textContent = '@'+creatorUser;
   document.getElementById('vdTakerName').textContent = '@'+takerUser;
+  document.getElementById('vdBounty').textContent  = `Rs. ${(p.dareBounty||0).toLocaleString('en-IN')} bounty won`;
   // Stash ids for collab modal
   const cm = document.getElementById('collabModal');
   if (cm) { cm.dataset.creatorId = creatorId; cm.dataset.takerId = p.takerId||''; }
   const ov = document.getElementById('videoDetailOverlay');
   ov.dataset.creatorName='@'+creatorUser; ov.dataset.takerName='@'+takerUser;
   ov.dataset.creatorAv=creatorName[0].toUpperCase(); ov.dataset.takerAv=(p.takerName||'T')[0].toUpperCase();
-  document.getElementById('vdBounty').textContent     =`Rs. ${(p.dareBounty||0).toLocaleString('en-IN')} bounty won`;
-  document.getElementById('vdBountyPill').textContent =`Rs. ${(p.dareBounty||0).toLocaleString('en-IN')}`;
-  const catPill=document.getElementById('vdCatPill');
-  if(catPill){catPill.textContent='#'+(p.cat||'dare');catPill.style.background=(CAT_C[p.cat]||'#1a73e8')+'22';catPill.style.color=CAT_C[p.cat]||'#1a73e8';}
+  // Description + rules + tags (column 2 — hidden until "Description & rules")
+  const _d = _dare || {};
+  const desc = p.description || _d.description || _d.desc || '';
+  document.getElementById('vdDesc').innerHTML = `<div class="dd-sec-label">Description</div><p class="dd-desc-text"${desc?'':' style="color:var(--t3)"'}>${desc?escHtml(desc):'No description.'}</p>`;
+  const rules = (_d.rules||[]).filter(r=>r&&r.trim());
+  document.getElementById('vdRules').innerHTML = rules.length ? `<div class="dd-sec-label">Rules</div>${rules.map(r=>`<div class="dd-rule">• ${escHtml(r)}</div>`).join('')}` : '';
+  const vrb=document.getElementById('vdRulesBar'); if(vrb) vrb.style.display = rules.length?'':'none';
+  const tags=(_d.tags&&_d.tags.length)?_d.tags:[p.cat||'dare'];
+  document.getElementById('vdTags').innerHTML = tags.map(t=>`<span class="dd-tag-link" onclick="searchTag('${(''+t).replace(/[\\'"<>]/g,'')}')">#${escHtml(t)}</span>`).join('');
+  // Like / dislike
   _updateLikeBtn(p.id,p.likeCount||0);
-  // Update comment input avatar
-  const vdAv=document.getElementById('vdInputAv');
+  _vdUpdateDislikeUI(p);
+  // Shared comment-box input avatar
+  const vdAv=document.getElementById('ddInputAv');
   if(vdAv){if(user?.picture)vdAv.innerHTML=`<img src="${user.picture}" style="width:100%;height:100%;object-fit:cover;border-radius:50%;" alt="av"/>`;else if(user)vdAv.textContent=user.name[0].toUpperCase();}
-  loadComments(p.id);
+  // Comments use the shared box (proofId = proof.id)
+  _ddCurrentId = p.id;
+  loadDareTopComment(p.id, { previewEl:'vdTopComment', countEl:'vdCommentCount', host:'videoDetailOverlay' });
   _renderRelatedVideos(p);
 }
+function _vdUpdateDislikeUI(p){
+  const btn=document.getElementById('vdDislikeBtn'); if(!btn) return;
+  const disliked = user && (p.dislikedBy||[]).includes(user.uid);
+  btn.classList.toggle('liked', !!disliked);
+  const c=document.getElementById('vdDislikeCount'); if(c) c.textContent=_fmtCount(p.dislikeCount||0);
+}
+async function dislikeProof(){
+  if(!user){ showToast('Sign in to dislike'); return; }
+  const p=activeProof; if(!p) return;
+  p.dislikedBy=p.dislikedBy||[]; const d=p.dislikedBy.includes(user.uid);
+  if(d){ p.dislikedBy=p.dislikedBy.filter(u=>u!==user.uid); p.dislikeCount=Math.max(0,(p.dislikeCount||0)-1); }
+  else { p.dislikedBy.push(user.uid); p.dislikeCount=(p.dislikeCount||0)+1; }
+  _vdUpdateDislikeUI(p);
+  db.collection('proofs').doc(p.id).update({ dislikedBy:d?firebase.firestore.FieldValue.arrayRemove(user.uid):firebase.firestore.FieldValue.arrayUnion(user.uid), dislikeCount:firebase.firestore.FieldValue.increment(d?-1:1) }).catch(()=>{});
+}
+function _vdReport(){
+  if(!activeProof) return;
+  document.querySelectorAll('#videoDetailOverlay .dd-action-menu.open').forEach(m=>m.classList.remove('open'));
+  openReportModal('video', activeProof.id, activeProof.dareTitle||'this video');
+}
+// Description/rules toggle — desktop reveals the middle column (3 cols); mobile = drawer
+function toggleVideoDesc(){
+  const ov=document.getElementById('videoDetailOverlay'); if(!ov) return;
+  if(window.innerWidth<=768){ ov.querySelector('.dd-col2')?.classList.toggle('open'); }
+  else { ov.classList.toggle('vd-show-desc'); }
+}
+function closeVideoDesc(){
+  const ov=document.getElementById('videoDetailOverlay'); if(!ov) return;
+  ov.querySelector('.dd-col2')?.classList.remove('open'); ov.classList.remove('vd-show-desc');
+}
+// Scroll-to-top for the video page
+function _vdScroller(){ const ov=document.getElementById('videoDetailOverlay'); if(!ov) return null; if(window.innerWidth>=769){ const c=ov.querySelector('.dd-col1'); if(c) return c; } return ov; }
+function _vdScrollTop(){ const sc=_vdScroller(); if(sc) sc.scrollTo({top:0,behavior:'smooth'}); }
+function _vdBindScroll(){ const sc=_vdScroller(); const btn=document.getElementById('vdScrollTop'); if(!sc) return; const on=()=>{ if(btn) btn.classList.toggle('show', sc.scrollTop>500); }; if(sc._vdSH) sc.removeEventListener('scroll',sc._vdSH); sc._vdSH=on; sc.addEventListener('scroll',on); if(btn) btn.classList.remove('show'); }
 
 function _scoredSearch(items,q,textFields,tagFields) {
   return items.map(item=>{
@@ -3533,8 +3583,7 @@ function _updateLikeBtn(proofId,count) {
   const isLiked=userLikes.includes(proofId);
   const btn=document.getElementById('vdLikeBtn'); const cntEl=document.getElementById('vdLikeCount');
   if(!btn) return;
-  btn.querySelector('.mi').textContent=isLiked?'favorite':'favorite_border';
-  btn.querySelector('.mi').style.color=isLiked?'#FF453A':'var(--t3)';
+  const mi=btn.querySelector('.mi'); if(mi){ mi.textContent='bolt'; mi.style.color=isLiked?'var(--blue)':''; }
   btn.classList.toggle('liked',isLiked);
   if(cntEl) cntEl.textContent=count.toLocaleString('en-IN');
 }
@@ -3577,6 +3626,7 @@ function closeVideoDetail() {
   document.getElementById('videoDetailOverlay').classList.remove('open');
   document.body.style.overflow='';
   document.body.classList.remove('detail-open');
+  closeDareComments(); closeVideoDesc();
   const player=document.getElementById('vdPlayer'); player.pause(); player.src='';
   activeProof=null;
 }
@@ -3715,7 +3765,13 @@ function _closeDetailOverlays(){
     const el = document.getElementById(id);
     if (el && el.classList.contains('open')){ el.classList.remove('open'); closed = true; }
   });
-  if (closed){ document.body.style.overflow = ''; _ddCurrentId = null; }
+  if (closed){
+    document.body.style.overflow = '';
+    document.body.classList.remove('detail-open');
+    if (typeof closeDareComments === 'function') closeDareComments();
+    const vp=document.getElementById('vdPlayer'); if(vp){ try{ vp.pause(); }catch(e){} }
+    _ddCurrentId = null;
+  }
 }
 // 3-dots on the dare actions row → Share / Report menu
 function _ddToggleActionMenu(btn){
@@ -3805,9 +3861,16 @@ async function dislikeDare(){
 let _ddComments = [];        // ALL comments for the current dare (top-level + replies)
 let _ddReplyTo = null;       // comment id currently being replied to
 let _ddReplyToName = '';     // name we're replying to (kept as @-prefix on the text)
-async function loadDareTopComment(dareId){
-  const el = document.getElementById('ddTopComment');
-  el.innerHTML = '<div style="color:var(--t3);font-size:13px;padding:10px 0;">Loading...</div>';
+// The comments box is shared between the dare page and the long-video page.
+// These point it at the right preview element / host column for whichever is open.
+let _ddPreviewElId = 'ddTopComment';
+let _ddCountElId   = 'ddCommentCount';
+let _ddHostOverlayId = 'dareDetailOverlay';
+async function loadDareTopComment(dareId, opts){
+  if (opts){ _ddPreviewElId = opts.previewEl||'ddTopComment'; _ddCountElId = opts.countEl||'ddCommentCount'; _ddHostOverlayId = opts.host||'dareDetailOverlay'; }
+  else { _ddPreviewElId='ddTopComment'; _ddCountElId='ddCommentCount'; _ddHostOverlayId='dareDetailOverlay'; }
+  const el = document.getElementById(_ddPreviewElId);
+  if (el) el.innerHTML = '<div style="color:var(--t3);font-size:13px;padding:10px 0;">Loading...</div>';
   _ddReplyTo = null; _ddCancelReplyBar();
   try {
     const snap = await db.collection('comments').where('proofId','==',dareId).limit(120).get();
@@ -3818,7 +3881,7 @@ async function loadDareTopComment(dareId){
 // Count of top-level comments → both the preview heading and the box header
 function _ddUpdateCount(){
   const n = (_ddComments||[]).filter(c=>!c.parentId).length;
-  const a = document.getElementById('ddCommentCount'); if (a) a.textContent = _fmtCount(n);
+  const a = document.getElementById(_ddCountElId); if (a) a.textContent = _fmtCount(n);
   const b = document.getElementById('ddBoxCount'); if (b) b.textContent = _fmtCount(n);
 }
 // top-liked first; ties (or no likes) → latest first
@@ -3880,7 +3943,7 @@ function _ddPreviewHtml(c){
     </div></div>`;
 }
 function _renderDarePreview(){
-  const el = document.getElementById('ddTopComment'); if (!el) return;
+  const el = document.getElementById(_ddPreviewElId); if (!el) return;
   const tops = _ddSortComments((_ddComments||[]).filter(c=>!c.parentId));
   if (!tops.length){ el.innerHTML = '<div class="vd-no-comments"><span class="mi">chat_bubble_outline</span><div>No comments yet — be the first!</div></div>'; return; }
   el.innerHTML = _ddPreviewHtml(tops[0]) +
@@ -3904,7 +3967,7 @@ function openDareComments(){
   const cb = box.querySelector('.dd-cbox'); if (!cb) return;
   // Desktop: dock the box exactly over column 1 (same size/position). Mobile: CSS sheet.
   if (window.innerWidth >= 769){
-    const col1 = document.querySelector('#dareDetailOverlay .dd-col1');
+    const col1 = document.querySelector('#'+_ddHostOverlayId+' .dd-col1');
     if (col1){ const r = col1.getBoundingClientRect();
       cb.style.cssText = `position:absolute;left:${r.left}px;top:${r.top}px;width:${r.width}px;height:${r.height}px;right:auto;bottom:auto;`;
     }
@@ -4061,9 +4124,13 @@ async function openVideoDetail(proofId) {
   // Open the watch page FIRST
   activeProof=p;
   _renderVideoDetail(p);
-  document.getElementById('videoDetailOverlay').classList.add('open');
+  const vov=document.getElementById('videoDetailOverlay');
+  vov.classList.add('open'); vov.classList.remove('vd-show-desc');
+  vov.querySelector('.dd-col2')?.classList.remove('open');
+  vov.scrollTop=0; const vc1=vov.querySelector('.dd-col1'); if(vc1) vc1.scrollTop=0;
   document.body.style.overflow='hidden';
   document.body.classList.add('detail-open');
+  _vdBindScroll();
   // Then show ad IN the video area, then play
   const player = document.getElementById('vdPlayer');
   const dur = p.videoDuration || 0;

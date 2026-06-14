@@ -11,7 +11,7 @@
 <link href="https://fonts.googleapis.com/icon?family=Material+Icons+Round" rel="stylesheet"/>
 
 <!-- App Styles -->
-<link rel="stylesheet" href="css/styles.css?v=20260613m"/>
+<link rel="stylesheet" href="css/styles.css?v=20260613n"/>
 
 <!-- Firebase CDN -->
 <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
@@ -795,7 +795,7 @@
 <div class="toast" id="toast"></div>
 
 <!-- App Logic -->
-<script src="js/app.js?v=20260613m"></script>
+<script src="js/app.js?v=20260613n"></script>
 
 <!-- ══ v0.19 NEW MODALS ══ -->
 
@@ -988,66 +988,62 @@
 </div>
 
 <div class="video-detail-overlay" id="videoDetailOverlay">
-  <div class="vd-layout">
-    <div class="vd-main">
-      <div class="vd-topbar">
-        <button class="vd-back-btn" onclick="closeVideoDetail()"><span class="mi">arrow_back</span></button>
-        <div class="vd-topbar-title" id="vdTopbarTitle" style="visibility:hidden;"></div>
-        <button class="vd-share-top-btn" onclick="shareDare(activeProof?.id, activeProof?.dareTitle)"><span class="mi">share</span></button>
-      </div>
-      <video class="vd-player" id="vdPlayer" controls playsinline></video>
-      <div class="vd-info-block">
-        <div class="vd-title" id="vdTitle">—</div>
-        <div class="vd-views-date" id="vdMeta">—</div>
-        <div class="vd-action-bar">
-          <button class="vd-action-btn" id="vdLikeBtn" onclick="toggleLike(activeProof?.id)">
-            <span class="mi" style="color:var(--t3);">favorite_border</span>
-            <span id="vdLikeCount">0</span>
-          </button>
-          <button class="vd-action-btn" onclick="shareDare(activeProof?.id, activeProof?.dareTitle)">
-            <span class="mi">share</span> Share
-          </button>
-          <div class="vd-bounty-pill" id="vdBountyPill">Rs. 0</div>
+  <div class="dd-wrap">
+    <div class="dd-layout">
+      <!-- ═══ COLUMN 1: video · title · creator+taker · actions · comments ═══ -->
+      <div class="dd-bar dd-col1">
+        <div class="vd2-player-wrap">
+          <video class="vd-player" id="vdPlayer" controls playsinline></video>
+          <span class="dd-bounty-badge" id="vdBountyBadge">$0</span>
         </div>
-        <div class="vd-collab-strip" onclick="openCollabModal()">
-          <div class="vd-collab-avs">
-            <div class="vd-collab-av" id="vdCreatorAv">C</div>
-            <div class="vd-collab-av vd-collab-av2" id="vdTakerAv">T</div>
+        <div class="dd-title2" id="vdTitle">—</div>
+        <div class="dd-rel-meta" id="vdMeta" style="margin:0 0 10px;">—</div>
+        <!-- creator + taker dual profiles -->
+        <div class="dd-creator vd2-collab" id="vdCollab" onclick="openCollabModal()">
+          <div class="vd2-collab-avs">
+            <div class="dd-creator-av" id="vdCreatorAv">C</div>
+            <div class="dd-creator-av vd2-av2" id="vdTakerAv">T</div>
           </div>
-          <div class="vd-collab-info">
-            <div class="vd-collab-names"><span id="vdCreatorName">@creator</span> & <span id="vdTakerName">@taker</span></div>
-            <div class="vd-collab-sub" id="vdBounty">Creator & Taker · tap to view</div>
-          </div>
-          <div class="vd-cat-pill" id="vdCatPill"></div>
-        </div>
-      </div>
-      <div class="vd-comments-section">
-        <div class="vd-sec-title">
-          <span class="mi" style="font-size:18px;vertical-align:-4px;">chat</span>
-          Comments <span id="vdCommentCount" style="color:var(--t3);font-weight:400;font-size:13px;"></span>
-        </div>
-        <div class="cmt-reply-bar" id="vdReplyBar" style="display:none;">
-          <span>Replying to <b id="vdReplyName"></b></span>
-          <button onclick="cancelReply()" title="Cancel"><span class="mi">close</span></button>
-        </div>
-        <div class="vd-comment-input-row" id="vdCommentInputRow">
-          <div class="vd-input-av" id="vdInputAv">?</div>
-          <div class="vd-comment-field">
-            <input class="vd-comment-input" id="vdCommentInput" placeholder="Add a comment..." maxlength="500"
-                   onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();submitComment();}"/>
-            <button class="vd-comment-send-btn" onclick="submitComment()"><span class="mi">send</span></button>
+          <div class="dd-creator-info">
+            <div class="dd-creator-name"><span id="vdCreatorName">@creator</span> &amp; <span id="vdTakerName">@taker</span></div>
+            <div class="dd-creator-sub" id="vdBounty">Creator &amp; Taker · tap to view</div>
           </div>
         </div>
-        <div id="vdComments"></div>
+        <button class="dd-details-btn" onclick="toggleVideoDesc()"><span class="mi">description</span> Description &amp; rules <span class="mi dd-details-chev">chevron_right</span></button>
+        <div class="dd-actions">
+          <button class="vd-action-btn" id="vdLikeBtn" onclick="toggleLike(activeProof?.id)"><span class="mi">bolt</span> <span id="vdLikeCount">0</span></button>
+          <button class="vd-action-btn" id="vdDislikeBtn" onclick="dislikeProof()"><span class="mi">thumb_down</span> <span id="vdDislikeCount">0</span></button>
+          <span class="dd-more">
+            <button class="vd-action-btn" onclick="_ddToggleActionMenu(this)"><span class="mi">more_horiz</span></button>
+            <span class="dd-action-menu">
+              <button onclick="shareDare(activeProof?.id, activeProof?.dareTitle)"><span class="mi">share</span> Share</button>
+              <button onclick="_vdReport()"><span class="mi">flag</span> Report</button>
+            </span>
+          </span>
+        </div>
+        <!-- Comments preview → opens shared comments box -->
+        <div class="dd-comments">
+          <div class="vd-sec-title" onclick="openDareComments()" style="cursor:pointer;"><span class="mi">chat_bubble</span> Comments <span class="dd-cmt-count" id="vdCommentCount">0</span></div>
+          <div id="vdTopComment" onclick="openDareComments()" style="cursor:pointer;"></div>
+        </div>
       </div>
-    </div>
-    <div class="vd-sidebar">
-      <div class="vd-sec-title" style="margin-bottom:12px;">
-        <span class="mi" style="font-size:18px;vertical-align:-4px;">playlist_play</span> Related Videos
+
+      <!-- ═══ COLUMN 2: description + rules (hidden until "Description & rules") ═══ -->
+      <div class="dd-bar dd-col2">
+        <button class="dd-col2-close" onclick="closeVideoDesc()" aria-label="Close"><span class="mi">close</span></button>
+        <div class="dd-desc" id="vdDesc"></div>
+        <div id="vdRulesBar"><div class="dd-rules" id="vdRules"></div></div>
+        <div class="dd-tags" id="vdTags"></div>
       </div>
-      <div id="vdRelated"></div>
+
+      <!-- ═══ COLUMN 3: related videos (16:9) ═══ -->
+      <div class="dd-bar dd-col3">
+        <div class="vd-sec-title"><span class="mi">playlist_play</span> Related Videos</div>
+        <div id="vdRelated" class="dd-related-grid"></div>
+      </div>
     </div>
   </div>
+  <button class="dd-scrolltop" id="vdScrollTop" onclick="_vdScrollTop()" aria-label="Scroll to top"><span class="mi">arrow_upward</span></button>
 </div>
 
 <!-- guest prompt -->

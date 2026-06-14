@@ -2016,8 +2016,15 @@ textarea.f-input{resize:vertical;min-height:84px;}
 .dd-rel-title{ font-size:14px; font-weight:600; color:var(--t1); margin-top:8px; line-height:1.3; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; }
 .dd-rel-meta{ font-size:12px; color:var(--t3); margin-top:3px; }
 
-/* Keep the main topbar visible — the dare page opens BELOW it */
-#dareDetailOverlay{ top:56px; }
+/* Long-video page: player wrap (16:9) + bounty badge + dual creator/taker avatars */
+.vd2-player-wrap{ position:relative; width:100%; aspect-ratio:16/9; background:#000; border-radius:14px; overflow:hidden; margin-bottom:14px; }
+.vd2-player-wrap .vd-player{ width:100%; height:100%; max-height:none; border-radius:0; aspect-ratio:auto; object-fit:contain; display:block; }
+.vd2-collab-avs{ position:relative; width:60px; height:42px; flex-shrink:0; }
+.vd2-collab-avs .dd-creator-av{ position:absolute; top:0; left:0; width:38px; height:38px; border:2px solid var(--bg2); }
+.vd2-collab-avs .vd2-av2{ left:22px; }
+
+/* Keep the main topbar visible — the dare / video page opens BELOW it */
+#dareDetailOverlay, #videoDetailOverlay{ top:56px; }
 /* Topbar turns solid (not transparent) while a detail overlay is open */
 body.detail-open .topbar{ background:#050505 !important; backdrop-filter:none !important; -webkit-backdrop-filter:none !important; }
 
@@ -2028,17 +2035,20 @@ body.detail-open .topbar{ background:#050505 !important; backdrop-filter:none !i
 
 /* Desktop: 3 columns, each scrolls independently; page opens beside the rail */
 @media(min-width:769px){
-  #dareDetailOverlay{ left:72px; overflow:hidden; transition:left .28s cubic-bezier(.4,0,.2,1); }
-  body.sidebar-expanded #dareDetailOverlay{ left:240px; }
-  #dareDetailOverlay .dd-wrap{ height:100%; max-width:1320px; display:flex; flex-direction:column; padding:0 16px; }
-  #dareDetailOverlay .dd-layout{ display:flex; gap:18px; align-items:stretch; flex:1; min-height:0; padding-bottom:16px; }
-  #dareDetailOverlay .dd-layout > .dd-bar{ margin-bottom:0; overflow-y:auto; }
+  #dareDetailOverlay, #videoDetailOverlay{ left:72px; overflow:hidden; transition:left .28s cubic-bezier(.4,0,.2,1); }
+  body.sidebar-expanded #dareDetailOverlay, body.sidebar-expanded #videoDetailOverlay{ left:240px; }
+  #dareDetailOverlay .dd-wrap, #videoDetailOverlay .dd-wrap{ height:100%; max-width:1320px; display:flex; flex-direction:column; padding:0 16px; }
+  #dareDetailOverlay .dd-layout, #videoDetailOverlay .dd-layout{ display:flex; gap:18px; align-items:stretch; flex:1; min-height:0; padding-bottom:16px; }
+  #dareDetailOverlay .dd-layout > .dd-bar, #videoDetailOverlay .dd-layout > .dd-bar{ margin-bottom:0; overflow-y:auto; }
   .dd-col1{ flex:1.5; min-width:0; }
   .dd-col2{ flex:1; min-width:0; }
   .dd-col3{ width:300px; flex-shrink:0; }
+  /* Long-video page: description column hidden by default → toggled to 3 cols */
+  #videoDetailOverlay .dd-col2{ display:none; }
+  #videoDetailOverlay.vd-show-desc .dd-col2{ display:block; }
   /* slim scrollbars inside the columns */
-  #dareDetailOverlay .dd-bar::-webkit-scrollbar{ width:8px; }
-  #dareDetailOverlay .dd-bar::-webkit-scrollbar-thumb{ background:#333; border-radius:8px; }
+  #dareDetailOverlay .dd-bar::-webkit-scrollbar, #videoDetailOverlay .dd-bar::-webkit-scrollbar{ width:8px; }
+  #dareDetailOverlay .dd-bar::-webkit-scrollbar-thumb, #videoDetailOverlay .dd-bar::-webkit-scrollbar-thumb{ background:#333; border-radius:8px; }
 }
 /* Mobile: related dares = 1-per-row full-width 16:9 (bigger, YouTube-style) */
 @media(max-width:768px){
@@ -2051,19 +2061,19 @@ body.detail-open .topbar{ background:#050505 !important; backdrop-filter:none !i
     z-index:168; overflow-y:auto; border-radius:16px 0 0 16px; box-shadow:-8px 0 28px rgba(0,0,0,.6); }
   .dd-col2.open{ transform:translateX(0); }
 }
-/* Mobile-only "Description & rules" button (also reveals the swipe drawer) */
-.dd-details-btn{ display:none; }
-@media(max-width:768px){
-  .dd-details-btn{ display:flex; align-items:center; gap:10px; width:100%; background:var(--bg3); border:1px solid var(--border); color:var(--t1); font-size:14px; font-weight:600; padding:12px 14px; border-radius:12px; margin:4px 0 14px; cursor:pointer; font-family:inherit; }
-  .dd-details-btn .mi{ font-size:20px; color:var(--t2); }
-  .dd-details-chev{ margin-left:auto; }
-}
+/* "Description & rules" button — base style (dare: mobile-only; video: always) */
+.dd-details-btn{ display:none; align-items:center; gap:10px; width:100%; background:var(--bg3); border:1px solid var(--border); color:var(--t1); font-size:14px; font-weight:600; padding:12px 14px; border-radius:12px; margin:4px 0 14px; cursor:pointer; font-family:inherit; }
+.dd-details-btn .mi{ font-size:20px; color:var(--t2); }
+.dd-details-chev{ margin-left:auto; }
+@media(max-width:768px){ .dd-details-btn{ display:flex; } }
+/* Long-video page shows the button on desktop too (description starts hidden) */
+#videoDetailOverlay .dd-details-btn{ display:flex; }
 /* col2 close button (mobile drawer only) */
 .dd-col2-close{ display:none; }
 @media(max-width:768px){
   .dd-col2-close{ display:inline-flex; align-items:center; justify-content:center; float:right; width:34px; height:34px; border-radius:50%; background:var(--bg3); border:1px solid var(--border); color:var(--t1); cursor:pointer; margin:-4px -4px 6px 6px; }
   /* glassy details drawer */
-  #dareDetailOverlay .dd-col2{ background:rgba(16,16,16,.72) !important; backdrop-filter:blur(18px) saturate(140%) !important; -webkit-backdrop-filter:blur(18px) saturate(140%) !important; border-left:1px solid rgba(255,255,255,.12) !important; }
+  #dareDetailOverlay .dd-col2, #videoDetailOverlay .dd-col2{ background:rgba(16,16,16,.72) !important; backdrop-filter:blur(18px) saturate(140%) !important; -webkit-backdrop-filter:blur(18px) saturate(140%) !important; border-left:1px solid rgba(255,255,255,.12) !important; }
 }
 
 /* ─── Comments box (scrollable, with close — desktop + mobile) ─── */
