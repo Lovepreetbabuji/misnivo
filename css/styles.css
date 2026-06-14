@@ -1945,6 +1945,9 @@ textarea.f-input{resize:vertical;min-height:84px;}
 .dd-hero { position:relative; width: 100%; aspect-ratio: 16/9; border-radius: 14px; overflow: hidden; background: #1f1f1f; margin-bottom: 16px; }
 /* Bounty badge — top-right corner of the thumbnail, $ prefixed */
 .dd-bounty-badge { position:absolute; top:10px; right:10px; background:rgba(0,0,0,.72); color:var(--green); font-size:16px; font-weight:800; padding:5px 12px; border-radius:8px; letter-spacing:.3px; border:1px solid rgba(255,255,255,.12); }
+/* Expiry badge — top-left corner of the thumbnail */
+.dd-expiry-badge { position:absolute; top:10px; left:10px; display:inline-flex; align-items:center; gap:4px; background:rgba(0,0,0,.72); color:var(--orange); font-size:13px; font-weight:700; padding:5px 10px; border-radius:8px; border:1px solid rgba(255,159,10,.35); }
+.dd-expiry-badge .mi { font-size:15px; }
 .dd-hero-bg { width:100%; height:100%; display:flex; align-items:center; justify-content:center; }
 .dd-body { }
 .dd-tags { display:flex; flex-wrap:wrap; gap:6px; margin-bottom:10px; }
@@ -1971,8 +1974,9 @@ textarea.f-input{resize:vertical;min-height:84px;}
   color:var(--orange); background:rgba(255,159,10,.12); border:1px solid rgba(255,159,10,.3);
   padding:3px 10px; border-radius:50px; margin:4px 0 2px; font-family:'IBM Plex Mono',monospace;
 }
-/* The dare's own back/title bar blends with the page (no separate black look) */
-.dd-topbar{ background:transparent; }
+/* The dare's own back/title bar — solid page bg so the title never shows
+   through content while scrolling (it stays fixed at the top) */
+.dd-topbar{ background:#050505; }
 /* Action buttons — one line (Accept · Like · Dislike · 3-dots) */
 .dd-actions{ display:flex; flex-wrap:wrap; gap:8px; align-items:center; margin-top:12px; }
 .dd-cta-inline{ flex-shrink:0; }
@@ -2006,13 +2010,13 @@ textarea.f-input{resize:vertical;min-height:84px;}
 /* Related-dare cards (Col 3) — 16:9 thumb + caption + meta + bounty */
 .dd-related-grid{ display:flex; flex-direction:column; gap:0; }
 .dd-rel-card{ cursor:pointer; margin-bottom:16px; }
-.dd-rel-thumb{ width:100%; aspect-ratio:16/9; border-radius:10px; overflow:hidden; background:#1f1f1f; }
+.dd-rel-thumb{ position:relative; width:100%; aspect-ratio:16/9; border-radius:10px; overflow:hidden; background:#1f1f1f; }
 .dd-rel-thumb img{ width:100%; height:100%; object-fit:cover; display:block; }
 .dd-rel-thumb-bg{ display:flex; align-items:center; justify-content:center; }
 .dd-rel-thumb-bg .mi{ font-size:36px; }
+.dd-rel-badge{ position:absolute; top:8px; right:8px; background:rgba(0,0,0,.75); color:var(--green); font-size:12px; font-weight:800; padding:3px 9px; border-radius:6px; border:1px solid rgba(255,255,255,.12); }
 .dd-rel-title{ font-size:14px; font-weight:600; color:var(--t1); margin-top:8px; line-height:1.3; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; }
 .dd-rel-meta{ font-size:12px; color:var(--t3); margin-top:3px; }
-.dd-rel-bounty{ font-size:13px; color:var(--green); font-weight:700; margin-top:3px; }
 
 /* Keep the main topbar visible — the dare page opens BELOW it */
 #dareDetailOverlay{ top:56px; }
@@ -2038,11 +2042,40 @@ body.detail-open .topbar{ background:#050505 !important; backdrop-filter:none !i
   #dareDetailOverlay .dd-bar::-webkit-scrollbar{ width:8px; }
   #dareDetailOverlay .dd-bar::-webkit-scrollbar-thumb{ background:#333; border-radius:8px; }
 }
-/* Mobile: columns stack; related grid = 2-up 16:9 */
+/* Mobile: related dares = 1-per-row full-width 16:9 (bigger, YouTube-style) */
 @media(max-width:768px){
-  .dd-related-grid{ display:grid; grid-template-columns:1fr 1fr; gap:14px; }
+  .dd-related-grid{ display:flex; flex-direction:column; gap:16px; }
   .dd-creator{ flex-wrap:wrap; }
   .dd-creator-meta{ width:100%; margin-left:0 !important; margin-top:4px; }
+  /* Description/rules become a swipe-left drawer */
+  .dd-col2{ position:fixed; top:56px; right:0; bottom:0; width:86%; max-width:380px;
+    transform:translateX(102%); transition:transform .28s cubic-bezier(.4,0,.2,1);
+    z-index:168; overflow-y:auto; border-radius:16px 0 0 16px; box-shadow:-8px 0 28px rgba(0,0,0,.6); }
+  .dd-col2.open{ transform:translateX(0); }
+}
+/* col2 close button (mobile drawer only) */
+.dd-col2-close{ display:none; }
+@media(max-width:768px){
+  .dd-col2-close{ display:inline-flex; align-items:center; justify-content:center; float:right; width:34px; height:34px; border-radius:50%; background:var(--bg3); border:1px solid var(--border); color:var(--t1); cursor:pointer; margin:-4px -4px 6px 6px; }
+}
+
+/* ─── Comments box (scrollable, with close — desktop + mobile) ─── */
+.dd-preview-comment{ margin-top:14px; }
+.dd-cbox-overlay{ position:fixed; inset:0; z-index:180; background:rgba(0,0,0,.6); display:none; align-items:flex-end; justify-content:center; }
+.dd-cbox-overlay.open{ display:flex; }
+.dd-cbox{ background:#0f0f0f; border:1px solid var(--border); width:100%; max-width:640px; height:82vh; display:flex; flex-direction:column; border-radius:16px 16px 0 0; overflow:hidden; }
+.dd-cbox-head{ display:flex; align-items:center; justify-content:space-between; padding:14px 16px; border-bottom:1px solid var(--border); flex-shrink:0; }
+.dd-cbox-title{ display:flex; align-items:center; gap:8px; font-size:16px; font-weight:700; color:var(--t1); }
+.dd-cbox-title .mi{ font-size:20px; }
+.dd-cbox-count, #ddBoxCount{ color:var(--t3); font-weight:600; }
+.dd-cbox-close{ width:34px; height:34px; border-radius:50%; background:var(--bg3); border:1px solid var(--border); color:var(--t1); cursor:pointer; display:inline-flex; align-items:center; justify-content:center; flex-shrink:0; }
+.dd-cbox-close:hover{ background:var(--glass3); }
+.dd-cbox-list{ flex:1; overflow-y:auto; padding:16px; display:flex; flex-direction:column; gap:18px; }
+.dd-cbox-foot{ flex-shrink:0; border-top:1px solid var(--border); padding:12px 16px; background:#0f0f0f; }
+.dd-cbox-foot .vd-comment-input-row{ margin:0; }
+@media(min-width:769px){
+  .dd-cbox-overlay{ align-items:center; }
+  .dd-cbox{ height:78vh; border-radius:16px; }
 }
 /* Mobile hamburger drawer must sit ABOVE the dare/video overlay (z 150) */
 @media(max-width:599px){

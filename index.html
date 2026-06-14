@@ -11,7 +11,7 @@
 <link href="https://fonts.googleapis.com/icon?family=Material+Icons+Round" rel="stylesheet"/>
 
 <!-- App Styles -->
-<link rel="stylesheet" href="css/styles.css?v=20260613j"/>
+<link rel="stylesheet" href="css/styles.css?v=20260613k"/>
 
 <!-- Firebase CDN -->
 <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
@@ -795,7 +795,7 @@
 <div class="toast" id="toast"></div>
 
 <!-- App Logic -->
-<script src="js/app.js?v=20260613j"></script>
+<script src="js/app.js?v=20260613k"></script>
 
 <!-- ══ v0.19 NEW MODALS ══ -->
 
@@ -915,10 +915,9 @@
       <div class="dd-bar dd-col1">
         <div class="dd-hero" id="ddHero"></div>
         <div class="dd-creator" id="ddCreator"></div>
-        <div class="dd-expiry" id="ddExpiry" style="display:none;"></div>
         <div class="dd-actions">
           <span class="dd-cta-inline" id="ddCta"></span>
-          <button class="vd-action-btn" id="ddLikeBtn" onclick="likeDare()"><span class="mi">thumb_up</span> <span id="ddLikeCount">0</span></button>
+          <button class="vd-action-btn" id="ddLikeBtn" onclick="likeDare()"><span class="mi">bolt</span> <span id="ddLikeCount">0</span></button>
           <button class="vd-action-btn" id="ddDislikeBtn" onclick="dislikeDare()"><span class="mi">thumb_down</span> <span id="ddDislikeCount">0</span></button>
           <span class="dd-more">
             <button class="vd-action-btn" onclick="_ddToggleActionMenu(this)"><span class="mi">more_horiz</span></button>
@@ -929,27 +928,16 @@
           </span>
         </div>
 
-        <!-- Comments (desktop: all; mobile: 1 + tap-anywhere to expand / Hide) -->
-        <div class="dd-comments" onclick="_ddExpandOnClick()">
-          <div class="vd-sec-title"><span class="mi">chat_bubble</span> <span id="ddCommentsTitle">Comments</span> <span class="dd-cmt-count" id="ddCommentCount">0</span></div>
-          <div class="dd-reply-bar" id="ddReplyBar" style="display:none;">
-            <span class="mi">reply</span> Replying to <b id="ddReplyName">@user</b>
-            <button class="dd-reply-cancel" onclick="event.stopPropagation();cancelDareReply()"><span class="mi">close</span></button>
-          </div>
-          <div class="vd-comment-input-row" onclick="event.stopPropagation()">
-            <div class="vd-input-av" id="ddInputAv">?</div>
-            <div class="vd-comment-field">
-              <input class="vd-comment-input" id="ddCommentInput" placeholder="Add a comment..." maxlength="500"
-                     onkeydown="if(event.key==='Enter'){event.preventDefault();submitDareComment();}"/>
-              <button class="vd-comment-send-btn" onclick="submitDareComment()"><span class="mi">send</span></button>
-            </div>
-          </div>
-          <div id="ddTopComment"></div>
+        <!-- Comments PREVIEW (top comment only) — tap to open the comments box -->
+        <div class="dd-comments">
+          <div class="vd-sec-title" onclick="openDareComments()" style="cursor:pointer;"><span class="mi">chat_bubble</span> <span id="ddCommentsTitle">Comments</span> <span class="dd-cmt-count" id="ddCommentCount">0</span></div>
+          <div id="ddTopComment" onclick="openDareComments()" style="cursor:pointer;"></div>
         </div>
       </div>
 
-      <!-- ═══ COLUMN 2: description + rules ═══ -->
+      <!-- ═══ COLUMN 2: description + rules (mobile: swipe-left drawer) ═══ -->
       <div class="dd-bar dd-col2">
+        <button class="dd-col2-close" onclick="closeDareDetails()" aria-label="Close"><span class="mi">close</span></button>
         <div class="dd-desc" id="ddDesc"></div>
         <div id="ddRulesBar"><div class="dd-rules" id="ddRules"></div></div>
         <div class="dd-tags" id="ddTags"></div>
@@ -963,6 +951,31 @@
     </div>
   </div>
   <button class="dd-scrolltop" id="ddScrollTop" onclick="_ddScrollTop()" aria-label="Scroll to top"><span class="mi">arrow_upward</span></button>
+</div>
+
+<!-- ═══ COMMENTS BOX (scrollable, with close — desktop + mobile) ═══ -->
+<div class="dd-cbox-overlay" id="ddCommentsBox" onclick="if(event.target===this)closeDareComments()">
+  <div class="dd-cbox">
+    <div class="dd-cbox-head">
+      <span class="dd-cbox-title"><span class="mi">chat_bubble</span> Comments <span id="ddBoxCount">0</span></span>
+      <button class="dd-cbox-close" onclick="closeDareComments()" aria-label="Close comments"><span class="mi">close</span></button>
+    </div>
+    <div class="dd-cbox-list" id="ddBoxList"></div>
+    <div class="dd-cbox-foot">
+      <div class="dd-reply-bar" id="ddReplyBar" style="display:none;">
+        <span class="mi">reply</span> Replying to <b id="ddReplyName">@user</b>
+        <button class="dd-reply-cancel" onclick="cancelDareReply()"><span class="mi">close</span></button>
+      </div>
+      <div class="vd-comment-input-row">
+        <div class="vd-input-av" id="ddInputAv">?</div>
+        <div class="vd-comment-field">
+          <input class="vd-comment-input" id="ddCommentInput" placeholder="Add a comment..." maxlength="500"
+                 onkeydown="if(event.key==='Enter'){event.preventDefault();submitDareComment();}"/>
+          <button class="vd-comment-send-btn" onclick="submitDareComment()"><span class="mi">send</span></button>
+        </div>
+      </div>
+    </div>
+  </div>
 </div>
 
 <div class="video-detail-overlay" id="videoDetailOverlay">

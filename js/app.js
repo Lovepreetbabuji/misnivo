@@ -3605,28 +3605,27 @@ function openDareDetail(dareId){
     d.viewCount = (d.viewCount||0) + 1;
   }
 
-  // Expiry countdown (urgency)
-  const exEl = document.getElementById('ddExpiry');
+  // Expiry countdown → badge on the thumbnail (top-left)
+  let expiryBadge = '';
   if (d.expiresAt){
     const exp = d.expiresAt.toDate ? d.expiresAt.toDate() : new Date(d.expiresAt);
     const ms = exp - new Date();
-    if (ms > 0){ const hrs = Math.floor(ms/3600000); exEl.textContent = '⏱ ' + (hrs>=24 ? Math.floor(hrs/24)+'d left' : hrs+'h left'); exEl.style.display=''; }
-    else exEl.style.display = 'none';
-  } else exEl.style.display = 'none';
-
+    if (ms > 0){ const hrs = Math.floor(ms/3600000); expiryBadge = `<span class="dd-expiry-badge"><span class="mi">schedule</span>${hrs>=24 ? Math.floor(hrs/24)+'d' : hrs+'h'} left</span>`; }
+  }
   const heroInner = thumb
     ? `<img src="${thumb}" alt="" style="width:100%;height:100%;object-fit:cover;display:block;"/>`
     : `<div class="dd-hero-bg" style="background:linear-gradient(135deg,${color}22,${color}55);"><span class="mi" style="color:${color};font-size:72px;">${icon}</span></div>`;
   document.getElementById('ddHero').innerHTML = heroInner +
-    `<span class="dd-bounty-badge">$${reward.toLocaleString('en-IN')}</span>`;
+    `<span class="dd-bounty-badge">$${reward.toLocaleString('en-IN')}</span>` + expiryBadge;
 
   // Tags live below description+rules (col 2): always blue, click = search that tag
   document.getElementById('ddTags').innerHTML = (d.tags?.length ? d.tags : [cat])
     .map(t=>`<span class="dd-tag-link" onclick="searchTag('${(''+t).replace(/[\\'"<>]/g,'')}')">#${escHtml(t)}</span>`).join('');
 
   const ddMeta = `${_relTimeStr(d.date)} · ${_fmtCount(d.viewCount||0)} views`;
+  const creatorPic = d.creatorPhotoURL || (d.creatorUid === user?.uid ? (user?.picture||'') : '');
   document.getElementById('ddCreator').innerHTML = `
-    <div class="dd-creator-av">${_avHtml(d.creatorPhotoURL, d.creator)}</div>
+    <div class="dd-creator-av">${_avHtml(creatorPic, d.creator)}</div>
     <div class="dd-creator-info">
       <div class="dd-creator-name">${escHtml(d.creator||'Creator')}</div>
       <div class="dd-creator-sub">@${escHtml(d.creatorUsername || (d.creator||'creator'))}</div>
@@ -3657,13 +3656,32 @@ function openDareDetail(dareId){
   const col1 = ov.querySelector('.dd-col1'); if (col1) col1.scrollTop = 0;
   document.body.style.overflow = 'hidden';
   document.body.classList.add('detail-open'); // makes the topbar opaque
-  _ddBindScrollTop();
+  closeDareDetails();
+  _ddBindScrollTop(); _ddBindSwipe();
 }
 function closeDareDetail(){
   document.getElementById('dareDetailOverlay').classList.remove('open');
   document.body.style.overflow = '';
   document.body.classList.remove('detail-open');
+  closeDareComments(); closeDareDetails();
   _ddCurrentId = null;
+}
+// Mobile: description/rules/tags live in a drawer revealed by a left-swipe
+function openDareDetails(){ document.querySelector('#dareDetailOverlay .dd-col2')?.classList.add('open'); }
+function closeDareDetails(){ document.querySelector('#dareDetailOverlay .dd-col2')?.classList.remove('open'); }
+let _ddTouchX=0, _ddTouchY=0, _ddTouchActive=false;
+function _ddBindSwipe(){
+  const ov = document.getElementById('dareDetailOverlay'); if (!ov || ov._ddSwipeBound) return;
+  ov._ddSwipeBound = true;
+  ov.addEventListener('touchstart', e=>{ if (window.innerWidth>768) return; const t=e.touches[0]; _ddTouchX=t.clientX; _ddTouchY=t.clientY; _ddTouchActive=true; }, {passive:true});
+  ov.addEventListener('touchend', e=>{
+    if (!_ddTouchActive || window.innerWidth>768) return; _ddTouchActive=false;
+    const t=e.changedTouches[0]; const dx=t.clientX-_ddTouchX, dy=t.clientY-_ddTouchY;
+    if (Math.abs(dx)<60 || Math.abs(dy)>Math.abs(dx)) return; // not a horizontal swipe
+    const col2open = document.querySelector('#dareDetailOverlay .dd-col2.open');
+    if (dx<0 && !col2open) openDareDetails();       // swipe left → open details
+    else if (dx>0 && col2open) closeDareDetails();  // swipe right → close
+  }, {passive:true});
 }
 // Which element actually scrolls? desktop = column 1; mobile = the overlay itself.
 function _ddScroller(){
@@ -3779,19 +3797,23 @@ async function dislikeDare(){
 // Top-liked first; if a comment has no likes, latest first. Replies nested
 // (same sort). Desktop: show ALL. Mobile: top 1 + tap-anywhere/"View all", close btn.
 let _ddComments = [];        // ALL comments for the current dare (top-level + replies)
-let _ddCommentsAll = false;  // mobile: are all comments expanded?
 let _ddReplyTo = null;       // comment id currently being replied to
+let _ddReplyToName = '';     // name we're replying to (kept as @-prefix on the text)
 async function loadDareTopComment(dareId){
   const el = document.getElementById('ddTopComment');
   el.innerHTML = '<div style="color:var(--t3);font-size:13px;padding:10px 0;">Loading...</div>';
-  _ddCommentsAll = false; _ddReplyTo = null; _ddCancelReplyBar();
+  _ddReplyTo = null; _ddCancelReplyBar();
   try {
     const snap = await db.collection('comments').where('proofId','==',dareId).limit(120).get();
     _ddComments = snap.docs.map(doc=>({id:doc.id,...doc.data()}));
-    const ccEl = document.getElementById('ddCommentCount');
-    if (ccEl) ccEl.textContent = _fmtCount(_ddComments.filter(c=>!c.parentId).length);
     _renderDareComments();
   } catch(e){ el.innerHTML = '<div style="color:var(--t3);font-size:13px;">Could not load comments</div>'; }
+}
+// Count of top-level comments → both the preview heading and the box header
+function _ddUpdateCount(){
+  const n = (_ddComments||[]).filter(c=>!c.parentId).length;
+  const a = document.getElementById('ddCommentCount'); if (a) a.textContent = _fmtCount(n);
+  const b = document.getElementById('ddBoxCount'); if (b) b.textContent = _fmtCount(n);
 }
 // top-liked first; ties (or no likes) → latest first
 function _ddSortComments(arr){
@@ -3823,33 +3845,51 @@ function _ddCommentHtml(c, replies){
       ${acts}${repHtml}
     </div></div>`;
 }
+// Re-render both the col-1 preview AND (if open) the comments box
 function _renderDareComments(){
+  _ddUpdateCount();
+  _renderDarePreview();
+  if (document.getElementById('ddCommentsBox')?.classList.contains('open')) _renderDareCommentsBox();
+}
+// Preview shown in column 1: ONLY the top comment (no input, no replies, no actions)
+function _ddPreviewHtml(c){
+  return `<div class="vd-comment dd-preview-comment">
+    <div class="vd-comment-av">${_avHtml(c.userPhotoURL, c.userName)}</div>
+    <div class="vd-comment-body">
+      <div class="vd-comment-author">${escHtml(c.userName||'—')}<span class="vd-comment-time">${c.createdAt&&c.createdAt.toDate?_timeAgo(c.createdAt.toDate()):''}</span></div>
+      <div class="vd-comment-text">${escHtml(c.text||'')}</div>
+    </div></div>`;
+}
+function _renderDarePreview(){
   const el = document.getElementById('ddTopComment'); if (!el) return;
+  const tops = _ddSortComments((_ddComments||[]).filter(c=>!c.parentId));
+  if (!tops.length){ el.innerHTML = '<div class="vd-no-comments"><span class="mi">chat_bubble_outline</span><div>No comments yet — be the first!</div></div>'; return; }
+  el.innerHTML = _ddPreviewHtml(tops[0]) +
+    `<button class="dd-viewall">View all ${tops.length} comment${tops.length!==1?'s':''}</button>`;
+}
+// Full list inside the scrollable comments box (with replies / like / reply / report)
+function _renderDareCommentsBox(){
+  const el = document.getElementById('ddBoxList'); if (!el) return;
   const all = _ddComments || [];
   const tops = _ddSortComments(all.filter(c=>!c.parentId));
   const byParent = {};
   all.forEach(c=>{ if(c.parentId){ (byParent[c.parentId]=byParent[c.parentId]||[]).push(c); } });
   Object.keys(byParent).forEach(k=>_ddSortComments(byParent[k]));
   if (!tops.length){ el.innerHTML = '<div class="vd-no-comments"><span class="mi">chat_bubble_outline</span><div>No comments yet — be the first!</div></div>'; return; }
-  const isMobile = window.innerWidth <= 768;
-  const list = (isMobile && !_ddCommentsAll) ? tops.slice(0,1) : tops;
-  let html = list.map(c=>_ddCommentHtml(c, byParent[c.id]||[])).join('');
-  if (isMobile){
-    if (!_ddCommentsAll && tops.length > 1)
-      html += `<button class="dd-viewall" onclick="event.stopPropagation();_ddShowAllComments()">View all ${tops.length} comments</button>`;
-    else if (_ddCommentsAll)
-      html += `<button class="dd-viewall" onclick="event.stopPropagation();_ddHideComments()"><span class="mi" style="vertical-align:middle;font-size:18px;">expand_less</span> Hide comments</button>`;
-  }
-  el.innerHTML = html;
+  el.innerHTML = tops.map(c=>_ddCommentHtml(c, byParent[c.id]||[])).join('');
 }
-// Mobile: tapping anywhere in the comment area expands all
-function _ddExpandOnClick(){ if (window.innerWidth<=768 && !_ddCommentsAll){ _ddShowAllComments(); } }
-function _ddShowAllComments(){ _ddCommentsAll = true; _renderDareComments(); }
-function _ddHideComments(){ _ddCommentsAll = false; _renderDareComments(); }
+function openDareComments(){
+  _renderDareCommentsBox();
+  const box = document.getElementById('ddCommentsBox'); if (box) box.classList.add('open');
+}
+function closeDareComments(){
+  const box = document.getElementById('ddCommentsBox'); if (box) box.classList.remove('open');
+  cancelDareReply();
+}
 function _ddToggleCmtMenu(btn){
   const menu = btn.nextElementSibling; if (!menu) return;
   const open = menu.classList.contains('open');
-  document.querySelectorAll('#ddTopComment .cmt-menu.open').forEach(m=>m.classList.remove('open'));
+  document.querySelectorAll('#ddBoxList .cmt-menu.open').forEach(m=>m.classList.remove('open'));
   if (!open) menu.classList.add('open');
 }
 async function likeDareComment(commentId){
@@ -3869,31 +3909,40 @@ async function likeDareComment(commentId){
 }
 function startDareReply(commentId, userName){
   if (!user){ showToast('Sign in to reply'); return; }
-  _ddReplyTo = commentId;
+  openDareComments();              // replies happen inside the box (input at bottom)
+  _ddReplyTo = commentId; _ddReplyToName = userName || '';
   const bar = document.getElementById('ddReplyBar'); const nm = document.getElementById('ddReplyName');
   if (nm) nm.textContent = '@'+userName;
   if (bar) bar.style.display = 'flex';
   const inp = document.getElementById('ddCommentInput'); if (inp){ inp.focus(); }
 }
 function _ddCancelReplyBar(){ const bar = document.getElementById('ddReplyBar'); if (bar) bar.style.display = 'none'; }
-function cancelDareReply(){ _ddReplyTo = null; _ddCancelReplyBar(); }
+function cancelDareReply(){ _ddReplyTo = null; _ddReplyToName = ''; _ddCancelReplyBar(); }
 function reportComment(commentId, userName){
-  document.querySelectorAll('#ddTopComment .cmt-menu.open').forEach(m=>m.classList.remove('open'));
+  document.querySelectorAll('#ddBoxList .cmt-menu.open').forEach(m=>m.classList.remove('open'));
   openReportModal('comment', commentId, userName||'comment');
 }
 async function submitDareComment(){
   if (!user) { showToast('Sign in to comment'); return; }
-  const inp = document.getElementById('ddCommentInput'); const text = (inp.value||'').trim();
+  const inp = document.getElementById('ddCommentInput'); let text = (inp.value||'').trim();
   if (!text) return; if (text.length>500){ showToast('Too long (max 500 chars)'); return; }
-  const parentId = _ddReplyTo || null;
+  // Resolve the parent. Replying to a reply → attach to the SAME top-level thread
+  // (flatten one level) and keep an @name prefix so the context is visible.
+  let parentId = _ddReplyTo || null;
+  if (parentId){
+    const target = (_ddComments||[]).find(c=>c.id===parentId);
+    if (target && target.parentId) parentId = target.parentId;
+    if (_ddReplyToName && !text.startsWith('@')) text = '@'+_ddReplyToName+' '+text;
+  }
   try {
     await db.collection('comments').add({
       proofId: _ddCurrentId, userId: user.uid, userName: user.name, userPhotoURL: user.picture||'',
       text, likeCount: 0, likedBy: [], parentId, createdAt: firebase.firestore.Timestamp.now()
     });
-    inp.value = ''; _ddReplyTo = null; _ddCancelReplyBar();
-    if (parentId) _ddCommentsAll = true; // make sure the new reply is visible
-    loadDareTopComment(_ddCurrentId);
+    inp.value = ''; _ddReplyTo = null; _ddReplyToName = ''; _ddCancelReplyBar();
+    const snap = await db.collection('comments').where('proofId','==',_ddCurrentId).limit(120).get();
+    _ddComments = snap.docs.map(doc=>({id:doc.id,...doc.data()}));
+    _renderDareComments(); // refresh preview + box, box stays open
   } catch(e){ showToast('Could not post comment'); }
 }
 function renderDareMore(excludeId){
@@ -3908,14 +3957,14 @@ function renderDareMore(excludeId){
   el.innerHTML = active.map(d=>{
     const cat=d.tags?.[0]||d.cat||'fitness'; const title=d.caption||d.title||'Untitled'; const reward=d.rewardAmount??d.bounty??0;
     const color=CAT_C[cat]||'#717171'; const icon=CAT_I[cat]||'bolt'; const thumb=d.thumbnailURL||'';
+    const badge = `<span class="dd-rel-badge">$${reward.toLocaleString('en-IN')}</span>`;
     const thumbHTML = thumb
-      ? `<div class="dd-rel-thumb"><img src="${thumb}" loading="lazy"/></div>`
-      : `<div class="dd-rel-thumb dd-rel-thumb-bg" style="background:linear-gradient(135deg,${color}22,${color}55);"><span class="mi" style="color:${color};">${icon}</span></div>`;
+      ? `<div class="dd-rel-thumb"><img src="${thumb}" loading="lazy"/>${badge}</div>`
+      : `<div class="dd-rel-thumb dd-rel-thumb-bg" style="background:linear-gradient(135deg,${color}22,${color}55);"><span class="mi" style="color:${color};">${icon}</span>${badge}</div>`;
     return `<div class="dd-rel-card" onclick="openDareDetail('${d.id}')">
       ${thumbHTML}
       <div class="dd-rel-title">${escHtml(title)}</div>
       <div class="dd-rel-meta">${escHtml(d.creator||'—')} · ${_relTimeStr(d.date)} · ${_fmtCount(d.viewCount||0)} views</div>
-      <div class="dd-rel-bounty">Rs.${reward.toLocaleString('en-IN')}</div>
     </div>`;
   }).join('');
 }
