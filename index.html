@@ -11,7 +11,7 @@
 <link href="https://fonts.googleapis.com/icon?family=Material+Icons+Round" rel="stylesheet"/>
 
 <!-- App Styles -->
-<link rel="stylesheet" href="css/styles.css?v=20260613f"/>
+<link rel="stylesheet" href="css/styles.css?v=20260613g"/>
 
 <!-- Firebase CDN -->
 <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
@@ -795,7 +795,7 @@
 <div class="toast" id="toast"></div>
 
 <!-- App Logic -->
-<script src="js/app.js?v=20260613f"></script>
+<script src="js/app.js?v=20260613g"></script>
 
 <!-- ══ v0.19 NEW MODALS ══ -->
 
@@ -930,10 +930,14 @@
           <span class="dd-cta-inline" id="ddCta"></span>
         </div>
 
-        <!-- Comments (desktop: all; mobile: 1 + View all) -->
-        <div class="dd-comments">
+        <!-- Comments (desktop: all; mobile: 1 + tap-anywhere to expand / Hide) -->
+        <div class="dd-comments" onclick="_ddExpandOnClick()">
           <div class="vd-sec-title"><span class="mi">chat_bubble</span> <span id="ddCommentsTitle">Comments</span></div>
-          <div class="vd-comment-input-row">
+          <div class="dd-reply-bar" id="ddReplyBar" style="display:none;">
+            <span class="mi">reply</span> Replying to <b id="ddReplyName">@user</b>
+            <button class="dd-reply-cancel" onclick="event.stopPropagation();cancelDareReply()"><span class="mi">close</span></button>
+          </div>
+          <div class="vd-comment-input-row" onclick="event.stopPropagation()">
             <div class="vd-input-av" id="ddInputAv">?</div>
             <div class="vd-comment-field">
               <input class="vd-comment-input" id="ddCommentInput" placeholder="Add a comment..." maxlength="500"
