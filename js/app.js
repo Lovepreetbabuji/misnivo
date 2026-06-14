@@ -3059,6 +3059,7 @@ function toggleSidebar() {
     sb.classList.toggle('open', _sidebarOpen);
     if (overlay) overlay.classList.toggle('show', _sidebarOpen);
     document.body.style.overflow = _sidebarOpen ? 'hidden' : '';
+    if (_sidebarOpen) _dmPush();
   } else {
     // Desktop: default is YouTube-style narrow rail; toggle to expanded drawer
     document.body.classList.toggle('sidebar-expanded');
@@ -3387,10 +3388,11 @@ function _renderRelatedVideos(currentProof) {
   if(!related.length){el.innerHTML='<div style="color:var(--t3);font-size:13px;">No related videos yet</div>';return;}
   el.innerHTML=related.map(p=>{
     const cat=p.cat||'fitness';const color=CAT_C[cat]||'#717171';const t=vidThumb(p,320);
+    const sc = _isShortVideo(p) ? ' dd-rel-thumb-short' : '';  // shorts → 9:16, long → 16:9
     const badge=`<span class="dd-rel-badge">$${(p.dareBounty||0).toLocaleString('en-IN')}</span>`;
     const thumb = t
-      ? `<div class="dd-rel-thumb"><img src="${t}" loading="lazy"/>${badge}</div>`
-      : `<div class="dd-rel-thumb dd-rel-thumb-bg" style="background:linear-gradient(135deg,${color}22,${color}55);"><span class="mi" style="color:${color};">play_circle</span>${badge}</div>`;
+      ? `<div class="dd-rel-thumb${sc}"><img src="${t}" loading="lazy"/>${badge}</div>`
+      : `<div class="dd-rel-thumb dd-rel-thumb-bg${sc}" style="background:linear-gradient(135deg,${color}22,${color}55);"><span class="mi" style="color:${color};">play_circle</span>${badge}</div>`;
     return `<div class="dd-rel-card" onclick="openVideo('${p.id}')">
       ${thumb}
       <div class="dd-rel-title">${escHtml(p.dareTitle||'Dare Video')}</div>
@@ -3420,6 +3422,9 @@ async function _renderVideoDetail(p) {
   document.getElementById('vdCreatorName').textContent = '@'+creatorUser;
   document.getElementById('vdTakerName').textContent = '@'+takerUser;
   document.getElementById('vdBounty').textContent  = `Rs. ${(p.dareBounty||0).toLocaleString('en-IN')} bounty won`;
+  // Follow the video's taker (hidden on your own video)
+  const fb=document.getElementById('vdFollowBtn');
+  if(fb){ if(p.takerId && p.takerId!==user?.uid){ fb.style.display=''; fb.onclick=function(e){ e.stopPropagation(); toggleFollow(p.takerId,'taker'); }; } else { fb.style.display='none'; } }
   // Stash ids for collab modal
   const cm = document.getElementById('collabModal');
   if (cm) { cm.dataset.creatorId = creatorId; cm.dataset.takerId = p.takerId||''; }
@@ -3443,6 +3448,7 @@ async function _renderVideoDetail(p) {
   if(vdAv){if(user?.picture)vdAv.innerHTML=`<img src="${user.picture}" style="width:100%;height:100%;object-fit:cover;border-radius:50%;" alt="av"/>`;else if(user)vdAv.textContent=user.name[0].toUpperCase();}
   // Comments use the shared box (proofId = proof.id)
   _ddCurrentId = p.id;
+  _ddCanPin = (p.takerId === user?.uid); // the video's taker can pin comments
   loadDareTopComment(p.id, { previewEl:'vdTopComment', countEl:'vdCommentCount', host:'videoDetailOverlay' });
   _renderRelatedVideos(p);
 }
@@ -3698,6 +3704,7 @@ function openDareDetail(dareId){
   if (user?.picture) av.innerHTML = `<img src="${user.picture}" style="width:100%;height:100%;object-fit:cover;border-radius:50%;" alt="av"/>`;
   else if (user) av.textContent = user.name[0].toUpperCase();
 
+  _ddCanPin = (d.creatorUid === user?.uid); // creator can pin on their dare
   loadDareTopComment(dareId);
   renderDareMore(dareId);
 
@@ -3709,6 +3716,7 @@ function openDareDetail(dareId){
   document.body.classList.add('detail-open'); // makes the topbar opaque
   closeDareDetails();
   _ddBindScrollTop(); _ddBindSwipe();
+  _dmPush();
 }
 function closeDareDetail(){
   document.getElementById('dareDetailOverlay').classList.remove('open');
@@ -3773,6 +3781,16 @@ function _closeDetailOverlays(){
     _ddCurrentId = null;
   }
 }
+// ── Phone BACK button: close the open layer instead of leaving the site ──
+function _dmPush(){ try{ history.pushState({dm:Date.now()},''); }catch(e){} }
+window.addEventListener('popstate', function(){
+  const isOpen = id => { const el=document.getElementById(id); return el && el.classList.contains('open'); };
+  if (isOpen('ddCommentsBox')){ closeDareComments(); _dmPush(); return; }
+  if (isOpen('shortsOverlay')){ closeShorts(); return; }
+  if (isOpen('videoDetailOverlay')){ closeVideoDetail(); return; }
+  if (isOpen('dareDetailOverlay')){ closeDareDetail(); return; }
+  if (typeof _sidebarOpen!=='undefined' && _sidebarOpen){ closeSidebar(); return; }
+});
 // 3-dots on the dare actions row → Share / Report menu
 function _ddToggleActionMenu(btn){
   const menu = btn.nextElementSibling; if (!menu) return;
@@ -3861,6 +3879,7 @@ async function dislikeDare(){
 let _ddComments = [];        // ALL comments for the current dare (top-level + replies)
 let _ddReplyTo = null;       // comment id currently being replied to
 let _ddReplyToName = '';     // name we're replying to (kept as @-prefix on the text)
+let _ddCanPin = false;       // can the current user pin comments here? (dare creator / video taker)
 // The comments box is shared between the dare page and the long-video page.
 // These point it at the right preview element / host column for whichever is open.
 let _ddPreviewElId = 'ddTopComment';
@@ -3887,6 +3906,7 @@ function _ddUpdateCount(){
 // top-liked first; ties (or no likes) → latest first
 function _ddSortComments(arr){
   arr.sort((a,b)=>{
+    if (!!a.pinned !== !!b.pinned) return a.pinned ? -1 : 1;   // pinned first
     const la=a.likeCount||a.likes||0, lb=b.likeCount||b.likes||0;
     if (lb!==la) return lb-la;
     const ta=(a.createdAt&&a.createdAt.seconds)||0, tb=(b.createdAt&&b.createdAt.seconds)||0;
@@ -3894,25 +3914,37 @@ function _ddSortComments(arr){
   });
   return arr;
 }
+async function pinDareComment(id){
+  const c=(_ddComments||[]).find(x=>x.id===id); if(!c) return;
+  const np=!c.pinned; c.pinned=np;
+  document.querySelectorAll('#ddBoxList .cmt-menu.open').forEach(m=>m.classList.remove('open'));
+  _renderDareComments();
+  db.collection('comments').doc(id).update({pinned:np}).catch(()=>{});
+}
 function _ddCommentHtml(c, replies){
   const liked = (c.likedBy||[]).includes(user&&user.uid);
   const likeN = c.likeCount||c.likes||0;
   const safeName = (c.userName||'').replace(/[\\'"<>]/g,'');
+  // The dare creator / video taker can pin top-level comments
+  const pinItem = (_ddCanPin && replies!==null)
+    ? `<button onclick="event.stopPropagation();pinDareComment('${c.id}')"><span class="mi">push_pin</span> ${c.pinned?'Unpin':'Pin'}</button>` : '';
   const acts = `<div class="vd-comment-acts">
       <button class="cmt-act${liked?' liked':''}" onclick="event.stopPropagation();likeDareComment('${c.id}')"><span class="mi">thumb_up</span>${likeN>0?' '+_fmtCount(likeN):''}</button>
       <button class="cmt-act" onclick="event.stopPropagation();startDareReply('${c.id}','${safeName}')">Reply</button>
       <span class="cmt-more"><button class="cmt-3dots" onclick="event.stopPropagation();_ddToggleCmtMenu(this)"><span class="mi">more_vert</span></button>
-        <span class="cmt-menu"><button onclick="event.stopPropagation();reportComment('${c.id}','${safeName}')"><span class="mi">flag</span> Report</button></span></span>
+        <span class="cmt-menu">${pinItem}<button onclick="event.stopPropagation();reportComment('${c.id}','${safeName}')"><span class="mi">flag</span> Report</button></span></span>
     </div>`;
+  const pinBadge = (c.pinned && replies!==null) ? `<span class="cmt-pinned"><span class="mi">push_pin</span> Pinned</span>` : '';
   // Replies are HIDDEN by default behind a "Show N replies" toggle
   let repToggle = '', repHtml = '';
   if (replies && replies.length){
     repToggle = `<button class="cmt-reptoggle" onclick="event.stopPropagation();_ddToggleReplies('${c.id}',this)"><span class="mi">expand_more</span> Show ${replies.length} repl${replies.length>1?'ies':'y'}</button>`;
     repHtml = `<div class="vd-replies" id="reps-${c.id}" style="display:none;">${replies.map(r=>_ddCommentHtml(r,null)).join('')}</div>`;
   }
-  return `<div class="vd-comment${replies===null?' vd-reply':''}">
+  return `<div class="vd-comment${replies===null?' vd-reply':''}${c.pinned&&replies!==null?' cmt-is-pinned':''}">
     <div class="vd-comment-av">${_avHtml(c.userPhotoURL, c.userName)}</div>
     <div class="vd-comment-body">
+      ${pinBadge}
       <div class="vd-comment-author">${escHtml(c.userName||'—')}<span class="vd-comment-time">${c.createdAt&&c.createdAt.toDate?_timeAgo(c.createdAt.toDate()):''}</span></div>
       <div class="vd-comment-text">${escHtml(c.text||'')}</div>
       ${acts}${repToggle}${repHtml}
@@ -3964,6 +3996,7 @@ function openDareComments(){
   _renderDareCommentsBox();
   const box = document.getElementById('ddCommentsBox'); if (!box) return;
   box.classList.add('open');
+  _dmPush();
   const cb = box.querySelector('.dd-cbox'); if (!cb) return;
   // Desktop: dock the box exactly over column 1 (same size/position). Mobile: CSS sheet.
   if (window.innerWidth >= 769){
@@ -4131,6 +4164,7 @@ async function openVideoDetail(proofId) {
   document.body.style.overflow='hidden';
   document.body.classList.add('detail-open');
   _vdBindScroll();
+  _dmPush();
   // Then show ad IN the video area, then play
   const player = document.getElementById('vdPlayer');
   const dur = p.videoDuration || 0;
@@ -4298,6 +4332,7 @@ function openShorts(proofId) {
   document.getElementById('shortsOverlay').classList.add('open');
   document.getElementById('shortsOverlay').classList.remove('comments-open');
   document.body.style.overflow = 'hidden';
+  _dmPush();
   _renderShortsSnapStack();   // build the native scroll-snap video stack
   renderShort();              // fill the fixed overlay for the current short
 }

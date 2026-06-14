@@ -1912,8 +1912,12 @@ textarea.f-input{resize:vertical;min-height:84px;}
 .cmt-menu { display:none; position:absolute; top:26px; right:0; background:#282828; border:1px solid var(--border); border-radius:10px; padding:4px; z-index:60; box-shadow:0 8px 24px rgba(0,0,0,.55); }
 .cmt-menu.open { display:block; }
 .cmt-menu button { display:flex; align-items:center; gap:8px; background:none; border:none; color:var(--t1); font-size:13px; font-weight:600; padding:9px 16px; white-space:nowrap; cursor:pointer; border-radius:7px; font-family:inherit; }
-.cmt-menu button:hover { background:var(--glass3); color:var(--red); }
+.cmt-menu button:hover { background:var(--glass3); }
+.cmt-menu button:hover .mi, .cmt-menu button:last-child:hover { color:var(--red); }
 .cmt-menu button .mi { font-size:16px; }
+/* Pinned comment marker */
+.cmt-pinned { display:inline-flex; align-items:center; gap:4px; font-size:11px; font-weight:700; color:var(--blue2); margin-bottom:3px; }
+.cmt-pinned .mi { font-size:14px; }
 /* "Replying to @user" bar above the input */
 .dd-reply-bar { align-items:center; gap:6px; font-size:12px; color:var(--t3); background:var(--bg3); border:1px solid var(--border); border-radius:8px; padding:6px 10px; margin-bottom:8px; }
 .dd-reply-bar b { color:var(--blue2); }
@@ -2009,6 +2013,8 @@ textarea.f-input{resize:vertical;min-height:84px;}
 .dd-related-grid{ display:flex; flex-direction:column; gap:0; }
 .dd-rel-card{ cursor:pointer; margin-bottom:16px; }
 .dd-rel-thumb{ position:relative; width:100%; aspect-ratio:16/9; border-radius:10px; overflow:hidden; background:#1f1f1f; }
+/* shorts in the related rail are vertical 9:16 */
+.dd-rel-thumb-short{ aspect-ratio:9/16; max-width:62%; margin:0 auto; }
 .dd-rel-thumb img{ width:100%; height:100%; object-fit:cover; display:block; }
 .dd-rel-thumb-bg{ display:flex; align-items:center; justify-content:center; }
 .dd-rel-thumb-bg .mi{ font-size:36px; }
@@ -2022,6 +2028,26 @@ textarea.f-input{resize:vertical;min-height:84px;}
 .vd2-collab-avs{ position:relative; width:60px; height:42px; flex-shrink:0; }
 .vd2-collab-avs .dd-creator-av{ position:absolute; top:0; left:0; width:38px; height:38px; border:2px solid var(--bg2); }
 .vd2-collab-avs .vd2-av2{ left:22px; }
+/* Desktop: comment box should NOT dim the page behind it */
+@media(min-width:769px){ .dd-cbox-overlay{ background:transparent; } }
+/* Mobile: bigger edge-to-edge video that stays pinned while the rest scrolls */
+@media(max-width:768px){
+  #videoDetailOverlay .vd2-player-wrap{ margin-left:-16px; margin-right:-16px; border-radius:0; position:sticky; top:0; z-index:6; }
+}
+/* Hamburger drawer must also work on 600–768px widths (matches JS isMobile≤768) */
+@media(min-width:600px) and (max-width:768px){
+  .bottom-nav{ display:flex; }
+  .sidebar{ position:fixed; top:56px; left:0; bottom:0; z-index:210; width:min(280px,80vw);
+    transform:translateX(-110%); transition:transform .28s cubic-bezier(.4,0,.2,1);
+    box-shadow:4px 0 24px rgba(0,0,0,.6); overflow-y:auto; padding-top:8px; padding-bottom:80px; justify-content:flex-start !important; }
+  .sidebar .nav-lbl{ display:block !important; }
+  .sidebar .nav-item{ justify-content:flex-start !important; padding:14px 20px !important; }
+  .sidebar.open{ transform:translateX(0); }
+  .sb-overlay{ z-index:160; }
+  .main{ margin-left:0 !important; }
+}
+/* Notification panel — slightly glassy (desktop + mobile) */
+.notif-panel{ background:rgba(18,18,18,.80) !important; backdrop-filter:blur(20px) saturate(140%) !important; -webkit-backdrop-filter:blur(20px) saturate(140%) !important; }
 
 /* Keep the main topbar visible — the dare / video page opens BELOW it */
 #dareDetailOverlay, #videoDetailOverlay{ top:56px; }
