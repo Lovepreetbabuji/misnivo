@@ -11,7 +11,7 @@
 <link href="https://fonts.googleapis.com/icon?family=Material+Icons+Round" rel="stylesheet"/>
 
 <!-- App Styles -->
-<link rel="stylesheet" href="css/styles.css?v=20260613r"/>
+<link rel="stylesheet" href="css/styles.css?v=20260613s"/>
 
 <!-- Firebase CDN -->
 <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
@@ -795,7 +795,7 @@
 <div class="toast" id="toast"></div>
 
 <!-- App Logic -->
-<script src="js/app.js?v=20260613r"></script>
+<script src="js/app.js?v=20260613s"></script>
 
 <!-- ══ v0.19 NEW MODALS ══ -->
 
@@ -1069,6 +1069,11 @@
 <div class="shorts-overlay" id="shortsOverlay">
   <button class="shorts-close" onclick="closeShorts()"><span class="mi">arrow_back</span></button>
 
+  <div class="shorts-3col">
+  <!-- COLUMN 1 (desktop): creator+taker ids · caption · description & rules -->
+  <div class="shorts-col1" id="shortsCol1"></div>
+
+  <!-- COLUMN 2: the video feed + overlaid buttons -->
   <div class="shorts-stage">
     <!-- Native scroll-snap stack; each slide carries its own overlay (info left, rail right) -->
     <div class="shorts-video-col">
@@ -1091,7 +1096,7 @@
     </div>
   </div>
 
-  <!-- Comments panel (slides from right) -->
+  <!-- COLUMN 3: comments (desktop permanent card; mobile slides from bottom) -->
   <div class="shorts-comments">
     <div class="shorts-comments-hdr">
       <span>Comments <b id="shortsCommentsCount">0</b></span>
@@ -1107,6 +1112,7 @@
       <button onclick="submitShortsComment()"><span class="mi">send</span></button>
     </div>
   </div>
+  </div><!-- /.shorts-3col -->
 </div>
 
 

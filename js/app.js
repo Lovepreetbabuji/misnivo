@@ -4435,6 +4435,7 @@ function _shortsSlideHtml(p, i) {
         <span class="shorts-time">0:00</span>
       </div>
       <button class="shorts-dots" onclick="shortsOpenMenu('${p.id}')"><span class="mi">more_vert</span></button>
+      <span class="shorts-bounty-badge">$${bounty}</span>
       <div class="shorts-seek-wrap">
         <input type="range" class="shorts-seek" min="0" max="1000" value="0" oninput="shortsSlideSeek(this)"/>
       </div>
@@ -4445,8 +4446,8 @@ function _shortsSlideHtml(p, i) {
       <span class="shorts-act-lbl shorts-like-count">${_fmtCount(p.likeCount || 0)}</span>
       <button class="shorts-act" onclick="showToast('Disliked')"><span class="mi">thumb_down</span></button>
       <span class="shorts-act-lbl">Dislike</span>
-      <button class="shorts-act" onclick="shortsOpenComments('${p.id}')"><span class="mi">comment</span></button>
-      <span class="shorts-act-lbl shorts-comment-count">${_fmtCount(p.commentCount || 0)}</span>
+      <button class="shorts-act shorts-cmt-rail" onclick="shortsOpenComments('${p.id}')"><span class="mi">comment</span></button>
+      <span class="shorts-act-lbl shorts-comment-count shorts-cmt-rail">${_fmtCount(p.commentCount || 0)}</span>
       <button class="shorts-act" onclick="showToast('Share link copied!')"><span class="mi">share</span></button>
       <span class="shorts-act-lbl">Share</span>
       <div class="shorts-act-views"><span class="mi">visibility</span><span class="shorts-views-count">${_fmtCount(p.viewCount || 0)}</span></div>
@@ -4485,7 +4486,47 @@ async function renderShort() {
     _checkViewMilestone(p.id, p.viewCount);
   }
 
-  if (shortsCommentsOpen) loadShortsComments(p.id);
+  _shortsFillCol1(p, d);
+  if (shortsCommentsOpen || window.innerWidth >= 769) loadShortsComments(p.id);
+}
+// Desktop column 1: creator+taker ids · caption · description & rules (synced to active short)
+function _shortsFillCol1(p, d){
+  const col1 = document.getElementById('shortsCol1'); if (!col1) return;
+  const creatorName = escHtml(d.creator || p.posterName || 'Creator');
+  const takerName   = escHtml(p.takerName || 'Taker');
+  const caption = escHtml(d.caption || d.title || p.dareTitle || 'Dare Video');
+  const desc = escHtml(d.desc || d.description || '');
+  const rules = (d.rules||[]).filter(r=>r && r.trim());
+  const cAv = _avHtml(d.creatorPhotoURL||p.posterPhotoURL, creatorName);
+  const tAv = _avHtml(p.takerPhotoURL, takerName);
+  col1.innerHTML = `
+    <div class="shorts-c1-collab" onclick="shortsOpenCollab()">
+      <div class="vd2-collab-avs"><div class="dd-creator-av">${cAv}</div><div class="dd-creator-av vd2-av2">${tAv}</div></div>
+      <div class="dd-creator-info">
+        <div class="dd-creator-name">@${creatorName} &amp; @${takerName}</div>
+        <div class="dd-creator-sub">Creator &amp; Taker · tap to follow</div>
+      </div>
+    </div>
+    <div class="shorts-c1-caption">${caption}</div>
+    ${desc ? `<div class="dd-sec-label">Description</div><p class="dd-desc-text">${desc}</p>` : ''}
+    ${rules.length ? `<div class="dd-sec-label">Rules</div>${rules.map(r=>`<div class="dd-rule">• ${escHtml(r)}</div>`).join('')}` : ''}
+  `;
+}
+// Glassy collaborators box for shorts (reuses the shared collab modal, centered)
+function shortsOpenCollab(){
+  const p = shortsFeed[shortsIndex]; if (!p) return;
+  const d = (typeof dares!=='undefined' ? dares.find(x=>x.id===p.dareId) : null) || {};
+  const cm = document.getElementById('collabModal'); if (!cm) return;
+  const creatorName = '@'+(d.creatorUsername||d.creator||p.posterName||'creator');
+  const takerName   = '@'+(p.takerUsername||p.takerName||'taker');
+  cm.dataset.creatorId = d.creatorUid||p.posterId||'';
+  cm.dataset.takerId   = p.takerId||'';
+  document.getElementById('cmCreatorName').textContent = creatorName;
+  document.getElementById('cmTakerName').textContent   = takerName;
+  document.getElementById('cmCreatorAv').innerHTML = _avHtml(d.creatorPhotoURL||p.posterPhotoURL, creatorName);
+  document.getElementById('cmTakerAv').innerHTML   = _avHtml(p.takerPhotoURL, takerName);
+  const sheet = cm.querySelector('.collab-sheet'); if (sheet) sheet.style.cssText='';  // centered
+  cm.style.display = 'flex'; cm.classList.add('open');
 }
 
 // Populate the desktop fixed info + rail for the current short
@@ -4602,6 +4643,7 @@ function _shortsBuildMenu(p){
     </div>
     <button class="shorts-menu-action" onclick="shortsDownload()"><span class="mi">download</span> Download</button>
     <button class="shorts-menu-action" onclick="shortsCycleSpeed()"><span class="mi">slow_motion_video</span> Playback speed <span id="shortsSpeedLbl" style="margin-left:auto;color:var(--t3);">${_SHORTS_SPEEDS[_shortsSpeedIdx]}x</span></button>
+    <button class="shorts-menu-action" onclick="shortsToggleAutoScroll()"><span class="mi">smart_display</span> Auto-scroll <span id="shortsAutoLbl" style="margin-left:auto;color:var(--t3);">${_shortsAutoScroll?'On':'Off'}</span></button>
     <button class="shorts-menu-action" onclick="shortsPiP()"><span class="mi">picture_in_picture_alt</span> Picture-in-picture</button>
     <button class="shorts-menu-report" onclick="openReportModal('proof','${p.id}')"><span class="mi">flag</span> Report</button>
   `;
@@ -4662,6 +4704,13 @@ function shortsDownload() {
 }
 let _shortsSpeedIdx = 0;
 const _SHORTS_SPEEDS = [1, 1.25, 1.5, 2, 0.5];
+let _shortsAutoScroll = false;
+function shortsToggleAutoScroll(){
+  _shortsAutoScroll = !_shortsAutoScroll;
+  const lbl = document.getElementById('shortsAutoLbl'); if (lbl) lbl.textContent = _shortsAutoScroll ? 'On' : 'Off';
+  showToast(_shortsAutoScroll ? 'Auto-scroll on — next short plays automatically' : 'Auto-scroll off');
+  const v = _shortsCurrentVideo(); if (v){ v.loop = !_shortsAutoScroll; }
+}
 function shortsCycleSpeed() {
   const v = _shortsCurrentVideo(); if (!v) return;
   _shortsSpeedIdx = (_shortsSpeedIdx + 1) % _SHORTS_SPEEDS.length;
@@ -5108,7 +5157,12 @@ function _shortsPlayCurrent() {
   const cur = items[shortsIndex];
   if (cur) {
     const v = cur.querySelector('video');
-    if (v) { v.muted = false; v.currentTime = 0; v.playbackRate = _SHORTS_SPEEDS[_shortsSpeedIdx] || 1; v.play().catch(()=>{}); _shortsSlideSyncIcons(v); }
+    if (v) {
+      v.muted = false; v.currentTime = 0; v.playbackRate = _SHORTS_SPEEDS[_shortsSpeedIdx] || 1;
+      v.loop = !_shortsAutoScroll;                                  // auto-scroll → don't loop
+      v.onended = () => { if (_shortsAutoScroll) shortsNav(1); };   // …advance to next short
+      v.play().catch(()=>{}); _shortsSlideSyncIcons(v);
+    }
   }
 }
 

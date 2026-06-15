@@ -2600,7 +2600,7 @@ html{scroll-behavior:smooth;}
   box-shadow:0 8px 28px rgba(0,0,0,.6);overflow:hidden;
 }
 /* Collaborators box: no full-screen dim; docked over column 1 (JS sets rect on desktop) */
-#collabModal{ background:transparent !important; }
+#collabModal{ background:transparent !important; z-index:600 !important; }
 @media(max-width:768px){
   #collabModal{ align-items:flex-end; }
   #collabModal .collab-sheet{ max-width:none; border-radius:16px 16px 0 0; margin:0; }
@@ -2668,24 +2668,24 @@ html{scroll-behavior:smooth;}
 .shorts-snap-item.active .shorts-info,
 .shorts-snap-item.active .shorts-actions{ animation:shortsOverlayFade .45s ease both; }
 
-/* ── (D-fix) Desktop: each slide is a row [info | video | rail] that scrolls together.
-   Placed AFTER the base snap rules so it wins on desktop. ── */
+/* ── Shorts wrapper: transparent on mobile (children act as direct), 3-col on desktop ── */
+.shorts-3col{ display:contents; }
+.shorts-col1{ display:none; }
 @media(min-width:769px){
-  .shorts-video-col{
-    width:min(1040px,98vw); max-width:none; aspect-ratio:auto; height:88vh;
-    background:transparent; border-radius:0;
-  }
-  .shorts-snap-item{ align-items:flex-end; justify-content:center; gap:18px; padding-bottom:4vh; }
-  .shorts-slide-box{ flex:0 0 auto; width:auto; height:80vh; aspect-ratio:9/16; }
-  /* info OUTSIDE the video on the LEFT, rail OUTSIDE on the right — in-flow so they scroll with the slide */
-  .shorts-snap-item .shorts-info{
-    position:static; flex:0 0 300px; width:300px; max-width:300px;
-    left:auto; right:auto; bottom:auto; padding-bottom:6px; text-shadow:none;
-  }
-  .shorts-snap-item .shorts-actions{
-    position:static; flex:0 0 auto; right:auto; bottom:auto; padding-bottom:6px; background:none;
-  }
-  .shorts-snap-item .shorts-actions .shorts-act{ background:rgba(255,255,255,0.10); }
+  /* Open BELOW the main topbar (keep it visible) */
+  #shortsOverlay{ top:56px; }
+  .shorts-overlay .shorts-3col{ display:flex; gap:16px; height:100%; max-width:1280px; margin:0 auto; padding:16px; align-items:stretch; box-sizing:border-box; }
+  /* COLUMN 1 — info card */
+  .shorts-col1{ display:block; flex:1; min-width:0; overflow-y:auto; background:var(--bg2); border:1px solid var(--border); border-radius:16px; padding:18px; }
+  /* COLUMN 2 — video + overlaid buttons (centered) */
+  .shorts-overlay .shorts-stage{ position:relative; flex:0 0 auto; width:auto; height:100%; display:flex; align-items:center; justify-content:center; transform:none !important; }
+  .shorts-video-col{ width:auto; height:100%; max-width:none; aspect-ratio:auto; background:transparent; border-radius:0; display:flex; align-items:center; justify-content:center; }
+  .shorts-snap-item{ align-items:center; justify-content:center; gap:0; padding:0; }
+  .shorts-slide-box{ flex:0 0 auto; width:auto; height:calc(100vh - 56px - 40px); max-height:90vh; aspect-ratio:9/16; border-radius:16px; overflow:hidden; }
+  .shorts-snap-item .shorts-info{ display:none !important; }          /* info lives in column 1 now */
+  .shorts-snap-item .shorts-actions{ position:absolute; right:10px; bottom:18px; left:auto; flex-direction:column; background:none; padding:0; }
+  .shorts-snap-item .shorts-actions .shorts-act{ background:rgba(255,255,255,0.12); }
+  .shorts-cmt-rail{ display:none !important; }                        /* comment btn hidden (column 3 has comments) */
 }
 
 /* Left "Details" button (desktop only) + glassy details panel */
@@ -2716,17 +2716,28 @@ html{scroll-behavior:smooth;}
 .shorts-details-panel .dd-rule{ font-size:13px; color:#eee; line-height:1.5; margin:0; }
 .shorts-details-panel .dd-bounty{ font-size:14px; color:var(--blue); font-weight:700; margin:2px 0 0; }
 
-/* Comments panel — glassy + curved floating panel (desktop only) */
+/* Comments = permanent COLUMN 3 on desktop (glassy curved card) */
 @media(min-width:769px){
-  .shorts-comments{
-    top:16px; bottom:16px; right:16px; border-radius:18px;
+  .shorts-overlay .shorts-comments{
+    position:static; transform:none !important; flex:1; min-width:0;
+    width:auto; height:100%; top:auto; right:auto; bottom:auto;
+    border-radius:18px; display:flex;
     background:rgba(22,22,28,0.72) !important;
     backdrop-filter:blur(22px) saturate(150%) !important;
     -webkit-backdrop-filter:blur(22px) saturate(150%) !important;
     border:1px solid rgba(255,255,255,0.12);
     box-shadow:0 16px 48px rgba(0,0,0,0.5);
   }
+  .shorts-overlay .shorts-comments-hdr button{ display:none; } /* no close needed (permanent) */
 }
+/* Bounty badge — bottom-left corner of the short */
+.shorts-bounty-badge{ position:absolute; left:10px; bottom:54px; z-index:6; background:rgba(0,0,0,.72); color:var(--green); font-size:14px; font-weight:800; padding:4px 11px; border-radius:8px; border:1px solid rgba(255,255,255,.12); }
+/* Shorts column-1 (desktop) info card */
+.shorts-c1-collab{ display:flex; align-items:center; gap:12px; cursor:pointer; padding-bottom:14px; border-bottom:1px solid var(--border); margin-bottom:14px; }
+.shorts-c1-caption{ font-size:16px; font-weight:700; color:var(--t1); line-height:1.4; }
+.shorts-col1 .dd-sec-label{ font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.5px; color:var(--t3); margin:16px 0 6px; }
+.shorts-col1 .dd-desc-text{ font-size:14px; color:var(--t2); line-height:1.6; margin:0; }
+.shorts-col1 .dd-rule{ font-size:13px; color:var(--t2); line-height:1.6; }
 
 /* ═══════════════════════════════════════════════════════════
    YOUTUBE MINIMALISM v2 — kill blur/shadow, except top/bottom
