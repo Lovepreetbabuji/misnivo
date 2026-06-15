@@ -3396,7 +3396,8 @@ function _vdRelShortCard(p){
   const inner = t ? `<img src="${t}" loading="lazy"/>` : `<div class="dd-rel-short-bg" style="background:linear-gradient(135deg,${color}22,${color}55);"><span class="mi" style="color:${color};">play_circle</span></div>`;
   return `<div class="dd-rel-short" onclick="openVideo('${p.id}')">
     <div class="dd-rel-short-thumb">${inner}<span class="dd-rel-badge">$${(p.dareBounty||0).toLocaleString('en-IN')}</span></div>
-    <div class="dd-rel-short-title">${escHtml(p.dareTitle||'')}</div></div>`;
+    <div class="dd-rel-short-title">${escHtml(p.dareTitle||'')}</div>
+    <div class="dd-rel-short-meta">${_fmtCount(p.viewCount||0)} views · ${_relTime(p)}</div></div>`;
 }
 // Related column = mobile-home-style feed: long 16:9 cards + a horizontal Shorts row
 function _renderRelatedVideos(currentProof) {
@@ -4945,7 +4946,17 @@ function openCollabModal() {
   document.getElementById('cmTakerAv').innerHTML   = _avHtml(ov.dataset.takerPhoto||'', ov.dataset.takerName||'T');
   cm.style.display = 'flex';
   cm.classList.add('open');   // .overlay needs .open or it stays invisible (opacity:0)
-  _dockToCol1(cm.querySelector('.collab-sheet'), 'videoDetailOverlay', false); // align with column 1 (auto height)
+  // Desktop: center a small sheet inside column 1. Mobile: CSS bottom sheet.
+  const sheet = cm.querySelector('.collab-sheet');
+  if (sheet){
+    if (window.innerWidth >= 769){
+      const col1 = document.querySelector('#videoDetailOverlay .dd-col1');
+      if (col1){ const r = col1.getBoundingClientRect();
+        const w = Math.min(r.width - 48, 340);
+        sheet.style.cssText = `position:fixed;left:${r.left + r.width/2}px;top:${r.top + r.height/2}px;transform:translate(-50%,-50%);width:${w}px;max-height:${r.height-40}px;margin:0;`;
+      }
+    } else { sheet.style.cssText = ''; }
+  }
 }
 function closeCollabModal() {
   const cm = document.getElementById('collabModal');
