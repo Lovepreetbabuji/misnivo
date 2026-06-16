@@ -2672,19 +2672,21 @@ html{scroll-behavior:smooth;}
 .shorts-3col{ display:contents; }
 .shorts-col1{ display:none; }
 @media(min-width:769px){
-  /* Open BELOW the main topbar (keep it visible) */
-  #shortsOverlay{ top:56px; }
-  .shorts-overlay .shorts-3col{ display:flex; gap:16px; height:100%; max-width:1280px; margin:0 auto; padding:16px; align-items:stretch; box-sizing:border-box; }
-  /* All THREE columns equal width */
-  .shorts-col1{ display:block; flex:1; min-width:0; overflow-y:auto; background:var(--bg2); border:1px solid var(--border); border-radius:16px; padding:18px; }
-  /* COLUMN 2 — the video box (9:16 centered inside, curved). Must have a definite
-     size because the snap-container inside is position:absolute. */
-  .shorts-overlay .shorts-stage{ position:relative; flex:1; min-width:0; width:auto; height:100%; display:block; transform:none !important; }
+  /* Open BELOW the main topbar; the whole page scrolls */
+  #shortsOverlay{ top:56px; overflow-y:auto; }
+  .shorts-overlay .shorts-3col{ display:flex; gap:16px; min-height:calc(100vh - 56px); max-width:1280px; margin:0 auto; padding:16px; align-items:flex-start; box-sizing:border-box; }
+  /* COLUMN 2 — the 9:16 video (definite size; snap-container inside is absolute) */
+  .shorts-overlay .shorts-stage{ position:sticky; top:16px; flex:0 0 auto; height:calc(100vh - 88px); aspect-ratio:9/16; width:auto; display:block; transform:none !important; }
   .shorts-video-col{ position:relative; width:100%; height:100%; max-width:none; aspect-ratio:auto; background:#000; border-radius:16px; overflow:hidden; }
   .shorts-snap-item .shorts-info{ display:none !important; }          /* info lives in column 1 now */
   .shorts-snap-item .shorts-actions{ position:absolute; right:10px; bottom:18px; left:auto; flex-direction:column; background:none; padding:0; }
   .shorts-snap-item .shorts-actions .shorts-act{ background:rgba(255,255,255,0.12); }
   .shorts-cmt-rail{ display:none !important; }                        /* comment btn hidden (column 3 has comments) */
+  /* COLUMN 1 — info card (flows; page scrolls when long) */
+  .shorts-col1{ display:block; flex:1; min-width:0; background:var(--bg2); border:1px solid var(--border); border-radius:16px; padding:18px; }
+  /* COLUMN 3 — comments card (always visible, sticky, own inner scroll) */
+  .shorts-overlay .shorts-comments{ position:sticky; top:16px; right:auto; bottom:auto; transform:none !important; width:auto; flex:1; min-width:0; height:calc(100vh - 88px); border-radius:18px; z-index:1; }
+  .shorts-overlay.comments-open .shorts-stage{ transform:none !important; }   /* don't shift the video on desktop */
 }
 
 /* Left "Details" button (desktop only) + glassy details panel */

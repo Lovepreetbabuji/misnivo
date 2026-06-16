@@ -4504,8 +4504,9 @@ function _shortsFillCol1(p, d){
       <div class="vd2-collab-avs"><div class="dd-creator-av">${cAv}</div><div class="dd-creator-av vd2-av2">${tAv}</div></div>
       <div class="dd-creator-info">
         <div class="dd-creator-name">@${creatorName} &amp; @${takerName}</div>
-        <div class="dd-creator-sub">Creator &amp; Taker · tap to follow</div>
+        <div class="dd-creator-sub">Creator &amp; Taker</div>
       </div>
+      <button class="shorts-follow dd-follow" onclick="event.stopPropagation();shortsOpenCollab()">Follow</button>
     </div>
     <div class="shorts-c1-caption">${caption}</div>
     ${desc ? `<div class="dd-sec-label">Description</div><p class="dd-desc-text">${desc}</p>` : ''}
