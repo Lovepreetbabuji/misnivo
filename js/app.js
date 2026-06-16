@@ -3666,7 +3666,8 @@ function closeVideoDetail() {
   document.body.style.overflow='';
   document.body.classList.remove('detail-open');
   closeDareComments(); closeVideoDesc();
-  const player=document.getElementById('vdPlayer'); player.pause(); player.src='';
+  _stopVdAd();   // kill any running pre-roll so it can't start the video in the background
+  const player=document.getElementById('vdPlayer'); player.pause(); player.removeAttribute('src'); player.load();
   activeProof=null;
 }
 
@@ -3813,6 +3814,7 @@ function _closeDetailOverlays(){
     document.body.style.overflow = '';
     document.body.classList.remove('detail-open');
     if (typeof closeDareComments === 'function') closeDareComments();
+    if (typeof _stopVdAd === 'function') _stopVdAd();   // kill any running pre-roll ad
     // Stop the long-video player (pause AND abort loading)
     const vp=document.getElementById('vdPlayer'); if(vp){ try{ vp.pause(); vp.removeAttribute('src'); vp.load(); }catch(e){} }
     if (typeof _viewStack !== 'undefined') _viewStack = [];   // navigating away resets the back-stack
@@ -4264,22 +4266,32 @@ async function openVideoDetail(proofId) {
   document.body.style.overflow='hidden';
   document.body.classList.add('detail-open');
   _vdBindScroll();
-  // Then show ad IN the video area, then play
+  // Then show ad IN the video area, then play. Ad shows once per video per
+  // session — coming BACK to a video plays it directly (no repeat ad).
   const player = document.getElementById('vdPlayer');
   const dur = p.videoDuration || 0;
-  if (dur >= 60) {
+  if (dur >= 60 && !_vdAdShown.has(p.id)) {
+    _vdAdShown.add(p.id);
     _showInlineAd(player, p);
   } else {
     if (player) { player.src = p.videoURL; player.play().catch(()=>{}); }
   }
 }
+let _vdAdShown = new Set();   // proofs that already showed their pre-roll this session
 
 // Inline ad overlay inside the video player area (YouTube-style pre-roll)
+let _vdAdTick = null, _vdAdSkipTO = null;
+// Cancel any running pre-roll ad (so it can't auto-start the old video in the
+// background after you navigate away during the countdown)
+function _stopVdAd(){
+  if (_vdAdTick){ clearInterval(_vdAdTick); _vdAdTick = null; }
+  if (_vdAdSkipTO){ clearTimeout(_vdAdSkipTO); _vdAdSkipTO = null; }
+  document.querySelectorAll('.vd-inline-ad').forEach(a=>a.remove());
+}
 function _showInlineAd(player, p) {
   if (!player) return;
+  _stopVdAd();
   const wrap = player.parentElement;
-  // Remove old ad if any
-  const old = wrap.querySelector('.vd-inline-ad'); if (old) old.remove();
   player.removeAttribute('src'); player.load();
   let secs = 5;
   const ad = document.createElement('div');
@@ -4293,20 +4305,24 @@ function _showInlineAd(player, p) {
     </div>
     <button class="vd-ad-skip" id="vdAdSkip" disabled>Skip in ${secs}s</button>`;
   wrap.appendChild(ad);
-  const tick = setInterval(() => {
+  // Only start the video if we're STILL on this same video (didn't navigate away)
+  const startVideo = () => {
+    _stopVdAd();
+    const open = document.getElementById('videoDetailOverlay')?.classList.contains('open');
+    if (!open) return;
+    if (typeof activeProof !== 'undefined' && activeProof && activeProof.id !== p.id) return;
+    player.src = p.videoURL; player.play().catch(()=>{});
+  };
+  _vdAdTick = setInterval(() => {
     secs--;
     const c = document.getElementById('vdAdCount'); if (c) c.textContent = secs;
     const skip = document.getElementById('vdAdSkip');
-    if (secs <= 0) {
-      clearInterval(tick);
-      ad.remove();
-      player.src = p.videoURL; player.play().catch(()=>{});
-    } else if (skip) { skip.textContent = `Skip in ${secs}s`; }
+    if (secs <= 0) startVideo();
+    else if (skip) { skip.textContent = `Skip in ${secs}s`; }
   }, 1000);
-  // Allow skip after 3s
-  setTimeout(() => {
+  _vdAdSkipTO = setTimeout(() => {
     const skip = document.getElementById('vdAdSkip');
-    if (skip) { skip.disabled = false; skip.textContent = 'Skip Ad'; skip.onclick = () => { clearInterval(tick); ad.remove(); player.src = p.videoURL; player.play().catch(()=>{}); }; }
+    if (skip) { skip.disabled = false; skip.textContent = 'Skip Ad'; skip.onclick = startVideo; }
   }, 3000);
 }
 
@@ -4476,12 +4492,12 @@ function _shortsSlideHtml(p, i) {
   return `
   <div class="shorts-snap-item" data-idx="${i}" data-proof-id="${p.id}">
     <div class="shorts-info">
-      <div class="shorts-creator-row">
+      <div class="shorts-creator-row" onclick="shortsOpenCollab()" style="cursor:pointer;">
         <div class="shorts-creator-av">${cAv}</div>
         <span class="shorts-creator-name">@${creatorName}</span>
-        <button class="shorts-follow" onclick="toggleFollow('${creatorId}','creator')">Follow</button>
+        <button class="shorts-follow" onclick="event.stopPropagation();shortsOpenCollab()">Follow</button>
       </div>
-      <div class="shorts-taker-row">
+      <div class="shorts-taker-row" onclick="shortsOpenCollab()" style="cursor:pointer;">
         <span class="shorts-taker-label">Taker</span>
         <span class="shorts-taker-name">@${takerName}</span>
       </div>
