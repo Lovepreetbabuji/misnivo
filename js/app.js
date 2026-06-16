@@ -4487,6 +4487,8 @@ function _shortsSlideHtml(p, i) {
       </div>
       <div class="shorts-caption" data-preview="${capPreview}" data-full="${caption}">${capPreview}${capToggle}</div>
       <button class="shorts-m-details" onclick="shortsOpenDetails()"><span class="mi">description</span> Description &amp; rules</button>
+      <button class="shorts-details-btn" onclick="shortsToggleDetailsLeft(this)"><span class="mi">expand_more</span> Description &amp; rules</button>
+      <div class="shorts-details-panel" style="display:none;">${_shortsDetailsHtml(d)}</div>
     </div>
 
     <div class="shorts-slide-box">
