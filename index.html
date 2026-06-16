@@ -11,7 +11,7 @@
 <link href="https://fonts.googleapis.com/icon?family=Material+Icons+Round" rel="stylesheet"/>
 
 <!-- App Styles -->
-<link rel="stylesheet" href="css/styles.css?v=20260613x"/>
+<link rel="stylesheet" href="css/styles.css?v=20260613y"/>
 
 <!-- Firebase CDN -->
 <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
@@ -795,7 +795,7 @@
 <div class="toast" id="toast"></div>
 
 <!-- App Logic -->
-<script src="js/app.js?v=20260613x"></script>
+<script src="js/app.js?v=20260613y"></script>
 
 <!-- ══ v0.19 NEW MODALS ══ -->
 
@@ -906,7 +906,7 @@
 <div class="video-detail-overlay" id="dareDetailOverlay">
   <div class="dd-wrap">
     <div class="vd-topbar dd-topbar">
-      <button class="vd-back-btn" onclick="closeDareDetail()"><span class="mi">arrow_back</span></button>
+      <button class="vd-back-btn" onclick="history.back()"><span class="mi">arrow_back</span></button>
       <div class="vd-topbar-title" id="ddTopTitle"></div>
       <span class="dd-more dd-top-more">
         <button class="vd-back-btn" onclick="_ddToggleActionMenu(this)"><span class="mi">more_vert</span></button>
@@ -1067,7 +1067,7 @@
 
 <!-- ═══ YOUTUBE SHORTS PLAYER OVERLAY ═══ -->
 <div class="shorts-overlay" id="shortsOverlay">
-  <button class="shorts-close" onclick="closeShorts()"><span class="mi">arrow_back</span></button>
+  <button class="shorts-close" onclick="history.back()"><span class="mi">arrow_back</span></button>
 
   <div class="shorts-3col">
   <!-- COLUMN 1 (desktop): creator+taker ids · caption · description & rules -->
