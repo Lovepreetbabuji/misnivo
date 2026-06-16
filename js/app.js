@@ -454,6 +454,7 @@ function startDaresListener() {
     .onSnapshot((snap) => {
       dares = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
       _reconcileTakerApprovals();   // creator picked me? → unlock Submit Proof
+      if (typeof _maybeInitialRoute === 'function') _maybeInitialRoute();   // deep-link /dare/:id
       // Refresh whichever page is active
       const activePage = document.querySelector('.page.active');
       if (activePage?.id === 'pageDares')    renderDaresPage();
@@ -596,6 +597,7 @@ async function renderHome(cat) {
     const snap = await db.collection('proofs').where('status','==','approved').get();
     homeProofs = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
     allProofs = homeProofs; // sync for explorer/search/related
+    if (typeof _maybeInitialRoute === 'function') _maybeInitialRoute();   // deep-link /watch|/shorts
 
     const filtered = homeFilterCat === 'all'
       ? homeProofs
@@ -3667,7 +3669,9 @@ function closeVideoDetail() {
   document.body.classList.remove('detail-open');
   closeDareComments(); closeVideoDesc();
   _stopVdAd();   // kill any running pre-roll so it can't start the video in the background
-  const player=document.getElementById('vdPlayer'); player.pause(); player.removeAttribute('src'); player.load();
+  const player=document.getElementById('vdPlayer');
+  if (activeProof && player && player.currentTime > 3 && !player.ended) _vdResumePos[activeProof.id] = player.currentTime;  // resume here on back
+  player.pause(); player.removeAttribute('src'); player.load();
   activeProof=null;
 }
 
@@ -3679,7 +3683,7 @@ let _ddCurrentId = null;
 function openDareDetail(dareId){
   const d = dares.find(x=>x.id===dareId);
   if (!d) { showToast('Dare not found'); return; }
-  if (typeof _enterView === 'function') _enterView();   // remember where we came from + pause it
+  if (typeof _enterView === 'function') _enterView('dare', dareId);   // give it a URL + pause/close current
   if (typeof _searchReturn !== 'undefined') _searchReturn = null;
   _ddCurrentId = dareId;
   const cat = d.tags?.[0] || d.cat || 'fitness';
@@ -3817,45 +3821,61 @@ function _closeDetailOverlays(){
     if (typeof _stopVdAd === 'function') _stopVdAd();   // kill any running pre-roll ad
     // Stop the long-video player (pause AND abort loading)
     const vp=document.getElementById('vdPlayer'); if(vp){ try{ vp.pause(); vp.removeAttribute('src'); vp.load(); }catch(e){} }
-    if (typeof _viewStack !== 'undefined') _viewStack = [];   // navigating away resets the back-stack
+    // Navigating to a page → drop the view URL back to root
+    if (!_navBack && /^\/(watch|shorts|dare)\//.test(location.pathname)){ try{ history.pushState({},'','/'); }catch(e){} }
     _ddCurrentId = null;
   }
 }
 // ── Phone BACK button: walk back through the pages you actually visited (don't
 //    leave the site, don't jump to home). Each step pauses the page being left
 //    so nothing keeps playing/loading in the background. ──
-let _viewStack = [];
-let _navBack = false;
-function _dmPush(){ try{ history.pushState({dm:Date.now()},''); }catch(e){} }
+// ── URL routing (YouTube-style): every video/short/dare gets a real URL so
+//    browser/phone back-forward work natively and links are shareable. ──
+let _navBack = false;            // true while opening in response to a route (don't push a new URL)
+let _routedInitial = false;      // deep-link handled?
+let _vdResumePos = {};           // proofId → seconds (resume long videos where you left)
+function _dmPush(){ try{ history.pushState({dm:Date.now()},''); }catch(e){} }   // for sub-layers (comment box etc.)
 function _pauseBackgroundMedia(){
   try{ const vp=document.getElementById('vdPlayer'); if(vp) vp.pause(); }catch(e){}
   document.querySelectorAll('#shortsSnapContainer video').forEach(v=>{ try{ v.pause(); }catch(e){} });
-}
-function _currentDetailView(){
-  if (document.getElementById('shortsOverlay')?.classList.contains('open'))      return { t:'short', id:(shortsFeed[shortsIndex]||{}).id };
-  if (document.getElementById('videoDetailOverlay')?.classList.contains('open')) return { t:'video', id:(typeof activeProof!=='undefined'&&activeProof)?activeProof.id:null };
-  if (document.getElementById('dareDetailOverlay')?.classList.contains('open'))  return { t:'dare',  id:_ddCurrentId };
-  return null;
 }
 function _closeCurrentView(){
   const sh=document.getElementById('shortsOverlay');        if (sh && sh.classList.contains('open'))  { closeShorts(); return; }
   const vov=document.getElementById('videoDetailOverlay');  if (vov && vov.classList.contains('open')){ closeVideoDetail(); return; }
   const dov=document.getElementById('dareDetailOverlay');   if (dov && dov.classList.contains('open')){ closeDareDetail(); return; }
 }
-// Call at the START of openShorts / openVideoDetail / openDareDetail
-function _enterView(){
-  if (_navBack) return;
-  const cur = _currentDetailView();
-  if (cur && cur.id){ _viewStack.push(cur); _closeCurrentView(); }  // remember + close (stops its video)
-  _dmPush();
+// Called at the START of openShorts / openVideoDetail / openDareDetail.
+function _enterView(type, id){
+  _pauseBackgroundMedia();
+  _closeCurrentView();                              // close whatever's open (stops its video)
+  if (!_navBack && id){
+    try{ history.pushState({ dm:type, id }, '', '/'+type+'/'+encodeURIComponent(id)); }catch(e){}
+  }
 }
-function _reopenView(v){
+// Open whatever view the current URL points to (back/forward + deep links)
+function _dmRouteFromUrl(){
   _navBack = true;
-  _closeCurrentView();                 // close the page we're leaving (stops its video)
-  if (v.t==='short')      openShorts(v.id);
-  else if (v.t==='video') openVideoDetail(v.id);
-  else if (v.t==='dare')  openDareDetail(v.id);
+  const m = (location.pathname||'').match(/^\/(watch|shorts|dare)\/([^/?#]+)/);
+  if (m){
+    const id = decodeURIComponent(m[2]);
+    if (m[1]==='watch')       openVideoDetail(id);
+    else if (m[1]==='shorts') openShorts(id);
+    else                      openDareDetail(id);
+  } else {
+    _closeCurrentView();                            // root / page URL → no overlay
+  }
   _navBack = false;
+}
+// On cold load / refresh of a deep link, open it once the data is available
+function _maybeInitialRoute(){
+  if (_routedInitial) return;
+  const m = (location.pathname||'').match(/^\/(watch|shorts|dare)\/([^/?#]+)/);
+  if (!m){ _routedInitial = true; return; }
+  const id = decodeURIComponent(m[2]);
+  const ready = (m[1]==='dare')
+    ? (dares||[]).some(d=>d.id===id)
+    : [...(typeof homeProofs!=='undefined'?homeProofs:[]),...(typeof allProofs!=='undefined'?allProofs:[])].some(p=>p.id===id);
+  if (ready){ _routedInitial = true; _dmRouteFromUrl(); }
 }
 window.addEventListener('popstate', function(){
   const isOpen = id => { const el=document.getElementById(id); return el && el.classList.contains('open'); };
@@ -3864,17 +3884,7 @@ window.addEventListener('popstate', function(){
   if (isOpen('shortsDetailsDrawer')){ shortsCloseDetails(); _dmPush(); return; }
   if (isOpen('collabModal')){ closeCollabModal(); _dmPush(); return; }
   if (typeof _sidebarOpen!=='undefined' && _sidebarOpen){ closeSidebar(); return; }
-  // reopen the previous page if there is one (closes the current first)
-  if (_viewStack.length){
-    _reopenView(_viewStack.pop());
-    _dmPush();   // keep a state so the NEXT back works
-    return;
-  }
-  // nothing to return to → just close the open detail page
-  _pauseBackgroundMedia();
-  if (isOpen('shortsOverlay')){ closeShorts(); return; }
-  if (isOpen('videoDetailOverlay')){ closeVideoDetail(); return; }
-  if (isOpen('dareDetailOverlay')){ closeDareDetail(); return; }
+  _dmRouteFromUrl();   // the URL is the source of truth — open/close to match it
 });
 // 3-dots on the dare actions row → Share / Report menu
 function _ddToggleActionMenu(btn){
@@ -4255,7 +4265,7 @@ async function loadComments(proofId) {
 async function openVideoDetail(proofId) {
   const p=homeProofs.find(x=>x.id===proofId)||allProofs.find(x=>x.id===proofId);
   if(!p||!p.videoURL){showToast('Video not available');return;}
-  if (typeof _enterView === 'function') _enterView();   // remember the page we came from + pause it
+  if (typeof _enterView === 'function') _enterView('watch', proofId);   // URL + pause/close current
   // Open the watch page FIRST
   activeProof=p;
   _renderVideoDetail(p);
@@ -4273,8 +4283,12 @@ async function openVideoDetail(proofId) {
   if (dur >= 60 && !_vdAdShown.has(p.id)) {
     _vdAdShown.add(p.id);
     _showInlineAd(player, p);
-  } else {
-    if (player) { player.src = p.videoURL; player.play().catch(()=>{}); }
+  } else if (player) {
+    // already-seen (or short) → play directly, resuming where you left off
+    const resume = _vdResumePos[p.id] || 0;
+    player.src = p.videoURL;
+    if (resume){ const _seek=()=>{ try{ player.currentTime = resume; }catch(e){} player.removeEventListener('loadedmetadata', _seek); }; player.addEventListener('loadedmetadata', _seek); }
+    player.play().catch(()=>{});
   }
 }
 let _vdAdShown = new Set();   // proofs that already showed their pre-roll this session
@@ -4438,7 +4452,7 @@ let shortsCommentsOpen = false;
 let shortsCaptionExpanded = false;
 
 function openShorts(proofId) {
-  if (typeof _enterView === 'function') _enterView();   // remember the page we came from + pause it
+  if (typeof _enterView === 'function') _enterView('shorts', proofId);   // URL + pause/close current
   const pool = (typeof allProofs !== 'undefined' && allProofs.length) ? allProofs : homeProofs;
   shortsFeed = (pool || []).filter(p => p.videoURL && _isShortVideo(p));
   if (!shortsFeed.length) { showToast('No videos yet'); return; }
@@ -4561,6 +4575,8 @@ async function renderShort() {
   ov.dataset.dareId = p.dareId || '';
   ov.dataset.creatorId = d.creatorUid || p.posterId || '';
   ov.dataset.takerId = p.takerId || '';
+  // keep the URL in sync with the current short as the feed scrolls (shareable)
+  try{ history.replaceState({ dm:'shorts', id:p.id }, '', '/shorts/'+encodeURIComponent(p.id)); }catch(e){}
 
   const up = document.getElementById('shortsNavUp'), dn = document.getElementById('shortsNavDown');
   if (up) up.classList.toggle('disabled', shortsIndex === 0);
