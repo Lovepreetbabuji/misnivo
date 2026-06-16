@@ -11,7 +11,7 @@
 <link href="https://fonts.googleapis.com/icon?family=Material+Icons+Round" rel="stylesheet"/>
 
 <!-- App Styles -->
-<link rel="stylesheet" href="css/styles.css?v=20260613u"/>
+<link rel="stylesheet" href="css/styles.css?v=20260613v"/>
 
 <!-- Firebase CDN -->
 <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
@@ -795,7 +795,7 @@
 <div class="toast" id="toast"></div>
 
 <!-- App Logic -->
-<script src="js/app.js?v=20260613u"></script>
+<script src="js/app.js?v=20260613v"></script>
 
 <!-- ══ v0.19 NEW MODALS ══ -->
 
@@ -1113,6 +1113,12 @@
     </div>
   </div>
   </div><!-- /.shorts-3col -->
+
+  <!-- Description & rules drawer (mobile: slides from right, glassy; swipe-left to open) -->
+  <div class="shorts-details-drawer" id="shortsDetailsDrawer">
+    <button class="shorts-details-drawer-close" onclick="shortsCloseDetails()"><span class="mi">close</span></button>
+    <div class="shorts-details-drawer-body" id="shortsDetailsDrawerBody"></div>
+  </div>
 </div>
 
 

@@ -4364,7 +4364,7 @@ function openShorts(proofId) {
   document.getElementById('shortsOverlay').classList.add('open');
   document.getElementById('shortsOverlay').classList.remove('comments-open');
   document.body.style.overflow = 'hidden';
-  _dmPush();
+  _dmPush(); _shortsBindSwipe();
   _renderShortsSnapStack();   // build the native scroll-snap video stack
   renderShort();              // fill the fixed overlay for the current short
 }
@@ -4372,6 +4372,7 @@ function openShorts(proofId) {
 function closeShorts() {
   const ov = document.getElementById('shortsOverlay');
   ov.classList.remove('open', 'comments-open');
+  shortsCloseDetails();
   document.body.style.overflow = '';
   const c = document.getElementById('shortsSnapContainer');
   if (c) c.querySelectorAll('video').forEach(v => { try { v.pause(); v.removeAttribute('src'); v.load(); } catch(e){} });
@@ -4417,12 +4418,7 @@ function _shortsSlideHtml(p, i) {
         <span class="shorts-taker-name">@${takerName}</span>
       </div>
       <div class="shorts-caption" data-preview="${capPreview}" data-full="${caption}">${capPreview}${capToggle}</div>
-      <button class="shorts-details-btn" onclick="shortsToggleDetailsLeft(this)"><span class="mi">expand_more</span> Details</button>
-      <div class="shorts-details-panel" style="display:none;">
-        ${desc ? `<div class="dd-sec-label">Description</div><p class="dd-desc-text">${desc}</p>` : ''}
-        ${rules.length ? `<div class="dd-sec-label">Rules</div>${rulesHtml}` : ''}
-        <div class="dd-sec-label">Winning Amount</div><p class="dd-bounty">Rs. ${bounty}</p>
-      </div>
+      <button class="shorts-m-details" onclick="shortsOpenDetails()"><span class="mi">description</span> Description &amp; rules</button>
     </div>
 
     <div class="shorts-slide-box">
@@ -4490,28 +4486,63 @@ async function renderShort() {
   if (shortsCommentsOpen || window.innerWidth >= 769) loadShortsComments(p.id);
 }
 // Desktop column 1: creator+taker ids · caption · description & rules (synced to active short)
+function _shortsDetailsHtml(d){
+  const desc = escHtml(d.desc || d.description || '');
+  const rules = (d.rules||[]).filter(r=>r && r.trim());
+  const tags = (d.tags && d.tags.length) ? d.tags : (d.cat?[d.cat]:[]);
+  return `${desc ? `<div class="dd-sec-label">Description</div><p class="dd-desc-text">${desc}</p>` : ''}
+    ${rules.length ? `<div class="dd-sec-label">Rules</div>${rules.map(r=>`<div class="dd-rule">• ${escHtml(r)}</div>`).join('')}` : ''}
+    ${tags.length ? `<div class="dd-sec-label">Tags</div><div class="dd-tags">${tags.map(t=>`<span class="dd-tag-link" onclick="searchTag('${(''+t).replace(/[\\'"<>]/g,'')}')">#${escHtml(t)}</span>`).join('')}</div>` : ''}`;
+}
 function _shortsFillCol1(p, d){
   const col1 = document.getElementById('shortsCol1'); if (!col1) return;
   const creatorName = escHtml(d.creator || p.posterName || 'Creator');
   const takerName   = escHtml(p.takerName || 'Taker');
   const caption = escHtml(d.caption || d.title || p.dareTitle || 'Dare Video');
-  const desc = escHtml(d.desc || d.description || '');
-  const rules = (d.rules||[]).filter(r=>r && r.trim());
   const cAv = _avHtml(d.creatorPhotoURL||p.posterPhotoURL, creatorName);
   const tAv = _avHtml(p.takerPhotoURL, takerName);
+  col1.classList.remove('expanded');
   col1.innerHTML = `
-    <div class="shorts-c1-collab" onclick="shortsOpenCollab()">
-      <div class="vd2-collab-avs"><div class="dd-creator-av">${cAv}</div><div class="dd-creator-av vd2-av2">${tAv}</div></div>
-      <div class="dd-creator-info">
-        <div class="dd-creator-name">@${creatorName} &amp; @${takerName}</div>
-        <div class="dd-creator-sub">Creator &amp; Taker</div>
+    <div class="shorts-c1-bottom">
+      <div class="shorts-c1-collab" onclick="shortsOpenCollab()">
+        <div class="vd2-collab-avs"><div class="dd-creator-av">${cAv}</div><div class="dd-creator-av vd2-av2">${tAv}</div></div>
+        <div class="dd-creator-info">
+          <div class="dd-creator-name">@${creatorName} &amp; @${takerName}</div>
+          <div class="dd-creator-sub">Creator &amp; Taker</div>
+        </div>
+        <button class="shorts-follow dd-follow" onclick="event.stopPropagation();shortsOpenCollab()">Follow</button>
       </div>
-      <button class="shorts-follow dd-follow" onclick="event.stopPropagation();shortsOpenCollab()">Follow</button>
-    </div>
-    <div class="shorts-c1-caption">${caption}</div>
-    ${desc ? `<div class="dd-sec-label">Description</div><p class="dd-desc-text">${desc}</p>` : ''}
-    ${rules.length ? `<div class="dd-sec-label">Rules</div>${rules.map(r=>`<div class="dd-rule">• ${escHtml(r)}</div>`).join('')}` : ''}
-  `;
+      <div class="shorts-c1-caption">${caption}</div>
+      <button class="dd-details-btn shorts-c1-detailsbtn" onclick="shortsToggleC1Details()"><span class="mi">description</span> Description &amp; rules <span class="mi dd-details-chev">chevron_right</span></button>
+      <div class="shorts-c1-details" id="shortsC1Details" style="display:none;">${_shortsDetailsHtml(d)}</div>
+    </div>`;
+}
+function shortsToggleC1Details(){
+  const col1 = document.getElementById('shortsCol1'); if (!col1) return;
+  const open = col1.classList.toggle('expanded');
+  const d = document.getElementById('shortsC1Details'); if (d) d.style.display = open ? 'block' : 'none';
+}
+// Mobile: description/rules/tags drawer (right side, glassy)
+function shortsOpenDetails(){
+  const p = shortsFeed[shortsIndex]; if (!p) return;
+  const d = (typeof dares!=='undefined' ? dares.find(x=>x.id===p.dareId) : null) || {};
+  const body = document.getElementById('shortsDetailsDrawerBody');
+  if (body) body.innerHTML = _shortsDetailsHtml(d) || '<p class="dd-desc-text" style="color:var(--t3)">No details.</p>';
+  document.getElementById('shortsDetailsDrawer')?.classList.add('open');
+}
+function shortsCloseDetails(){ document.getElementById('shortsDetailsDrawer')?.classList.remove('open'); }
+let _shTouchX=0,_shTouchY=0,_shTouchOn=false;
+function _shortsBindSwipe(){
+  const ov = document.getElementById('shortsOverlay'); if (!ov || ov._shSwipe) return; ov._shSwipe=true;
+  ov.addEventListener('touchstart', e=>{ if(window.innerWidth>768) return; const t=e.touches[0]; _shTouchX=t.clientX; _shTouchY=t.clientY; _shTouchOn=true; }, {passive:true});
+  ov.addEventListener('touchend', e=>{
+    if(!_shTouchOn||window.innerWidth>768) return; _shTouchOn=false;
+    const t=e.changedTouches[0]; const dx=t.clientX-_shTouchX, dy=t.clientY-_shTouchY;
+    if(Math.abs(dx)<60 || Math.abs(dy)>Math.abs(dx)) return;
+    const open = document.getElementById('shortsDetailsDrawer')?.classList.contains('open');
+    if(dx<0 && !open) shortsOpenDetails();
+    else if(dx>0 && open) shortsCloseDetails();
+  }, {passive:true});
 }
 // Glassy collaborators box for shorts (reuses the shared collab modal, centered)
 function shortsOpenCollab(){

@@ -2675,18 +2675,41 @@ html{scroll-behavior:smooth;}
   /* Open BELOW the main topbar; the whole page scrolls */
   #shortsOverlay{ top:56px; overflow-y:auto; }
   .shorts-overlay .shorts-3col{ display:flex; gap:16px; min-height:calc(100vh - 56px); max-width:1280px; margin:0 auto; padding:16px; align-items:flex-start; box-sizing:border-box; }
-  /* COLUMN 2 — the 9:16 video (definite size; snap-container inside is absolute) */
-  .shorts-overlay .shorts-stage{ position:sticky; top:16px; flex:0 0 auto; height:calc(100vh - 88px); aspect-ratio:9/16; width:auto; display:block; transform:none !important; }
+  /* COLUMN 2 — same width as the others; the 9:16 video sits centered inside */
+  .shorts-overlay .shorts-stage{ position:sticky; top:16px; flex:1; min-width:0; height:calc(100vh - 88px); width:auto; display:block; transform:none !important; }
   .shorts-video-col{ position:relative; width:100%; height:100%; max-width:none; aspect-ratio:auto; background:#000; border-radius:16px; overflow:hidden; }
+  /* up/down nav arrows removed — navigate by scrolling the video */
+  .shorts-nav{ display:none !important; }
   .shorts-snap-item .shorts-info{ display:none !important; }          /* info lives in column 1 now */
   .shorts-snap-item .shorts-actions{ position:absolute; right:10px; bottom:18px; left:auto; flex-direction:column; background:none; padding:0; }
   .shorts-snap-item .shorts-actions .shorts-act{ background:rgba(255,255,255,0.12); }
   .shorts-cmt-rail{ display:none !important; }                        /* comment btn hidden (column 3 has comments) */
-  /* COLUMN 1 — info card (flows; page scrolls when long) */
-  .shorts-col1{ display:block; flex:1; min-width:0; background:var(--bg2); border:1px solid var(--border); border-radius:16px; padding:18px; }
+  /* COLUMN 1 — info card. Default: ids+caption anchored at the BOTTOM + a
+     "Description & rules" button. Expanded: content moves to the top + details show. */
+  .shorts-col1{ display:flex; flex-direction:column; justify-content:flex-end; flex:1; min-width:0; min-height:calc(100vh - 88px); background:var(--bg2); border:1px solid var(--border); border-radius:16px; padding:18px; }
+  .shorts-col1.expanded{ justify-content:flex-start; }
+  .shorts-col1 .shorts-c1-detailsbtn{ display:flex; margin-top:14px; }
+  .shorts-c1-details{ margin-top:10px; }
   /* COLUMN 3 — comments card (always visible, sticky, own inner scroll) */
   .shorts-overlay .shorts-comments{ position:sticky; top:16px; right:auto; bottom:auto; transform:none !important; width:auto; flex:1; min-width:0; height:calc(100vh - 88px); border-radius:18px; z-index:1; }
   .shorts-overlay.comments-open .shorts-stage{ transform:none !important; }   /* don't shift the video on desktop */
+}
+
+/* Mobile "Description & rules" button on each short + glassy right-side drawer */
+.shorts-m-details{ display:none; }
+.shorts-details-drawer{ display:none; }
+@media(max-width:768px){
+  .shorts-m-details{ display:inline-flex; align-items:center; gap:6px; margin-top:8px; background:rgba(255,255,255,0.14); border:1px solid rgba(255,255,255,0.16); color:#fff; font-family:inherit; font-size:13px; font-weight:600; padding:7px 14px; border-radius:50px; cursor:pointer; }
+  .shorts-m-details .mi{ font-size:17px; }
+  .shorts-details-drawer{ display:block; position:fixed; top:0; right:0; bottom:0; width:86%; max-width:380px; transform:translateX(102%); transition:transform .28s cubic-bezier(.4,0,.2,1); z-index:420; overflow-y:auto; padding:18px 18px 40px;
+    background:rgba(16,16,16,.84); backdrop-filter:blur(20px) saturate(140%); -webkit-backdrop-filter:blur(20px) saturate(140%); border-left:1px solid rgba(255,255,255,.12); border-radius:16px 0 0 16px; }
+  .shorts-details-drawer.open{ transform:translateX(0); }
+  .shorts-details-drawer-close{ float:right; width:34px; height:34px; border-radius:50%; background:rgba(255,255,255,.12); border:none; color:#fff; cursor:pointer; display:inline-flex; align-items:center; justify-content:center; }
+  .shorts-details-drawer-body{ clear:both; padding-top:6px; color:#eee; }
+  .shorts-details-drawer-body .dd-sec-label{ color:#bbb; }
+  .shorts-details-drawer-body .dd-desc-text, .shorts-details-drawer-body .dd-rule{ color:#eee; }
+  /* Bounty below the action buttons (right side) */
+  .shorts-snap-item .shorts-bounty-badge{ left:auto; right:10px; bottom:64px; }
 }
 
 /* Left "Details" button (desktop only) + glassy details panel */
