@@ -4518,6 +4518,20 @@ function _shortsSlideHtml(p, i) {
       <span class="shorts-act-lbl">Share</span>
       <div class="shorts-act-views"><span class="mi">visibility</span><span class="shorts-views-count">${_fmtCount(p.viewCount || 0)}</span></div>
     </div>
+
+    <!-- COLUMN 3 (desktop): this short's comments, own scroll -->
+    <div class="shorts-rowcmts">
+      <div class="shorts-rowcmts-hdr"><span class="mi">chat_bubble</span> Comments <span class="shorts-rowcmts-count">${_fmtCount(p.commentCount||0)}</span></div>
+      <div class="shorts-rowcmts-list" id="rowcmts-${p.id}"><div style="color:var(--t3);text-align:center;padding:30px;">Loading…</div></div>
+      <div class="shorts-rowcmts-foot">
+        <div class="cmt-reply-bar shorts-rowreply" id="rowreply-${p.id}" style="display:none;"><span>Replying to <b></b></span><button onclick="event.stopPropagation();cancelShortsReply()"><span class="mi">close</span></button></div>
+        <div class="vd-comment-input-row">
+          <input class="vd-comment-input" id="rowinp-${p.id}" placeholder="Add a comment..." maxlength="500"
+                 onkeydown="if(event.key==='Enter'){event.preventDefault();submitShortsComment();}"/>
+          <button class="vd-comment-send-btn" onclick="submitShortsComment()"><span class="mi">send</span></button>
+        </div>
+      </div>
+    </div>
   </div>`;
 }
 
@@ -4876,23 +4890,30 @@ async function loadShortsComments(proofId) {
     box.innerHTML = '<div style="color:var(--t3);text-align:center;padding:20px;">Could not load comments</div>';
   }
 }
+function _shortsActiveId(){ return document.getElementById('shortsOverlay')?.dataset.proofId; }
 function _renderShortsCommentsList() {
-  const box = document.getElementById('shortsCommentsList'); if (!box) return;
   const comments = _shortsComments || [];
   const ov = document.getElementById('shortsOverlay');
+  const activeId = ov?.dataset.proofId;
   // Creator AND taker can pin (only the pinner can unpin)
   const canPin = (typeof user !== 'undefined' && user && ov && (user.uid === ov.dataset.takerId || user.uid === ov.dataset.creatorId));
-  const cntEl = document.getElementById('shortsCommentsCount'); if (cntEl) cntEl.textContent = comments.filter(c=>!c.parentId).length;
+  const n = comments.filter(c=>!c.parentId).length;
+  let html;
   if (!comments.length) {
-    box.innerHTML = '<div style="color:var(--t3);text-align:center;padding:40px 20px;">No comments yet. Be the first!</div>';
-    return;
+    html = '<div style="color:var(--t3);text-align:center;padding:40px 20px;">No comments yet. Be the first!</div>';
+  } else {
+    const tops = comments.filter(c => !c.parentId);
+    const byParent = {};
+    comments.forEach(c => { if (c.parentId) (byParent[c.parentId]=byParent[c.parentId]||[]).push(c); });
+    _ddSortComments(tops);                              // pinned → top-liked → latest
+    Object.keys(byParent).forEach(k=>_ddSortComments(byParent[k]));
+    html = tops.map(c => _shortsCommentHtml(c, byParent[c.id]||[], canPin)).join('');
   }
-  const tops = comments.filter(c => !c.parentId);
-  const byParent = {};
-  comments.forEach(c => { if (c.parentId) (byParent[c.parentId]=byParent[c.parentId]||[]).push(c); });
-  _ddSortComments(tops);                              // pinned → top-liked → latest
-  Object.keys(byParent).forEach(k=>_ddSortComments(byParent[k]));
-  box.innerHTML = tops.map(c => _shortsCommentHtml(c, byParent[c.id]||[], canPin)).join('');
+  // Desktop: the active row's column-3 list. Mobile: the slide-in sheet. (Fill both if present.)
+  const rowList = activeId ? document.getElementById('rowcmts-'+activeId) : null;
+  if (rowList){ rowList.innerHTML = html; const rc = rowList.closest('.shorts-rowcmts')?.querySelector('.shorts-rowcmts-count'); if (rc) rc.textContent = _fmtCount(n); }
+  const sheetList = document.getElementById('shortsCommentsList'); if (sheetList) sheetList.innerHTML = html;
+  const sheetCnt = document.getElementById('shortsCommentsCount'); if (sheetCnt) sheetCnt.textContent = n;
 }
 function _shortsCommentHtml(c, replies, canPin) {
   const liked = (c.likedBy||[]).includes(user?.uid);
@@ -4942,22 +4963,31 @@ function _shortsReplyHtml(c) {
 let _shortsReplyToName = '';
 function startShortsReply(commentId, userName) {
   shortsReplyingTo = commentId; _shortsReplyToName = userName || '';
+  const activeId = _shortsActiveId();
+  const rowReply = document.getElementById('rowreply-'+activeId);
+  if (rowReply){ rowReply.style.display='flex'; const b=rowReply.querySelector('b'); if(b) b.textContent='@'+userName; }
   const nm = document.getElementById('shortsReplyName'); if (nm) nm.textContent = '@'+userName;
   const bar = document.getElementById('shortsReplyBar'); if (bar) bar.style.display='flex';
-  const inp = document.getElementById('shortsCommentInput'); if (inp) inp.focus();
+  const inp = (window.innerWidth >= 769) ? document.getElementById('rowinp-'+activeId) : document.getElementById('shortsCommentInput');
+  inp?.focus();
 }
 function cancelShortsReply() {
   shortsReplyingTo = null; _shortsReplyToName = '';
+  const activeId = _shortsActiveId();
+  const rowReply = document.getElementById('rowreply-'+activeId); if (rowReply) rowReply.style.display='none';
   const bar = document.getElementById('shortsReplyBar'); if (bar) bar.style.display='none';
 }
 
 async function submitShortsComment() {
   if (guestCheck()) return;
-  const inp = document.getElementById('shortsCommentInput');
-  let text = inp.value.trim();
-  if (!text) return;
   const ov = document.getElementById('shortsOverlay');
   const pid = ov.dataset.proofId;
+  const rowInp = document.getElementById('rowinp-'+pid);
+  const sheetInp = document.getElementById('shortsCommentInput');
+  const inp = (window.innerWidth >= 769) ? (rowInp || sheetInp) : (sheetInp || rowInp);
+  if (!inp) return;
+  let text = inp.value.trim();
+  if (!text) return;
   // Reply-to-reply → attach to the same top-level thread + keep an @name prefix
   let parentId = shortsReplyingTo || null;
   if (parentId){
