@@ -2672,27 +2672,29 @@ html{scroll-behavior:smooth;}
 .shorts-3col{ display:contents; }
 .shorts-col1{ display:none; }
 @media(min-width:769px){
-  /* Open BELOW the main topbar; the whole page scrolls */
-  #shortsOverlay{ top:56px; overflow-y:auto; }
-  .shorts-overlay .shorts-3col{ display:flex; gap:16px; min-height:calc(100vh - 56px); max-width:1280px; margin:0 auto; padding:16px; align-items:flex-start; box-sizing:border-box; }
-  /* COLUMN 2 — same width as the others; the 9:16 video sits centered inside */
-  .shorts-overlay .shorts-stage{ position:sticky; top:16px; flex:1; min-width:0; height:calc(100vh - 88px); width:auto; display:block; transform:none !important; }
-  .shorts-video-col{ position:relative; width:100%; height:100%; max-width:none; aspect-ratio:auto; background:#000; border-radius:16px; overflow:hidden; }
-  /* up/down nav arrows removed — navigate by scrolling the video */
-  .shorts-nav{ display:none !important; }
-  .shorts-snap-item .shorts-info{ display:none !important; }          /* info lives in column 1 now */
-  .shorts-snap-item .shorts-actions{ position:absolute; right:10px; bottom:18px; left:auto; flex-direction:column; background:none; padding:0; }
-  .shorts-snap-item .shorts-actions .shorts-act{ background:rgba(255,255,255,0.12); }
-  .shorts-cmt-rail{ display:none !important; }                        /* comment btn hidden (column 3 has comments) */
-  /* COLUMN 1 — info card. Default: ids+caption anchored at the BOTTOM + a
+  /* Open BELOW the main topbar. Fixed-height 3-column: each column scrolls on
+     its own; the middle (video) is ALWAYS 9:16 and never resizes. */
+  #shortsOverlay{ top:56px; overflow:hidden; }
+  .shorts-overlay .shorts-3col{ display:flex; gap:16px; height:calc(100vh - 56px); max-width:1280px; margin:0 auto; padding:16px; align-items:stretch; box-sizing:border-box; }
+  /* COLUMN 1 — info card, own scroll. Default: ids+caption at the BOTTOM + a
      "Description & rules" button. Expanded: content moves to the top + details show. */
-  .shorts-col1{ display:flex; flex-direction:column; justify-content:flex-end; flex:1; min-width:0; min-height:calc(100vh - 88px); background:var(--bg2); border:1px solid var(--border); border-radius:16px; padding:18px; }
+  .shorts-col1{ display:flex; flex-direction:column; justify-content:flex-end; flex:1; min-width:0; overflow-y:auto; background:var(--bg2); border:1px solid var(--border); border-radius:16px; padding:18px; }
   .shorts-col1.expanded{ justify-content:flex-start; }
   .shorts-col1 .shorts-c1-detailsbtn{ display:flex; margin-top:14px; }
   .shorts-c1-details{ margin-top:10px; }
-  /* COLUMN 3 — comments card (always visible, sticky, own inner scroll) */
-  .shorts-overlay .shorts-comments{ position:sticky; top:16px; right:auto; bottom:auto; transform:none !important; width:auto; flex:1; min-width:0; height:calc(100vh - 88px); border-radius:18px; z-index:1; }
-  .shorts-overlay.comments-open .shorts-stage{ transform:none !important; }   /* don't shift the video on desktop */
+  /* COLUMN 2 — ALWAYS 9:16 (fixed). Navigate by scrolling the video. */
+  .shorts-overlay .shorts-stage{ position:relative; flex:0 0 auto; height:100%; aspect-ratio:9/16; width:auto; display:block; transform:none !important; }
+  .shorts-video-col{ position:relative; width:100%; height:100%; max-width:none; aspect-ratio:auto; background:#000; border-radius:16px; overflow:hidden; }
+  .shorts-nav{ display:none !important; }                              /* arrows removed */
+  .shorts-snap-item .shorts-info{ display:none !important; }           /* info lives in column 1 */
+  .shorts-snap-item .shorts-actions{ position:absolute; right:10px; bottom:18px; left:auto; flex-direction:column; background:none; padding:0; }
+  .shorts-snap-item .shorts-actions .shorts-act{ background:rgba(255,255,255,0.12); }
+  .shorts-cmt-rail{ display:none !important; }                         /* comment btn hidden (column 3) */
+  /* COLUMN 3 — comments card: see the "permanent column 3" rule below */
+  .shorts-overlay.comments-open .shorts-stage{ transform:none !important; }
+  /* Bigger, bolder section labels + text in the shorts info */
+  .shorts-col1 .dd-sec-label{ font-size:14px; font-weight:800; color:var(--t1); }
+  .shorts-col1 .dd-desc-text, .shorts-col1 .dd-rule{ font-size:14px; font-weight:600; color:var(--t1); }
 }
 
 /* Mobile "Description & rules" button on each short + glassy right-side drawer */
@@ -2706,10 +2708,12 @@ html{scroll-behavior:smooth;}
   .shorts-details-drawer.open{ transform:translateX(0); }
   .shorts-details-drawer-close{ float:right; width:34px; height:34px; border-radius:50%; background:rgba(255,255,255,.12); border:none; color:#fff; cursor:pointer; display:inline-flex; align-items:center; justify-content:center; }
   .shorts-details-drawer-body{ clear:both; padding-top:6px; color:#eee; }
-  .shorts-details-drawer-body .dd-sec-label{ color:#bbb; }
-  .shorts-details-drawer-body .dd-desc-text, .shorts-details-drawer-body .dd-rule{ color:#eee; }
-  /* Bounty below the action buttons (right side) */
-  .shorts-snap-item .shorts-bounty-badge{ left:auto; right:10px; bottom:64px; }
+  .shorts-details-drawer-body .dd-sec-label{ color:#ccc; font-size:14px; font-weight:800; }
+  .shorts-details-drawer-body .dd-desc-text, .shorts-details-drawer-body .dd-rule{ color:#fff; font-size:14px; font-weight:600; }
+  /* Bounty at the TOP-right, beside the 3-dots button */
+  .shorts-snap-item .shorts-bounty-badge{ left:auto; right:56px; top:14px; bottom:auto; }
+  /* Comments sheet glassy */
+  .shorts-comments{ background:rgba(16,16,16,.82) !important; backdrop-filter:blur(20px) saturate(140%) !important; -webkit-backdrop-filter:blur(20px) saturate(140%) !important; border-top:1px solid rgba(255,255,255,.12); }
 }
 
 /* Left "Details" button (desktop only) + glassy details panel */
@@ -2745,7 +2749,7 @@ html{scroll-behavior:smooth;}
   .shorts-overlay .shorts-comments{
     position:static; transform:none !important; flex:1; min-width:0;
     width:auto; height:100%; top:auto; right:auto; bottom:auto;
-    border-radius:18px; display:flex;
+    border-radius:18px; display:flex; flex-direction:column;
     background:rgba(22,22,28,0.72) !important;
     backdrop-filter:blur(22px) saturate(150%) !important;
     -webkit-backdrop-filter:blur(22px) saturate(150%) !important;

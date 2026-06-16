@@ -410,6 +410,7 @@ async function initUser(fbUser) {
       const d   = snap.data();
       wallet        = d.wallet        || { balance:100000, transactions:[] };
       acceptedDares = d.acceptedDares || [];
+      _reconcileTakerApprovals();   // in case dares already loaded
       pinnedDares   = d.pinnedDares   || [];
       user.username = d.username || (user.name||'user').toLowerCase().replace(/[^a-z0-9_.]/g,'').slice(0,20);
       user.bio      = d.bio      || '';
@@ -452,6 +453,7 @@ function startDaresListener() {
     .orderBy('createdAt', 'desc')
     .onSnapshot((snap) => {
       dares = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      _reconcileTakerApprovals();   // creator picked me? → unlock Submit Proof
       // Refresh whichever page is active
       const activePage = document.querySelector('.page.active');
       if (activePage?.id === 'pageDares')    renderDaresPage();
@@ -2920,6 +2922,21 @@ async function approveTaker(dareId, takerUid, takerName) {
   } catch(e) { showToast('Error: '+e.message); }
 }
 
+// A taker's acceptedDares entry lives in THEIR user doc, which the creator can't
+// write to. So when the creator approves them (dare.approvedTakers), reconcile the
+// local entry here so "Applied" flips to "Submit Proof". Persist so it sticks.
+function _reconcileTakerApprovals(){
+  if (!user || !Array.isArray(acceptedDares) || !acceptedDares.length) return;
+  let changed = false;
+  acceptedDares.forEach(a => {
+    if (a.applicantStatus === 'pending') {
+      const d = (dares||[]).find(x => x.id === a.dareId);
+      if (d && (d.approvedTakers||[]).includes(user.uid)) { a.applicantStatus = 'accepted'; changed = true; }
+    }
+  });
+  if (changed) db.collection('users').doc(user.uid).update({ acceptedDares }).catch(()=>{});
+}
+
 async function revokeTaker(dareId, takerUid) {
   try {
     const d = dares.find(x=>x.id===dareId);
@@ -3793,7 +3810,8 @@ function _closeDetailOverlays(){
     document.body.style.overflow = '';
     document.body.classList.remove('detail-open');
     if (typeof closeDareComments === 'function') closeDareComments();
-    const vp=document.getElementById('vdPlayer'); if(vp){ try{ vp.pause(); }catch(e){} }
+    // Stop the long-video player (pause AND abort loading)
+    const vp=document.getElementById('vdPlayer'); if(vp){ try{ vp.pause(); vp.removeAttribute('src'); vp.load(); }catch(e){} }
     _ddCurrentId = null;
   }
 }
@@ -4186,6 +4204,8 @@ async function loadComments(proofId) {
 async function openVideoDetail(proofId) {
   const p=homeProofs.find(x=>x.id===proofId)||allProofs.find(x=>x.id===proofId);
   if(!p||!p.videoURL){showToast('Video not available');return;}
+  // Leaving the shorts player → stop its videos first
+  if (document.getElementById('shortsOverlay')?.classList.contains('open')) closeShorts();
   // Open the watch page FIRST
   activeProof=p;
   _renderVideoDetail(p);
@@ -4355,6 +4375,8 @@ let shortsCommentsOpen = false;
 let shortsCaptionExpanded = false;
 
 function openShorts(proofId) {
+  // Leaving the long-video / dare page → stop its video + loading first
+  if (typeof _closeDetailOverlays === 'function') _closeDetailOverlays();
   const pool = (typeof allProofs !== 'undefined' && allProofs.length) ? allProofs : homeProofs;
   shortsFeed = (pool || []).filter(p => p.videoURL && _isShortVideo(p));
   if (!shortsFeed.length) { showToast('No videos yet'); return; }
