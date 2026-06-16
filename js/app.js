@@ -4112,7 +4112,7 @@ function closeDareComments(){
 function _ddToggleCmtMenu(btn){
   const menu = btn.nextElementSibling; if (!menu) return;
   const open = menu.classList.contains('open');
-  document.querySelectorAll('#ddBoxList .cmt-menu.open').forEach(m=>m.classList.remove('open'));
+  document.querySelectorAll('.cmt-menu.open').forEach(m=>m.classList.remove('open')); // any container (dd box / shorts)
   if (!open) menu.classList.add('open');
 }
 async function likeDareComment(commentId){
@@ -4142,7 +4142,7 @@ function startDareReply(commentId, userName){
 function _ddCancelReplyBar(){ const bar = document.getElementById('ddReplyBar'); if (bar) bar.style.display = 'none'; }
 function cancelDareReply(){ _ddReplyTo = null; _ddReplyToName = ''; _ddCancelReplyBar(); }
 function reportComment(commentId, userName){
-  document.querySelectorAll('#ddBoxList .cmt-menu.open').forEach(m=>m.classList.remove('open'));
+  document.querySelectorAll('.cmt-menu.open').forEach(m=>m.classList.remove('open'));
   openReportModal('comment', commentId, userName||'comment');
 }
 async function submitDareComment(){
@@ -4878,8 +4878,9 @@ function _renderShortsCommentsList() {
   const box = document.getElementById('shortsCommentsList'); if (!box) return;
   const comments = _shortsComments || [];
   const ov = document.getElementById('shortsOverlay');
-  const isTaker = (typeof user !== 'undefined' && user && ov && user.uid === ov.dataset.takerId);
-  const cntEl = document.getElementById('shortsCommentsCount'); if (cntEl) cntEl.textContent = comments.length;
+  // Creator AND taker can pin (only the pinner can unpin)
+  const canPin = (typeof user !== 'undefined' && user && ov && (user.uid === ov.dataset.takerId || user.uid === ov.dataset.creatorId));
+  const cntEl = document.getElementById('shortsCommentsCount'); if (cntEl) cntEl.textContent = comments.filter(c=>!c.parentId).length;
   if (!comments.length) {
     box.innerHTML = '<div style="color:var(--t3);text-align:center;padding:40px 20px;">No comments yet. Be the first!</div>';
     return;
@@ -4887,63 +4888,86 @@ function _renderShortsCommentsList() {
   const tops = comments.filter(c => !c.parentId);
   const byParent = {};
   comments.forEach(c => { if (c.parentId) (byParent[c.parentId]=byParent[c.parentId]||[]).push(c); });
-  tops.sort((a,b)=>{ if(a.pinned&&!b.pinned)return -1; if(!a.pinned&&b.pinned)return 1; return (b.likeCount||b.likes||0)-(a.likeCount||a.likes||0); });
-  box.innerHTML = tops.map(c => _shortsCommentHtml(c, byParent[c.id]||[], isTaker)).join('');
+  _ddSortComments(tops);                              // pinned → top-liked → latest
+  Object.keys(byParent).forEach(k=>_ddSortComments(byParent[k]));
+  box.innerHTML = tops.map(c => _shortsCommentHtml(c, byParent[c.id]||[], canPin)).join('');
 }
-function _shortsCommentHtml(c, replies, isTaker) {
+function _shortsCommentHtml(c, replies, canPin) {
   const liked = (c.likedBy||[]).includes(user?.uid);
   const likeN = c.likeCount || c.likes || 0;
+  const safeName = (c.userName||'').replace(/[\\'"<>]/g,'');
+  let pinItem = '';
+  if (canPin){
+    if (!c.pinned) pinItem = `<button onclick="event.stopPropagation();pinShortsComment('${c.id}')"><span class="mi">push_pin</span> Pin</button>`;
+    else if (c.pinnedBy === (user&&user.uid)) pinItem = `<button onclick="event.stopPropagation();pinShortsComment('${c.id}')"><span class="mi">push_pin</span> Unpin</button>`;
+  }
+  let repToggle = '', repHtml = '';
+  if (replies && replies.length){
+    repToggle = `<button class="cmt-reptoggle" onclick="event.stopPropagation();_ddToggleReplies('${c.id}',this)"><span class="mi">expand_more</span> Show ${replies.length} repl${replies.length>1?'ies':'y'}</button>`;
+    repHtml = `<div class="shorts-replies" id="reps-${c.id}" style="display:none;">${replies.map(r=>_shortsReplyHtml(r)).join('')}</div>`;
+  }
   return `<div class="shorts-comment ${c.pinned?'pinned':''}">
     <div class="shorts-comment-av">${_avHtml(c.userPhotoURL, c.userName)}</div>
     <div class="shorts-comment-body">
-      <div class="shorts-comment-head">@${escHtml(c.userName||'user')} ${c.pinned?'<span class="shorts-pin-badge"><span class="mi" style="font-size:11px;">push_pin</span> Pinned</span>':''}</div>
+      ${c.pinned?'<span class="cmt-pinned"><span class="mi">push_pin</span> Pinned</span>':''}
+      <div class="shorts-comment-head">@${escHtml(c.userName||'user')}</div>
       <div class="shorts-comment-text">${escHtml(c.text||'')}</div>
-      <div class="shorts-comment-acts">
+      <div class="shorts-comment-acts vd-comment-acts">
         <button class="cmt-act ${liked?'liked':''}" onclick="likeComment('${c.id}')"><span class="mi">thumb_up</span>${likeN>0?' '+_fmtCount(likeN):''}</button>
-        <button class="cmt-act" onclick="startShortsReply('${c.id}','${escHtml((c.userName||'').replace(/'/g,''))}')">Reply</button>
-        ${isTaker?`<span class="shorts-comment-pin" onclick="pinShortsComment('${_shortsCommentsProofId}','${c.id}',${!c.pinned})">${c.pinned?'Unpin':'Pin'}</span>`:''}
+        <button class="cmt-act" onclick="startShortsReply('${c.id}','${safeName}')">Reply</button>
+        <span class="cmt-more"><button class="cmt-3dots" onclick="event.stopPropagation();_ddToggleCmtMenu(this)"><span class="mi">more_vert</span></button>
+          <span class="cmt-menu">${pinItem}<button onclick="event.stopPropagation();reportComment('${c.id}','${safeName}')"><span class="mi">flag</span> Report</button></span></span>
       </div>
-      ${replies.length?`<div class="shorts-replies">${replies.map(r=>_shortsReplyHtml(r)).join('')}</div>`:''}
+      ${repToggle}${repHtml}
     </div>
   </div>`;
 }
 function _shortsReplyHtml(c) {
   const liked = (c.likedBy||[]).includes(user?.uid);
   const likeN = c.likeCount || c.likes || 0;
-  return `<div class="shorts-comment">
+  return `<div class="shorts-comment shorts-reply">
     <div class="shorts-comment-av" style="width:26px;height:26px;font-size:11px;">${_avHtml(c.userPhotoURL, c.userName)}</div>
     <div class="shorts-comment-body">
       <div class="shorts-comment-head">@${escHtml(c.userName||'user')}</div>
       <div class="shorts-comment-text">${escHtml(c.text||'')}</div>
-      <div class="shorts-comment-acts">
+      <div class="shorts-comment-acts vd-comment-acts">
         <button class="cmt-act ${liked?'liked':''}" onclick="likeComment('${c.id}')"><span class="mi">thumb_up</span>${likeN>0?' '+_fmtCount(likeN):''}</button>
+        <button class="cmt-act" onclick="startShortsReply('${c.id}','${(c.userName||'').replace(/[\\'"<>]/g,'')}')">Reply</button>
       </div>
     </div>
   </div>`;
 }
+let _shortsReplyToName = '';
 function startShortsReply(commentId, userName) {
-  shortsReplyingTo = commentId;
+  shortsReplyingTo = commentId; _shortsReplyToName = userName || '';
   const nm = document.getElementById('shortsReplyName'); if (nm) nm.textContent = '@'+userName;
   const bar = document.getElementById('shortsReplyBar'); if (bar) bar.style.display='flex';
   const inp = document.getElementById('shortsCommentInput'); if (inp) inp.focus();
 }
 function cancelShortsReply() {
-  shortsReplyingTo = null;
+  shortsReplyingTo = null; _shortsReplyToName = '';
   const bar = document.getElementById('shortsReplyBar'); if (bar) bar.style.display='none';
 }
 
 async function submitShortsComment() {
   if (guestCheck()) return;
   const inp = document.getElementById('shortsCommentInput');
-  const text = inp.value.trim();
+  let text = inp.value.trim();
   if (!text) return;
   const ov = document.getElementById('shortsOverlay');
   const pid = ov.dataset.proofId;
+  // Reply-to-reply → attach to the same top-level thread + keep an @name prefix
+  let parentId = shortsReplyingTo || null;
+  if (parentId){
+    const t = (_shortsComments||[]).find(x=>x.id===parentId);
+    if (t && t.parentId) parentId = t.parentId;
+    if (_shortsReplyToName && !text.startsWith('@')) text = '@'+_shortsReplyToName+' '+text;
+  }
   inp.value = '';
   try {
     await db.collection('comments').add({
       proofId: pid, userId: user.uid, userName: user.name || 'user', userPhotoURL: user.picture || '', text,
-      likes: 0, likeCount: 0, likedBy: [], parentId: (shortsReplyingTo || null), pinned: false, createdAt: firebase.firestore.Timestamp.now()
+      likes: 0, likeCount: 0, likedBy: [], parentId, pinned: false, createdAt: firebase.firestore.Timestamp.now()
     });
     cancelShortsReply();
     await db.collection('proofs').doc(pid).update({ commentCount: firebase.firestore.FieldValue.increment(1) }).catch(()=>{});
@@ -4958,12 +4982,18 @@ async function submitShortsComment() {
   } catch(e) { showToast('Could not post comment'); }
 }
 
-async function pinShortsComment(proofId, commentId, pin) {
-  try {
-    await db.collection('comments').doc(commentId).update({ pinned: pin });
-    loadShortsComments(proofId);
-    showToast(pin ? 'Comment pinned' : 'Comment unpinned');
-  } catch(e) { showToast('Could not update'); }
+async function pinShortsComment(commentId) {
+  const c = (_shortsComments||[]).find(x=>x.id===commentId); if (!c) return;
+  document.querySelectorAll('.cmt-menu.open').forEach(m=>m.classList.remove('open'));
+  if (c.pinned){
+    if (c.pinnedBy && c.pinnedBy !== user?.uid){ showToast('Only the person who pinned this can unpin it'); return; }
+    c.pinned=false; c.pinnedBy=null;
+    db.collection('comments').doc(commentId).update({ pinned:false, pinnedBy:firebase.firestore.FieldValue.delete() }).catch(()=>{});
+  } else {
+    c.pinned=true; c.pinnedBy=user?.uid||null;
+    db.collection('comments').doc(commentId).update({ pinned:true, pinnedBy:user?.uid||null }).catch(()=>{});
+  }
+  _renderShortsCommentsList();
 }
 
 // 3-dots menu toggle
