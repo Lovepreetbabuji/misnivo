@@ -3678,6 +3678,7 @@ let _ddCurrentId = null;
 function openDareDetail(dareId){
   const d = dares.find(x=>x.id===dareId);
   if (!d) { showToast('Dare not found'); return; }
+  if (typeof _enterView === 'function') _enterView();   // remember where we came from + pause it
   if (typeof _searchReturn !== 'undefined') _searchReturn = null;
   _ddCurrentId = dareId;
   const cat = d.tags?.[0] || d.cat || 'fitness';
@@ -3749,7 +3750,6 @@ function openDareDetail(dareId){
   document.body.classList.add('detail-open'); // makes the topbar opaque
   closeDareDetails();
   _ddBindScrollTop(); _ddBindSwipe();
-  _dmPush();
 }
 function closeDareDetail(){
   document.getElementById('dareDetailOverlay').classList.remove('open');
@@ -3806,24 +3806,73 @@ function _closeDetailOverlays(){
     const el = document.getElementById(id);
     if (el && el.classList.contains('open')){ el.classList.remove('open'); closed = true; }
   });
+  // The shorts player is also a full page — close it on real navigation too
+  const sh = document.getElementById('shortsOverlay');
+  if (sh && sh.classList.contains('open')){ if (typeof closeShorts==='function') closeShorts(); closed = true; }
   if (closed){
     document.body.style.overflow = '';
     document.body.classList.remove('detail-open');
     if (typeof closeDareComments === 'function') closeDareComments();
     // Stop the long-video player (pause AND abort loading)
     const vp=document.getElementById('vdPlayer'); if(vp){ try{ vp.pause(); vp.removeAttribute('src'); vp.load(); }catch(e){} }
+    if (typeof _viewStack !== 'undefined') _viewStack = [];   // navigating away resets the back-stack
     _ddCurrentId = null;
   }
 }
-// ── Phone BACK button: close the open layer instead of leaving the site ──
+// ── Phone BACK button: walk back through the pages you actually visited (don't
+//    leave the site, don't jump to home). Each step pauses the page being left
+//    so nothing keeps playing/loading in the background. ──
+let _viewStack = [];
+let _navBack = false;
 function _dmPush(){ try{ history.pushState({dm:Date.now()},''); }catch(e){} }
+function _pauseBackgroundMedia(){
+  try{ const vp=document.getElementById('vdPlayer'); if(vp) vp.pause(); }catch(e){}
+  document.querySelectorAll('#shortsSnapContainer video').forEach(v=>{ try{ v.pause(); }catch(e){} });
+}
+function _currentDetailView(){
+  if (document.getElementById('shortsOverlay')?.classList.contains('open'))      return { t:'short', id:(shortsFeed[shortsIndex]||{}).id };
+  if (document.getElementById('videoDetailOverlay')?.classList.contains('open')) return { t:'video', id:(typeof activeProof!=='undefined'&&activeProof)?activeProof.id:null };
+  if (document.getElementById('dareDetailOverlay')?.classList.contains('open'))  return { t:'dare',  id:_ddCurrentId };
+  return null;
+}
+function _closeCurrentView(){
+  const sh=document.getElementById('shortsOverlay');        if (sh && sh.classList.contains('open'))  { closeShorts(); return; }
+  const vov=document.getElementById('videoDetailOverlay');  if (vov && vov.classList.contains('open')){ closeVideoDetail(); return; }
+  const dov=document.getElementById('dareDetailOverlay');   if (dov && dov.classList.contains('open')){ closeDareDetail(); return; }
+}
+// Call at the START of openShorts / openVideoDetail / openDareDetail
+function _enterView(){
+  if (_navBack) return;
+  const cur = _currentDetailView();
+  if (cur && cur.id){ _viewStack.push(cur); _closeCurrentView(); }  // remember + close (stops its video)
+  _dmPush();
+}
+function _reopenView(v){
+  _navBack = true;
+  _closeCurrentView();                 // close the page we're leaving (stops its video)
+  if (v.t==='short')      openShorts(v.id);
+  else if (v.t==='video') openVideoDetail(v.id);
+  else if (v.t==='dare')  openDareDetail(v.id);
+  _navBack = false;
+}
 window.addEventListener('popstate', function(){
   const isOpen = id => { const el=document.getElementById(id); return el && el.classList.contains('open'); };
+  // close any open sub-layer first (keep a guard state)
   if (isOpen('ddCommentsBox')){ closeDareComments(); _dmPush(); return; }
+  if (isOpen('shortsDetailsDrawer')){ shortsCloseDetails(); _dmPush(); return; }
+  if (isOpen('collabModal')){ closeCollabModal(); _dmPush(); return; }
+  if (typeof _sidebarOpen!=='undefined' && _sidebarOpen){ closeSidebar(); return; }
+  // reopen the previous page if there is one (closes the current first)
+  if (_viewStack.length){
+    _reopenView(_viewStack.pop());
+    _dmPush();   // keep a state so the NEXT back works
+    return;
+  }
+  // nothing to return to → just close the open detail page
+  _pauseBackgroundMedia();
   if (isOpen('shortsOverlay')){ closeShorts(); return; }
   if (isOpen('videoDetailOverlay')){ closeVideoDetail(); return; }
   if (isOpen('dareDetailOverlay')){ closeDareDetail(); return; }
-  if (typeof _sidebarOpen!=='undefined' && _sidebarOpen){ closeSidebar(); return; }
 });
 // 3-dots on the dare actions row → Share / Report menu
 function _ddToggleActionMenu(btn){
@@ -4204,8 +4253,7 @@ async function loadComments(proofId) {
 async function openVideoDetail(proofId) {
   const p=homeProofs.find(x=>x.id===proofId)||allProofs.find(x=>x.id===proofId);
   if(!p||!p.videoURL){showToast('Video not available');return;}
-  // Leaving the shorts player → stop its videos first
-  if (document.getElementById('shortsOverlay')?.classList.contains('open')) closeShorts();
+  if (typeof _enterView === 'function') _enterView();   // remember the page we came from + pause it
   // Open the watch page FIRST
   activeProof=p;
   _renderVideoDetail(p);
@@ -4216,7 +4264,6 @@ async function openVideoDetail(proofId) {
   document.body.style.overflow='hidden';
   document.body.classList.add('detail-open');
   _vdBindScroll();
-  _dmPush();
   // Then show ad IN the video area, then play
   const player = document.getElementById('vdPlayer');
   const dur = p.videoDuration || 0;
@@ -4375,8 +4422,7 @@ let shortsCommentsOpen = false;
 let shortsCaptionExpanded = false;
 
 function openShorts(proofId) {
-  // Leaving the long-video / dare page → stop its video + loading first
-  if (typeof _closeDetailOverlays === 'function') _closeDetailOverlays();
+  if (typeof _enterView === 'function') _enterView();   // remember the page we came from + pause it
   const pool = (typeof allProofs !== 'undefined' && allProofs.length) ? allProofs : homeProofs;
   shortsFeed = (pool || []).filter(p => p.videoURL && _isShortVideo(p));
   if (!shortsFeed.length) { showToast('No videos yet'); return; }
@@ -4386,7 +4432,7 @@ function openShorts(proofId) {
   document.getElementById('shortsOverlay').classList.add('open');
   document.getElementById('shortsOverlay').classList.remove('comments-open');
   document.body.style.overflow = 'hidden';
-  _dmPush(); _shortsBindSwipe();
+  _shortsBindSwipe();
   _renderShortsSnapStack();   // build the native scroll-snap video stack
   renderShort();              // fill the fixed overlay for the current short
 }
@@ -4506,6 +4552,12 @@ async function renderShort() {
 
   _shortsFillCol1(p, d);
   if (shortsCommentsOpen || window.innerWidth >= 769) loadShortsComments(p.id);
+  // Desktop: slide column 1 + comments in sync with the video (feels like the whole row scrolls)
+  if (window.innerWidth >= 769){
+    [document.getElementById('shortsCol1'), document.querySelector('#shortsOverlay .shorts-comments')].forEach(el=>{
+      if (el){ el.classList.remove('shorts-col-shift'); void el.offsetWidth; el.classList.add('shorts-col-shift'); }
+    });
+  }
 }
 // Desktop column 1: creator+taker ids · caption · description & rules (synced to active short)
 function _shortsDetailsHtml(d){

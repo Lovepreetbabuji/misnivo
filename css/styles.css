@@ -2687,8 +2687,13 @@ html{scroll-behavior:smooth;}
   .shorts-video-col{ position:relative; width:100%; height:100%; max-width:none; aspect-ratio:auto; background:#000; border-radius:16px; overflow:hidden; }
   .shorts-nav{ display:none !important; }                              /* arrows removed */
   .shorts-snap-item .shorts-info{ display:none !important; }           /* info lives in column 1 */
-  .shorts-snap-item .shorts-actions{ position:absolute; right:10px; bottom:18px; left:auto; flex-direction:column; background:none; padding:0; }
-  .shorts-snap-item .shorts-actions .shorts-act{ background:rgba(255,255,255,0.12); }
+  .shorts-snap-item .shorts-actions{ position:absolute; right:10px; bottom:18px; left:auto; flex-direction:column; background:none; padding:0; gap:2px; }
+  .shorts-snap-item .shorts-actions .shorts-act{ background:rgba(255,255,255,0.12); width:38px; height:38px; }
+  .shorts-snap-item .shorts-actions .shorts-act .mi{ font-size:19px; }
+  .shorts-snap-item .shorts-act-lbl{ font-size:11px; }
+  /* Short change → column 1 + comments slide in (feels like the whole row scrolls) */
+  @keyframes shortsColShift{ from{ transform:translateY(26px); opacity:.35; } to{ transform:translateY(0); opacity:1; } }
+  .shorts-col-shift{ animation:shortsColShift .34s ease both; }
   .shorts-cmt-rail{ display:none !important; }                         /* comment btn hidden (column 3) */
   /* COLUMN 3 — comments card: see the "permanent column 3" rule below */
   .shorts-overlay.comments-open .shorts-stage{ transform:none !important; }
