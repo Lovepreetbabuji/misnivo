@@ -4505,18 +4505,17 @@ function _shortsSlideHtml(p, i) {
       <div class="shorts-seek-wrap">
         <input type="range" class="shorts-seek" min="0" max="1000" value="0" oninput="shortsSlideSeek(this)"/>
       </div>
-    </div>
-
-    <div class="shorts-actions">
-      <button class="shorts-act shorts-like-btn ${liked?'liked':''}" onclick="shortsLikeSlide('${p.id}', this)"><span class="mi">thumb_up</span></button>
-      <span class="shorts-act-lbl shorts-like-count">${_fmtCount(p.likeCount || 0)}</span>
-      <button class="shorts-act" onclick="showToast('Disliked')"><span class="mi">thumb_down</span></button>
-      <span class="shorts-act-lbl">Dislike</span>
-      <button class="shorts-act shorts-cmt-rail" onclick="shortsOpenComments('${p.id}')"><span class="mi">comment</span></button>
-      <span class="shorts-act-lbl shorts-comment-count shorts-cmt-rail">${_fmtCount(p.commentCount || 0)}</span>
-      <button class="shorts-act" onclick="showToast('Share link copied!')"><span class="mi">share</span></button>
-      <span class="shorts-act-lbl">Share</span>
-      <div class="shorts-act-views"><span class="mi">visibility</span><span class="shorts-views-count">${_fmtCount(p.viewCount || 0)}</span></div>
+      <div class="shorts-actions">
+        <button class="shorts-act shorts-like-btn ${liked?'liked':''}" onclick="shortsLikeSlide('${p.id}', this)"><span class="mi">thumb_up</span></button>
+        <span class="shorts-act-lbl shorts-like-count">${_fmtCount(p.likeCount || 0)}</span>
+        <button class="shorts-act" onclick="showToast('Disliked')"><span class="mi">thumb_down</span></button>
+        <span class="shorts-act-lbl">Dislike</span>
+        <button class="shorts-act shorts-cmt-rail" onclick="shortsOpenComments('${p.id}')"><span class="mi">comment</span></button>
+        <span class="shorts-act-lbl shorts-comment-count shorts-cmt-rail">${_fmtCount(p.commentCount || 0)}</span>
+        <button class="shorts-act" onclick="showToast('Share link copied!')"><span class="mi">share</span></button>
+        <span class="shorts-act-lbl">Share</span>
+        <div class="shorts-act-views"><span class="mi">visibility</span><span class="shorts-views-count">${_fmtCount(p.viewCount || 0)}</span></div>
+      </div>
     </div>
 
     <!-- COLUMN 3 (desktop): this short's comments, own scroll -->
@@ -5051,6 +5050,7 @@ function shortsToggleDetailsLeft(btn){
   const open = panel.style.display === 'block';
   panel.style.display = open ? 'none' : 'block';
   btn.classList.toggle('open', !open);
+  info.classList.toggle('dets-open', !open);   // expanded → ids+caption move to the top
 }
 
 // Simple follow (creator/taker) — reuse if toggleFollow exists, else basic
