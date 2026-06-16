@@ -213,9 +213,9 @@ body{
    TOPBAR — Glass frosted + red accent
 ═══════════════════════════════════════════════════════ */
 .topbar{
-  /* Above the detail overlays (z150) so the hamburger/search/profile menus
-     always open ON TOP of the dare/video page, never behind it */
-  position:fixed;top:0;left:0;right:0;z-index:155;height:56px;
+  /* Always above EVERY page overlay (detail z150, shorts z400, …) so the
+     hamburger/search/profile menus open ON TOP of any page, never behind it */
+  position:fixed;top:0;left:0;right:0;z-index:9000;height:56px;
   /* Glass */
   background:rgba(10,6,6,0.80);
   backdrop-filter:var(--blur);-webkit-backdrop-filter:var(--blur);
@@ -927,7 +927,7 @@ body{
 .overlay{
   position:fixed;inset:0;
   background:rgba(0,0,0,0.7);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);
-  z-index:200;display:flex;align-items:center;justify-content:center;padding:16px;
+  z-index:9500;display:flex;align-items:center;justify-content:center;padding:16px;
   opacity:0;pointer-events:none;transition:all .25s;
 }
 .overlay.open{opacity:1;pointer-events:all;}
@@ -1303,7 +1303,7 @@ textarea.f-input{resize:vertical;min-height:84px;}
 
   /* Sidebar: hidden by default, slides in as overlay */
   .sidebar{
-    position:fixed;top:56px;left:0;bottom:0;z-index:200;
+    position:fixed;top:56px;left:0;bottom:0;z-index:9100;
     width:min(280px,80vw);
     transform:translateX(-110%);
     transition:transform .28s cubic-bezier(.4,0,.2,1);
@@ -1616,7 +1616,7 @@ textarea.f-input{resize:vertical;min-height:84px;}
 
   /* Sidebar: hidden by default, slides in as overlay */
   .sidebar{
-    position:fixed;top:56px;left:0;bottom:0;z-index:200;
+    position:fixed;top:56px;left:0;bottom:0;z-index:9100;
     width:min(280px,80vw);
     transform:translateX(-110%);
     transition:transform .28s cubic-bezier(.4,0,.2,1);
@@ -1798,7 +1798,7 @@ textarea.f-input{resize:vertical;min-height:84px;}
   background: #1f1f1f;
   border: 1px solid var(--border); border-radius: 12px;
   box-shadow: 0 8px 28px rgba(0,0,0,0.5);
-  display: none; flex-direction: column; overflow: hidden; z-index: 300;
+  display: none; flex-direction: column; overflow: hidden; z-index: 9200;
 }
 .notif-panel.open { display: flex; animation: scaleIn .22s cubic-bezier(.34,1.56,.64,1) both; }
 .notif-panel-hdr {
@@ -2050,13 +2050,13 @@ textarea.f-input{resize:vertical;min-height:84px;}
 /* Hamburger drawer must also work on 600–768px widths (matches JS isMobile≤768) */
 @media(min-width:600px) and (max-width:768px){
   .bottom-nav{ display:flex; }
-  .sidebar{ position:fixed; top:56px; left:0; bottom:0; z-index:210; width:min(280px,80vw);
+  .sidebar{ position:fixed; top:56px; left:0; bottom:0; z-index:9100; width:min(280px,80vw);
     transform:translateX(-110%); transition:transform .28s cubic-bezier(.4,0,.2,1);
     box-shadow:4px 0 24px rgba(0,0,0,.6); overflow-y:auto; padding-top:8px; padding-bottom:80px; justify-content:flex-start !important; }
   .sidebar .nav-lbl{ display:block !important; }
   .sidebar .nav-item{ justify-content:flex-start !important; padding:14px 20px !important; }
   .sidebar.open{ transform:translateX(0); }
-  .sb-overlay{ z-index:160; }
+  .sb-overlay{ z-index:9050; }
   .main{ margin-left:0 !important; }
 }
 /* Notification panel — slightly glassy (desktop + mobile) */
@@ -2152,8 +2152,8 @@ body.detail-open .topbar{ background:#050505 !important; backdrop-filter:none !i
 .dd-top-more .dd-action-menu{ top:46px; bottom:auto; }
 /* Mobile hamburger drawer must sit ABOVE the dare/video overlay (z 150) */
 @media(max-width:599px){
-  .sb-overlay{ z-index:160; }
-  .sidebar{ z-index:210 !important; }
+  .sb-overlay{ z-index:9050; }
+  .sidebar{ z-index:9100 !important; }
 }
 
 /* ─── EXPLORER / TRENDING PAGE ───────────────────────────────── */
@@ -2521,7 +2521,7 @@ body.detail-open .topbar{ background:#050505 !important; backdrop-filter:none !i
 /* Mobile: full-width Instagram-style */
 @media(max-width:768px){
   /* Mobile: full-screen overlay */
-  .notif-panel{position:fixed;inset:0;top:0;left:0;right:0;width:100%;height:100%;max-height:100%;border-radius:0;z-index:500;}
+  .notif-panel{position:fixed;inset:0;top:0;left:0;right:0;width:100%;height:100%;max-height:100%;border-radius:0;z-index:9200;}
 }
 
 /* #1: Scroll performance */

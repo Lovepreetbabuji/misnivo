@@ -1113,7 +1113,7 @@ function _handleSearchNow() {
 //  OPEN / CLOSE POST DARE MODAL
 // ════════════════════════════════════════════════════════════════════
 function openPost() {
-  if (typeof _closeDetailOverlays === 'function') _closeDetailOverlays();
+  // Post modal (z9500) opens ON TOP of the current page — don't close/leave it
   editingDareId = null;
   // Reset all state
   postTags = []; postRules = []; selectedThumb = null;
