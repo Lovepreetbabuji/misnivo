@@ -584,6 +584,39 @@ function _isShortVideo(p) {
   return false;                                                   // default → Long
 }
 
+// ─── Unified ACTIVE-DARE card (home / dares page / explore "more dares" / search) ───
+function _activeDareCard(d){
+  const cat = d.tags?.[0]||d.cat||'fitness';
+  const title = d.caption||d.title||'Untitled Dare';
+  const reward = d.rewardAmount ?? d.bounty ?? 0;
+  const thumb = d.thumbnailURL||'';
+  const color = CAT_C[cat]||'#FF2D4A', icon = CAT_I[cat]||'bolt';
+  const isMine = d.creatorUid===user?.uid;
+  const accepted = (typeof d.takers==='number') ? d.takers : (d.approvedTakers?.length||0);
+  let expiry='';
+  if (d.expiresAt){ const exp=d.expiresAt.toDate?d.expiresAt.toDate():new Date(d.expiresAt); const ms=exp-Date.now();
+    if (ms>0){ const h=Math.floor(ms/3600000); expiry=`<span class="adc-expiry"><span class="mi">schedule</span>${h>=24?Math.floor(h/24)+'d':h+'h'} left</span>`; } }
+  const inner = thumb ? `<img src="${thumb}" loading="lazy"/>`
+    : `<div class="adc-thumb-bg" style="background:linear-gradient(135deg,${color}22,${color}55);"><span class="mi" style="color:${color};">${icon}</span></div>`;
+  const cAv = _avHtml(d.creatorPhotoURL || (isMine?(user&&user.picture):''), d.creator);
+  const safe = (''+title).replace(/[\\'"<>]/g,'');
+  const action = isMine
+    ? `<button class="adc-act" onclick="event.stopPropagation();openEditDare('${d.id}')" title="Edit"><span class="mi">edit</span></button>`
+    : `<button class="adc-act" onclick="event.stopPropagation();openReportModal('dare','${d.id}','${safe}')" title="Report"><span class="mi">flag</span></button>`;
+  const pinned = (typeof pinnedDares!=='undefined' && pinnedDares.includes(d.id))
+    ? `<div class="adc-pin"><span class="mi">push_pin</span></div>` : '';
+  return `<div class="active-dare-card" onclick="openDareDetail('${d.id}')">
+    <div class="adc-thumb">${inner}${pinned}${expiry}<span class="adc-bounty">Rs.${reward.toLocaleString('en-IN')}</span></div>
+    <div class="adc-cap">${escHtml(title)}</div>
+    <div class="adc-row">
+      <div class="adc-av">${cAv}</div>
+      <div class="adc-info"><div class="adc-creator">${escHtml(d.creator||'—')}</div><div class="adc-ago">${_relTimeStr(d.date)}</div></div>
+      <span class="adc-accepted" title="Accepted users"><span class="mi">group</span>${accepted}</span>
+      ${action}
+    </div>
+  </div>`;
+}
+
 // ─── MAIN HOME RENDER ────────────────────────────────────
 async function renderHome(cat) {
   if (cat) homeFilterCat = cat;
@@ -750,59 +783,12 @@ function _renderHomeActiveDares() {
     return;
   }
 
-  const cards = active.map(d => {
-    const cat   = d.tags?.[0] || d.cat || 'fitness';
-    const color = CAT_C[cat] || '#FF2D4A';
-    const icon  = CAT_I[cat] || 'bolt';
-    const label = CAT_L[cat] || cat;
-    const title = d.caption || d.title || 'Untitled Dare';
-    const reward = d.rewardAmount ?? d.bounty ?? 0;
-    const thumb  = d.thumbnailURL || '';
-
-    const isMine    = d.creatorUid === user?.uid;
-    const myEntry   = (acceptedDares||[]).find(a => a.dareId === d.id);
-    let   btn       = '';
-    if (isMine) {
-      btn = `<button class="btn-yours" style="padding:7px 14px;border-radius:50px;width:auto;cursor:default;">Your Dare</button>`;
-    } else if (myEntry) {
-      btn = `<button class="btn-proof-done" style="padding:7px 12px;border-radius:50px;width:auto;">
-               <span class="mi">check_circle</span>Accepted</button>`;
-    } else {
-      btn = `<button class="btn-accept" style="width:auto;padding:8px 18px;border-radius:50px;"
-               onclick="event.stopPropagation();acceptDare('${d.id}')">Accept</button>`;
-    }
-
-    const thumbHTML = thumb
-      ? `<div class="dare-list-thumb" style="background:#000;overflow:hidden;">
-           <img src="${thumb}" style="width:100%;height:100%;object-fit:cover;" loading="lazy"/>
-         </div>`
-      : `<div class="dare-list-thumb" style="background:linear-gradient(135deg,${color}22,${color}55);">
-           <span class="mi" style="color:${color};font-size:38px;">${icon}</span>
-         </div>`;
-
-    return `
-    <div class="dare-list-card">
-      ${thumbHTML}
-      <div class="dare-list-body">
-        <div>
-          <span class="dare-list-cat cat-${cat}">${label}</span>
-          <div class="dare-list-title">${escHtml(title)}</div>
-          <div style="font-size:12px;color:var(--t3);margin-top:3px;">
-            ${d.creator||'—'} · ${d.takers||0} takers
-          </div>
-        </div>
-        <div class="dare-list-bottom">
-          <span class="dare-list-bounty">Rs.${reward.toLocaleString('en-IN')}</span>
-          ${btn}
-        </div>
-      </div>
-    </div>`;
-  }).join('');
+  const cards = active.map(_activeDareCard).join('');
 
   const total   = (dares||[]).filter(d => !d.completed).length;
   const hasMore = total > 6;
   container.innerHTML = `
-    <div class="dare-list">${cards}</div>
+    <div class="active-dare-grid">${cards}</div>
     ${hasMore ? `<div style="text-align:center;margin-top:16px;">
       <button class="btn-empty" style="display:inline-flex;" onclick="goPage('dares')">
         <span class="mi">bolt</span>View All ${total} Dares
@@ -930,97 +916,7 @@ function renderDaresPage() {
     return 0; // already sorted by createdAt desc from listener
   });
 
-  feed.innerHTML = `<div class="dare-list">${active.map(d => {
-    const cat    = d.tags?.[0] || d.cat || 'fitness';
-    const title  = d.caption   || d.title || 'Untitled Dare';
-    const reward = d.rewardAmount ?? d.bounty ?? 0;
-    const desc   = d.description || d.desc || '';
-    const thumb  = d.thumbnailURL || '';
-    const color  = CAT_C[cat] || '#717171';
-    const icon   = CAT_I[cat] || 'bolt';
-    const label  = CAT_L[cat] || cat;
-    const myEntry = acceptedDares.find(a => a.dareId === d.id);
-    const isMine  = d.creatorUid === user?.uid;
-    const isPinned = pinnedDares.includes(d.id);
-
-    // Expiry badge
-    let expiryBadge = '';
-    if (d.expiresAt) {
-      const exp = d.expiresAt.toDate ? d.expiresAt.toDate() : new Date(d.expiresAt);
-      const hoursLeft = Math.max(0, Math.round((exp - now) / 3600000));
-      const daysLeft  = Math.floor(hoursLeft / 24);
-      const label2    = daysLeft > 0 ? `${daysLeft}d left` : `${hoursLeft}h left`;
-      const color2    = hoursLeft < 24 ? '#FF453A' : '#FF9F0A';
-      expiryBadge = `<span style="font-size:10px;color:${color2};font-weight:600;
-        padding:2px 8px;border-radius:50px;background:${color2}18;
-        border:1px solid ${color2}44;font-family:'IBM Plex Mono',monospace;">
-        ⏱ ${label2}</span>`;
-    }
-
-    let btn = '';
-    if (isMine) {
-      btn = `<button class="btn-yours" style="padding:8px 16px;border-radius:50px;width:auto;">Your Dare</button>`;
-    } else if (myEntry) {
-      if (myEntry.proofStatus === 'submitted' || myEntry.proofStatus === 'approved') {
-        btn = `<button class="btn-proof-done" style="padding:8px 14px;border-radius:50px;width:auto;">
-                 <span class="mi">check_circle</span>Submitted</button>`;
-      } else if (myEntry.applicantStatus === 'pending') {
-        btn = `<button class="btn-proof-done" style="padding:8px 14px;border-radius:50px;width:auto;background:rgba(255,159,10,.1);color:var(--orange);border:1px solid rgba(255,159,10,.3);">
-                 <span class="mi">hourglass_empty</span>Applied</button>`;
-      } else {
-        btn = `<button class="btn-proof" style="width:auto;padding:8px 16px;border-radius:50px;"
-                 onclick="openProof('${d.id}')"><span class="mi">video_call</span>Submit Proof</button>`;
-      }
-    } else {
-      btn = `<button class="btn-accept" style="width:auto;padding:9px 20px;border-radius:50px;"
-               onclick="acceptDare('${d.id}')">
-               ${d.takerSelectionMode === 'creator_picks' ? 'Apply' : 'Accept'}
-             </button>`;
-    }
-
-    const thumbHTML = thumb
-      ? `<div class="dare-list-thumb" style="background:#000;overflow:hidden;cursor:pointer;" onclick="openDareDetail('${d.id}')">
-           <img src="${thumb}" style="width:100%;height:100%;object-fit:cover;" loading="lazy"/>
-         </div>`
-      : `<div class="dare-list-thumb" style="background:linear-gradient(135deg,${color}22,${color}55);cursor:pointer;" onclick="openDareDetail('${d.id}')">
-           <span class="mi" style="color:${color};font-size:40px;">${icon}</span>
-         </div>`;
-
-    const tagsHTML = d.tags?.length
-      ? d.tags.map(t => `<span class="dare-tag-pill">#${t}</span>`).join('')
-      : `<span class="dare-list-cat cat-${cat}">${label}</span>`;
-
-    return `
-    <div class="dare-list-card ${isPinned ? 'dare-pinned' : ''}">
-      ${isPinned ? `<div class="pin-ribbon"><span class="mi">push_pin</span>Pinned</div>` : ''}
-      ${thumbHTML}
-      <div class="dare-list-body">
-        <div>
-          <div style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:6px;align-items:center;">
-            ${tagsHTML}${expiryBadge}
-          </div>
-          <div class="dare-list-title" style="cursor:pointer;" onclick="openDareDetail('${d.id}')">${escHtml(title)}</div>
-          <div class="dare-list-desc">${escHtml(desc)}</div>
-        </div>
-        <div class="dare-list-bottom">
-          <div class="dare-list-meta">
-            <span><span class="mi" style="font-size:14px;">person</span>${d.creator||'—'}</span>
-            <span><span class="mi" style="font-size:14px;">group</span>${d.takers||0}</span>
-            ${d.takerSelectionMode==='creator_picks' ? `<span style="font-size:10px;color:var(--orange);font-weight:600;
-              padding:2px 8px;border-radius:50px;background:rgba(255,159,10,.1);border:1px solid rgba(255,159,10,.3);
-              font-family:'IBM Plex Mono',monospace;">Creator Picks</span>` : ''}
-          </div>
-          <div style="display:flex;align-items:center;gap:10px;">
-            <span class="dare-list-bounty">Rs.${reward.toLocaleString('en-IN')}</span>
-            ${btn}
-            <button class="btn-report-icon" onclick="openReportModal('dare','${d.id}','${escHtml(title)}')" title="Report dare">
-              <span class="mi">flag</span>
-            </button>
-          </div>
-        </div>
-      </div>
-    </div>`;
-  }).join('')}</div>`;
+  feed.innerHTML = `<div class="active-dare-grid">${active.map(_activeDareCard).join('')}</div>`;
 }
 
 // ════════════════════════════
@@ -3232,8 +3128,8 @@ function _doSearch(q) {
       feed.innerHTML=typeBar+`<div class="empty"><span class="mi">search_off</span><div class="empty-title">No dares for "${escHtml(q)}"</div><p class="empty-desc">Try searching Videos tab</p></div>`;
     } else {
       let html=typeBar+`<div style="font-size:12px;color:var(--t3);margin-bottom:14px;padding:0 4px;">${results.length} dare${results.length!==1?'s':''} for "<strong style="color:var(--t1);">${escHtml(q)}</strong>"</div>`;
-      if (active.length)    html+=`<div class="search-section-label">Active (${active.length})</div><div class="dare-list">${active.map(d=>_searchDareCard(d)).join('')}</div>`;
-      if (completed.length) html+=`<div class="search-section-label" style="color:var(--t3);">Completed (${completed.length})</div><div class="dare-list">${completed.map(d=>_searchDareCard(d)).join('')}</div>`;
+      if (active.length)    html+=`<div class="search-section-label">Active (${active.length})</div><div class="active-dare-grid">${active.map(d=>_searchDareCard(d)).join('')}</div>`;
+      if (completed.length) html+=`<div class="search-section-label" style="color:var(--t3);">Completed (${completed.length})</div><div class="active-dare-grid">${completed.map(d=>_searchDareCard(d)).join('')}</div>`;
       feed.innerHTML=html;
     }
   } else {
@@ -3249,15 +3145,7 @@ function _doSearch(q) {
 }
 
 function _explorerDareCard(d) {
-  const cat=d.tags?.[0]||d.cat||'fitness';const color=CAT_C[cat]||'#1a73e8';const icon=CAT_I[cat]||'bolt';
-  const title=d.caption||d.title||'Untitled';const reward=d.rewardAmount??d.bounty??0;const thumb=d.thumbnailURL||'';
-  const isMine=d.creatorUid===user?.uid;const myEntry=acceptedDares.find(a=>a.dareId===d.id);
-  let btn='';
-  if(isMine) btn=`<button class="btn-yours" style="padding:7px 14px;border-radius:50px;width:auto;">Your Dare</button>`;
-  else if(myEntry) btn=`<button class="btn-proof-done" style="padding:7px 12px;border-radius:50px;width:auto;"><span class="mi">check_circle</span>Accepted</button>`;
-  else btn=`<button class="btn-accept" style="width:auto;padding:8px 18px;border-radius:50px;" onclick="event.stopPropagation();acceptDare('${d.id}')">Accept</button>`;
-  const thumbHTML=thumb?`<div class="dare-list-thumb" style="background:#000;overflow:hidden;"><img src="${thumb}" style="width:100%;height:100%;object-fit:cover;" loading="lazy"/></div>`:`<div class="dare-list-thumb" style="background:linear-gradient(135deg,${color}22,${color}55);"><span class="mi" style="color:${color};font-size:38px;">${icon}</span></div>`;
-  return `<div class="dare-list-card">${thumbHTML}<div class="dare-list-body"><div><span class="dare-list-cat cat-${cat}">${CAT_L[cat]||cat}</span><div class="dare-list-title">${escHtml(title)}</div><div style="font-size:12px;color:var(--t3);margin-top:3px;">${d.creator||'—'} · <strong style="color:var(--blue2);">${d.takers||0}</strong> accepted</div></div><div class="dare-list-bottom"><span class="dare-list-bounty">Rs.${reward.toLocaleString('en-IN')}</span>${btn}</div></div></div>`;
+  return _activeDareCard(d);
 }
 
 function _explorerVideoCard(p) {
@@ -3401,7 +3289,7 @@ function _renderNotifications() {
 
 function _vdRelLongCard(p){
   const cat=p.cat||'fitness';const color=CAT_C[cat]||'#717171';const t=vidThumb(p,320);
-  const badge=`<span class="dd-rel-badge">$${(p.dareBounty||0).toLocaleString('en-IN')}</span>`;
+  const badge=`<span class="dd-rel-badge">Rs.${(p.dareBounty||0).toLocaleString('en-IN')}</span>`;
   const thumb = t
     ? `<div class="dd-rel-thumb"><img src="${t}" loading="lazy"/>${badge}</div>`
     : `<div class="dd-rel-thumb dd-rel-thumb-bg" style="background:linear-gradient(135deg,${color}22,${color}55);"><span class="mi" style="color:${color};">play_circle</span>${badge}</div>`;
@@ -3414,7 +3302,7 @@ function _vdRelShortCard(p){
   const cat=p.cat||'fitness';const color=CAT_C[cat]||'#717171';const t=vidThumb(p,240);
   const inner = t ? `<img src="${t}" loading="lazy"/>` : `<div class="dd-rel-short-bg" style="background:linear-gradient(135deg,${color}22,${color}55);"><span class="mi" style="color:${color};">play_circle</span></div>`;
   return `<div class="dd-rel-short" onclick="openVideo('${p.id}')">
-    <div class="dd-rel-short-thumb">${inner}<span class="dd-rel-badge">$${(p.dareBounty||0).toLocaleString('en-IN')}</span></div>
+    <div class="dd-rel-short-thumb">${inner}<span class="dd-rel-badge">Rs.${(p.dareBounty||0).toLocaleString('en-IN')}</span></div>
     <div class="dd-rel-short-title">${escHtml(p.dareTitle||'')}</div>
     <div class="dd-rel-short-meta">${_fmtCount(p.viewCount||0)} views · ${_relTime(p)}</div></div>`;
 }
@@ -3538,26 +3426,7 @@ function _scoredSearch(items,q,textFields,tagFields) {
 }
 
 function _searchDareCard(d) {
-  const cat=d.tags?.[0]||d.cat||'fitness'; const color=CAT_C[cat]||'#1a73e8'; const icon=CAT_I[cat]||'bolt';
-  const title=d.caption||d.title||'Untitled'; const reward=d.rewardAmount??d.bounty??0; const thumb=d.thumbnailURL||'';
-  const isMine=d.creatorUid===user?.uid; const myEntry=acceptedDares.find(a=>a.dareId===d.id);
-  let btn='';
-  if (d.completed)   btn=`<button class="btn-proof-done" style="padding:8px 14px;border-radius:50px;width:auto;"><span class="mi">check_circle</span>Completed</button>`;
-  else if (isMine)   btn=`<button class="btn-yours" style="padding:8px 14px;border-radius:50px;width:auto;">Your Dare</button>`;
-  else if (myEntry)  btn=`<button class="btn-proof-done" style="padding:8px 14px;border-radius:50px;width:auto;"><span class="mi">check_circle</span>Accepted</button>`;
-  else               btn=`<button class="btn-accept" style="width:auto;padding:9px 20px;border-radius:50px;" onclick="acceptDare('${d.id}')">Accept</button>`;
-  const thumbHTML=thumb
-    ?`<div class="dare-list-thumb" style="background:#000;overflow:hidden;"><img src="${thumb}" style="width:100%;height:100%;object-fit:cover;" loading="lazy"/></div>`
-    :`<div class="dare-list-thumb" style="background:linear-gradient(135deg,${color}22,${color}55);"><span class="mi" style="color:${color};font-size:40px;">${icon}</span></div>`;
-  return `<div class="dare-list-card">${thumbHTML}
-    <div class="dare-list-body">
-      <div>
-        <div style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:4px;">${(d.tags||[]).map(t=>`<span class="dare-tag-pill">#${t}</span>`).join('')}${d.completed?`<span class="status-badge status-approved" style="font-size:10px;">Completed</span>`:''}</div>
-        <div class="dare-list-title">${escHtml(title)}</div>
-      </div>
-      <div class="dare-list-bottom"><span class="dare-list-bounty">Rs.${reward.toLocaleString('en-IN')}</span>${btn}</div>
-    </div>
-  </div>`;
+  return _activeDareCard(d);
 }
 
 async function _sendNotification(toUserId,type,title,message,refId=''){
@@ -3712,7 +3581,7 @@ function openDareDetail(dareId){
     ? `<img src="${thumb}" alt="" style="width:100%;height:100%;object-fit:cover;display:block;"/>`
     : `<div class="dd-hero-bg" style="background:linear-gradient(135deg,${color}22,${color}55);"><span class="mi" style="color:${color};font-size:72px;">${icon}</span></div>`;
   document.getElementById('ddHero').innerHTML = heroInner +
-    `<span class="dd-bounty-badge">$${reward.toLocaleString('en-IN')}</span>` + expiryBadge;
+    `<span class="dd-bounty-badge">Rs.${reward.toLocaleString('en-IN')}</span>` + expiryBadge;
 
   // Tags live below description+rules (col 2): always blue, click = search that tag
   document.getElementById('ddTags').innerHTML = (d.tags?.length ? d.tags : [cat])
@@ -4189,19 +4058,7 @@ function renderDareMore(excludeId){
     return true;
   }).slice(0, 12);
   if (!active.length){ el.innerHTML = '<div class="exp-empty">No other active dares.</div>'; return; }
-  el.innerHTML = active.map(d=>{
-    const cat=d.tags?.[0]||d.cat||'fitness'; const title=d.caption||d.title||'Untitled'; const reward=d.rewardAmount??d.bounty??0;
-    const color=CAT_C[cat]||'#717171'; const icon=CAT_I[cat]||'bolt'; const thumb=d.thumbnailURL||'';
-    const badge = `<span class="dd-rel-badge">$${reward.toLocaleString('en-IN')}</span>`;
-    const thumbHTML = thumb
-      ? `<div class="dd-rel-thumb"><img src="${thumb}" loading="lazy"/>${badge}</div>`
-      : `<div class="dd-rel-thumb dd-rel-thumb-bg" style="background:linear-gradient(135deg,${color}22,${color}55);"><span class="mi" style="color:${color};">${icon}</span>${badge}</div>`;
-    return `<div class="dd-rel-card" onclick="openDareDetail('${d.id}')">
-      ${thumbHTML}
-      <div class="dd-rel-title">${escHtml(title)}</div>
-      <div class="dd-rel-meta">${escHtml(d.creator||'—')} · ${_relTimeStr(d.date)} · ${_fmtCount(d.viewCount||0)} views</div>
-    </div>`;
-  }).join('');
+  el.innerHTML = `<div class="active-dare-grid">${active.map(_activeDareCard).join('')}</div>`;
 }
 
 function doTrendingSearch(term){document.getElementById('searchInput').value=term;searchType='dares';handleSearchImmediate();}
@@ -4354,7 +4211,7 @@ async function renderExplorer() {
     const showAll=activeExpTab==='all';
     container.innerHTML=`
       ${showAll||activeExpTab==='viewed'?`<div class="exp-section"><div class="exp-sec-hdr"><span class="exp-fire"></span><div><div class="exp-sec-title">Most Viewed Today</div><div class="exp-sec-sub">Top taker videos</div></div></div>${_mixedVideoFeedHtml(mostViewed,'Complete dares to see videos here!')}</div>`:''}
-      ${showAll||activeExpTab==='accepted'?`<div class="exp-section"><div class="exp-sec-hdr"><span class="exp-fire"></span><div><div class="exp-sec-title">Most Accepted Dares</div><div class="exp-sec-sub">Dares everyone wants to try</div></div></div>${mostAccepted.length?`<div class="dare-list">${mostAccepted.map(d=>_explorerDareCard(d)).join('')}</div>`:`<div class="exp-empty">No active dares!</div>`}</div>`:''}
+      ${showAll||activeExpTab==='accepted'?`<div class="exp-section"><div class="exp-sec-hdr"><span class="exp-fire"></span><div><div class="exp-sec-title">Most Accepted Dares</div><div class="exp-sec-sub">Dares everyone wants to try</div></div></div>${mostAccepted.length?`<div class="active-dare-grid">${mostAccepted.map(d=>_explorerDareCard(d)).join('')}</div>`:`<div class="exp-empty">No active dares!</div>`}</div>`:''}
       ${showAll||activeExpTab==='liked'?`<div class="exp-section"><div class="exp-sec-hdr"><span class="exp-fire"></span><div><div class="exp-sec-title">Most Liked Videos</div><div class="exp-sec-sub">Community favorites</div></div></div>${_mixedVideoFeedHtml(mostLiked.filter(p=>(p.likeCount||0)>0),'Like videos to see them here!')}</div>`:''}
       ${showAll||activeExpTab==='searched'?`<div class="exp-section"><div class="exp-sec-hdr"><span class="exp-fire"></span><div><div class="exp-sec-title">Trending Searches</div><div class="exp-sec-sub">What people are looking for</div></div></div>${topSearches.length?`<div class="trending-searches-list">${topSearches.map((s,i)=>`<div class="trending-search-row" onclick="doTrendingSearch('${escHtml(s.term||'')}')"><span class="trending-rank">${i<3?['🥇','🥈','🥉'][i]:'#'+(i+1)}</span><span class="trending-term">${escHtml(s.term||'')}</span><span class="trending-count">${(s.count||0).toLocaleString('en-IN')} searches</span><span class="mi" style="color:var(--t4);margin-left:auto;font-size:14px;">arrow_forward_ios</span></div>`).join('')}</div>`:`<div class="exp-empty">Search for something to start tracking!</div>`}</div>`:''}`;
   }catch(e){container.innerHTML=`<div class="empty"><span class="mi">error_outline</span><div class="empty-title">Error loading trending</div><p class="empty-desc">${e.message}</p></div>`;}
@@ -4533,7 +4390,7 @@ function _shortsSlideHtml(p, i) {
         <span class="shorts-time">0:00</span>
       </div>
       <button class="shorts-dots" onclick="shortsOpenMenu('${p.id}')"><span class="mi">more_vert</span></button>
-      <span class="shorts-bounty-badge">$${bounty}</span>
+      <span class="shorts-bounty-badge">Rs.${bounty}</span>
       <div class="shorts-seek-wrap">
         <input type="range" class="shorts-seek" min="0" max="1000" value="0" oninput="shortsSlideSeek(this)"/>
       </div>
@@ -5309,6 +5166,7 @@ function _shortsRowHtml(shorts) {
       <div class="short-card" onclick="openShorts('${p.id}')">
         <div class="short-thumb">
           ${t ? `<img src="${t}" alt="" loading="lazy" onerror="this.style.display='none'"/>` : `<div class="yt-thumb-bg"><span class="mi">bolt</span></div>`}
+          <div class="short-bounty-tag">Rs.${(p.dareBounty||0).toLocaleString('en-IN')}</div>
         </div>
         <div class="short-cap">${escHtml(_cap)}</div>
         <div class="short-meta">${(p.viewCount||0).toLocaleString('en-IN')} views</div>
