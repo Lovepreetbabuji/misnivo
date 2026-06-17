@@ -2710,6 +2710,8 @@ html{scroll-behavior:smooth;}
 }
 /* per-row comments are desktop-only; mobile uses the slide-in sheet */
 @media(max-width:768px){ .shorts-rowcmts{ display:none !important; } }
+/* Mobile: shorts is full-screen immersive — hide the main topbar (desktop keeps it) */
+@media(max-width:768px){ body.shorts-open .topbar{ display:none !important; } }
 
 /* Mobile "Description & rules" button on each short + glassy right-side drawer */
 .shorts-m-details{ display:none; }

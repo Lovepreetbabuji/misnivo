@@ -4462,6 +4462,7 @@ function openShorts(proofId) {
   document.getElementById('shortsOverlay').classList.add('open');
   document.getElementById('shortsOverlay').classList.remove('comments-open');
   document.body.style.overflow = 'hidden';
+  document.body.classList.add('shorts-open');   // mobile: hide the topbar (immersive)
   _shortsBindSwipe();
   _renderShortsSnapStack();   // build the native scroll-snap video stack
   renderShort();              // fill the fixed overlay for the current short
@@ -4472,6 +4473,7 @@ function closeShorts() {
   ov.classList.remove('open', 'comments-open');
   shortsCloseDetails();
   document.body.style.overflow = '';
+  document.body.classList.remove('shorts-open');
   const c = document.getElementById('shortsSnapContainer');
   if (c) c.querySelectorAll('video').forEach(v => { try { v.pause(); v.removeAttribute('src'); v.load(); } catch(e){} });
   shortsCommentsOpen = false;
