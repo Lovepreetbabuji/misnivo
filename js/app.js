@@ -606,7 +606,7 @@ function _activeDareCard(d){
   const pinned = (typeof pinnedDares!=='undefined' && pinnedDares.includes(d.id))
     ? `<div class="adc-pin"><span class="mi">push_pin</span></div>` : '';
   return `<div class="active-dare-card" onclick="openDareDetail('${d.id}')">
-    <div class="adc-thumb">${inner}${pinned}${expiry}<span class="adc-bounty">Rs.${reward.toLocaleString('en-IN')}</span></div>
+    <div class="adc-thumb">${inner}${pinned}${expiry}<span class="adc-bounty">$${reward.toLocaleString('en-IN')}</span></div>
     <div class="adc-cap">${escHtml(title)}</div>
     <div class="adc-row">
       <div class="adc-av">${cAv}</div>
@@ -703,7 +703,7 @@ function _renderVideoGrid(proofs) {
           : `<div class="yt-thumb-bg"><span class="mi">${icon}</span></div>`
         }
         <div class="yt-play-over"><span class="mi">play_circle</span></div>
-        <div class="yt-bounty">Rs.${(p.dareBounty||0).toLocaleString('en-IN')}</div>
+        <div class="yt-bounty">$${(p.dareBounty||0).toLocaleString('en-IN')}</div>
         ${dur ? `<div style="position:absolute;bottom:8px;right:8px;
           background:rgba(0,0,0,.8);color:#fff;font-size:10px;font-weight:600;
           padding:2px 7px;border-radius:5px;">${dur}</div>` : ''}
@@ -752,7 +752,7 @@ function _renderShortsSection(shorts) {
           : `<div class="short-thumb-bg" style="background:#272727;"><span class="mi" style="color:${color};">${icon}</span></div>`
         }
         <div class="short-play-over"><span class="mi">play_circle</span></div>
-        <div class="short-bounty-tag">Rs.${(p.dareBounty||0).toLocaleString('en-IN')}</div>
+        <div class="short-bounty-tag">$${(p.dareBounty||0).toLocaleString('en-IN')}</div>
         ${dur ? `<div class="short-dur-tag">${dur}</div>` : ''}
       </div>
       <div class="short-info">
@@ -3155,14 +3155,14 @@ function _explorerVideoCard(p) {
     <div class="yt-thumb">
       ${vidThumb(p,480)?`<img src="${vidThumb(p,480)}" alt="" loading="lazy" style="width:100%;height:100%;object-fit:cover;display:block;"/>`:`<div class="yt-thumb-bg"><span class="mi">${icon}</span></div>`}
       <div class="yt-play-over"><span class="mi">play_circle</span></div>
-      <div class="yt-bounty">Rs.${(p.dareBounty||0).toLocaleString('en-IN')}</div>
+      <div class="yt-bounty">$${(p.dareBounty||0).toLocaleString('en-IN')}</div>
       ${dur?`<div style="position:absolute;bottom:8px;right:8px;background:rgba(0,0,0,.8);color:#fff;font-size:10px;font-weight:600;padding:2px 7px;border-radius:5px;">${dur}</div>`:''}
     </div>
     <div class="yt-info">
       <div class="yt-av">${_avHtml(p.takerPhotoURL, p.takerName)}</div>
       <div class="yt-meta">
         <div class="yt-title">${escHtml(p.dareTitle||'Dare Video')}</div>
-        <div class="yt-sub"><span>${escHtml(p.takerName||'—')}</span><span class="yt-dot"></span><span>${(p.viewCount||0).toLocaleString('en-IN')} views</span><span class="yt-dot"></span><span> ${(p.likeCount||0).toLocaleString('en-IN')}</span></div>
+        <div class="yt-sub"><span>@${escHtml(p.takerUsername||p.takerName||'creator')}</span><span class="yt-dot"></span><span>${(p.viewCount||0).toLocaleString('en-IN')} views</span><span class="yt-dot"></span><span>${_relTime(p)}</span></div>
       </div>
     </div>
   </div>`;
@@ -3289,7 +3289,7 @@ function _renderNotifications() {
 
 function _vdRelLongCard(p){
   const cat=p.cat||'fitness';const color=CAT_C[cat]||'#717171';const t=vidThumb(p,320);
-  const badge=`<span class="dd-rel-badge">Rs.${(p.dareBounty||0).toLocaleString('en-IN')}</span>`;
+  const badge=`<span class="dd-rel-badge">$${(p.dareBounty||0).toLocaleString('en-IN')}</span>`;
   const thumb = t
     ? `<div class="dd-rel-thumb"><img src="${t}" loading="lazy"/>${badge}</div>`
     : `<div class="dd-rel-thumb dd-rel-thumb-bg" style="background:linear-gradient(135deg,${color}22,${color}55);"><span class="mi" style="color:${color};">play_circle</span>${badge}</div>`;
@@ -3302,7 +3302,7 @@ function _vdRelShortCard(p){
   const cat=p.cat||'fitness';const color=CAT_C[cat]||'#717171';const t=vidThumb(p,240);
   const inner = t ? `<img src="${t}" loading="lazy"/>` : `<div class="dd-rel-short-bg" style="background:linear-gradient(135deg,${color}22,${color}55);"><span class="mi" style="color:${color};">play_circle</span></div>`;
   return `<div class="dd-rel-short" onclick="openVideo('${p.id}')">
-    <div class="dd-rel-short-thumb">${inner}<span class="dd-rel-badge">Rs.${(p.dareBounty||0).toLocaleString('en-IN')}</span></div>
+    <div class="dd-rel-short-thumb">${inner}<span class="dd-rel-badge">$${(p.dareBounty||0).toLocaleString('en-IN')}</span></div>
     <div class="dd-rel-short-title">${escHtml(p.dareTitle||'')}</div>
     <div class="dd-rel-short-meta">${_fmtCount(p.viewCount||0)} views · ${_relTime(p)}</div></div>`;
 }
@@ -3511,14 +3511,14 @@ function _videoCardSearch(p) {
     <div class="yt-thumb">
       ${vidThumb(p,480)?`<img src="${vidThumb(p,480)}" alt="" loading="lazy" style="width:100%;height:100%;object-fit:cover;display:block;"/>`:`<div class="yt-thumb-bg"><span class="mi">${icon}</span></div>`}
       <div class="yt-play-over"><span class="mi">play_circle</span></div>
-      <div class="yt-bounty">Rs.${(p.dareBounty||0).toLocaleString('en-IN')}</div>
+      <div class="yt-bounty">$${(p.dareBounty||0).toLocaleString('en-IN')}</div>
       ${dur?`<div style="position:absolute;bottom:8px;right:8px;background:rgba(0,0,0,.8);color:#fff;font-size:10px;font-weight:600;padding:2px 7px;border-radius:5px;">${dur}</div>`:''}
     </div>
     <div class="yt-info">
       <div class="yt-av">${_avHtml(p.takerPhotoURL, p.takerName)}</div>
       <div class="yt-meta">
         <div class="yt-title">${escHtml(p.dareTitle||'Dare Video')}</div>
-        <div class="yt-sub"><span>${escHtml(p.takerName||'—')}</span><span class="yt-dot"></span><span>${(p.viewCount||0).toLocaleString('en-IN')} views</span><span class="yt-dot"></span><span> ${(p.likeCount||0).toLocaleString('en-IN')}</span></div>
+        <div class="yt-sub"><span>@${escHtml(p.takerUsername||p.takerName||'creator')}</span><span class="yt-dot"></span><span>${(p.viewCount||0).toLocaleString('en-IN')} views</span><span class="yt-dot"></span><span>${_relTime(p)}</span></div>
       </div>
     </div>
   </div>`;
@@ -3581,7 +3581,7 @@ function openDareDetail(dareId){
     ? `<img src="${thumb}" alt="" style="width:100%;height:100%;object-fit:cover;display:block;"/>`
     : `<div class="dd-hero-bg" style="background:linear-gradient(135deg,${color}22,${color}55);"><span class="mi" style="color:${color};font-size:72px;">${icon}</span></div>`;
   document.getElementById('ddHero').innerHTML = heroInner +
-    `<span class="dd-bounty-badge">Rs.${reward.toLocaleString('en-IN')}</span>` + expiryBadge;
+    `<span class="dd-bounty-badge">$${reward.toLocaleString('en-IN')}</span>` + expiryBadge;
 
   // Tags live below description+rules (col 2): always blue, click = search that tag
   document.getElementById('ddTags').innerHTML = (d.tags?.length ? d.tags : [cat])
@@ -5166,7 +5166,7 @@ function _shortsRowHtml(shorts) {
       <div class="short-card" onclick="openShorts('${p.id}')">
         <div class="short-thumb">
           ${t ? `<img src="${t}" alt="" loading="lazy" onerror="this.style.display='none'"/>` : `<div class="yt-thumb-bg"><span class="mi">bolt</span></div>`}
-          <div class="short-bounty-tag">Rs.${(p.dareBounty||0).toLocaleString('en-IN')}</div>
+          <div class="short-bounty-tag">$${(p.dareBounty||0).toLocaleString('en-IN')}</div>
         </div>
         <div class="short-cap">${escHtml(_cap)}</div>
         <div class="short-meta">${(p.viewCount||0).toLocaleString('en-IN')} views</div>
