@@ -943,38 +943,16 @@ function renderAcceptedPage() {
     return;
   }
 
-  const statusMap   = {pending:'status-active',submitted:'status-submitted',approved:'status-approved'};
-  const statusLabel = {pending:'Proof Pending',submitted:'Under Review',approved:'Approved'};
-
-  feed.innerHTML = `<div class="dare-list">${acceptedDares.map(a => {
-    const cat   = a.cat || 'fitness';
-    const color = CAT_C[cat] || '#FF2D4A';
-    const icon  = CAT_I[cat] || 'bolt';
-    let btn = '';
-    if (a.proofStatus === 'pending') {
-      btn = `<button class="btn-proof" style="width:auto;padding:9px 18px;border-radius:50px;" onclick="openProof('${a.dareId}')"><span class="mi">video_call</span>Submit Proof</button>`;
-    } else if (a.proofStatus === 'submitted') {
-      btn = `<button class="btn-proof-done" style="width:auto;padding:8px 16px;border-radius:50px;"><span class="mi">hourglass_empty</span>Under Review</button>`;
-    } else if (a.proofStatus === 'approved') {
-      btn = `<button class="btn-proof-done" style="width:auto;padding:8px 16px;border-radius:50px;"><span class="mi">check_circle</span>Rs.${(a.bounty||0).toLocaleString('en-IN')} Won!</button>`;
-    }
-    return `
-    <div class="dare-list-card">
-      <div class="dare-list-thumb" style="background:linear-gradient(135deg,${color}22,${color}55);">
-        <span class="mi" style="color:${color};font-size:40px;">${icon}</span>
-      </div>
-      <div class="dare-list-body">
-        <div>
-          <span class="status-badge ${statusMap[a.proofStatus]}" style="margin-bottom:8px;display:inline-block;">${statusLabel[a.proofStatus]}</span>
-          <div class="dare-list-title">${a.dareTitle||'—'}</div>
-          <div style="font-size:12px;color:var(--t3);margin-bottom:8px;">Accepted: ${a.date||''} ${a.proofFilename ? '• '+a.proofFilename : ''}</div>
-        </div>
-        <div class="dare-list-bottom">
-          <span class="dare-list-bounty">Rs.${(a.bounty||0).toLocaleString('en-IN')}</span>
-          ${btn}
-        </div>
-      </div>
-    </div>`;
+  feed.innerHTML = `<div class="active-dare-grid">${acceptedDares.map(a => {
+    const d = (dares||[]).find(x => x.id === a.dareId) || {
+      id: a.dareId, caption: a.dareTitle, cat: a.cat,
+      bounty: a.bounty, rewardAmount: a.bounty,
+      thumbnailURL: a.thumbnailURL || a.dareThumbnailURL || '',
+      creator: a.creator || a.posterName || '—',
+      creatorPhotoURL: a.creatorPhotoURL || a.posterPhotoURL || '',
+      date: a.acceptedDate || a.date
+    };
+    return _activeDareCard(d);
   }).join('')}</div>`;
 }
 
@@ -3173,7 +3151,7 @@ function _mixedVideoFeedHtml(arr, emptyMsg) {
   const longs  = (arr||[]).filter(p => !_isShortVideo(p));
   const shorts = (arr||[]).filter(p =>  _isShortVideo(p));
   let html = '';
-  if (longs.length)  html += `<div class="yt-grid">${longs.map(p=>_explorerVideoCard(p)).join('')}</div>`;
+  if (longs.length)  html += `<div class="feed-longs">${longs.map(_longCardHtml).join('')}</div>`;
   if (shorts.length) html += _shortsRowHtml(shorts);
   return html || `<div class="exp-empty">${emptyMsg||'Nothing here yet'}</div>`;
 }
@@ -3315,11 +3293,8 @@ function _renderRelatedVideos(currentProof) {
   const shorts=related.filter(p=>_isShortVideo(p)).slice(0,10);
   const longs =related.filter(p=>!_isShortVideo(p)).slice(0,8);
   if(!shorts.length&&!longs.length){el.innerHTML='<div style="color:var(--t3);font-size:13px;">No related videos yet</div>';return;}
-  let html=longs.map(_vdRelLongCard).join('');
-  if(shorts.length){
-    html+=`<div class="dd-rel-shortsrow-label"><span class="mi">bolt</span> Shorts</div>
-      <div class="dd-rel-shortsrow">${shorts.map(_vdRelShortCard).join('')}</div>`;
-  }
+  let html = longs.length ? `<div class="feed-longs">${longs.map(_longCardHtml).join('')}</div>` : '';
+  if(shorts.length){ html += _shortsRowHtml(shorts); }
   el.innerHTML=html;
 }
 
@@ -3343,7 +3318,7 @@ async function _renderVideoDetail(p) {
   document.getElementById('vdCreatorAv').innerHTML = _avHtml(_dare?.creatorPhotoURL || p.posterPhotoURL, creatorName);
   document.getElementById('vdCreatorName').textContent = '@'+creatorUser;
   document.getElementById('vdTakerName').textContent = '@'+takerUser;
-  document.getElementById('vdBounty').textContent  = `Rs. ${(p.dareBounty||0).toLocaleString('en-IN')} bounty won`;
+  document.getElementById('vdBounty').textContent  = `$${(p.dareBounty||0).toLocaleString('en-IN')} bounty won`;
   // Follow the video's taker (hidden on your own video)
   const fb=document.getElementById('vdFollowBtn');
   if(fb){ fb.style.display=''; fb.onclick=function(e){ e.stopPropagation(); openCollabModal(); }; } // opens the box with both ids + per-id follow
@@ -5143,7 +5118,7 @@ function _longCardHtml(p) {
       <div class="yt-thumb">
         ${t ? `<img src="${t}" alt="" loading="lazy" onerror="this.style.display='none'"/>` : `<div class="yt-thumb-bg"><span class="mi">bolt</span></div>`}
         ${dur?`<div class="yt-dur">${dur}</div>`:''}
-        <div class="yt-rs">Rs.${(p.dareBounty||0).toLocaleString('en-IN')}</div>
+        <div class="yt-bounty">$${(p.dareBounty||0).toLocaleString('en-IN')}</div>
       </div>
       <div class="yt-info">
         <div class="yt-av">${_avHtml(p.takerPhotoURL, p.takerName)}</div>

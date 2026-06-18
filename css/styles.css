@@ -2090,6 +2090,11 @@ textarea.f-input{resize:vertical;min-height:84px;}
 
 /* Related-dare cards (Col 3) — 16:9 thumb + caption + meta + bounty */
 .dd-related-grid{ display:flex; flex-direction:column; gap:0; }
+/* Related sidebar now reuses home cards (.feed-longs + .shorts-row) — keep them
+   single-column and inside the 360px rail (no negative bleed, no min-320 grid) */
+#vdRelated .feed-longs{ display:flex !important; flex-direction:column !important; gap:18px !important; margin:0 !important; grid-template-columns:none !important; }
+#vdRelated .feed-longs .yt-thumb{ border-radius:12px !important; }
+#vdRelated .shorts-home-sec{ margin:18px 0 0; }
 .dd-rel-card{ cursor:pointer; margin-bottom:16px; }
 .dd-rel-thumb{ position:relative; width:100%; aspect-ratio:16/9; border-radius:10px; overflow:hidden; background:#1f1f1f; }
 /* Related column "Shorts" horizontal-scroll row (like the home feed) */
