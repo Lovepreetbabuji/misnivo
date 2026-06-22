@@ -543,6 +543,7 @@ async function logout() {
 // ════════════════════════════
 function goPage(pg) {
   _searchReturn = null;
+  try{ _pvStop(); }catch(e){}
   if (typeof _closeDetailOverlays === 'function') _closeDetailOverlays();
   document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
   const el = document.getElementById('page' + pg.charAt(0).toUpperCase() + pg.slice(1));
@@ -3538,6 +3539,7 @@ function closeVideoDetail() {
 let _ddCurrentId = null;
 
 function openDareDetail(dareId){
+  try{ _pvStop(); }catch(e){}
   const d = dares.find(x=>x.id===dareId);
   if (!d) { showToast('Dare not found'); return; }
   if (typeof _enterView === 'function') _enterView('dare', dareId);   // give it a URL + pause/close current
@@ -4108,6 +4110,7 @@ async function loadComments(proofId) {
 }
 
 async function openVideoDetail(proofId) {
+  try{ _pvStop(); }catch(e){}
   const p=homeProofs.find(x=>x.id===proofId)||allProofs.find(x=>x.id===proofId);
   if(!p||!p.videoURL){showToast('Video not available');return;}
   if (typeof _enterView === 'function') _enterView('watch', proofId);   // URL + pause/close current
@@ -4297,6 +4300,7 @@ let shortsCommentsOpen = false;
 let shortsCaptionExpanded = false;
 
 function openShorts(proofId) {
+  try{ _pvStop(); }catch(e){}
   if (typeof _enterView === 'function') _enterView('shorts', proofId);   // URL + pause/close current
   const pool = (typeof allProofs !== 'undefined' && allProofs.length) ? allProofs : homeProofs;
   shortsFeed = (pool || []).filter(p => p.videoURL && _isShortVideo(p));
@@ -5127,7 +5131,7 @@ function _longCardHtml(p) {
   const dur = p.videoDuration ? (p.videoDuration>=60?Math.floor(p.videoDuration/60)+':'+String(p.videoDuration%60).padStart(2,'0'):'0:'+String(p.videoDuration).padStart(2,'0')) : '';
   const t = vidThumb(p, 640);
   return `
-    <div class="yt-card" onclick="openVideoDetail('${p.id}')">
+    <div class="yt-card" onclick="openVideoDetail('${p.id}')" data-vurl="${p.videoURL||''}" data-dur="${p.videoDuration||0}">
       <div class="yt-thumb">
         ${t ? `<img src="${t}" alt="" loading="lazy" onerror="this.style.display='none'"/>` : `<div class="yt-thumb-bg"><span class="mi">bolt</span></div>`}
         ${dur?`<div class="yt-dur">${dur}</div>`:''}
@@ -5438,3 +5442,123 @@ function _setProofThumbPreview(url) {
   const row = document.getElementById('fpCapturedRow');
   if (row) row.style.display = 'flex';
 }
+
+// ════════════════════════════════════════════════════════════════════
+//  VIDEO PREVIEW — YouTube-style hover (desktop) + scroll autoplay (mobile)
+//  Applies to long-video cards (.feed-longs .yt-card[data-vurl]).
+// ════════════════════════════════════════════════════════════════════
+let _pvVideo = null, _pvTimer = null, _pvCard = null, _pvSoundOn = false;
+const _pvIsTouch = () => window.matchMedia('(hover:none),(pointer:coarse)').matches || window.innerWidth <= 768;
+
+// Sample points cut across the clip (mimics YouTube's snippet preview)
+function _pvSamples(D){
+  const n = D<=20 ? 3 : (D<=60 ? 4 : 5);
+  const a=[]; for(let i=0;i<n;i++) a.push(Math.max(0, D*((i+0.5)/n))); return a;
+}
+
+function _pvStop(){
+  if (_pvTimer){ clearInterval(_pvTimer); _pvTimer=null; }
+  if (_pvVideo){
+    try{ _pvVideo.pause(); }catch(e){}
+    const th=_pvVideo.closest('.yt-thumb'); if(th) th.classList.remove('playing');
+    const vb=th && th.querySelector('.yt-vol-btn'); if(vb) vb.remove();
+    _pvVideo.remove(); _pvVideo=null;
+  }
+  _pvCard=null;
+}
+
+// sampled=true → desktop hover snippet hop; sampled=false → mobile full play (looping)
+function _pvPlay(card, sampled){
+  const vurl=card.getAttribute('data-vurl'); if(!vurl) return;
+  if (_pvCard===card) return;
+  _pvStop();
+  _pvCard=card;
+  const thumb=card.querySelector('.yt-thumb'); if(!thumb){ _pvCard=null; return; }
+  const v=document.createElement('video');
+  v.src=vurl; v.muted=!( !sampled && _pvSoundOn ); v.playsInline=true;
+  v.setAttribute('playsinline',''); v.preload='auto'; v.className='yt-preview-vid';
+  if(!sampled) v.loop=true;
+  thumb.appendChild(v); _pvVideo=v; thumb.classList.add('playing');
+
+  if(!sampled){
+    // mobile: full play + a volume toggle (video always plays; tap = sound on/off)
+    const vb=document.createElement('button');
+    vb.className='yt-vol-btn'; vb.innerHTML=`<span class="mi">${_pvSoundOn?'volume_up':'volume_off'}</span>`;
+    vb.onclick=(e)=>{ e.stopPropagation(); _pvSoundOn=!_pvSoundOn; if(_pvVideo) _pvVideo.muted=!_pvSoundOn;
+      vb.innerHTML=`<span class="mi">${_pvSoundOn?'volume_up':'volume_off'}</span>`; };
+    thumb.appendChild(vb);
+    v.play().catch(()=>{});
+    return;
+  }
+
+  // desktop hover: hop across sample points
+  const fallbackDur=parseFloat(card.getAttribute('data-dur'))||0;
+  let samples=[], si=0;
+  const begin=()=>{
+    const D=(isFinite(v.duration)&&v.duration>0)?v.duration:(fallbackDur||10);
+    samples=_pvSamples(D); si=0;
+    try{ v.currentTime=samples[0]; }catch(e){}
+    v.play().catch(()=>{});
+    _pvTimer=setInterval(()=>{
+      if(!_pvVideo) return;
+      si=(si+1)%samples.length;
+      try{ v.currentTime=samples[si]; }catch(e){}
+      v.play().catch(()=>{});
+    }, 1400);
+  };
+  v.addEventListener('loadedmetadata', begin, { once:true });
+  v.addEventListener('error', _pvStop, { once:true });
+}
+
+// ── Desktop: hover to preview ──
+function _pvBindHover(){
+  document.addEventListener('mouseover', (e)=>{
+    if(_pvIsTouch()) return;
+    const card=e.target.closest('.feed-longs .yt-card'); if(!card) return;
+    if(card!==_pvCard) _pvPlay(card, true);
+  });
+  document.addEventListener('mouseout', (e)=>{
+    if(_pvIsTouch()) return;
+    const card=e.target.closest('.feed-longs .yt-card'); if(!card) return;
+    const to=e.relatedTarget;
+    if(!to || !card.contains(to)) _pvStop();
+  });
+}
+
+// ── Mobile: stop scrolling 3s on a centered card → it plays ──
+let _pvScrollTO=null;
+function _pvPlayCentered(){
+  if(!_pvIsTouch()) return;
+  const home=document.getElementById('pageHome');
+  // run on any page that shows long cards
+  const cards=[...document.querySelectorAll('.feed-longs .yt-card[data-vurl]')].filter(c=>c.getAttribute('data-vurl'));
+  if(!cards.length) return;
+  const cy=window.innerHeight/2; let best=null, bestD=1e9;
+  for(const c of cards){
+    const r=c.getBoundingClientRect();
+    if(r.bottom<80 || r.top>window.innerHeight-80) continue;
+    const d=Math.abs((r.top+r.height/2)-cy);
+    if(d<bestD){ bestD=d; best=c; }
+  }
+  if(!best) return;
+  // only if reasonably centered (within 30% of viewport height)
+  if(bestD > window.innerHeight*0.32){ return; }
+  if(best!==_pvCard) _pvPlay(best, false);
+}
+function _pvBindScroll(){
+  const onScroll=()=>{
+    if(!_pvIsTouch()) return;
+    if(_pvScrollTO) clearTimeout(_pvScrollTO);
+    _pvScrollTO=setTimeout(_pvPlayCentered, 3000);
+  };
+  window.addEventListener('scroll', onScroll, { passive:true });
+  const main=document.querySelector('.main'); if(main) main.addEventListener('scroll', onScroll, { passive:true });
+  // also try once shortly after load / page change
+  setTimeout(()=>{ if(_pvIsTouch()) _pvPlayCentered(); }, 3200);
+}
+
+// stop any preview when opening a real detail view
+function _pvStopOnNav(){ _pvStop(); }
+
+_pvBindHover();
+_pvBindScroll();
