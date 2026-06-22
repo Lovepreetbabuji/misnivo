@@ -600,22 +600,35 @@ function _activeDareCard(d){
     : `<div class="adc-thumb-bg" style="background:linear-gradient(135deg,${color}22,${color}55);"><span class="mi" style="color:${color};">${icon}</span></div>`;
   const cAv = _avHtml(d.creatorPhotoURL || (isMine?(user&&user.picture):''), d.creator);
   const safe = (''+title).replace(/[\\'"<>]/g,'');
-  const action = isMine
-    ? `<button class="adc-act" onclick="event.stopPropagation();openEditDare('${d.id}')" title="Edit"><span class="mi">edit</span></button>`
-    : `<button class="adc-act" onclick="event.stopPropagation();openReportModal('dare','${d.id}','${safe}')" title="Report"><span class="mi">flag</span></button>`;
+  const uname = (d.creatorUsername||d.creator||'creator');
   const pinned = (typeof pinnedDares!=='undefined' && pinnedDares.includes(d.id))
     ? `<div class="adc-pin"><span class="mi">push_pin</span></div>` : '';
+  const menuItem = isMine
+    ? `<button onclick="event.stopPropagation();_closeAdcMenus();openEditDare('${d.id}')"><span class="mi">edit</span>Edit</button>`
+    : `<button onclick="event.stopPropagation();_closeAdcMenus();openReportModal('dare','${d.id}','${safe}')"><span class="mi">flag</span>Report</button>`;
   return `<div class="active-dare-card" onclick="openDareDetail('${d.id}')">
     <div class="adc-thumb">${inner}${pinned}${expiry}<span class="adc-bounty">$${reward.toLocaleString('en-IN')}</span></div>
-    <div class="adc-cap">${escHtml(title)}</div>
-    <div class="adc-row">
-      <div class="adc-av">${cAv}</div>
-      <div class="adc-info"><div class="adc-creator">${escHtml(d.creator||'—')}</div><div class="adc-ago">${_relTimeStr(d.date)}</div></div>
-      <span class="adc-accepted" title="Accepted users"><span class="mi">group</span>${accepted}</span>
-      ${action}
+    <div class="yt-info">
+      <div class="yt-av">${cAv}</div>
+      <div class="yt-meta">
+        <div class="yt-title">${escHtml(title)}</div>
+        <div class="yt-sub"><span>@${escHtml(uname)}</span><span class="yt-dot"></span><span>${accepted} accepted</span><span class="yt-dot"></span><span>${_relTimeStr(d.date)}</span></div>
+      </div>
+      <div class="adc-menu-wrap">
+        <button class="adc-dots" onclick="event.stopPropagation();_toggleAdcMenu(this)" title="More"><span class="mi">more_vert</span></button>
+        <div class="adc-menu">${menuItem}</div>
+      </div>
     </div>
   </div>`;
 }
+function _toggleAdcMenu(btn){
+  const wrap = btn.parentElement;
+  const wasOpen = wrap.classList.contains('open');
+  _closeAdcMenus();
+  if (!wasOpen) wrap.classList.add('open');
+}
+function _closeAdcMenus(){ document.querySelectorAll('.adc-menu-wrap.open').forEach(w=>w.classList.remove('open')); }
+document.addEventListener('click', _closeAdcMenus);
 
 // ─── MAIN HOME RENDER ────────────────────────────────────
 async function renderHome(cat) {
