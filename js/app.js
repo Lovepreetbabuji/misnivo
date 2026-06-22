@@ -759,7 +759,7 @@ function _renderShortsSection(shorts) {
     const icon  = CAT_I[cat] || 'bolt';
     const dur   = p.videoDuration ? p.videoDuration + 's' : '';
     return `
-    <div class="short-card" onclick="openShorts('${p.id}')">
+    <div class="short-card" onclick="openShorts('${p.id}')" data-vurl="${p.videoURL||''}" data-dur="${p.videoDuration||0}">
       <div class="short-thumb">
         ${vidThumb(p,360)
           ? `<img src="${vidThumb(p,360)}" alt="" loading="lazy" style="width:100%;height:100%;object-fit:cover;display:block;"/>`
@@ -5155,7 +5155,7 @@ function _shortsRowHtml(shorts) {
       const _w = (p.dareTitle||'Short').trim().split(/\s+/);
       const _cap = _w.length > 5 ? _w.slice(0,5).join(' ') + '...' : _w.join(' ');
       return `
-      <div class="short-card" onclick="openShorts('${p.id}')">
+      <div class="short-card" onclick="openShorts('${p.id}')" data-vurl="${p.videoURL||''}" data-dur="${p.videoDuration||0}">
         <div class="short-thumb">
           ${t ? `<img src="${t}" alt="" loading="lazy" onerror="this.style.display='none'"/>` : `<div class="yt-thumb-bg"><span class="mi">bolt</span></div>`}
           <div class="short-bounty-tag">$${(p.dareBounty||0).toLocaleString('en-IN')}</div>
@@ -5460,66 +5460,83 @@ function _pvStop(){
   if (_pvTimer){ clearInterval(_pvTimer); _pvTimer=null; }
   if (_pvVideo){
     try{ _pvVideo.pause(); }catch(e){}
-    const th=_pvVideo.closest('.yt-thumb'); if(th) th.classList.remove('playing');
-    const vb=th && th.querySelector('.yt-vol-btn'); if(vb) vb.remove();
+    const th=_pvVideo.closest('.yt-thumb, .short-thumb');
+    if(th){ th.classList.remove('playing'); const c=th.querySelector('.yt-pv-ctrls'); if(c) c.remove(); }
     _pvVideo.remove(); _pvVideo=null;
   }
   _pvCard=null;
 }
 
-// sampled=true → desktop hover snippet hop; sampled=false → mobile full play (looping)
-function _pvPlay(card, sampled){
+// volume (top-right) + pause (below) controls for the full-play preview
+function _pvAddControls(thumb){
+  const wrap=document.createElement('div'); wrap.className='yt-pv-ctrls';
+  const vol=document.createElement('button'); vol.className='yt-pv-btn';
+  vol.innerHTML=`<span class="mi">${_pvSoundOn?'volume_up':'volume_off'}</span>`;
+  vol.onclick=(e)=>{ e.stopPropagation(); e.preventDefault();
+    _pvSoundOn=!_pvSoundOn; if(_pvVideo) _pvVideo.muted=!_pvSoundOn;
+    vol.innerHTML=`<span class="mi">${_pvSoundOn?'volume_up':'volume_off'}</span>`; };
+  const pause=document.createElement('button'); pause.className='yt-pv-btn';
+  pause.innerHTML=`<span class="mi">pause</span>`;
+  pause.onclick=(e)=>{ e.stopPropagation(); e.preventDefault();
+    if(!_pvVideo) return;
+    if(_pvVideo.paused){ _pvVideo.play().catch(()=>{}); pause.innerHTML=`<span class="mi">pause</span>`; }
+    else { _pvVideo.pause(); pause.innerHTML=`<span class="mi">play_arrow</span>`; } };
+  wrap.appendChild(vol); wrap.appendChild(pause); thumb.appendChild(wrap);
+}
+
+// mode 'long' → play normally (no cuts), muted, looping, + volume/pause buttons
+// mode 'short' → cut-cut sampled snippet preview (always muted, no controls)
+function _pvPlay(card, mode){
   const vurl=card.getAttribute('data-vurl'); if(!vurl) return;
   if (_pvCard===card) return;
   _pvStop();
   _pvCard=card;
-  const thumb=card.querySelector('.yt-thumb'); if(!thumb){ _pvCard=null; return; }
+  const thumb=card.querySelector('.yt-thumb, .short-thumb'); if(!thumb){ _pvCard=null; return; }
   const v=document.createElement('video');
-  v.src=vurl; v.muted=!( !sampled && _pvSoundOn ); v.playsInline=true;
-  v.setAttribute('playsinline',''); v.preload='auto'; v.className='yt-preview-vid';
-  if(!sampled) v.loop=true;
+  v.src=vurl; v.playsInline=true; v.setAttribute('playsinline','');
+  v.preload='auto'; v.className='yt-preview-vid';
   thumb.appendChild(v); _pvVideo=v; thumb.classList.add('playing');
 
-  if(!sampled){
-    // mobile: full play + a volume toggle (video always plays; tap = sound on/off)
-    const vb=document.createElement('button');
-    vb.className='yt-vol-btn'; vb.innerHTML=`<span class="mi">${_pvSoundOn?'volume_up':'volume_off'}</span>`;
-    vb.onclick=(e)=>{ e.stopPropagation(); _pvSoundOn=!_pvSoundOn; if(_pvVideo) _pvVideo.muted=!_pvSoundOn;
-      vb.innerHTML=`<span class="mi">${_pvSoundOn?'volume_up':'volume_off'}</span>`; };
-    thumb.appendChild(vb);
-    v.play().catch(()=>{});
+  if(mode==='short'){
+    // SHORTS: cut-cut snippet hop across the clip
+    v.muted=true;
+    const fallbackDur=parseFloat(card.getAttribute('data-dur'))||0;
+    let samples=[], si=0;
+    const begin=()=>{
+      const D=(isFinite(v.duration)&&v.duration>0)?v.duration:(fallbackDur||10);
+      samples=_pvSamples(D); si=0;
+      try{ v.currentTime=samples[0]; }catch(e){}
+      v.play().catch(()=>{});
+      _pvTimer=setInterval(()=>{
+        if(!_pvVideo) return;
+        si=(si+1)%samples.length;
+        try{ v.currentTime=samples[si]; }catch(e){}
+        v.play().catch(()=>{});
+      }, 1400);
+    };
+    v.addEventListener('loadedmetadata', begin, { once:true });
+    v.addEventListener('error', _pvStop, { once:true });
     return;
   }
 
-  // desktop hover: hop across sample points
-  const fallbackDur=parseFloat(card.getAttribute('data-dur'))||0;
-  let samples=[], si=0;
-  const begin=()=>{
-    const D=(isFinite(v.duration)&&v.duration>0)?v.duration:(fallbackDur||10);
-    samples=_pvSamples(D); si=0;
-    try{ v.currentTime=samples[0]; }catch(e){}
-    v.play().catch(()=>{});
-    _pvTimer=setInterval(()=>{
-      if(!_pvVideo) return;
-      si=(si+1)%samples.length;
-      try{ v.currentTime=samples[si]; }catch(e){}
-      v.play().catch(()=>{});
-    }, 1400);
-  };
-  v.addEventListener('loadedmetadata', begin, { once:true });
-  v.addEventListener('error', _pvStop, { once:true });
+  // LONG: normal continuous playback, muted unless sound toggled, looping + controls
+  v.loop=true; v.muted=!_pvSoundOn;
+  _pvAddControls(thumb);
+  v.play().catch(()=>{});
 }
 
-// ── Desktop: hover to preview ──
+// ── Desktop: hover to preview (long = normal play, short = cut-cut) ──
 function _pvBindHover(){
   document.addEventListener('mouseover', (e)=>{
     if(_pvIsTouch()) return;
-    const card=e.target.closest('.feed-longs .yt-card'); if(!card) return;
-    if(card!==_pvCard) _pvPlay(card, true);
+    const longC=e.target.closest('.feed-longs .yt-card');
+    const shortC=e.target.closest('.short-card');
+    const card=longC||shortC; if(!card) return;
+    if(card!==_pvCard) _pvPlay(card, longC ? 'long' : 'short');
   });
   document.addEventListener('mouseout', (e)=>{
     if(_pvIsTouch()) return;
-    const card=e.target.closest('.feed-longs .yt-card'); if(!card) return;
+    const card=e.target.closest('.feed-longs .yt-card, .short-card'); if(!card) return;
     const to=e.relatedTarget;
     if(!to || !card.contains(to)) _pvStop();
   });
@@ -5543,18 +5560,18 @@ function _pvPlayCentered(){
   if(!best) return;
   // only if reasonably centered (within 30% of viewport height)
   if(bestD > window.innerHeight*0.32){ return; }
-  if(best!==_pvCard) _pvPlay(best, false);
+  if(best!==_pvCard) _pvPlay(best, 'long');
 }
 function _pvBindScroll(){
   const onScroll=()=>{
     if(!_pvIsTouch()) return;
     if(_pvScrollTO) clearTimeout(_pvScrollTO);
-    _pvScrollTO=setTimeout(_pvPlayCentered, 3000);
+    _pvScrollTO=setTimeout(_pvPlayCentered, 2000);
   };
   window.addEventListener('scroll', onScroll, { passive:true });
   const main=document.querySelector('.main'); if(main) main.addEventListener('scroll', onScroll, { passive:true });
   // also try once shortly after load / page change
-  setTimeout(()=>{ if(_pvIsTouch()) _pvPlayCentered(); }, 3200);
+  setTimeout(()=>{ if(_pvIsTouch()) _pvPlayCentered(); }, 2200);
 }
 
 // stop any preview when opening a real detail view
