@@ -3121,7 +3121,7 @@ html{scroll-behavior:smooth;}
 }
 .shorts-row::-webkit-scrollbar { display: none; }
 .short-card {
-  flex: 0 0 300px;               /* desktop: YouTube-size shorts (mobile overridden below) */
+  flex: 0 0 250px;               /* desktop: YouTube-size shorts (mobile overridden below) */
   cursor: pointer;
   background: transparent !important;
   border: none !important;
@@ -3132,7 +3132,7 @@ html{scroll-behavior:smooth;}
 .short-card:hover { transform: none !important; box-shadow: none !important; }
 .short-cap, .short-meta { padding: 0 2px; }   /* small breathing room so text isn't flush to edge */
 .short-thumb {
-  width: 300px;
+  width: 250px;
   height: auto;                  /* let aspect-ratio drive height (kill legacy height:276px) */
   aspect-ratio: 9/16;
   border-radius: 12px;
