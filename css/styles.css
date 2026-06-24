@@ -2092,6 +2092,9 @@ textarea.f-input{resize:vertical;min-height:84px;}
 #vdRelated .feed-longs{ display:flex !important; flex-direction:column !important; gap:18px !important; margin:0 !important; grid-template-columns:none !important; }
 #vdRelated .feed-longs .yt-thumb{ border-radius:12px !important; }
 #vdRelated .shorts-home-sec{ margin:18px 0 0; }
+/* Related-rail shorts: small YouTube-sidebar size (home shorts stay 200px) */
+#vdRelated .short-card{ flex:0 0 150px !important; }
+#vdRelated .short-thumb{ width:150px !important; }
 .dd-rel-card{ cursor:pointer; margin-bottom:16px; }
 .dd-rel-thumb{ position:relative; width:100%; aspect-ratio:16/9; border-radius:10px; overflow:hidden; background:#1f1f1f; }
 /* Related column "Shorts" horizontal-scroll row (like the home feed) */
