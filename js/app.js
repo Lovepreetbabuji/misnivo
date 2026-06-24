@@ -782,7 +782,6 @@ function _renderShortsSection(shorts) {
 function _renderHomeActiveDares() {
   const container = document.getElementById('homeActiveDares');
   if (!container) return;
-  if (!container) return;
 
   const active = (dares || []).filter(d => !d.completed).slice(0, 6);
 
@@ -5066,6 +5065,7 @@ function closeCollabModal() {
 // #7: Interleaved infinite feed — mixes long videos & shorts rows in random chunks
 let _feedLong = [], _feedShorts = [], _feedLongIdx = 0, _feedScrollBound = false, _shortsRowShown = false;
 function _renderInterleavedFeed(longVids, shorts) {
+  try{ _pvStop(); }catch(e){}   // kill any running hover/scroll preview before wiping the feed
   _feedLong = longVids || [];
   _feedShorts = shorts || [];
   _feedLongIdx = 0;
@@ -5086,11 +5086,9 @@ function _renderInterleavedFeed(longVids, shorts) {
     return;
   }
   _appendFeedChunk(); _appendFeedChunk(); // initial chunks
-  // Infinite scroll: append more when near bottom
+  // Infinite scroll: append more when near bottom (window is the scroller — .main has no overflow)
   if (!_feedScrollBound) {
     _feedScrollBound = true;
-    const main = document.querySelector('.main') || window;
-    (main===window?window:main).addEventListener('scroll', _feedMaybeLoadMore, { passive:true });
     window.addEventListener('scroll', _feedMaybeLoadMore, { passive:true });
   }
 }
@@ -5538,7 +5536,8 @@ function _pvBindHover(){
     if(_pvIsTouch()) return;
     const card=e.target.closest('.feed-longs .yt-card, .short-card'); if(!card) return;
     const to=e.relatedTarget;
-    if(!to || !card.contains(to)) _pvStop();
+    // only stop if we're truly leaving the card that's actually previewing
+    if(card===_pvCard && (!to || !card.contains(to))) _pvStop();
   });
 }
 
@@ -5546,10 +5545,9 @@ function _pvBindHover(){
 let _pvScrollTO=null;
 function _pvPlayCentered(){
   if(!_pvIsTouch()) return;
-  const home=document.getElementById('pageHome');
   // run on any page that shows long cards
   const cards=[...document.querySelectorAll('.feed-longs .yt-card[data-vurl]')].filter(c=>c.getAttribute('data-vurl'));
-  if(!cards.length) return;
+  if(!cards.length){ _pvStop(); return; }
   const cy=window.innerHeight/2; let best=null, bestD=1e9;
   for(const c of cards){
     const r=c.getBoundingClientRect();
@@ -5557,9 +5555,8 @@ function _pvPlayCentered(){
     const d=Math.abs((r.top+r.height/2)-cy);
     if(d<bestD){ bestD=d; best=c; }
   }
-  if(!best) return;
-  // only if reasonably centered (within 30% of viewport height)
-  if(bestD > window.innerHeight*0.32){ return; }
+  // nothing reasonably centered (within 32% of viewport) → stop any off-screen preview
+  if(!best || bestD > window.innerHeight*0.32){ _pvStop(); return; }
   if(best!==_pvCard) _pvPlay(best, 'long');
 }
 function _pvBindScroll(){
