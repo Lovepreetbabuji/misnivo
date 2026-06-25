@@ -2166,104 +2166,94 @@ function renderProfile() {
 
   document.getElementById('walletBal').textContent  = 'Rs. ' + wallet.balance.toLocaleString('en-IN');
 
-  // My Dares — sorted latest first
-  const md = document.getElementById('tMyDares');
-  const myPostedSorted = [...myPosted].sort((a,b)=>{
-    const ap = pinnedDares.includes(a.id) ? 1 : 0;
-    const bp = pinnedDares.includes(b.id) ? 1 : 0;
-    if (bp !== ap) return bp - ap;  // pinned first
-    const ta = a.createdAt?.toDate?.()?.getTime() || 0;
-    const tb = b.createdAt?.toDate?.()?.getTime() || 0;
-    return tb - ta;
-  });
-  md.innerHTML = !myPostedSorted.length
-    ? `<div class="empty" style="padding:32px;"><span class="mi">assignment</span><div class="empty-title" style="font-size:18px;">No Dares Posted</div><p class="empty-desc" style="margin-bottom:16px;">Post your first dare!</p><button class="btn-empty" onclick="openPost()"><span class="mi">add_circle</span>Post a Dare</button></div>`
-    : myPostedSorted.map(d => {
-        const title   = d.caption || d.title || 'Untitled';
-        const reward  = d.rewardAmount ?? d.bounty ?? 0;
-        const pending = d.proofCount || 0;
-        const isPinned = pinnedDares.includes(d.id);
-        const now = new Date();
-        let expiryInfo = '';
-        if (d.expiresAt) {
-          const exp = d.expiresAt.toDate ? d.expiresAt.toDate() : new Date(d.expiresAt);
-          const hLeft = Math.max(0, Math.round((exp - now)/3600000));
-          expiryInfo = `<span style="font-size:10px;color:${hLeft<24?'var(--red)':'var(--orange)'};font-weight:600;margin-left:6px;">${hLeft<24?hLeft+'h':Math.floor(hLeft/24)+'d'} left</span>`;
-        }
-        return `
-        <div class="dare-mini ${isPinned?'dare-pinned-mini':''}">
-          <div style="flex:1;min-width:0;">
-            <div class="dare-mini-title">${escHtml(title)}${isPinned?'<span class="pin-badge"></span>':''}${expiryInfo}</div>
-            <div class="dare-mini-meta">
-              <span><span class="mi">bolt</span>Rs.${reward.toLocaleString('en-IN')}</span>
-              <span><span class="mi">group</span>${d.takers||0} ${d.takerSelectionMode==='creator_picks'?'applicants':'takers'}</span>
-              <span><span class="mi">video_call</span>${d.proofCount||0} proofs</span>
-              <span>${_relTimeStr(d.date)}</span>
-            </div>
-          </div>
-          <div class="dare-mini-right">
-            ${d.completed
-              ? `<span class="status-badge status-approved">Completed</span>`
-              : `<span class="status-badge status-active">Active</span>`}
-            <div style="display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end;margin-top:6px;">
-              ${d.takerSelectionMode==='creator_picks' ? `
-              <button class="btn-select-takers" onclick="openSelectTakersModal('${d.id}')">
-                <span class="mi">how_to_reg</span>Select Takers
-                ${(d.takers||0)>0?`<span class="select-badge">${d.takers}</span>`:''}
-              </button>` : ''}
-              <button class="btn-review" onclick="openReviewModal('${d.id}')">
-                <span class="mi">rate_review</span>Proofs
-                ${pending>0?`<span class="review-badge">${pending}</span>`:''}
-              </button>
-              ${!d.completed ? `<button class="btn-dare-action" onclick="openEditDare('${d.id}')" title="Edit">
-                <span class="mi">edit</span>
-              </button>` : ''}
-              <button class="btn-dare-action ${isPinned?'btn-dare-pinned':''}"
-                onclick="${isPinned?`unpinDare('${d.id}')`:`pinDare('${d.id}')`}" title="${isPinned?'Unpin':'Pin'}">
-                <span class="mi">push_pin</span>
-              </button>
-              ${!d.completed ? `<button class="btn-dare-action btn-dare-delete" onclick="deleteDare('${d.id}')" title="Delete">
-                <span class="mi">delete</span>
-              </button>` : ''}
-            </div>
-          </div>
-        </div>`; }).join('');
-
-  // Accepted Dares — sorted latest first
-  const ad = document.getElementById('tAccepted');
-  const statusMap   = {pending:'status-active',submitted:'status-submitted',approved:'status-approved'};
-  const statusLabel = {pending:'Pending Proof',submitted:'Proof Submitted',approved:'Approved'};
-  const sortedAccepted = [...acceptedDares].sort((a,b)=>{
-    return (b.date||'').localeCompare(a.date||'');
-  });
-  ad.innerHTML = !sortedAccepted.length
-    ? `<div class="empty" style="padding:32px;"><span class="mi">sports_score</span><div class="empty-title" style="font-size:18px;">No Dares Accepted</div><p class="empty-desc" style="margin-bottom:16px;">Accept a dare from the feed!</p><button class="btn-empty" onclick="goPage('dares')"><span class="mi">arrow_back</span>Browse Dares</button></div>`
-    : sortedAccepted.map(a=>{
-      const appliedLabel = a.applicantStatus==='pending'
-        ? `<span class="status-badge" style="background:rgba(255,159,10,.12);color:var(--orange);border:1px solid rgba(255,159,10,.3);">Applied</span>`
-        : `<span class="status-badge ${statusMap[a.proofStatus]}">${statusLabel[a.proofStatus]}</span>`;
-      return `
-      <div class="dare-mini">
-        <div><div class="dare-mini-title">${a.dareTitle}</div>
-          <div class="dare-mini-meta">
-            <span><span class="mi">bolt</span>Rs.${(a.bounty||0).toLocaleString('en-IN')}</span>
-            ${a.proofFilename?`<span><span class="mi">video_file</span>${a.proofFilename}</span>`:''}
-            <span>${a.date}</span>
-          </div>
-        </div>
-        <div class="dare-mini-right">
-          ${appliedLabel}
-          ${a.proofStatus==='pending' && a.applicantStatus!=='pending'
-            ?`<button class="btn-mini-proof" onclick="openProof('${a.dareId}')"><span class="mi">video_call</span>Submit Proof</button>`:''
-          }
-        </div>
-      </div>`; }).join('');
-
-  // Stats + badges + socials + Videos tab
-  _renderProfileStats(myPosted);
-  _renderProfileBadges(myPosted);
+  // Tabs: Completed (your won videos) · My Dares · Accepted — all card-style + sub-filters
   _renderProfileSocials(user, 'profSocials');
   _renderProfileVideos();
+  _renderMyDares();
+  _renderAcceptedDares();
+}
+
+// ── Profile dare card (your posted dares) — thumbnail + 3-dot actions (top-left) ──
+function _profileDareCard(d){
+  const cat=d.tags?.[0]||d.cat||'fitness';
+  const title=d.caption||d.title||'Untitled Dare';
+  const reward=d.rewardAmount ?? d.bounty ?? 0;
+  const thumb=d.thumbnailURL||'';
+  const color=CAT_C[cat]||'#FF2D4A', icon=CAT_I[cat]||'bolt';
+  const inner=thumb?`<img src="${thumb}" loading="lazy"/>`:`<div class="adc-thumb-bg" style="background:linear-gradient(135deg,${color}22,${color}55);"><span class="mi" style="color:${color};">${icon}</span></div>`;
+  const isPinned=(typeof pinnedDares!=='undefined'&&pinnedDares.includes(d.id));
+  const proofs=d.proofCount||0;
+  const cAv=_avHtml(d.creatorPhotoURL||(user&&user.picture),d.creator||user?.name);
+  const statusPill=d.completed?'<span class="pdc-status done">Completed</span>':'<span class="pdc-status live">Active</span>';
+  const menu=`<div class="adc-menu pdc-menu">
+    <button onclick="event.stopPropagation();_closeAdcMenus();openReviewModal('${d.id}')"><span class="mi">rate_review</span> Proofs${proofs?` (${proofs})`:''}</button>
+    ${!d.completed?`<button onclick="event.stopPropagation();_closeAdcMenus();openEditDare('${d.id}')"><span class="mi">edit</span> Edit</button>`:''}
+    <button onclick="event.stopPropagation();_closeAdcMenus();${isPinned?`unpinDare('${d.id}')`:`pinDare('${d.id}')`}"><span class="mi">push_pin</span> ${isPinned?'Unpin':'Pin'}</button>
+    ${!d.completed?`<button onclick="event.stopPropagation();_closeAdcMenus();deleteDare('${d.id}')"><span class="mi">delete</span> Delete</button>`:''}</div>`;
+  return `<div class="active-dare-card" onclick="openDareDetail('${d.id}')">
+    <div class="adc-menu-wrap pdc-menu-wrap"><button class="adc-dots pdc-dots" onclick="event.stopPropagation();_toggleAdcMenu(this)"><span class="mi">more_vert</span></button>${menu}</div>
+    <div class="adc-thumb">${inner}
+      <span class="adc-bounty">$${reward.toLocaleString('en-IN')}</span>
+      ${statusPill}${proofs?`<span class="pdc-proofs"><span class="mi">video_call</span>${proofs}</span>`:''}
+    </div>
+    <div class="yt-info">
+      <div class="yt-av">${cAv}</div>
+      <div class="yt-meta"><div class="yt-title">${escHtml(title)}</div>
+        <div class="yt-sub"><span>${d.takers||0} ${d.takerSelectionMode==='creator_picks'?'applicants':'takers'}</span><span class="yt-dot"></span><span>${proofs} proofs</span><span class="yt-dot"></span><span>${_relTimeStr(d.date)}</span></div></div>
+    </div>
+  </div>`;
+}
+// ── Profile accepted card — thumbnail + status + submit-proof ──
+function _profileAcceptedCard(a){
+  const d=(dares||[]).find(x=>x.id===a.dareId)||{};
+  const title=a.dareTitle||d.caption||'Dare';
+  const reward=a.bounty ?? d.rewardAmount ?? d.bounty ?? 0;
+  const thumb=d.thumbnailURL||a.thumbnailURL||'';
+  const cat=d.tags?.[0]||d.cat||a.cat||'fitness'; const color=CAT_C[cat]||'#FF2D4A', icon=CAT_I[cat]||'bolt';
+  const inner=thumb?`<img src="${thumb}" loading="lazy"/>`:`<div class="adc-thumb-bg" style="background:linear-gradient(135deg,${color}22,${color}55);"><span class="mi" style="color:${color};">${icon}</span></div>`;
+  let badge, action='';
+  if(a.applicantStatus==='pending'){ badge='<span class="pdc-status applied">Applied</span>'; }
+  else if(a.proofStatus==='approved'){ badge='<span class="pdc-status done">Approved · Live</span>'; }
+  else if(a.proofStatus==='submitted'){ badge='<span class="pdc-status review">Under Review</span>'; }
+  else { badge='<span class="pdc-status live">To Submit</span>'; action=`<button class="pdc-submit" onclick="event.stopPropagation();openProof('${a.dareId}')"><span class="mi">video_call</span>Submit Proof</button>`; }
+  return `<div class="active-dare-card" onclick="openDareDetail('${a.dareId}')">
+    <div class="adc-thumb">${inner}<span class="adc-bounty">$${reward.toLocaleString('en-IN')}</span>${badge}</div>
+    <div class="yt-info">
+      <div class="yt-av">${_avHtml(d.creatorPhotoURL,d.creator||'—')}</div>
+      <div class="yt-meta"><div class="yt-title">${escHtml(title)}</div>
+        <div class="yt-sub"><span>${escHtml(d.creator||'—')}</span><span class="yt-dot"></span><span>${a.date||''}</span></div></div>
+    </div>
+    ${action?`<div class="pdc-action">${action}</div>`:''}
+  </div>`;
+}
+let _pMyFilter='all', _pAccFilter='all';
+function _setMyFilter(k){ _pMyFilter=k; _renderMyDares(); }
+function _setAccFilter(k){ _pAccFilter=k; _renderAcceptedDares(); }
+function _renderMyDares(){
+  const el=document.getElementById('tMyDares'); if(!el||!user) return;
+  let list=(dares||[]).filter(d=>d.creatorUid===user.uid);
+  list.sort((a,b)=>{ const ap=pinnedDares.includes(a.id)?1:0,bp=pinnedDares.includes(b.id)?1:0; if(bp!==ap)return bp-ap;
+    return (b.createdAt?.toDate?.()?.getTime()||0)-(a.createdAt?.toDate?.()?.getTime()||0); });
+  if(_pMyFilter==='live') list=list.filter(d=>!d.completed);
+  else if(_pMyFilter==='completed') list=list.filter(d=>d.completed);
+  const chips=[['all','All'],['live','Live'],['completed','Completed']]
+    .map(([k,l])=>`<button class="pfilter ${_pMyFilter===k?'active':''}" onclick="_setMyFilter('${k}')">${l}</button>`).join('');
+  const head=`<div class="pfilter-row">${chips}</div>`;
+  el.innerHTML = head + (list.length
+    ? `<div class="active-dare-grid">${list.map(_profileDareCard).join('')}</div>`
+    : `<div class="empty" style="padding:32px;"><span class="mi">assignment</span><div class="empty-title" style="font-size:18px;">No dares here</div><p class="empty-desc" style="margin-bottom:16px;">Post your first dare!</p><button class="btn-empty" onclick="openPost()"><span class="mi">add_circle</span>Post a Dare</button></div>`);
+}
+function _renderAcceptedDares(){
+  const el=document.getElementById('tAccepted'); if(!el) return;
+  const stOf=a=> a.applicantStatus==='pending'?'applied' : a.proofStatus==='approved'?'approved' : a.proofStatus==='submitted'?'review' : 'tosubmit';
+  let list=[...(acceptedDares||[])].sort((a,b)=>(b.date||'').localeCompare(a.date||''));
+  if(_pAccFilter!=='all') list=list.filter(a=>stOf(a)===_pAccFilter);
+  const chips=[['all','All'],['tosubmit','To Submit'],['review','Under Review'],['approved','Approved']]
+    .map(([k,l])=>`<button class="pfilter ${_pAccFilter===k?'active':''}" onclick="_setAccFilter('${k}')">${l}</button>`).join('');
+  const head=`<div class="pfilter-row">${chips}</div>`;
+  el.innerHTML = head + (list.length
+    ? `<div class="active-dare-grid">${list.map(_profileAcceptedCard).join('')}</div>`
+    : `<div class="empty" style="padding:32px;"><span class="mi">sports_score</span><div class="empty-title" style="font-size:18px;">Nothing here</div><p class="empty-desc" style="margin-bottom:16px;">Accept a dare from the feed!</p><button class="btn-empty" onclick="goPage('dares')"><span class="mi">arrow_back</span>Browse Dares</button></div>`);
 }
 
 // ── Profile: stats row (own profile) ──
