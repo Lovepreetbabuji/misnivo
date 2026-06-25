@@ -2321,6 +2321,118 @@ function _renderProfileVideos(){
   el.innerHTML = html;
 }
 
+// ════════════════════════════════════════════════════════════════════
+//  PUBLIC PROFILE — view any user (videos, dares, follow, share)
+// ════════════════════════════════════════════════════════════════════
+let _ppUid = null, _ppData = null;
+async function openPublicProfile(uid){
+  if (!uid) return;
+  if (user && uid === user.uid){ closePublicProfile(); goPage('profile'); return; }   // your own → own page
+  try{ _pvStop(); }catch(e){}
+  if (typeof _pauseBackgroundMedia==='function') _pauseBackgroundMedia();
+  _closeCurrentView();                                  // close any video/dare/shorts behind it
+  if (!_navBack){ try{ history.pushState({dm:'u',id:uid}, '', '/u/'+encodeURIComponent(uid)); }catch(e){} }
+  _ppUid = uid;
+  let u = null;
+  try{ const doc = await db.collection('users').doc(uid).get(); if (doc.exists) u = doc.data(); }catch(e){}
+  _ppData = u || {};
+  const name = u?.name || 'User';
+  document.getElementById('ppName').textContent   = name;
+  document.getElementById('ppHandle').textContent = '@' + (u?.username || 'user');
+  const bio = document.getElementById('ppBio');
+  if (bio){ bio.textContent = u?.bio || ''; bio.style.display = (u?.bio && u.bio.trim()) ? 'block' : 'none'; }
+  const pic = document.getElementById('ppPic');
+  if (pic){ pic.innerHTML = u?.picture ? `<img src="${u.picture}" alt="av"/>` : name[0].toUpperCase(); }
+  const ban = document.getElementById('ppBanner');
+  if (ban){ ban.style.background = u?.banner ? `url(${u.banner}) center/cover` : ''; }
+  // reset tabs to Videos
+  document.querySelectorAll('#pubProfOverlay .tab').forEach((t,i)=>t.classList.toggle('active', i===0));
+  const pv=document.getElementById('ppVideos'), pd=document.getElementById('ppDares');
+  if(pv) pv.style.display='block'; if(pd) pd.style.display='none';
+  _ppRenderFollowBtn(); _ppRenderStats(uid); _ppRenderContent(uid);
+  const ov = document.getElementById('pubProfOverlay');
+  ov.classList.add('open'); ov.scrollTop = 0;
+  document.body.style.overflow = 'hidden';
+}
+function closePublicProfile(){
+  const ov=document.getElementById('pubProfOverlay'); if(ov) ov.classList.remove('open');
+  document.body.style.overflow=''; _ppUid=null;
+}
+async function _ppRenderFollowBtn(){
+  const btn=document.getElementById('ppFollowBtn'); if(!btn) return;
+  if(!user){ btn.style.display='none'; return; }
+  btn.style.display='';
+  try{ const doc=await db.collection('follows').doc(user.uid+'_'+_ppUid+'_creator').get();
+    const f=doc.exists; btn.textContent=f?'Following':'Follow'; btn.classList.toggle('following',f);
+  }catch(e){}
+}
+async function _pubFollowToggle(){
+  if(!user||!_ppUid) return;
+  await toggleFollow(_ppUid,'creator');
+  _ppRenderFollowBtn(); _ppRenderStats(_ppUid);
+}
+async function _ppRenderStats(uid){
+  const el=document.getElementById('ppStats'); if(!el) return;
+  const their=(dares||[]).filter(d=>d.creatorUid===uid);
+  const posted=their.length, completed=their.filter(d=>d.completed).length;
+  const pool=(typeof allProofs!=='undefined'&&allProofs.length)?allProofs:homeProofs;
+  const videos=(pool||[]).filter(p=>p.takerId===uid).length;
+  const stat=(v,l,cb)=>`<div class="pstat"${cb?` onclick="${cb}" style="cursor:pointer"`:''}><div class="pstat-v">${v}</div><div class="pstat-l">${l}</div></div>`;
+  el.innerHTML=`<div class="pstat-grid">
+    ${stat(videos,'Videos')}${stat(posted,'Dares')}${stat(completed,'Completed')}
+    ${stat('<span id="ppFollowers">…</span>','Followers',`_ppFollowList('followers')`)}
+    ${stat('<span id="ppFollowing">…</span>','Following',`_ppFollowList('following')`)}</div>`;
+  _profileFollowCounts(uid).then(({followers,following})=>{
+    const a=document.getElementById('ppFollowers'); if(a)a.textContent=_fmtCount(followers);
+    const b=document.getElementById('ppFollowing'); if(b)b.textContent=_fmtCount(following);
+  });
+}
+function _ppRenderContent(uid){
+  const pool=(typeof allProofs!=='undefined'&&allProofs.length)?allProofs:homeProofs;
+  const mine=(pool||[]).filter(p=>p.takerId===uid);
+  const vel=document.getElementById('ppVideos');
+  if(vel){
+    if(!mine.length) vel.innerHTML=`<div class="empty" style="padding:32px;"><span class="mi">video_library</span><div class="empty-title" style="font-size:18px;">No videos yet</div></div>`;
+    else { const longs=mine.filter(p=>!_isShortVideo(p)),shorts=mine.filter(p=>_isShortVideo(p)); let h='';
+      if(longs.length)h+=`<div class="feed-longs">${longs.map(_longCardHtml).join('')}</div>`; if(shorts.length)h+=_shortsRowHtml(shorts); vel.innerHTML=h; }
+  }
+  const del=document.getElementById('ppDares');
+  if(del){ const active=(dares||[]).filter(d=>d.creatorUid===uid&&!d.completed);
+    del.innerHTML = active.length?`<div class="active-dare-grid">${active.map(_activeDareCard).join('')}</div>`
+      :`<div class="empty" style="padding:32px;"><span class="mi">bolt</span><div class="empty-title" style="font-size:18px;">No active dares</div></div>`;
+  }
+}
+function _ppTab(el,id){
+  el.parentElement.querySelectorAll('.tab').forEach(t=>t.classList.remove('active')); el.classList.add('active');
+  ['ppVideos','ppDares'].forEach(x=>{ const e=document.getElementById(x); if(e) e.style.display=x===id?'block':'none'; });
+}
+function _pubShare(){
+  const url=location.origin+'/u/'+(_ppUid||'');
+  const name=_ppData?.name||'this creator';
+  if(navigator.share){ navigator.share({title:'DareMarket — '+name, url}).catch(()=>{}); }
+  else if(navigator.clipboard){ navigator.clipboard.writeText(url).then(()=>showToast('Profile link copied')).catch(()=>showToast(url)); }
+  else showToast(url);
+}
+async function _ppFollowList(type){
+  const uid=_ppUid||user?.uid; if(!uid) return;
+  document.getElementById('flTitle').textContent = type==='followers'?'Followers':'Following';
+  const body=document.getElementById('flBody');
+  body.innerHTML='<div style="text-align:center;padding:24px;color:var(--t3);font-size:13px;">Loading…</div>';
+  document.getElementById('followListOverlay').classList.add('open');
+  const field = type==='followers'?'targetUid':'followerUid';
+  const other = type==='followers'?'followerUid':'targetUid';
+  try{
+    const snap=await db.collection('follows').where(field,'==',uid).limit(50).get();
+    const uids=[...new Set(snap.docs.map(d=>d.data()[other]))];
+    if(!uids.length){ body.innerHTML='<div style="text-align:center;padding:24px;color:var(--t3);font-size:13px;">No '+(type)+' yet</div>'; return; }
+    const users=(await Promise.all(uids.map(u=>db.collection('users').doc(u).get().then(d=>d.exists?{uid:u,...d.data()}:null).catch(()=>null)))).filter(Boolean);
+    body.innerHTML = users.map(u=>`<div class="fl-row" onclick="closeWalletModal('followListOverlay');openPublicProfile('${u.uid}')">
+      <div class="fl-av">${_avHtml(u.picture,u.name)}</div>
+      <div class="fl-info"><div class="fl-name">${escHtml(u.name||'User')}</div><div class="fl-handle">@${escHtml(u.username||'user')}</div></div>
+      <span class="mi" style="color:var(--t3);">chevron_right</span></div>`).join('');
+  }catch(e){ body.innerHTML='<div style="text-align:center;padding:24px;color:var(--t3);font-size:13px;">Could not load</div>'; }
+}
+
 function switchPTab(el, tabId) {
   document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
   el.classList.add('active');
@@ -3382,6 +3494,11 @@ async function _renderVideoDetail(p) {
   document.getElementById('vdCreatorAv').innerHTML = _avHtml(_dare?.creatorPhotoURL || p.posterPhotoURL, creatorName);
   document.getElementById('vdCreatorName').textContent = '@'+creatorUser;
   document.getElementById('vdTakerName').textContent = '@'+takerUser;
+  // tap creator / taker → open their public profile
+  const _bindProf=(ids,uid)=>{ if(!uid) return; ids.forEach(id=>{ const e=document.getElementById(id);
+    if(e){ e.style.cursor='pointer'; e.onclick=ev=>{ ev.stopPropagation(); openPublicProfile(uid); }; } }); };
+  _bindProf(['vdCreatorAv','vdCreatorName'], creatorId);
+  _bindProf(['vdTakerAv','vdTakerName'], p.takerId);
   document.getElementById('vdBounty').textContent  = `$${(p.dareBounty||0).toLocaleString('en-IN')} bounty won`;
   // Follow the video's taker (hidden on your own video)
   const fb=document.getElementById('vdFollowBtn');
@@ -3637,13 +3754,14 @@ function openDareDetail(dareId){
 
   const ddMeta = `${_relTimeStr(d.date)} · ${_fmtCount(d.viewCount||0)} views`;
   const creatorPic = d.creatorPhotoURL || (d.creatorUid === user?.uid ? (user?.picture||'') : '');
+  const _ddCu = d.creatorUid||'';
   document.getElementById('ddCreator').innerHTML = `
-    <div class="dd-creator-av">${_avHtml(creatorPic, d.creator)}</div>
-    <div class="dd-creator-info">
+    <div class="dd-creator-av" style="cursor:pointer" onclick="openPublicProfile('${_ddCu}')">${_avHtml(creatorPic, d.creator)}</div>
+    <div class="dd-creator-info" style="cursor:pointer" onclick="openPublicProfile('${_ddCu}')">
       <div class="dd-creator-name">${escHtml(d.creator||'Creator')}</div>
       <div class="dd-creator-sub">@${escHtml(d.creatorUsername || (d.creator||'creator'))}</div>
     </div>
-    ${d.creatorUid !== user?.uid ? `<button class="shorts-follow dd-follow" onclick="toggleFollow('${d.creatorUid||''}','creator')">Follow</button>` : ''}
+    ${d.creatorUid !== user?.uid ? `<button class="shorts-follow dd-follow" onclick="toggleFollow('${_ddCu}','creator')">Follow</button>` : ''}
     <span class="dd-creator-meta">${ddMeta}</span>`;
 
   const desc = d.description || d.desc || '';
@@ -3763,6 +3881,7 @@ function _closeCurrentView(){
 }
 // Called at the START of openShorts / openVideoDetail / openDareDetail.
 function _enterView(type, id){
+  if (typeof closePublicProfile==='function') closePublicProfile();   // leaving for a video/dare → close public profile
   _pauseBackgroundMedia();
   _closeCurrentView();                              // close whatever's open (stops its video)
   if (!_navBack && id){
@@ -3772,13 +3891,15 @@ function _enterView(type, id){
 // Open whatever view the current URL points to (back/forward + deep links)
 function _dmRouteFromUrl(){
   _navBack = true;
-  const m = (location.pathname||'').match(/^\/(watch|shorts|dare)\/([^/?#]+)/);
+  const m = (location.pathname||'').match(/^\/(watch|shorts|dare|u)\/([^/?#]+)/);
   if (m){
     const id = decodeURIComponent(m[2]);
     if (m[1]==='watch')       openVideoDetail(id);
     else if (m[1]==='shorts') openShorts(id);
+    else if (m[1]==='u')      openPublicProfile(id);
     else                      openDareDetail(id);
   } else {
+    if (typeof closePublicProfile==='function') closePublicProfile();
     _closeCurrentView();                            // root / page URL → no overlay
   }
   _navBack = false;
@@ -3786,11 +3907,11 @@ function _dmRouteFromUrl(){
 // On cold load / refresh of a deep link, open it once the data is available
 function _maybeInitialRoute(){
   if (_routedInitial) return;
-  const m = (location.pathname||'').match(/^\/(watch|shorts|dare)\/([^/?#]+)/);
+  const m = (location.pathname||'').match(/^\/(watch|shorts|dare|u)\/([^/?#]+)/);
   if (!m){ _routedInitial = true; return; }
   const id = decodeURIComponent(m[2]);
-  const ready = (m[1]==='dare')
-    ? (dares||[]).some(d=>d.id===id)
+  const ready = (m[1]==='u') ? true                 // public profile fetches its own user doc
+    : (m[1]==='dare') ? (dares||[]).some(d=>d.id===id)
     : [...(typeof homeProofs!=='undefined'?homeProofs:[]),...(typeof allProofs!=='undefined'?allProofs:[])].some(p=>p.id===id);
   if (ready){ _routedInitial = true; _dmRouteFromUrl(); }
 }

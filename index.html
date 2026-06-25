@@ -11,7 +11,7 @@
 <link href="https://fonts.googleapis.com/icon?family=Material+Icons+Round" rel="stylesheet"/>
 
 <!-- App Styles -->
-<link rel="stylesheet" href="/css/styles.css?v=20260615x"/>
+<link rel="stylesheet" href="/css/styles.css?v=20260615y"/>
 
 <!-- Firebase CDN -->
 <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
@@ -461,6 +461,42 @@
      PROFILE EDIT MODAL
      Username, Bio, Photo, Website
      ══════════════════════════════════ -->
+<!-- ══ PUBLIC PROFILE (view any user) ══ -->
+<div class="pubprof-overlay" id="pubProfOverlay">
+  <div class="pubprof-wrap">
+    <button class="pubprof-back" onclick="history.back()" aria-label="Back"><span class="mi">arrow_back</span></button>
+    <div class="pubprof-banner" id="ppBanner"></div>
+    <div class="pubprof-head">
+      <div class="pubprof-pic" id="ppPic"></div>
+      <div class="pubprof-id">
+        <div class="pubprof-name" id="ppName">—</div>
+        <div class="pubprof-handle" id="ppHandle">@—</div>
+        <div class="pubprof-bio" id="ppBio" style="display:none;"></div>
+      </div>
+      <div class="pubprof-actions">
+        <button class="pubprof-follow" id="ppFollowBtn" onclick="_pubFollowToggle()">Follow</button>
+        <button class="pubprof-share" onclick="_pubShare()" aria-label="Share"><span class="mi">share</span></button>
+      </div>
+    </div>
+    <div class="profile-stats" id="ppStats"></div>
+    <div class="tabs">
+      <button class="tab active" onclick="_ppTab(this,'ppVideos')">Videos</button>
+      <button class="tab"        onclick="_ppTab(this,'ppDares')">Dares</button>
+    </div>
+    <div id="ppVideos"></div>
+    <div id="ppDares" style="display:none;"></div>
+  </div>
+</div>
+
+<!-- ══ FOLLOWERS / FOLLOWING LIST ══ -->
+<div class="overlay" id="followListOverlay">
+  <div class="modal wallet-modal">
+    <div class="modal-hdr"><div class="modal-title" id="flTitle">Followers</div>
+      <button class="modal-close" onclick="closeWalletModal('followListOverlay')"><span class="mi">close</span></button></div>
+    <div id="flBody" class="fl-body"></div>
+  </div>
+</div>
+
 <div class="profile-edit-overlay" id="profileEditOverlay" onclick="if(event.target===this)cancelProfileEdit()">
   <div class="profile-edit-modal">
     <div class="pe-header">
@@ -907,7 +943,7 @@
 <div class="toast" id="toast"></div>
 
 <!-- App Logic -->
-<script src="/js/app.js?v=20260615x"></script>
+<script src="/js/app.js?v=20260615y"></script>
 
 <!-- ══ v0.19 NEW MODALS ══ -->
 
