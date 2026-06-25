@@ -3377,6 +3377,14 @@ async function dislikeProof(){
   else { p.dislikedBy.push(user.uid); p.dislikeCount=(p.dislikeCount||0)+1; }
   _vdUpdateDislikeUI(p);
   db.collection('proofs').doc(p.id).update({ dislikedBy:d?firebase.firestore.FieldValue.arrayRemove(user.uid):firebase.firestore.FieldValue.arrayUnion(user.uid), dislikeCount:firebase.firestore.FieldValue.increment(d?-1:1) }).catch(()=>{});
+  // mutually exclusive: a new dislike clears an existing like
+  if(!d && userLikes.includes(p.id)){
+    userLikes=userLikes.filter(id=>id!==p.id);
+    p.likeCount=Math.max(0,(p.likeCount||0)-1);
+    db.collection('proofs').doc(p.id).update({likeCount:firebase.firestore.FieldValue.increment(-1)}).catch(()=>{});
+    db.collection('users').doc(user.uid).update({likedProofs:userLikes}).catch(()=>{});
+    _updateLikeBtn(p.id, p.likeCount);
+  }
 }
 function _vdReport(){
   if(!activeProof) return;
@@ -4275,6 +4283,13 @@ async function toggleLike(proofId) {
     if(p){p.likeCount=(p.likeCount||0)+1;newCount=p.likeCount;}
     db.collection('proofs').doc(proofId).update({likeCount:firebase.firestore.FieldValue.increment(1)})
       .then(()=>_checkLikeMilestone(proofId,newCount,p?.takerId,p?.dareTitle)).catch(()=>{});
+    // mutually exclusive: liking clears an existing dislike
+    if(p && (p.dislikedBy||[]).includes(user.uid)){
+      p.dislikedBy=p.dislikedBy.filter(u=>u!==user.uid);
+      p.dislikeCount=Math.max(0,(p.dislikeCount||0)-1);
+      db.collection('proofs').doc(proofId).update({dislikedBy:firebase.firestore.FieldValue.arrayRemove(user.uid),dislikeCount:firebase.firestore.FieldValue.increment(-1)}).catch(()=>{});
+      if(activeProof && activeProof.id===proofId) _vdUpdateDislikeUI(p);
+    }
   }
   db.collection('users').doc(user.uid).update({likedProofs:userLikes}).catch(()=>{});
   _updateLikeBtn(proofId,newCount);
@@ -5530,6 +5545,8 @@ function _pvBindHover(){
     const longC=e.target.closest('.feed-longs .yt-card');
     const shortC=e.target.closest('.short-card');
     const card=longC||shortC; if(!card) return;
+    // don't preview inside a detail overlay (related rail) — it competes with the main video
+    if(card.closest('#videoDetailOverlay,#shortsOverlay,#dareDetailOverlay')) return;
     if(card!==_pvCard) _pvPlay(card, longC ? 'long' : 'short');
   });
   document.addEventListener('mouseout', (e)=>{
@@ -5545,8 +5562,8 @@ function _pvBindHover(){
 let _pvScrollTO=null;
 function _pvPlayCentered(){
   if(!_pvIsTouch()) return;
-  // run on any page that shows long cards
-  const cards=[...document.querySelectorAll('.feed-longs .yt-card[data-vurl]')].filter(c=>c.getAttribute('data-vurl'));
+  // only the active home/explore page feed — never the watch-page related rail
+  const cards=[...document.querySelectorAll('.page.active .feed-longs .yt-card[data-vurl]')].filter(c=>c.getAttribute('data-vurl'));
   if(!cards.length){ _pvStop(); return; }
   const cy=window.innerHeight/2; let best=null, bestD=1e9;
   for(const c of cards){
