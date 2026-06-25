@@ -11,7 +11,7 @@
 <link href="https://fonts.googleapis.com/icon?family=Material+Icons+Round" rel="stylesheet"/>
 
 <!-- App Styles -->
-<link rel="stylesheet" href="/css/styles.css?v=20260615y"/>
+<link rel="stylesheet" href="/css/styles.css?v=20260615z"/>
 
 <!-- Firebase CDN -->
 <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
@@ -311,13 +311,18 @@
             <button class="btn-customize" onclick="openProfileEdit()">
               <span class="mi">edit</span> Customize Profile
             </button>
+            <button class="btn-customize" onclick="openSettings()">
+              <span class="mi">settings</span> Settings
+            </button>
             <span class="profile-provider" id="profProvider">—</span>
           </div>
+          <div class="profile-socials" id="profSocials"></div>
         </div>
       </div>
 
       <!-- Stats -->
       <div class="profile-stats" id="profStats"></div>
+      <div class="profile-badges" id="profBadges"></div>
 
       <!-- Tabs -->
       <div class="tabs">
@@ -472,6 +477,7 @@
         <div class="pubprof-name" id="ppName">—</div>
         <div class="pubprof-handle" id="ppHandle">@—</div>
         <div class="pubprof-bio" id="ppBio" style="display:none;"></div>
+        <div class="profile-socials" id="ppSocials"></div>
       </div>
       <div class="pubprof-actions">
         <button class="pubprof-follow" id="ppFollowBtn" onclick="_pubFollowToggle()">Follow</button>
@@ -494,6 +500,27 @@
     <div class="modal-hdr"><div class="modal-title" id="flTitle">Followers</div>
       <button class="modal-close" onclick="closeWalletModal('followListOverlay')"><span class="mi">close</span></button></div>
     <div id="flBody" class="fl-body"></div>
+  </div>
+</div>
+
+<!-- ══ SETTINGS ══ -->
+<div class="overlay" id="settingsOverlay">
+  <div class="modal wallet-modal">
+    <div class="modal-hdr"><div class="modal-title">Settings</div>
+      <button class="modal-close" onclick="closeWalletModal('settingsOverlay')"><span class="mi">close</span></button></div>
+    <div class="set-sec-label">Notifications</div>
+    <label class="set-row"><div class="set-t">Likes &amp; comments</div>
+      <span class="switch"><input type="checkbox" id="setNotifLikes" onchange="_saveSettings()"><span class="sl"></span></span></label>
+    <label class="set-row"><div class="set-t">New followers</div>
+      <span class="switch"><input type="checkbox" id="setNotifFollow" onchange="_saveSettings()"><span class="sl"></span></span></label>
+    <label class="set-row"><div class="set-t">Dare updates</div>
+      <span class="switch"><input type="checkbox" id="setNotifDares" onchange="_saveSettings()"><span class="sl"></span></span></label>
+    <div class="set-sec-label">Privacy</div>
+    <label class="set-row"><div><div class="set-t">Private profile</div><div class="set-s">Hide your videos &amp; dares from others</div></div>
+      <span class="switch"><input type="checkbox" id="setPrivate" onchange="_saveSettings()"><span class="sl"></span></span></label>
+    <div class="set-sec-label">Account</div>
+    <button class="set-btn" onclick="logout()"><span class="mi">logout</span> Log out</button>
+    <button class="set-btn danger" onclick="deleteAccount()"><span class="mi">delete_forever</span> Delete account</button>
   </div>
 </div>
 
@@ -555,6 +582,14 @@
       <div class="pe-field">
         <div class="pe-label">Website / Contact Link <span>Optional</span></div>
         <input class="pe-input" id="peWebsite" type="url" placeholder="https://yourwebsite.com"/>
+      </div>
+
+      <!-- Social links -->
+      <div class="pe-field">
+        <div class="pe-label">Social links <span>Optional — handles only</span></div>
+        <div class="pe-social-row"><span class="mi">photo_camera</span><input class="pe-input" id="peInsta" type="text" placeholder="Instagram username" maxlength="40"/></div>
+        <div class="pe-social-row"><span class="mi">tag</span><input class="pe-input" id="peX" type="text" placeholder="X (Twitter) username" maxlength="40"/></div>
+        <div class="pe-social-row"><span class="mi">smart_display</span><input class="pe-input" id="peYt" type="text" placeholder="YouTube @handle" maxlength="40"/></div>
       </div>
 
       <!-- Actions -->
@@ -943,7 +978,7 @@
 <div class="toast" id="toast"></div>
 
 <!-- App Logic -->
-<script src="/js/app.js?v=20260615y"></script>
+<script src="/js/app.js?v=20260615z"></script>
 
 <!-- ══ v0.19 NEW MODALS ══ -->
 

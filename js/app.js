@@ -2259,8 +2259,10 @@ function renderProfile() {
         </div>
       </div>`; }).join('');
 
-  // Stats + Videos tab
+  // Stats + badges + socials + Videos tab
   _renderProfileStats(myPosted);
+  _renderProfileBadges(myPosted);
+  _renderProfileSocials(user, 'profSocials');
   _renderProfileVideos();
 }
 
@@ -2349,6 +2351,7 @@ async function openPublicProfile(uid){
   document.querySelectorAll('#pubProfOverlay .tab').forEach((t,i)=>t.classList.toggle('active', i===0));
   const pv=document.getElementById('ppVideos'), pd=document.getElementById('ppDares');
   if(pv) pv.style.display='block'; if(pd) pd.style.display='none';
+  _renderProfileSocials(u||{}, 'ppSocials');
   _ppRenderFollowBtn(); _ppRenderStats(uid); _ppRenderContent(uid);
   const ov = document.getElementById('pubProfOverlay');
   ov.classList.add('open'); ov.scrollTop = 0;
@@ -2433,6 +2436,71 @@ async function _ppFollowList(type){
   }catch(e){ body.innerHTML='<div style="text-align:center;padding:24px;color:var(--t3);font-size:13px;">Could not load</div>'; }
 }
 
+// ════════════════════════════════════════════════════════════════════
+//  PROFILE — settings, achievements, social links
+// ════════════════════════════════════════════════════════════════════
+function openSettings(){
+  if(!user){ showToast('Sign in first'); return; }
+  const s=user.settings||{};
+  document.getElementById('setNotifLikes').checked  = s.notifLikes  !== false;
+  document.getElementById('setNotifFollow').checked = s.notifFollow !== false;
+  document.getElementById('setNotifDares').checked  = s.notifDares  !== false;
+  document.getElementById('setPrivate').checked     = s.private === true;
+  document.getElementById('settingsOverlay').classList.add('open');
+}
+function _saveSettings(){
+  if(!user) return;
+  user.settings={
+    notifLikes:  document.getElementById('setNotifLikes').checked,
+    notifFollow: document.getElementById('setNotifFollow').checked,
+    notifDares:  document.getElementById('setNotifDares').checked,
+    private:     document.getElementById('setPrivate').checked
+  };
+  db.collection('users').doc(user.uid).update({ settings:user.settings }).catch(()=>{});
+}
+async function deleteAccount(){
+  if(!user) return;
+  if(!confirm('Delete your account permanently?\n\nThis removes your profile and cannot be undone.')) return;
+  if(!confirm('Are you absolutely sure? This is final.')) return;
+  try{
+    await db.collection('users').doc(user.uid).delete();
+    try{ await auth.currentUser.delete(); }catch(e){}   // needs recent login; sign out regardless
+    showToast('Account deleted');
+    if(typeof logout==='function') logout();
+  }catch(e){ showToast('Could not delete — re-login and retry'); }
+}
+
+// Achievements (computed from your activity)
+function _renderProfileBadges(myPosted){
+  const el=document.getElementById('profBadges'); if(!el) return;
+  myPosted = myPosted || (dares||[]).filter(d=>d.creatorUid===user.uid);
+  const completed=myPosted.filter(d=>d.completed).length;
+  const earned=(wallet.transactions||[]).filter(t=>_wtxnCat(t)==='bounty_won').reduce((s,t)=>s+(t.amount||0),0);
+  const pool=(typeof allProofs!=='undefined'&&allProofs.length)?allProofs:homeProofs;
+  const videos=(pool||[]).filter(p=>p.takerId===user.uid).length;
+  const verified=(wallet.kyc&&wallet.kyc.status==='verified');
+  const badges=[
+    verified           && {i:'verified',      t:'Verified',      c:'#0A84FF'},
+    myPosted.length>=1 && {i:'rocket_launch', t:'First Dare',    c:'#FF9F0A'},
+    completed>=5       && {i:'military_tech',  t:'Dedicated',     c:'#BF5AF2'},
+    videos>=1          && {i:'movie',          t:'Creator',       c:'#FF2D55'},
+    earned>0           && {i:'paid',           t:'Bounty Hunter', c:'#32D74B'},
+  ].filter(Boolean);
+  el.innerHTML = badges.length ? badges.map(b=>`<span class="pbadge" style="--bc:${b.c}"><span class="mi">${b.i}</span>${b.t}</span>`).join('') : '';
+}
+
+// Social link icons (own profile or public profile)
+function _renderProfileSocials(u, elId){
+  const el=document.getElementById(elId||'profSocials'); if(!el) return;
+  u = u || user || {};
+  const s=u.socials||{}; const links=[];
+  if(s.insta) links.push(`<a href="https://instagram.com/${encodeURIComponent((''+s.insta).replace(/^@/,''))}" target="_blank" rel="noopener" class="psocial" title="Instagram"><span class="mi">photo_camera</span></a>`);
+  if(s.x)     links.push(`<a href="https://x.com/${encodeURIComponent((''+s.x).replace(/^@/,''))}" target="_blank" rel="noopener" class="psocial" title="X"><span class="mi">tag</span></a>`);
+  if(s.yt)    links.push(`<a href="https://youtube.com/${encodeURIComponent((''+s.yt))}" target="_blank" rel="noopener" class="psocial" title="YouTube"><span class="mi">smart_display</span></a>`);
+  if(u.website) links.push(`<a href="${escHtml(u.website)}" target="_blank" rel="noopener" class="psocial" title="Website"><span class="mi">link</span></a>`);
+  el.innerHTML = links.join('');
+}
+
 function switchPTab(el, tabId) {
   document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
   el.classList.add('active');
@@ -2511,6 +2579,10 @@ function openProfileEdit() {
   document.getElementById('peBio').value     = user.bio     || '';
   document.getElementById('peBioCount').textContent = (user.bio||'').length + ' / 160';
   document.getElementById('peWebsite').value = user.website || '';
+  const _soc = user.socials || {};
+  const _si=document.getElementById('peInsta'); if(_si) _si.value=_soc.insta||'';
+  const _sx=document.getElementById('peX');     if(_sx) _sx.value=_soc.x||'';
+  const _sy=document.getElementById('peYt');    if(_sy) _sy.value=_soc.yt||'';
 
   // Reset photo selection and handle status
   peSelectedPhotoFile = null;
@@ -2598,6 +2670,12 @@ async function saveProfile() {
   const newHandle  = document.getElementById('peHandle').value.trim().toLowerCase();
   const newBio     = document.getElementById('peBio').value.trim();
   const newWebsite = document.getElementById('peWebsite').value.trim();
+  const _clean = v => (''+(v||'')).trim().replace(/^@/,'').replace(/\s/g,'');
+  const newSocials = {
+    insta: _clean(document.getElementById('peInsta')?.value),
+    x:     _clean(document.getElementById('peX')?.value),
+    yt:    (''+(document.getElementById('peYt')?.value||'')).trim().replace(/\s/g,'')
+  };
 
   if (!newName)   { showToast('Display name cannot be empty'); return; }
   if (!newHandle) { showToast('Username cannot be empty'); return; }
@@ -2627,6 +2705,7 @@ async function saveProfile() {
       username: newHandle,
       bio:      newBio,
       website:  newWebsite,
+      socials:  newSocials,
       photoURL: photoURL
     });
 
@@ -2643,6 +2722,7 @@ async function saveProfile() {
     user.username = newHandle;
     user.bio      = newBio;
     user.website  = newWebsite;
+    user.socials  = newSocials;
     user.picture  = photoURL;
 
     // Refresh UI
