@@ -2165,6 +2165,10 @@ body.detail-open .topbar{ background:#050505 !important; backdrop-filter:none !i
   /* Long-video page: description column hidden by default → toggled to 3 cols */
   #videoDetailOverlay .dd-col2{ display:none; }
   #videoDetailOverlay.vd-show-desc .dd-col2{ display:block; }
+  /* 2-column (no description) → make the Related column noticeably wider (~1.5x,
+     proportional so it scales and never squeezes the video). col1:col3 = 2:1 ≈ 33% */
+  #videoDetailOverlay:not(.vd-show-desc) .dd-col1{ flex:2; }
+  #videoDetailOverlay:not(.vd-show-desc) .dd-col3{ flex:1; width:auto; min-width:300px; }
   /* slim scrollbars inside the columns */
   #dareDetailOverlay .dd-bar::-webkit-scrollbar, #videoDetailOverlay .dd-bar::-webkit-scrollbar{ width:8px; }
   #dareDetailOverlay .dd-bar::-webkit-scrollbar-thumb, #videoDetailOverlay .dd-bar::-webkit-scrollbar-thumb{ background:#333; border-radius:8px; }
@@ -2630,7 +2634,7 @@ html{scroll-behavior:smooth;}
    can't override aspect-ratio and shrink the long card to half width */
 #homeVideoGrid .yt-thumb{aspect-ratio:16/9 !important;background:#000;width:100% !important;height:auto !important;}
 .feed-longs .yt-thumb{aspect-ratio:16/9 !important;background:#000;width:100% !important;height:auto !important;}
-.short-thumb{aspect-ratio:9/16 !important;background:#000;}
+.short-thumb{aspect-ratio:11/16 !important;background:#000;}  /* slightly wider than 9:16, like YouTube shorts shelf */
 /* card height = 9:16 thumb + caption + meta; don't force the whole card to 9:16
    (that clipped/pushed the title & views out of view) */
 .shorts-row .short-card{aspect-ratio:auto;}
@@ -3139,7 +3143,7 @@ html{scroll-behavior:smooth;}
 .short-thumb {
   width: 170px;
   height: auto;                  /* let aspect-ratio drive height (kill legacy height:276px) */
-  aspect-ratio: 9/16;
+  aspect-ratio: 11/16;
   border-radius: 12px;
   overflow: hidden;
   background: #1f1f1f;
@@ -3159,7 +3163,7 @@ html{scroll-behavior:smooth;}
   .short-card { flex: 0 0 44vw; }
   /* height:auto + aspect-ratio so legacy .short-thumb{height:230px} can't break 9:16;
      44vw width = ~2 shorts visible per row like YouTube mobile */
-  .short-thumb { width: 44vw; height: auto; aspect-ratio: 9/16; }
+  .short-thumb { width: 44vw; height: auto; aspect-ratio: 11/16; }
   .shorts-home-sec { margin: 16px 0 24px; padding: 0 0 0 0; }
 }
 
