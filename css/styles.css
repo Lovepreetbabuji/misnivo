@@ -3125,6 +3125,12 @@ html{scroll-behavior:smooth;}
   border-top: none !important;
 }
 
+/* Restore glass on modal/popup backdrops (same frosted glass as the notif panel) */
+.overlay, .profile-edit-overlay {
+  backdrop-filter: var(--blur) !important;
+  -webkit-backdrop-filter: var(--blur) !important;
+}
+
 /* Kill multi-layer shadows everywhere — flat */
 .yt-card, .dare-list-card, .exp-card, .vd-related-card,
 .chip, .nav-item, .bn-item, .btn-post, .icon-btn,
