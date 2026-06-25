@@ -11,7 +11,7 @@
 <link href="https://fonts.googleapis.com/icon?family=Material+Icons+Round" rel="stylesheet"/>
 
 <!-- App Styles -->
-<link rel="stylesheet" href="/css/styles.css?v=20260615t"/>
+<link rel="stylesheet" href="/css/styles.css?v=20260615u"/>
 
 <!-- Firebase CDN -->
 <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
@@ -333,16 +333,69 @@
       <div class="sec-title" style="margin-bottom:20px;"><div class="sec-dot"></div>Wallet</div>
       <div class="wallet-card">
         <div class="wallet-label">Available Balance</div>
-        <div class="wallet-balance" id="walletBal">Rs. 1,00,000</div>
+        <div class="wallet-balance" id="walletBal">Rs. 0</div>
         <div class="wallet-sub">Testnet balance — real payments coming soon</div>
+        <div class="wallet-breakdown">
+          <div class="wbk-item">
+            <span class="wbk-ic wbk-locked"><span class="mi">lock</span></span>
+            <div><div class="wbk-val" id="walletLocked">Rs. 0</div><div class="wbk-lbl">Locked in dares</div></div>
+          </div>
+          <div class="wbk-item">
+            <span class="wbk-ic wbk-pending"><span class="mi">schedule</span></span>
+            <div><div class="wbk-val" id="walletPending">Rs. 0</div><div class="wbk-lbl">Pending earnings</div></div>
+          </div>
+        </div>
         <div class="wallet-actions">
-          <button class="btn-wallet" onclick="showToast('Deposit — coming soon!')"><span class="mi">add</span>Deposit</button>
-          <button class="btn-wallet" onclick="showToast('Withdraw — coming soon!')"><span class="mi">arrow_downward</span>Withdraw</button>
-          <button class="btn-wallet" onclick="showToast('Transfer — coming soon!')"><span class="mi">send</span>Transfer</button>
+          <button class="btn-wallet" onclick="openDepositModal()"><span class="mi">add</span>Deposit</button>
+          <button class="btn-wallet" onclick="openWithdrawModal()"><span class="mi">arrow_downward</span>Withdraw</button>
+        </div>
+        <button class="wallet-claim" id="walletClaimBtn" style="display:none;" onclick="claimPending()">
+          <span class="mi">savings</span> Claim <span id="walletClaimAmt"></span> to balance
+        </button>
+      </div>
+
+      <div class="wallet-txn-hdr">
+        <div class="sec-title" style="font-size:16px;margin:0;"><div class="sec-dot"></div>Transactions</div>
+        <div class="wallet-search">
+          <span class="mi">search</span>
+          <input id="walletTxnSearch" placeholder="Search transactions" oninput="_walletSearchInput(this.value)" autocomplete="off"/>
         </div>
       </div>
-      <div class="sec-title" style="font-size:16px;margin:24px 0 14px;"><div class="sec-dot"></div>Transactions</div>
+      <div class="wallet-filters" id="walletFilters"></div>
       <div id="walletTxns"></div>
+    </div>
+
+    <!-- ══ WALLET MODALS ══ -->
+    <div class="overlay wallet-ov" id="depositOverlay">
+      <div class="modal wallet-modal">
+        <div class="modal-hdr"><div class="modal-title">Add Money</div>
+          <button class="modal-close" onclick="closeWalletModal('depositOverlay')"><span class="mi">close</span></button></div>
+        <div class="wallet-amt-row"><span class="wallet-amt-cur">Rs.</span>
+          <input id="depositAmt" class="wallet-amt-input" type="number" inputmode="numeric" placeholder="0" min="1"/></div>
+        <div class="wallet-chips" id="depositChips"></div>
+        <p class="wallet-note"><span class="mi">info</span> Testnet — no real money is charged.</p>
+        <button class="btn-fill" onclick="doDeposit()">Add Money</button>
+      </div>
+    </div>
+
+    <div class="overlay wallet-ov" id="withdrawOverlay">
+      <div class="modal wallet-modal">
+        <div class="modal-hdr"><div class="modal-title">Withdraw</div>
+          <button class="modal-close" onclick="closeWalletModal('withdrawOverlay')"><span class="mi">close</span></button></div>
+        <div class="wallet-amt-row"><span class="wallet-amt-cur">Rs.</span>
+          <input id="withdrawAmt" class="wallet-amt-input" type="number" inputmode="numeric" placeholder="0" min="1"/></div>
+        <div class="wallet-avail" id="withdrawAvail">Available: Rs. 0</div>
+        <p class="wallet-note" id="withdrawNote"><span class="mi">account_balance</span> Goes to your linked account (testnet — instant).</p>
+        <button class="btn-fill" onclick="doWithdraw()">Withdraw</button>
+      </div>
+    </div>
+
+    <div class="overlay wallet-ov" id="txnDetailOverlay">
+      <div class="modal wallet-modal">
+        <div class="modal-hdr"><div class="modal-title">Transaction</div>
+          <button class="modal-close" onclick="closeWalletModal('txnDetailOverlay')"><span class="mi">close</span></button></div>
+        <div id="txnDetailBody"></div>
+      </div>
     </div>
 
   </main>
@@ -798,7 +851,7 @@
 <div class="toast" id="toast"></div>
 
 <!-- App Logic -->
-<script src="/js/app.js?v=20260615t"></script>
+<script src="/js/app.js?v=20260615u"></script>
 
 <!-- ══ v0.19 NEW MODALS ══ -->
 

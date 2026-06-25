@@ -58,7 +58,7 @@ function uploadToCloudinary(file, resourceType, onProgress) {
 // ════════════════════════════
 let user            = null;
 let dares           = [];
-let wallet          = { balance:100000, transactions:[] };
+let wallet          = { balance:100000, pending:0, transactions:[] };
 let acceptedDares   = [];
 let activeCat       = 'all';
 let proofDareId           = null;
@@ -408,7 +408,7 @@ async function initUser(fbUser) {
       await batch.commit();
     } else {
       const d   = snap.data();
-      wallet        = d.wallet        || { balance:100000, transactions:[] };
+      wallet        = d.wallet        || { balance:100000, pending:0, transactions:[] };
       acceptedDares = d.acceptedDares || [];
       _reconcileTakerApprovals();   // in case dares already loaded
       pinnedDares   = d.pinnedDares   || [];
@@ -420,7 +420,7 @@ async function initUser(fbUser) {
     }
   } catch(e) {
     console.error('initUser error:', e);
-    wallet = { balance:100000, transactions:[] };
+    wallet = { balance:100000, pending:0, transactions:[] };
     acceptedDares = [];
   }
 
@@ -534,7 +534,7 @@ async function emailSignup() {
 async function logout() {
   if (daresUnsub) { daresUnsub(); daresUnsub = null; }
   await auth.signOut();
-  user = null; dares = []; wallet = { balance:100000, transactions:[] }; acceptedDares = [];
+  user = null; dares = []; wallet = { balance:100000, pending:0, transactions:[] }; acceptedDares = [];
   closeDD();
 }
 
@@ -1368,10 +1368,10 @@ async function submitDare() {
       if (reward > 0) {
         wallet.balance -= reward;
         wallet.transactions.unshift({
-          type:'debit',
+          id:'w'+Date.now()+Math.floor(Math.random()*1000), ts:Date.now(), status:'completed',
+          type:'debit', category:'dare_posted',
           title:'Dare Posted: ' + caption.substring(0,30),
-          amount: reward,
-          date: todayStr()
+          amount: reward, ref:'REF'+Date.now().toString(36).toUpperCase(), date: todayStr()
         });
         await db.collection('users').doc(user.uid).update({ wallet });
       }
@@ -1979,13 +1979,15 @@ async function approveProof(proofId) {
     const takerSnap = await takerRef.get();
     if (takerSnap.exists) {
       const takerData = takerSnap.data();
-      const tw = takerData.wallet || { balance:0, transactions:[] };
-      tw.balance += proof.dareBounty || 0;
+      const tw = takerData.wallet || { balance:0, pending:0, transactions:[] };
+      const _bw = proof.dareBounty || 0;
+      tw.pending = (tw.pending||0) + _bw;   // won bounty lands in "pending earnings" until claimed
+      tw.transactions = tw.transactions || [];
       tw.transactions.unshift({
-        type:'credit',
+        id:'w'+Date.now()+Math.floor(Math.random()*1000), ts:Date.now(), status:'completed',
+        type:'credit', category:'bounty_won',
         title:'Bounty Won: ' + (proof.dareTitle||'').substring(0,30),
-        amount: proof.dareBounty || 0,
-        date: todayStr()
+        amount: _bw, ref:'REF'+Date.now().toString(36).toUpperCase(), date: todayStr()
       });
       const tAD = (takerData.acceptedDares||[]).map(a =>
         a.dareId === proof.dareId ? {...a, proofStatus:'approved'} : a
@@ -2594,7 +2596,9 @@ async function deleteDare(id) {
     const reward = d.rewardAmount ?? d.bounty ?? 0;
     if (reward > 0 && !d.completed) {
       wallet.balance += reward;
-      wallet.transactions.unshift({ type:'credit', title:'Dare Deleted (Refund): '+title.slice(0,25), amount:reward, date:todayStr() });
+      wallet.transactions.unshift({ id:'w'+Date.now()+Math.floor(Math.random()*1000), ts:Date.now(), status:'completed',
+        type:'credit', category:'refund', title:'Dare Deleted (Refund): '+title.slice(0,25), amount:reward,
+        ref:'REF'+Date.now().toString(36).toUpperCase(), date:todayStr() });
       await db.collection('users').doc(user.uid).update({ wallet });
     }
     showToast('Dare deleted' + (reward>0&&!d.completed ? ` · Rs.${reward.toLocaleString('en-IN')} refunded` : ''));
@@ -4993,26 +4997,194 @@ function shortsTouchEnd(e) {
   if (Math.abs(dy) > 60) shortsNav(dy > 0 ? 1 : -1);
 }
 
+// ════════════════════════════════════════════════════════════════════
+//  WALLET — testnet money dashboard (escrow + history + deposit/withdraw)
+// ════════════════════════════════════════════════════════════════════
+let _walletFilter = 'all', _walletQuery = '';
+const _WTXN_CATS = {
+  deposit:     { icon:'add',            label:'Deposit',      type:'credit' },
+  withdraw:    { icon:'account_balance',label:'Withdrawal',   type:'debit'  },
+  bounty_won:  { icon:'emoji_events',   label:'Bounty Won',   type:'credit' },
+  bounty_paid: { icon:'paid',           label:'Bounty Paid',  type:'debit'  },
+  dare_posted: { icon:'lock',           label:'Dare Posted',  type:'debit'  },
+  refund:      { icon:'undo',           label:'Refund',       type:'credit' },
+  claim:       { icon:'savings',        label:'Claimed',      type:'credit' },
+  other:       { icon:'swap_horiz',     label:'Transaction',  type:'credit' }
+};
+const _WFILTERS = [['all','All'],['deposit','Deposits'],['withdraw','Withdrawals'],['bounty_won','Bounty Won'],['dare_posted','Bounty Paid'],['refund','Refunds']];
+
+// Derive a category for old transactions that only have {type,title,amount,date}
+function _wtxnCat(t){
+  if (t.category && _WTXN_CATS[t.category]) return t.category;
+  const s = (t.title||'').toLowerCase();
+  if (s.startsWith('deposit')) return 'deposit';
+  if (s.startsWith('withdraw')) return 'withdraw';
+  if (s.includes('bounty won')) return 'bounty_won';
+  if (s.includes('refund') || s.includes('deleted')) return 'refund';
+  if (s.startsWith('dare posted')) return 'dare_posted';
+  return t.type === 'credit' ? 'other' : 'dare_posted';
+}
+function _wtxnTs(t){ return t.ts || (t.date ? new Date(t.date).getTime() : 0) || 0; }
+
+// Total bounty locked in YOUR active (incomplete) dares — computed, never drifts
+function _walletLocked(){
+  if (!user || typeof dares === 'undefined') return 0;
+  return (dares||[]).filter(d => d.creatorUid === user.uid && !d.completed)
+    .reduce((s,d) => s + (d.rewardAmount ?? d.bounty ?? 0), 0);
+}
+
+// Add a transaction + persist the wallet (current user)
+function _walletAddTxn(o){
+  wallet.transactions = wallet.transactions || [];
+  wallet.transactions.unshift({
+    id: 'w'+Date.now()+Math.floor(Math.random()*1000),
+    ts: Date.now(),
+    status: o.status || 'completed',
+    type: o.type || (_WTXN_CATS[o.category]?.type) || 'credit',
+    category: o.category || 'other',
+    title: o.title || (_WTXN_CATS[o.category]?.label) || 'Transaction',
+    amount: o.amount || 0,
+    ref: o.ref || ('REF'+Date.now().toString(36).toUpperCase()),
+    date: todayStr()
+  });
+  if (user) db.collection('users').doc(user.uid).update({ wallet }).catch(()=>{});
+}
+
+// Auto-refund: your own dares that expired without being completed → bounty back
+async function _walletReconcileExpired(){
+  if (!user || typeof dares === 'undefined') return false;
+  const now = Date.now(); let changed = false;
+  for (const d of (dares||[])){
+    if (d.creatorUid !== user.uid || d.completed || d.refunded) continue;
+    const reward = d.rewardAmount ?? d.bounty ?? 0;
+    if (reward <= 0 || !d.expiresAt) continue;
+    const exp = d.expiresAt.toDate ? d.expiresAt.toDate() : new Date(d.expiresAt);
+    if (exp.getTime() >= now) continue;                 // not expired yet
+    d.refunded = true; d.completed = true;              // bounty was never paid out → safe to refund
+    wallet.balance = (wallet.balance||0) + reward;
+    wallet.transactions = wallet.transactions || [];
+    wallet.transactions.unshift({ id:'w'+Date.now()+Math.floor(Math.random()*1000), ts:Date.now(), status:'completed',
+      type:'credit', category:'refund', title:'Dare Expired (Refund): '+((d.caption||d.title||'').slice(0,25)), amount:reward,
+      ref:'REF'+Date.now().toString(36).toUpperCase(), date:todayStr() });
+    db.collection('dares').doc(d.id).update({ refunded:true, completed:true }).catch(()=>{});
+    changed = true;
+  }
+  if (changed) db.collection('users').doc(user.uid).update({ wallet }).catch(()=>{});
+  return changed;
+}
+
 function renderWallet() {
-  // Balance
+  wallet = wallet || { balance:0, pending:0, transactions:[] };
+  wallet.pending = wallet.pending || 0;
+  _walletReconcileExpired().then(changed=>{ if (changed) renderWallet(); });
+  const locked = _walletLocked();
   const bal = document.getElementById('walletBal');
   if (bal) bal.textContent = 'Rs. ' + (wallet.balance||0).toLocaleString('en-IN');
-  // Transactions
-  const tx = document.getElementById('walletTxns');
-  if (!tx) return;
-  tx.innerHTML = !wallet.transactions.length
-    ? `<div class="empty" style="padding:40px;"><span class="mi">receipt_long</span><div class="empty-title" style="font-size:18px;">No Transactions</div><p class="empty-desc">Your transaction history will appear here.</p></div>`
-    : wallet.transactions.map(t=>`
-      <div class="txn-item">
-        <div class="txn-left">
-          <div class="txn-icon" style="background:${t.type==='credit'?'rgba(0,200,83,.15)':'rgba(229,57,53,.15)'};">
-            <span class="mi" style="color:${t.type==='credit'?'var(--green)':'var(--red)'};">${t.type==='credit'?'arrow_downward':'arrow_upward'}</span>
-          </div>
-          <div><div class="txn-title">${escHtml(t.title||'')}</div><div class="txn-date">${t.date||''}</div></div>
-        </div>
-        <div class="txn-amt ${t.type}">${t.type==='credit'?'+':'-'}Rs.${(t.amount||0).toLocaleString('en-IN')}</div>
-      </div>`).join('');
+  const lk = document.getElementById('walletLocked'); if (lk) lk.textContent = 'Rs. ' + locked.toLocaleString('en-IN');
+  const pd = document.getElementById('walletPending'); if (pd) pd.textContent = 'Rs. ' + (wallet.pending||0).toLocaleString('en-IN');
+  // Claim button
+  const cb = document.getElementById('walletClaimBtn'), ca = document.getElementById('walletClaimAmt');
+  if (cb){ if ((wallet.pending||0) > 0){ cb.style.display=''; if(ca) ca.textContent='Rs.'+wallet.pending.toLocaleString('en-IN'); } else cb.style.display='none'; }
+  // Filter chips
+  const fc = document.getElementById('walletFilters');
+  if (fc) fc.innerHTML = _WFILTERS.map(([k,l])=>`<button class="wfilter ${_walletFilter===k?'active':''}" onclick="_walletSetFilter('${k}')">${l}</button>`).join('');
+  _renderWalletTxns();
 }
+
+function _renderWalletTxns(){
+  const tx = document.getElementById('walletTxns'); if (!tx) return;
+  let list = (wallet.transactions||[]).slice();
+  if (_walletFilter !== 'all') list = list.filter(t => _wtxnCat(t) === _walletFilter);
+  if (_walletQuery){
+    const q = _walletQuery.toLowerCase();
+    list = list.filter(t => (t.title||'').toLowerCase().includes(q) || (''+(t.amount||'')).includes(q) || (t.date||'').toLowerCase().includes(q));
+  }
+  list.sort((a,b)=>_wtxnTs(b)-_wtxnTs(a));
+  if (!list.length){
+    tx.innerHTML = `<div class="empty" style="padding:40px;"><span class="mi">receipt_long</span>
+      <div class="empty-title" style="font-size:18px;">${(wallet.transactions||[]).length?'No matches':'No Transactions'}</div>
+      <p class="empty-desc">${(wallet.transactions||[]).length?'Try a different filter or search.':'Your transaction history will appear here.'}</p></div>`;
+    return;
+  }
+  tx.innerHTML = list.map(t=>{
+    const cat = _wtxnCat(t), meta = _WTXN_CATS[cat] || _WTXN_CATS.other;
+    const credit = (t.type||meta.type) === 'credit';
+    const pending = t.status && t.status !== 'completed';
+    return `<div class="txn-item" onclick="openTxnDetail('${t.id||''}')">
+      <div class="txn-left">
+        <div class="txn-icon" style="background:${credit?'rgba(0,200,83,.15)':'rgba(229,57,53,.15)'};">
+          <span class="mi" style="color:${credit?'var(--green)':'var(--red)'};">${meta.icon}</span>
+        </div>
+        <div><div class="txn-title">${escHtml(t.title||meta.label)}</div>
+          <div class="txn-date">${t.date||''}${pending?` · <span class="txn-status ${t.status}">${t.status}</span>`:''}</div></div>
+      </div>
+      <div class="txn-amt ${credit?'credit':'debit'}">${credit?'+':'-'}Rs.${(t.amount||0).toLocaleString('en-IN')}</div>
+    </div>`;
+  }).join('');
+}
+
+function _walletSetFilter(k){ _walletFilter = k; renderWallet(); }
+function _walletSearchInput(v){ _walletQuery = (v||'').trim(); _renderWalletTxns(); }
+
+function openTxnDetail(id){
+  const t = (wallet.transactions||[]).find(x=>x.id===id); if(!t) return;
+  const cat = _wtxnCat(t), meta = _WTXN_CATS[cat]||_WTXN_CATS.other;
+  const credit = (t.type||meta.type)==='credit';
+  const row=(k,v)=>`<div class="txd-row"><span>${k}</span><b>${v}</b></div>`;
+  document.getElementById('txnDetailBody').innerHTML = `
+    <div class="txd-amt ${credit?'credit':'debit'}">${credit?'+':'-'}Rs.${(t.amount||0).toLocaleString('en-IN')}</div>
+    <div class="txd-title">${escHtml(t.title||meta.label)}</div>
+    ${row('Type', meta.label)}
+    ${row('Status', `<span class="txn-status ${t.status||'completed'}">${t.status||'completed'}</span>`)}
+    ${row('Date', t.date||'—')}
+    ${row('Reference', t.ref||'—')}`;
+  document.getElementById('txnDetailOverlay').classList.add('open');
+}
+
+// ── Deposit / Withdraw (testnet) ──
+function openDepositModal(){
+  if(!user){ showToast('Sign in first'); return; }
+  const inp=document.getElementById('depositAmt'); if(inp) inp.value='';
+  const chips=document.getElementById('depositChips');
+  if(chips) chips.innerHTML=[500,1000,5000,10000].map(a=>`<button class="wchip" onclick="document.getElementById('depositAmt').value=${a}">+Rs.${a.toLocaleString('en-IN')}</button>`).join('');
+  document.getElementById('depositOverlay').classList.add('open');
+  setTimeout(()=>inp&&inp.focus(),50);
+}
+function doDeposit(){
+  const amt=Math.floor(+document.getElementById('depositAmt').value||0);
+  if(amt<=0){ showToast('Enter a valid amount'); return; }
+  if(amt>500000){ showToast('Max Rs.5,00,000 per deposit (testnet)'); return; }
+  wallet.balance=(wallet.balance||0)+amt;
+  _walletAddTxn({ category:'deposit', title:'Deposit', amount:amt });
+  closeWalletModal('depositOverlay');
+  showToast(`Rs.${amt.toLocaleString('en-IN')} added`);
+  renderWallet();
+}
+function openWithdrawModal(){
+  if(!user){ showToast('Sign in first'); return; }
+  const inp=document.getElementById('withdrawAmt'); if(inp) inp.value='';
+  const av=document.getElementById('withdrawAvail'); if(av) av.textContent='Available: Rs. '+(wallet.balance||0).toLocaleString('en-IN');
+  document.getElementById('withdrawOverlay').classList.add('open');
+  setTimeout(()=>inp&&inp.focus(),50);
+}
+function doWithdraw(){
+  const amt=Math.floor(+document.getElementById('withdrawAmt').value||0);
+  if(amt<=0){ showToast('Enter a valid amount'); return; }
+  if(amt>(wallet.balance||0)){ showToast('Insufficient available balance'); return; }
+  wallet.balance-=amt;
+  _walletAddTxn({ category:'withdraw', title:'Withdrawal to bank', amount:amt, status:'completed' });
+  closeWalletModal('withdrawOverlay');
+  showToast(`Rs.${amt.toLocaleString('en-IN')} withdrawn`);
+  renderWallet();
+}
+function claimPending(){
+  const amt=wallet.pending||0; if(amt<=0) return;
+  wallet.balance=(wallet.balance||0)+amt; wallet.pending=0;
+  _walletAddTxn({ category:'claim', title:'Pending earnings claimed', amount:amt });
+  showToast(`Rs.${amt.toLocaleString('en-IN')} moved to balance`);
+  renderWallet();
+}
+function closeWalletModal(id){ const el=document.getElementById(id); if(el) el.classList.remove('open'); }
 
 // Smart router: shorts (<60s) open Shorts player, long videos open YouTube watch page
 function openVideo(proofId) {

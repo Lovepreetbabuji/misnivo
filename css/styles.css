@@ -933,6 +933,63 @@ body{
 .btn-wallet:hover{background:rgba(255,255,255,0.20);transform:translateY(-1px);}
 .btn-wallet .mi{font-size:18px;}
 
+/* ── Wallet: balance breakdown ── */
+.wallet-breakdown{display:flex;gap:12px;margin-top:20px;position:relative;z-index:1;flex-wrap:wrap;}
+.wbk-item{flex:1;min-width:140px;display:flex;align-items:center;gap:10px;
+  background:rgba(0,0,0,.22);border:1px solid rgba(255,255,255,.12);border-radius:12px;padding:10px 12px;}
+.wbk-ic{width:34px;height:34px;border-radius:9px;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+.wbk-ic .mi{font-size:18px;color:#fff;}
+.wbk-locked{background:rgba(255,159,10,.30);}
+.wbk-pending{background:rgba(10,132,255,.30);}
+.wbk-val{font-size:16px;font-weight:800;color:#fff;font-family:'Roboto',sans-serif;line-height:1.1;}
+.wbk-lbl{font-size:11px;color:rgba(255,255,255,.6);margin-top:2px;}
+.wallet-claim{margin-top:14px;width:100%;position:relative;z-index:1;
+  display:flex;align-items:center;justify-content:center;gap:8px;cursor:pointer;
+  background:rgba(0,200,83,.18);border:1px solid rgba(0,200,83,.45);color:#fff;
+  border-radius:14px;padding:12px;font-size:13px;font-weight:700;font-family:inherit;transition:background .2s;}
+.wallet-claim:hover{background:rgba(0,200,83,.30);}
+.wallet-claim .mi{font-size:18px;color:var(--green);}
+
+/* ── Wallet: transactions toolbar ── */
+.wallet-txn-hdr{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:26px 0 12px;flex-wrap:wrap;}
+.wallet-search{display:flex;align-items:center;gap:8px;background:var(--glass);backdrop-filter:var(--blur);
+  border:1px solid var(--border);border-radius:50px;padding:7px 14px;min-width:220px;flex:0 1 280px;}
+.wallet-search .mi{font-size:18px;color:var(--t3);}
+.wallet-search input{flex:1;background:transparent;border:none;outline:none;color:var(--t1);font-size:13px;font-family:inherit;}
+.wallet-filters{display:flex;gap:8px;overflow-x:auto;padding-bottom:6px;margin-bottom:10px;scrollbar-width:none;}
+.wallet-filters::-webkit-scrollbar{display:none;}
+.wfilter{flex-shrink:0;background:var(--glass);border:1px solid var(--border);color:var(--t2);
+  border-radius:50px;padding:7px 15px;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;transition:all .15s;white-space:nowrap;}
+.wfilter:hover{border-color:var(--border2);color:var(--t1);}
+.wfilter.active{background:var(--t1);color:#0a0a0a;border-color:var(--t1);}
+.txn-item{cursor:pointer;}
+.txn-status{text-transform:capitalize;font-weight:700;font-size:11px;}
+.txn-status.pending,.txn-status.processing{color:var(--orange,#FF9F0A);}
+.txn-status.failed{color:var(--red);}
+
+/* ── Wallet modals ── */
+.wallet-modal{max-width:420px;}
+.wallet-amt-row{display:flex;align-items:center;gap:8px;margin:18px 0 6px;
+  border-bottom:2px solid var(--border2);padding-bottom:8px;}
+.wallet-amt-cur{font-size:30px;font-weight:700;color:var(--t2);font-family:'Roboto',sans-serif;}
+.wallet-amt-input{flex:1;background:transparent;border:none;outline:none;color:var(--t1);
+  font-size:38px;font-weight:800;font-family:'Roboto',sans-serif;width:100%;}
+.wallet-amt-input::-webkit-outer-spin-button,.wallet-amt-input::-webkit-inner-spin-button{-webkit-appearance:none;margin:0;}
+.wallet-chips{display:flex;flex-wrap:wrap;gap:8px;margin:14px 0;}
+.wchip{background:var(--glass);border:1px solid var(--border);color:var(--t1);border-radius:50px;
+  padding:8px 14px;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;}
+.wchip:hover{border-color:var(--blue);color:var(--blue);}
+.wallet-avail{font-size:13px;color:var(--t3);margin:4px 0 14px;}
+.wallet-note{display:flex;align-items:center;gap:7px;font-size:12px;color:var(--t3);margin:8px 0 16px;line-height:1.4;}
+.wallet-note .mi{font-size:16px;flex-shrink:0;}
+.txd-amt{font-size:34px;font-weight:800;font-family:'Roboto',sans-serif;text-align:center;margin:8px 0 4px;}
+.txd-amt.credit{color:var(--green);}
+.txd-amt.debit{color:var(--red);}
+.txd-title{text-align:center;font-size:14px;color:var(--t2);margin-bottom:18px;}
+.txd-row{display:flex;justify-content:space-between;gap:12px;padding:11px 0;border-top:1px solid var(--border);font-size:13px;}
+.txd-row span{color:var(--t3);}
+.txd-row b{color:var(--t1);font-weight:600;text-align:right;word-break:break-word;}
+
 /* ═══════════════════════════════════════════════════════
    TABS
 ═══════════════════════════════════════════════════════ */
