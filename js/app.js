@@ -4844,6 +4844,7 @@ function _shortsCommentHtml(c, replies, canPin) {
 function _shortsReplyHtml(c) {
   const liked = (c.likedBy||[]).includes(user?.uid);
   const likeN = c.likeCount || c.likes || 0;
+  const safeName = (c.userName||'').replace(/[\\'"<>]/g,'');
   return `<div class="shorts-comment shorts-reply">
     <div class="shorts-comment-av" style="width:26px;height:26px;font-size:11px;">${_avHtml(c.userPhotoURL, c.userName)}</div>
     <div class="shorts-comment-body">
@@ -4851,7 +4852,9 @@ function _shortsReplyHtml(c) {
       <div class="shorts-comment-text">${escHtml(c.text||'')}</div>
       <div class="shorts-comment-acts vd-comment-acts">
         <button class="cmt-act ${liked?'liked':''}" onclick="likeComment('${c.id}')"><span class="mi">thumb_up</span>${likeN>0?' '+_fmtCount(likeN):''}</button>
-        <button class="cmt-act" onclick="startShortsReply('${c.id}','${(c.userName||'').replace(/[\\'"<>]/g,'')}')">Reply</button>
+        <button class="cmt-act" onclick="startShortsReply('${c.id}','${safeName}')">Reply</button>
+        <span class="cmt-more"><button class="cmt-3dots" onclick="event.stopPropagation();_ddToggleCmtMenu(this)"><span class="mi">more_vert</span></button>
+          <span class="cmt-menu"><button onclick="event.stopPropagation();reportComment('${c.id}','${safeName}')"><span class="mi">flag</span> Report</button></span></span>
       </div>
     </div>
   </div>`;
