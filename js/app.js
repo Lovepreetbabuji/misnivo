@@ -2246,7 +2246,8 @@ function _renderMyDares(){
 function _renderAcceptedDares(){
   const el=document.getElementById('tAccepted'); if(!el) return;
   const stOf=a=> a.applicantStatus==='pending'?'applied' : a.proofStatus==='approved'?'approved' : a.proofStatus==='submitted'?'review' : 'tosubmit';
-  let list=[...(acceptedDares||[])].sort((a,b)=>(b.date||'').localeCompare(a.date||''));
+  const _at=a=> new Date(a.acceptedDate||a.date||0).getTime()||0;
+  let list=[...(acceptedDares||[])].sort((a,b)=>_at(b)-_at(a));   // latest first
   if(_pAccFilter!=='all') list=list.filter(a=>stOf(a)===_pAccFilter);
   const chips=[['all','All'],['tosubmit','To Submit'],['review','Under Review'],['approved','Approved']]
     .map(([k,l])=>`<button class="pfilter ${_pAccFilter===k?'active':''}" onclick="_setAccFilter('${k}')">${l}</button>`).join('');
@@ -2297,7 +2298,8 @@ async function _profileFollowCounts(uid){
 function _renderProfileVideos(){
   const el = document.getElementById('tVideos'); if (!el) return;
   const pool = (typeof allProofs!=='undefined' && allProofs.length) ? allProofs : homeProofs;
-  const mine = (pool||[]).filter(p => p.takerId === user.uid);
+  const _vt = p => p.createdAtMs || (p.createdAt?.toDate?.()?.getTime()) || (p.submittedAt ? new Date(p.submittedAt).getTime() : 0) || 0;
+  const mine = (pool||[]).filter(p => p.takerId === user.uid).sort((a,b)=>_vt(b)-_vt(a));  // latest first
   if (!mine.length){
     el.innerHTML = `<div class="empty" style="padding:32px;"><span class="mi">video_library</span>
       <div class="empty-title" style="font-size:18px;">No Videos Yet</div>
