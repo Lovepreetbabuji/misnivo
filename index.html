@@ -11,7 +11,7 @@
 <link href="https://fonts.googleapis.com/icon?family=Material+Icons+Round" rel="stylesheet"/>
 
 <!-- App Styles -->
-<link rel="stylesheet" href="/css/styles.css?v=20260615v"/>
+<link rel="stylesheet" href="/css/styles.css?v=20260615w"/>
 
 <!-- Firebase CDN -->
 <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
@@ -354,13 +354,18 @@
         </button>
       </div>
 
+      <div class="wallet-stats" id="walletStats"></div>
+
       <div class="wallet-acct" id="walletAcct"></div>
 
       <div class="wallet-txn-hdr">
         <div class="sec-title" style="font-size:16px;margin:0;"><div class="sec-dot"></div>Transactions</div>
-        <div class="wallet-search">
-          <span class="mi">search</span>
-          <input id="walletTxnSearch" placeholder="Search transactions" oninput="_walletSearchInput(this.value)" autocomplete="off"/>
+        <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+          <div class="wallet-search">
+            <span class="mi">search</span>
+            <input id="walletTxnSearch" placeholder="Search transactions" oninput="_walletSearchInput(this.value)" autocomplete="off"/>
+          </div>
+          <button class="wallet-export" onclick="exportWalletCSV()" title="Download statement (CSV)"><span class="mi">download</span>Export</button>
         </div>
       </div>
       <div class="wallet-filters" id="walletFilters"></div>
@@ -900,7 +905,7 @@
 <div class="toast" id="toast"></div>
 
 <!-- App Logic -->
-<script src="/js/app.js?v=20260615v"></script>
+<script src="/js/app.js?v=20260615w"></script>
 
 <!-- ══ v0.19 NEW MODALS ══ -->
 

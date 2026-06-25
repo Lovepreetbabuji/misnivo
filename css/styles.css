@@ -1032,6 +1032,28 @@ body{
 .wmtab.active{background:var(--t1);color:#0a0a0a;border-color:var(--t1);}
 .wallet-pin{text-align:center;font-size:28px;letter-spacing:14px;font-weight:800;padding-left:14px;}
 
+/* ── Wallet: insights (summary + chart) + export ── */
+.wstat-card{background:var(--glass);backdrop-filter:var(--blur);border:1px solid var(--border);border-radius:16px;padding:16px;}
+.wstat-row{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:18px;}
+.wstat-box{flex:1;min-width:100px;background:rgba(255,255,255,.04);border:1px solid var(--border);border-radius:12px;padding:11px 13px;}
+.wstat-lbl{font-size:11px;color:var(--t3);text-transform:uppercase;letter-spacing:.5px;}
+.wstat-val{font-size:17px;font-weight:800;color:var(--t1);font-family:'Roboto',sans-serif;margin-top:3px;}
+.wstat-val.green{color:var(--green);} .wstat-val.red{color:var(--red);}
+.wstat-chart{display:flex;align-items:flex-end;gap:10px;height:120px;padding:0 4px;}
+.wbar-col{flex:1;display:flex;flex-direction:column;align-items:center;gap:6px;height:100%;}
+.wbars{flex:1;display:flex;align-items:flex-end;justify-content:center;gap:4px;width:100%;}
+.wbar{width:42%;min-height:3px;border-radius:4px 4px 0 0;transition:height .4s cubic-bezier(.22,1,.36,1);}
+.wbar.inc{background:var(--green);} .wbar.exp{background:var(--red);}
+.wbar-lbl{font-size:11px;color:var(--t3);}
+.wstat-legend{display:flex;align-items:center;gap:16px;margin-top:14px;font-size:12px;color:var(--t3);flex-wrap:wrap;}
+.wstat-legend .wdot{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:5px;vertical-align:middle;}
+.wstat-legend .wdot.inc{background:var(--green);} .wstat-legend .wdot.exp{background:var(--red);}
+.wstat-net{margin-left:auto;} .wstat-net b.green{color:var(--green);} .wstat-net b.red{color:var(--red);}
+.wallet-export{display:flex;align-items:center;gap:6px;background:var(--glass);border:1px solid var(--border);
+  color:var(--t1);border-radius:50px;padding:8px 15px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;transition:all .15s;}
+.wallet-export:hover{border-color:var(--border2);background:var(--glass2);}
+.wallet-export .mi{font-size:18px;}
+
 /* ═══════════════════════════════════════════════════════
    TABS
 ═══════════════════════════════════════════════════════ */

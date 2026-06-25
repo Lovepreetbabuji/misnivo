@@ -3175,9 +3175,9 @@ function _mixedVideoFeedHtml(arr, emptyMsg) {
 
 function _hideSuggestions() { const el=document.getElementById('searchSuggestions'); if(el) el.style.display='none'; }
 
-function _notifColor(type){const m={like_milestone:'#FF453A',comment_milestone:'#0A84FF',view_milestone:'#32D74B',dare_accepted:'#FF9F0A',proof_submitted:'#BF5AF2',proof_approved:'#32D74B',proof_rejected:'#FF453A'};return m[type]||'#8E8E93';}
+function _notifColor(type){const m={like_milestone:'#FF453A',comment_milestone:'#0A84FF',view_milestone:'#32D74B',dare_accepted:'#FF9F0A',proof_submitted:'#BF5AF2',proof_approved:'#32D74B',proof_rejected:'#FF453A',wallet_credit:'#32D74B',wallet_debit:'#FF453A'};return m[type]||'#8E8E93';}
 
-function _notifIcon(type){const m={like_milestone:'favorite',comment_milestone:'chat',view_milestone:'visibility',dare_accepted:'bolt',proof_submitted:'video_call',proof_approved:'check_circle',proof_rejected:'cancel'};return m[type]||'notifications';}
+function _notifIcon(type){const m={like_milestone:'favorite',comment_milestone:'chat',view_milestone:'visibility',dare_accepted:'bolt',proof_submitted:'video_call',proof_approved:'check_circle',proof_rejected:'cancel',wallet_credit:'account_balance_wallet',wallet_debit:'account_balance_wallet'};return m[type]||'notifications';}
 
 async function _notifyDareAccepted(dare,takerName){if(!dare.creatorUid||dare.creatorUid===user?.uid)return;await _sendNotification(dare.creatorUid,'dare_accepted',`⚡ ${takerName} accepted your dare!`,`"${(dare.caption||dare.title||'').slice(0,30)}" has a new taker.`,dare.id);}
 
@@ -5088,6 +5088,7 @@ function renderWallet() {
   // Filter chips
   const fc = document.getElementById('walletFilters');
   if (fc) fc.innerHTML = _WFILTERS.map(([k,l])=>`<button class="wfilter ${_walletFilter===k?'active':''}" onclick="_walletSetFilter('${k}')">${l}</button>`).join('');
+  _renderWalletStats();
   _renderWalletAcct();
   _renderWalletTxns();
 }
@@ -5157,6 +5158,7 @@ function doDeposit(){
   if(amt>500000){ showToast('Max Rs.5,00,000 per deposit (testnet)'); return; }
   wallet.balance=(wallet.balance||0)+amt;
   _walletAddTxn({ category:'deposit', title:'Deposit', amount:amt });
+  _walletNotify('Money added', `Rs.${amt.toLocaleString('en-IN')} added to your wallet`, true);
   closeWalletModal('depositOverlay');
   showToast(`Rs.${amt.toLocaleString('en-IN')} added`);
   renderWallet();
@@ -5190,6 +5192,7 @@ function _executeWithdraw(amt){
   setTimeout(()=>{ tx.status='completed';                       // testnet: simulate settlement
     if(user) db.collection('users').doc(user.uid).update({wallet}).catch(()=>{});
     const wp=document.getElementById('pageWallet'); if(wp&&wp.classList.contains('active')) renderWallet();
+    _walletNotify('Withdrawal completed', `Rs.${amt.toLocaleString('en-IN')} sent to your account`, false);
     showToast('Withdrawal completed');
   }, 4000);
 }
@@ -5197,6 +5200,7 @@ function claimPending(){
   const amt=wallet.pending||0; if(amt<=0) return;
   wallet.balance=(wallet.balance||0)+amt; wallet.pending=0;
   _walletAddTxn({ category:'claim', title:'Pending earnings claimed', amount:amt });
+  _walletNotify('Earnings claimed', `Rs.${amt.toLocaleString('en-IN')} moved to your balance`, true);
   showToast(`Rs.${amt.toLocaleString('en-IN')} moved to balance`);
   renderWallet();
 }
@@ -5322,6 +5326,65 @@ function _renderWalletAcct(){
           : '<div class="wacc-empty">No accounts linked yet</div>'}
       </div>
     </div>`;
+}
+
+// ── Insights: earnings summary + 6-month income/expense chart ──
+function _renderWalletStats(){
+  const el=document.getElementById('walletStats'); if(!el) return;
+  const txns=wallet.transactions||[];
+  if(!txns.length){ el.innerHTML=''; return; }
+  let totalIn=0, totalOut=0, bountyWon=0;
+  const now=new Date(), mk=d=>d.getFullYear()+'-'+d.getMonth();
+  const months=[]; for(let i=5;i>=0;i--){ const d=new Date(now.getFullYear(),now.getMonth()-i,1); months.push({k:mk(d),label:d.toLocaleString('en-US',{month:'short'}),inc:0,exp:0}); }
+  const mMap={}; months.forEach(m=>mMap[m.k]=m);
+  txns.forEach(t=>{
+    const cat=_wtxnCat(t), meta=_WTXN_CATS[cat]||_WTXN_CATS.other, credit=(t.type||meta.type)==='credit', amt=t.amount||0;
+    if(credit){ totalIn+=amt; if(cat==='bounty_won') bountyWon+=amt; } else totalOut+=amt;
+    const ts=_wtxnTs(t); if(ts){ const m=mMap[mk(new Date(ts))]; if(m){ credit?m.inc+=amt:m.exp+=amt; } }
+  });
+  const max=Math.max(1,...months.map(m=>Math.max(m.inc,m.exp)));
+  const tm=mMap[mk(now)]||{inc:0,exp:0}, net=tm.inc-tm.exp;
+  el.innerHTML=`
+    <div class="sec-title" style="font-size:16px;margin:26px 0 12px;"><div class="sec-dot"></div>Insights</div>
+    <div class="wstat-card">
+      <div class="wstat-row">
+        <div class="wstat-box"><div class="wstat-lbl">Total in</div><div class="wstat-val green">+Rs.${totalIn.toLocaleString('en-IN')}</div></div>
+        <div class="wstat-box"><div class="wstat-lbl">Total out</div><div class="wstat-val red">-Rs.${totalOut.toLocaleString('en-IN')}</div></div>
+        <div class="wstat-box"><div class="wstat-lbl">Bounty earned</div><div class="wstat-val">Rs.${bountyWon.toLocaleString('en-IN')}</div></div>
+      </div>
+      <div class="wstat-chart">
+        ${months.map(m=>`<div class="wbar-col">
+          <div class="wbars">
+            <div class="wbar inc" style="height:${Math.round(m.inc/max*100)}%" title="In Rs.${m.inc.toLocaleString('en-IN')}"></div>
+            <div class="wbar exp" style="height:${Math.round(m.exp/max*100)}%" title="Out Rs.${m.exp.toLocaleString('en-IN')}"></div>
+          </div>
+          <div class="wbar-lbl">${m.label}</div>
+        </div>`).join('')}
+      </div>
+      <div class="wstat-legend"><span><i class="wdot inc"></i>Income</span><span><i class="wdot exp"></i>Expense</span>
+        <span class="wstat-net">This month: <b class="${net>=0?'green':'red'}">${net>=0?'+':'−'}Rs.${Math.abs(net).toLocaleString('en-IN')}</b></span></div>
+    </div>`;
+}
+
+// ── Statement export (CSV) ──
+function exportWalletCSV(){
+  const txns=(wallet.transactions||[]).slice().sort((a,b)=>_wtxnTs(b)-_wtxnTs(a));
+  if(!txns.length){ showToast('No transactions to export'); return; }
+  const esc=s=>`"${(''+s).replace(/"/g,'""')}"`;
+  const rows=[['Date','Type','Category','Title','Amount (Rs)','Status','Reference']];
+  txns.forEach(t=>{ const cat=_wtxnCat(t), meta=_WTXN_CATS[cat]||_WTXN_CATS.other, credit=(t.type||meta.type)==='credit';
+    rows.push([t.date||'', credit?'Credit':'Debit', meta.label, t.title||'', (credit?'+':'-')+(t.amount||0), t.status||'completed', t.ref||'']); });
+  const csv=rows.map(r=>r.map(esc).join(',')).join('\r\n');
+  const blob=new Blob([csv],{type:'text/csv;charset=utf-8;'}), url=URL.createObjectURL(blob);
+  const a=document.createElement('a'); a.href=url; a.download='daremarket-statement-'+todayStr().replace(/\s+/g,'-')+'.csv';
+  document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
+  showToast('Statement downloaded');
+}
+
+// ── Wallet event notification (self) ──
+function _walletNotify(title,msg,credit){
+  if(!user || typeof _sendNotification!=='function') return;
+  _sendNotification(user.uid, credit?'wallet_credit':'wallet_debit', title, msg, '');
 }
 
 // Smart router: shorts (<60s) open Shorts player, long videos open YouTube watch page
