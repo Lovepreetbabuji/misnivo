@@ -2259,27 +2259,74 @@ function renderProfile() {
         </div>
       </div>`; }).join('');
 
-  // Transactions (now in wallet page)
-  const tx = document.getElementById('walletTxns') || document.getElementById('tTxns');
-  if (tx) tx.innerHTML = !wallet.transactions.length
-    ? `<div class="empty" style="padding:32px;"><span class="mi">receipt_long</span><div class="empty-title" style="font-size:18px;">No Transactions</div><p class="empty-desc" style="margin-bottom:0;">Your transaction history will appear here.</p></div>`
-    : wallet.transactions.map(t=>`
-      <div class="txn-item">
-        <div class="txn-left">
-          <div class="txn-icon" style="background:${t.type==='credit'?'rgba(0,200,83,.15)':'rgba(229,57,53,.15)'};">
-            <span class="mi" style="color:${t.type==='credit'?'var(--green)':'var(--red)'};">${t.type==='credit'?'arrow_downward':'arrow_upward'}</span>
-          </div>
-          <div><div class="txn-title">${t.title}</div><div class="txn-date">${t.date}</div></div>
-        </div>
-        <div class="txn-amt ${t.type}">${t.type==='credit'?'+':'-'}Rs.${(t.amount||0).toLocaleString('en-IN')}</div>
-      </div>`).join('');
+  // Stats + Videos tab
+  _renderProfileStats(myPosted);
+  _renderProfileVideos();
+}
+
+// ── Profile: stats row (own profile) ──
+function _renderProfileStats(myPosted){
+  const el = document.getElementById('profStats'); if (!el) return;
+  myPosted = myPosted || (dares||[]).filter(d => d.creatorUid === user.uid);
+  const posted    = myPosted.length;
+  const completed = myPosted.filter(d => d.completed).length;
+  const txns      = (wallet.transactions||[]);
+  const earned    = txns.filter(t => _wtxnCat(t)==='bounty_won').reduce((s,t)=>s+(t.amount||0),0);
+  const paid      = txns.filter(t => _wtxnCat(t)==='dare_posted').reduce((s,t)=>s+(t.amount||0),0);
+  const verified  = (wallet.kyc && wallet.kyc.status==='verified');
+  const stat = (val,lbl) => `<div class="pstat"><div class="pstat-v">${val}</div><div class="pstat-l">${lbl}</div></div>`;
+  el.innerHTML = `
+    ${verified ? `<div class="pstat-verified"><span class="mi">verified</span> Verified</div>` : ''}
+    <div class="pstat-grid">
+      ${stat(posted, 'Dares')}
+      ${stat(completed, 'Completed')}
+      ${stat('Rs.'+earned.toLocaleString('en-IN'), 'Earned')}
+      ${stat('Rs.'+paid.toLocaleString('en-IN'), 'Paid out')}
+      ${stat('<span id="pstatFollowers">…</span>', 'Followers')}
+      ${stat('<span id="pstatFollowing">…</span>', 'Following')}
+    </div>`;
+  // Follower / following counts (async — from the follows collection)
+  _profileFollowCounts(user.uid).then(({followers,following})=>{
+    const f1=document.getElementById('pstatFollowers'); if(f1) f1.textContent=_fmtCount(followers);
+    const f2=document.getElementById('pstatFollowing'); if(f2) f2.textContent=_fmtCount(following);
+  });
+}
+async function _profileFollowCounts(uid){
+  try{
+    const [fr, fg] = await Promise.all([
+      db.collection('follows').where('targetUid','==',uid).get(),
+      db.collection('follows').where('followerUid','==',uid).get()
+    ]);
+    return { followers: fr.size, following: fg.size };
+  }catch(e){ return { followers:0, following:0 }; }
+}
+
+// ── Profile: Videos tab (your completed-dare proof videos) ──
+function _renderProfileVideos(){
+  const el = document.getElementById('tVideos'); if (!el) return;
+  const pool = (typeof allProofs!=='undefined' && allProofs.length) ? allProofs : homeProofs;
+  const mine = (pool||[]).filter(p => p.takerId === user.uid);
+  if (!mine.length){
+    el.innerHTML = `<div class="empty" style="padding:32px;"><span class="mi">video_library</span>
+      <div class="empty-title" style="font-size:18px;">No Videos Yet</div>
+      <p class="empty-desc" style="margin-bottom:16px;">Complete a dare and submit video proof — it shows up here.</p>
+      <button class="btn-empty" onclick="goPage('dares')"><span class="mi">bolt</span>Browse Dares</button></div>`;
+    return;
+  }
+  const longs  = mine.filter(p => !_isShortVideo(p));
+  const shorts = mine.filter(p =>  _isShortVideo(p));
+  let html = '';
+  if (longs.length)  html += `<div class="feed-longs">${longs.map(_longCardHtml).join('')}</div>`;
+  if (shorts.length) html += _shortsRowHtml(shorts);
+  el.innerHTML = html;
 }
 
 function switchPTab(el, tabId) {
   document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
   el.classList.add('active');
-  ['tMyDares','tAccepted','tTxns'].forEach(id => {
-    document.getElementById(id).style.display = id === tabId ? 'block' : 'none';
+  ['tVideos','tMyDares','tAccepted','tTxns'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.style.display = id === tabId ? 'block' : 'none';
   });
 }
 

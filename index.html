@@ -11,7 +11,7 @@
 <link href="https://fonts.googleapis.com/icon?family=Material+Icons+Round" rel="stylesheet"/>
 
 <!-- App Styles -->
-<link rel="stylesheet" href="/css/styles.css?v=20260615w"/>
+<link rel="stylesheet" href="/css/styles.css?v=20260615x"/>
 
 <!-- Firebase CDN -->
 <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
@@ -317,14 +317,16 @@
       </div>
 
       <!-- Stats -->
-
+      <div class="profile-stats" id="profStats"></div>
 
       <!-- Tabs -->
       <div class="tabs">
-        <button class="tab active" onclick="switchPTab(this,'tMyDares')">My Dares</button>
+        <button class="tab active" onclick="switchPTab(this,'tVideos')">Videos</button>
+        <button class="tab"        onclick="switchPTab(this,'tMyDares')">My Dares</button>
         <button class="tab"        onclick="switchPTab(this,'tAccepted')">Accepted</button>
       </div>
-      <div id="tMyDares"></div>
+      <div id="tVideos"></div>
+      <div id="tMyDares" style="display:none;"></div>
       <div id="tAccepted" style="display:none;"></div>
     </div>
 
@@ -905,7 +907,7 @@
 <div class="toast" id="toast"></div>
 
 <!-- App Logic -->
-<script src="/js/app.js?v=20260615w"></script>
+<script src="/js/app.js?v=20260615x"></script>
 
 <!-- ══ v0.19 NEW MODALS ══ -->
 
