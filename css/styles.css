@@ -990,6 +990,48 @@ body{
 .txd-row span{color:var(--t3);}
 .txd-row b{color:var(--t1);font-weight:600;text-align:right;word-break:break-word;}
 
+/* ── Wallet: Account & Security ── */
+.wacc-card{background:var(--glass);backdrop-filter:var(--blur);border:1px solid var(--border);border-radius:16px;overflow:hidden;}
+.wacc-row{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:15px 16px;cursor:pointer;
+  border-bottom:1px solid var(--border);transition:background .15s;}
+.wacc-row:hover{background:var(--glass2);}
+.wacc-l{display:flex;align-items:center;gap:12px;min-width:0;}
+.wacc-ic{width:38px;height:38px;border-radius:11px;flex-shrink:0;display:flex;align-items:center;justify-content:center;
+  background:rgba(255,255,255,.06);}
+.wacc-ic .mi{font-size:19px;color:var(--t1);}
+.wacc-t{font-size:14px;font-weight:600;color:var(--t1);}
+.wacc-s{font-size:12px;color:var(--t3);margin-top:1px;}
+.wacc-r{display:flex;align-items:center;gap:8px;flex-shrink:0;}
+.wacc-r .mi{font-size:20px;}
+.wacc-badge{font-size:11px;font-weight:700;padding:3px 10px;border-radius:50px;}
+.wacc-badge.ok{background:rgba(0,200,83,.16);color:var(--green);border:1px solid rgba(0,200,83,.4);}
+.wacc-badge.pend{background:rgba(255,159,10,.16);color:var(--orange,#FF9F0A);border:1px solid rgba(255,159,10,.4);}
+.wacc-badge.no{background:rgba(229,57,53,.14);color:var(--red);border:1px solid rgba(229,57,53,.35);}
+.wacc-methods{padding:14px 16px;}
+.wacc-methods-hdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;}
+.wacc-methods-hdr span{font-size:12px;font-weight:700;color:var(--t3);text-transform:uppercase;letter-spacing:.5px;}
+.wacc-methods-hdr button{display:flex;align-items:center;gap:4px;background:none;border:none;color:var(--blue);
+  font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;}
+.wacc-methods-hdr button .mi{font-size:17px;}
+.wacc-method{display:flex;align-items:center;gap:11px;padding:9px 0;}
+.wacc-mic{width:34px;height:34px;border-radius:9px;flex-shrink:0;display:flex;align-items:center;justify-content:center;
+  background:rgba(255,255,255,.06);}
+.wacc-mic .mi{font-size:18px;color:var(--t1);}
+.wacc-mbody{flex:1;min-width:0;}
+.wacc-mt{font-size:13px;font-weight:600;color:var(--t1);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.wacc-ms{font-size:11px;color:var(--t3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.wacc-mdel{background:none;border:none;color:var(--t3);cursor:pointer;padding:6px;border-radius:8px;flex-shrink:0;}
+.wacc-mdel:hover{color:var(--red);background:rgba(229,57,53,.12);}
+.wacc-mdel .mi{font-size:18px;}
+.wacc-empty{font-size:13px;color:var(--t3);text-align:center;padding:10px 0;}
+/* method modal tabs + form labels + pin */
+.wallet-flabel{display:block;font-size:12px;font-weight:600;color:var(--t3);margin:12px 0 5px;}
+.wallet-mtabs{display:flex;gap:8px;margin-bottom:6px;}
+.wmtab{flex:1;background:var(--glass);border:1px solid var(--border);color:var(--t2);border-radius:10px;
+  padding:9px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;transition:all .15s;}
+.wmtab.active{background:var(--t1);color:#0a0a0a;border-color:var(--t1);}
+.wallet-pin{text-align:center;font-size:28px;letter-spacing:14px;font-weight:800;padding-left:14px;}
+
 /* ═══════════════════════════════════════════════════════
    TABS
 ═══════════════════════════════════════════════════════ */

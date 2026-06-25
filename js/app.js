@@ -5088,6 +5088,7 @@ function renderWallet() {
   // Filter chips
   const fc = document.getElementById('walletFilters');
   if (fc) fc.innerHTML = _WFILTERS.map(([k,l])=>`<button class="wfilter ${_walletFilter===k?'active':''}" onclick="_walletSetFilter('${k}')">${l}</button>`).join('');
+  _renderWalletAcct();
   _renderWalletTxns();
 }
 
@@ -5171,11 +5172,26 @@ function doWithdraw(){
   const amt=Math.floor(+document.getElementById('withdrawAmt').value||0);
   if(amt<=0){ showToast('Enter a valid amount'); return; }
   if(amt>(wallet.balance||0)){ showToast('Insufficient available balance'); return; }
+  if(((wallet.kyc&&wallet.kyc.status)||'none')!=='verified'){ closeWalletModal('withdrawOverlay'); showToast('Complete KYC to withdraw'); openKycModal(); return; }
+  if(!(wallet.methods||[]).length){ closeWalletModal('withdrawOverlay'); showToast('Add a bank/UPI account first'); openMethodModal(); return; }
+  const exec=()=>_executeWithdraw(amt);
+  if(wallet.pin){ closeWalletModal('withdrawOverlay'); _pinVerify(exec); } else exec();
+}
+function _executeWithdraw(amt){
   wallet.balance-=amt;
-  _walletAddTxn({ category:'withdraw', title:'Withdrawal to bank', amount:amt, status:'completed' });
+  const tx={ id:'w'+Date.now()+Math.floor(Math.random()*1000), ts:Date.now(), status:'processing',
+    type:'debit', category:'withdraw', title:'Withdrawal to '+((wallet.methods||[])[0]?.label||'bank'), amount:amt,
+    ref:'REF'+Date.now().toString(36).toUpperCase(), date:todayStr() };
+  wallet.transactions=wallet.transactions||[]; wallet.transactions.unshift(tx);
+  if(user) db.collection('users').doc(user.uid).update({wallet}).catch(()=>{});
   closeWalletModal('withdrawOverlay');
-  showToast(`Rs.${amt.toLocaleString('en-IN')} withdrawn`);
+  showToast('Withdrawal initiated · processing');
   renderWallet();
+  setTimeout(()=>{ tx.status='completed';                       // testnet: simulate settlement
+    if(user) db.collection('users').doc(user.uid).update({wallet}).catch(()=>{});
+    const wp=document.getElementById('pageWallet'); if(wp&&wp.classList.contains('active')) renderWallet();
+    showToast('Withdrawal completed');
+  }, 4000);
 }
 function claimPending(){
   const amt=wallet.pending||0; if(amt<=0) return;
@@ -5185,6 +5201,128 @@ function claimPending(){
   renderWallet();
 }
 function closeWalletModal(id){ const el=document.getElementById(id); if(el) el.classList.remove('open'); }
+
+// ── KYC ──
+function openKycModal(){
+  if(!user){ showToast('Sign in first'); return; }
+  wallet.kyc = wallet.kyc || { status:'none' };
+  if(wallet.kyc.status==='verified'){ showToast('KYC already verified ✓'); return; }
+  document.getElementById('kycName').value = wallet.kyc.name||'';
+  document.getElementById('kycPan').value  = wallet.kyc.pan||'';
+  document.getElementById('kycOverlay').classList.add('open');
+}
+function submitKyc(){
+  const name=(document.getElementById('kycName').value||'').trim();
+  const pan=(document.getElementById('kycPan').value||'').trim().toUpperCase();
+  if(name.length<3){ showToast('Enter your full name'); return; }
+  if(!/^[A-Z]{5}[0-9]{4}[A-Z]$/.test(pan)){ showToast('Enter a valid PAN (ABCDE1234F)'); return; }
+  wallet.kyc={ status:'verified', name, pan };          // testnet: instant approval
+  if(user) db.collection('users').doc(user.uid).update({ wallet }).catch(()=>{});
+  closeWalletModal('kycOverlay'); showToast('KYC verified ✓'); renderWallet();
+}
+
+// ── Linked accounts (UPI / bank) ──
+let _methodType='upi';
+function _methodTab(t){
+  _methodType=t;
+  document.getElementById('wmtabUpi').classList.toggle('active',t==='upi');
+  document.getElementById('wmtabBank').classList.toggle('active',t==='bank');
+  document.getElementById('methodUpi').style.display = t==='upi'?'':'none';
+  document.getElementById('methodBank').style.display = t==='bank'?'':'none';
+}
+function openMethodModal(){
+  if(!user){ showToast('Sign in first'); return; }
+  ['mUpi','mBankName','mBankNum','mBankIfsc'].forEach(id=>{ const e=document.getElementById(id); if(e) e.value=''; });
+  _methodTab('upi'); document.getElementById('methodOverlay').classList.add('open');
+}
+function addMethod(){
+  wallet.methods=wallet.methods||[]; let m=null;
+  if(_methodType==='upi'){
+    const v=(document.getElementById('mUpi').value||'').trim();
+    if(!/^[\w.\-]{2,}@[a-zA-Z]{2,}$/.test(v)){ showToast('Enter a valid UPI ID'); return; }
+    m={ id:'m'+Date.now(), type:'upi', label:v, sub:'UPI' };
+  } else {
+    const nm=(document.getElementById('mBankName').value||'').trim();
+    const num=(document.getElementById('mBankNum').value||'').trim().replace(/\s/g,'');
+    const ifsc=(document.getElementById('mBankIfsc').value||'').trim().toUpperCase();
+    if(nm.length<3||!/^\d{6,18}$/.test(num)||ifsc.length<6){ showToast('Fill valid bank details'); return; }
+    m={ id:'m'+Date.now(), type:'bank', label:'••••'+num.slice(-4), sub:nm+' · '+ifsc };
+  }
+  wallet.methods.push(m);
+  if(user) db.collection('users').doc(user.uid).update({ wallet }).catch(()=>{});
+  closeWalletModal('methodOverlay'); showToast('Account added'); renderWallet();
+}
+function removeMethod(id){
+  wallet.methods=(wallet.methods||[]).filter(m=>m.id!==id);
+  if(user) db.collection('users').doc(user.uid).update({ wallet }).catch(()=>{});
+  renderWallet();
+}
+
+// ── Transaction PIN (set / verify) ──
+let _pinCb=null, _pinMode='set';
+function openPinModal(){
+  _pinMode = wallet.pin ? 'change':'set';
+  document.getElementById('pinTitle').textContent = wallet.pin?'Change transaction PIN':'Set transaction PIN';
+  document.getElementById('pinNote').innerHTML = '<span class="mi">lock</span> A 4-digit PIN protects your withdrawals.';
+  document.getElementById('pinSubmitBtn').textContent='Save PIN';
+  document.getElementById('pinInput').value='';
+  document.getElementById('pinOverlay').classList.add('open');
+  setTimeout(()=>document.getElementById('pinInput').focus(),60);
+}
+function _pinVerify(cb){
+  _pinMode='verify'; _pinCb=cb;
+  document.getElementById('pinTitle').textContent='Enter PIN';
+  document.getElementById('pinNote').innerHTML='<span class="mi">lock</span> Enter your 4-digit PIN to confirm.';
+  document.getElementById('pinSubmitBtn').textContent='Confirm';
+  document.getElementById('pinInput').value='';
+  document.getElementById('pinOverlay').classList.add('open');
+  setTimeout(()=>document.getElementById('pinInput').focus(),60);
+}
+function _pinSubmit(){
+  const v=(document.getElementById('pinInput').value||'').trim();
+  if(!/^\d{4}$/.test(v)){ showToast('Enter a 4-digit PIN'); return; }
+  if(_pinMode==='verify'){
+    if(v!==wallet.pin){ showToast('Incorrect PIN'); return; }
+    closeWalletModal('pinOverlay'); const cb=_pinCb; _pinCb=null; if(cb) cb();
+  } else {
+    wallet.pin=v;
+    if(user) db.collection('users').doc(user.uid).update({ wallet }).catch(()=>{});
+    closeWalletModal('pinOverlay'); showToast('PIN saved ✓'); renderWallet();
+  }
+}
+
+// ── Account & Security section (rendered inside the wallet page) ──
+function _renderWalletAcct(){
+  const el=document.getElementById('walletAcct'); if(!el) return;
+  const kyc=(wallet.kyc&&wallet.kyc.status)||'none';
+  const methods=wallet.methods||[];
+  const kycBadge = kyc==='verified'?'<span class="wacc-badge ok">Verified</span>'
+    : kyc==='pending'?'<span class="wacc-badge pend">Pending</span>'
+    : '<span class="wacc-badge no">Not verified</span>';
+  el.innerHTML = `
+    <div class="sec-title" style="font-size:16px;margin:26px 0 12px;"><div class="sec-dot"></div>Account &amp; Security</div>
+    <div class="wacc-card">
+      <div class="wacc-row" onclick="openKycModal()">
+        <div class="wacc-l"><span class="wacc-ic"><span class="mi">verified_user</span></span>
+          <div><div class="wacc-t">KYC verification</div><div class="wacc-s">PAN check, needed for withdrawals</div></div></div>
+        <div class="wacc-r">${kycBadge}<span class="mi" style="color:var(--t3);">chevron_right</span></div>
+      </div>
+      <div class="wacc-row" onclick="openPinModal()">
+        <div class="wacc-l"><span class="wacc-ic"><span class="mi">lock</span></span>
+          <div><div class="wacc-t">Transaction PIN</div><div class="wacc-s">${wallet.pin?'PIN is set · tap to change':'Not set'}</div></div></div>
+        <div class="wacc-r"><span class="mi" style="color:var(--t3);">chevron_right</span></div>
+      </div>
+      <div class="wacc-methods">
+        <div class="wacc-methods-hdr"><span>Linked accounts</span><button onclick="openMethodModal()"><span class="mi">add</span>Add</button></div>
+        ${methods.length? methods.map(m=>`<div class="wacc-method">
+            <span class="wacc-mic"><span class="mi">${m.type==='upi'?'qr_code_2':'account_balance'}</span></span>
+            <div class="wacc-mbody"><div class="wacc-mt">${escHtml(m.label)}</div><div class="wacc-ms">${escHtml(m.sub||'')}</div></div>
+            <button class="wacc-mdel" onclick="removeMethod('${m.id}')" title="Remove"><span class="mi">delete</span></button>
+          </div>`).join('')
+          : '<div class="wacc-empty">No accounts linked yet</div>'}
+      </div>
+    </div>`;
+}
 
 // Smart router: shorts (<60s) open Shorts player, long videos open YouTube watch page
 function openVideo(proofId) {

@@ -11,7 +11,7 @@
 <link href="https://fonts.googleapis.com/icon?family=Material+Icons+Round" rel="stylesheet"/>
 
 <!-- App Styles -->
-<link rel="stylesheet" href="/css/styles.css?v=20260615u"/>
+<link rel="stylesheet" href="/css/styles.css?v=20260615v"/>
 
 <!-- Firebase CDN -->
 <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
@@ -354,6 +354,8 @@
         </button>
       </div>
 
+      <div class="wallet-acct" id="walletAcct"></div>
+
       <div class="wallet-txn-hdr">
         <div class="sec-title" style="font-size:16px;margin:0;"><div class="sec-dot"></div>Transactions</div>
         <div class="wallet-search">
@@ -395,6 +397,53 @@
         <div class="modal-hdr"><div class="modal-title">Transaction</div>
           <button class="modal-close" onclick="closeWalletModal('txnDetailOverlay')"><span class="mi">close</span></button></div>
         <div id="txnDetailBody"></div>
+      </div>
+    </div>
+
+    <div class="overlay wallet-ov" id="kycOverlay">
+      <div class="modal wallet-modal">
+        <div class="modal-hdr"><div class="modal-title">Verify KYC</div>
+          <button class="modal-close" onclick="closeWalletModal('kycOverlay')"><span class="mi">close</span></button></div>
+        <p class="wallet-note"><span class="mi">verified_user</span> Required once before withdrawals. Testnet — instant approval.</p>
+        <label class="wallet-flabel">Full name (as per PAN)</label>
+        <input id="kycName" class="pe-input" placeholder="e.g. Rohan Sharma" autocomplete="off"/>
+        <label class="wallet-flabel">PAN number</label>
+        <input id="kycPan" class="pe-input" placeholder="ABCDE1234F" maxlength="10" style="text-transform:uppercase;" autocomplete="off"/>
+        <button class="btn-fill" style="margin-top:16px;" onclick="submitKyc()">Submit for verification</button>
+      </div>
+    </div>
+
+    <div class="overlay wallet-ov" id="methodOverlay">
+      <div class="modal wallet-modal">
+        <div class="modal-hdr"><div class="modal-title">Add account</div>
+          <button class="modal-close" onclick="closeWalletModal('methodOverlay')"><span class="mi">close</span></button></div>
+        <div class="wallet-mtabs">
+          <button class="wmtab active" id="wmtabUpi" onclick="_methodTab('upi')">UPI</button>
+          <button class="wmtab" id="wmtabBank" onclick="_methodTab('bank')">Bank</button>
+        </div>
+        <div id="methodUpi">
+          <label class="wallet-flabel">UPI ID</label>
+          <input id="mUpi" class="pe-input" placeholder="name@upi" autocomplete="off"/>
+        </div>
+        <div id="methodBank" style="display:none;">
+          <label class="wallet-flabel">Account holder</label>
+          <input id="mBankName" class="pe-input" placeholder="Full name" autocomplete="off"/>
+          <label class="wallet-flabel">Account number</label>
+          <input id="mBankNum" class="pe-input" placeholder="XXXXXXXXXXXX" autocomplete="off"/>
+          <label class="wallet-flabel">IFSC</label>
+          <input id="mBankIfsc" class="pe-input" placeholder="SBIN0001234" style="text-transform:uppercase;" autocomplete="off"/>
+        </div>
+        <button class="btn-fill" style="margin-top:16px;" onclick="addMethod()">Add account</button>
+      </div>
+    </div>
+
+    <div class="overlay wallet-ov" id="pinOverlay">
+      <div class="modal wallet-modal">
+        <div class="modal-hdr"><div class="modal-title" id="pinTitle">Set transaction PIN</div>
+          <button class="modal-close" onclick="closeWalletModal('pinOverlay')"><span class="mi">close</span></button></div>
+        <p class="wallet-note" id="pinNote"><span class="mi">lock</span> A 4-digit PIN protects your withdrawals & transfers.</p>
+        <input id="pinInput" class="pe-input wallet-pin" type="password" inputmode="numeric" maxlength="4" placeholder="••••" autocomplete="off"/>
+        <button class="btn-fill" style="margin-top:16px;" id="pinSubmitBtn" onclick="_pinSubmit()">Save PIN</button>
       </div>
     </div>
 
@@ -851,7 +900,7 @@
 <div class="toast" id="toast"></div>
 
 <!-- App Logic -->
-<script src="/js/app.js?v=20260615u"></script>
+<script src="/js/app.js?v=20260615v"></script>
 
 <!-- ══ v0.19 NEW MODALS ══ -->
 
