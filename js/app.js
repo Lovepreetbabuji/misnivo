@@ -1272,6 +1272,11 @@ async function submitDare() {
   if (!editingDareId && reward > wallet.balance) {
     showToast('Insufficient wallet balance'); return;
   }
+  if (editingDareId) {   // editing: only the reward *increase* needs more balance
+    const _oldD = dares.find(d=>d.id===editingDareId);
+    const _oldR = _oldD ? (_oldD.rewardAmount ?? _oldD.bounty ?? 0) : 0;
+    if (reward - _oldR > wallet.balance) { showToast('Insufficient balance to raise the reward'); return; }
+  }
 
   // Expiry
   let expiresAt = null;
@@ -1341,10 +1346,24 @@ async function submitDare() {
 
     if (editingDareId) {
       // ── EDIT MODE: update existing dare ──────────────────────────────────
+      const _oldD = dares.find(d=>d.id===editingDareId);
+      const _oldR = _oldD ? (_oldD.rewardAmount ?? _oldD.bounty ?? 0) : 0;
+      const _delta = reward - _oldR;     // >0 lock more, <0 refund difference
       await db.collection('dares').doc(editingDareId).update({
         ...dareData,
         updatedAt: firebase.firestore.FieldValue.serverTimestamp()
       });
+      if (_delta !== 0) {                 // keep escrow accounting in sync
+        wallet.balance -= _delta;
+        wallet.transactions = wallet.transactions || [];
+        wallet.transactions.unshift({
+          id:'w'+Date.now()+Math.floor(Math.random()*1000), ts:Date.now(), status:'completed',
+          type: _delta>0?'debit':'credit', category: _delta>0?'dare_posted':'refund',
+          title: (_delta>0?'Reward raised: ':'Reward lowered (refund): ') + caption.substring(0,25),
+          amount: Math.abs(_delta), ref:'REF'+Date.now().toString(36).toUpperCase(), date: todayStr()
+        });
+        await db.collection('users').doc(user.uid).update({ wallet });
+      }
       closePost();
       showToast('Dare updated successfully!');
       editingDareId = null;
@@ -2494,12 +2513,20 @@ function _renderProfileSocials(u, elId){
 }
 
 function switchPTab(el, tabId) {
-  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-  el.classList.add('active');
+  document.querySelectorAll('#pageProfile .tabs .tab').forEach(t => t.classList.remove('active'));
+  if (el) el.classList.add('active');
   ['tVideos','tMyDares','tAccepted','tTxns'].forEach(id => {
-    const el = document.getElementById(id);
-    if (el) el.style.display = id === tabId ? 'block' : 'none';
+    const e = document.getElementById(id);
+    if (e) e.style.display = id === tabId ? 'block' : 'none';
   });
+}
+// Open the profile page and activate a specific tab (used by the topbar menu)
+function goProfileTab(tabId){
+  goPage('profile');
+  setTimeout(()=>{
+    const btn=[...document.querySelectorAll('#pageProfile .tabs .tab')].find(b=>(b.getAttribute('onclick')||'').includes(tabId));
+    if(btn) btn.click();
+  }, 60);
 }
 
 // ════════════════════════════

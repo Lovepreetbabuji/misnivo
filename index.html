@@ -11,7 +11,7 @@
 <link href="https://fonts.googleapis.com/icon?family=Material+Icons+Round" rel="stylesheet"/>
 
 <!-- App Styles -->
-<link rel="stylesheet" href="/css/styles.css?v=20260616e"/>
+<link rel="stylesheet" href="/css/styles.css?v=20260616f"/>
 
 <!-- Firebase CDN -->
 <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
@@ -166,8 +166,8 @@
             <div class="dd-email" id="ddEmail">—</div>
           </div>
           <div class="dd-item" onclick="goPage('profile');closeDD()"><span class="mi">person</span>My Profile</div>
-          <div class="dd-item" onclick="goPage('profile');closeDD()"><span class="mi">account_balance_wallet</span>My Wallet</div>
-          <div class="dd-item" onclick="goPage('profile');closeDD()"><span class="mi">assignment</span>My Dares</div>
+          <div class="dd-item" onclick="goPage('wallet');closeDD()"><span class="mi">account_balance_wallet</span>My Wallet</div>
+          <div class="dd-item" onclick="goProfileTab('tMyDares');closeDD()"><span class="mi">assignment</span>My Dares</div>
           <div class="dd-item" onclick="closeDD();openSettings()"><span class="mi">settings</span>Settings</div>
           <div class="dd-item admin-link" onclick="openAdminReports();closeDD()" id="adminDDItem" style="display:none;"><span class="mi">admin_panel_settings</span>Admin Reports</div>
           <div class="dd-item danger" onclick="logout()"><span class="mi">logout</span>Sign Out</div>
@@ -972,7 +972,7 @@
 <div class="toast" id="toast"></div>
 
 <!-- App Logic -->
-<script src="/js/app.js?v=20260616e"></script>
+<script src="/js/app.js?v=20260616f"></script>
 
 <!-- ══ v0.19 NEW MODALS ══ -->
 
