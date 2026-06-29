@@ -828,14 +828,15 @@ body{
   font-size:20px;background:linear-gradient(90deg,var(--t1),var(--blue2));
   -webkit-background-clip:text;background-clip:text;color:transparent;
 }
-.profile-header{display:flex;align-items:flex-start;gap:20px;padding:18px 4px;position:relative;z-index:1;}
+/* Instagram-style header: big avatar (left) · name/bio/actions (right), vertically centered */
+.profile-header{display:flex;align-items:center;gap:46px;padding:26px 12px;position:relative;z-index:1;}
 .profile-pic-wrap{position:relative;flex-shrink:0;}
 .profile-pic{
-  width:100px;height:100px;border-radius:50%;
+  width:148px;height:148px;border-radius:50%;
   background:#373737;
   border:4px solid var(--bg);
   display:flex;align-items:center;justify-content:center;
-  font-size:40px;font-weight:700;color:#fff;overflow:hidden;
+  font-size:56px;font-weight:700;color:#fff;overflow:hidden;
   box-shadow:0 8px 24px rgba(0,0,0,0.6),4px 4px 12px var(--neu-dark);
   cursor:pointer;
 }
@@ -868,21 +869,34 @@ body{
 .btn-customize:hover{background:rgba(255,255,255,0.08);border-color:rgba(255,255,255,0.08);}
 .btn-customize .mi{font-size:18px;}
 
-/* ── Profile: Followers / Following count boxes (replaced GOOGLE tag) ── */
+/* ── Profile: 3-option row — Edit Profile · Followers · Following ── */
+.profile-actions{display:flex;gap:12px;margin-top:18px;flex-wrap:wrap;align-items:center;}
+.prof-edit-btn{display:inline-flex;align-items:center;justify-content:center;
+  background:var(--glass2);border:1px solid var(--border);border-radius:12px;
+  color:var(--t1);font-weight:700;font-size:14px;padding:11px 26px;cursor:pointer;font-family:inherit;
+  transition:background .15s,border-color .15s;
+  box-shadow:3px 3px 8px var(--neu-dark),-2px -2px 5px var(--neu-light);}
+.prof-edit-btn:hover{background:var(--glass);border-color:var(--border2);}
 .prof-count-box{display:inline-flex;align-items:baseline;gap:6px;cursor:pointer;
-  background:var(--glass);border:1px solid var(--border);border-radius:14px;padding:9px 16px;
+  background:var(--glass);border:1px solid var(--border);border-radius:12px;padding:11px 20px;
   font-family:inherit;transition:border-color .15s,background .15s;
   box-shadow:3px 3px 8px var(--neu-dark),-2px -2px 5px var(--neu-light);}
 .prof-count-box:hover{background:var(--glass2);border-color:var(--border2);}
 .pcb-v{font-size:16px;font-weight:800;color:var(--t1);font-family:'Roboto',sans-serif;}
 .pcb-l{font-size:12px;color:var(--t3);font-weight:600;}
 
-/* ── Profile: mobile-only top bar (Settings · Back) ── */
-.prof-mobile-bar{display:none;}
+/* X (Twitter) logo — replaces the old hashtag/tag icon */
+.pe-x-logo{font-family:'Roboto',sans-serif;font-weight:900;font-size:18px;color:var(--t3);
+  width:20px;text-align:center;flex-shrink:0;line-height:1;}
+.psoc-x{font-family:'Roboto',sans-serif;font-weight:900;font-size:15px;line-height:1;}
+
+/* ── Profile mobile banner buttons (Back · Settings) — overlaid on the banner box ── */
 .pmb-btn{width:40px;height:40px;border-radius:50%;display:flex;align-items:center;justify-content:center;
-  background:var(--glass);border:1px solid var(--border);color:var(--t1);cursor:pointer;}
-.pmb-btn:hover{background:var(--glass2);}
-.pmb-title{flex:1;text-align:center;font-size:16px;font-weight:700;color:var(--t1);font-family:'Roboto',sans-serif;}
+  background:rgba(0,0,0,.45);border:1px solid rgba(255,255,255,.18);color:#fff;cursor:pointer;
+  position:absolute;top:14px;z-index:2;}
+.pmb-btn:hover{background:rgba(0,0,0,.65);}
+.pmb-back{left:14px;}
+.pmb-set{right:14px;}
 
 /* ── Topbar gear (desktop: replaces avatar on profile page) ── */
 .topbar-gear{display:none;}
@@ -907,20 +921,19 @@ body.profile-open .user-menu{display:none;}
 .fl-follow:hover{opacity:.85;}
 .fl-follow.following{background:var(--glass);color:var(--t1);border:1px solid var(--border2);}
 
-/* ── Mobile: profile page replaces the topbar with its own mini-bar + small banner ── */
+/* ── Mobile: profile page — topbar hidden, full-bleed banner with overlaid Back/Settings ── */
 @media(max-width:768px){
   body.profile-open .topbar{display:none !important;}
-  body.profile-open .main{margin-top:0;}
-  .prof-mobile-bar{display:flex;align-items:center;gap:10px;padding:8px 0 10px;
-    position:sticky;top:0;z-index:50;background:var(--bg);}
-  .profile-banner{display:flex;align-items:center;justify-content:center;height:84px;
-    border-radius:14px;overflow:hidden;position:relative;background:#1a1a1a;
-    box-shadow:6px 6px 16px var(--neu-dark),-2px -2px 8px var(--neu-light);}
+  body.profile-open .main{margin-top:0;padding-top:0;}
+  .profile-banner{display:flex;align-items:center;justify-content:center;height:150px;
+    border-radius:0 0 18px 18px;overflow:hidden;position:relative;background:#161616;margin:0 -12px;
+    box-shadow:0 8px 18px rgba(0,0,0,.4);}
   .profile-banner::before{content:'';position:absolute;inset:0;
-    background:radial-gradient(ellipse at 30% 50%,rgba(255,255,255,0.06),transparent 60%);}
-  .profile-banner-brand{font-size:18px;position:relative;z-index:1;}
-  .profile-pic-wrap{margin-top:-40px;}
-  .profile-header{padding-top:10px;}
+    background:radial-gradient(ellipse at 30% 40%,rgba(255,255,255,0.07),transparent 60%);}
+  .profile-banner-brand{font-size:26px;position:relative;z-index:1;}
+  .profile-pic{width:92px;height:92px;font-size:34px;}
+  .profile-pic-wrap{margin-top:-44px;}
+  .profile-header{align-items:flex-start;gap:16px;padding:10px 4px 16px;}
 }
 .profile-stats{margin:16px 0 6px;}
 .pstat-verified{display:inline-flex;align-items:center;gap:5px;font-size:12px;font-weight:700;color:var(--green);

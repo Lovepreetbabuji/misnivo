@@ -2513,13 +2513,22 @@ function openNotifSettings(){
   document.getElementById('settingsOverlay').classList.remove('open');
   document.getElementById('notifSettingsOverlay').classList.add('open');
 }
+function openMoreSettings(){
+  if(!user){ showToast('Sign in first'); return; }
+  const s=user.settings||{};
+  document.getElementById('setAutoplay').checked = s.autoplay !== false;   // default ON
+  document.getElementById('settingsOverlay').classList.remove('open');
+  document.getElementById('moreSettingsOverlay').classList.add('open');
+}
 function _saveSettings(){
   if(!user) return;
+  const _ap=document.getElementById('setAutoplay');
   user.settings={
     notifLikes:  document.getElementById('setNotifLikes').checked,
     notifFollow: document.getElementById('setNotifFollow').checked,
     notifDares:  document.getElementById('setNotifDares').checked,
-    private:     document.getElementById('setPrivate').checked
+    private:     document.getElementById('setPrivate').checked,
+    autoplay:    _ap ? _ap.checked : (user.settings?.autoplay !== false)
   };
   db.collection('users').doc(user.uid).update({ settings:user.settings }).catch(()=>{});
 }
@@ -2560,7 +2569,7 @@ function _renderProfileSocials(u, elId){
   u = u || user || {};
   const s=u.socials||{}; const links=[];
   if(s.insta) links.push(`<a href="https://instagram.com/${encodeURIComponent((''+s.insta).replace(/^@/,''))}" target="_blank" rel="noopener" class="psocial" title="Instagram"><span class="mi">photo_camera</span></a>`);
-  if(s.x)     links.push(`<a href="https://x.com/${encodeURIComponent((''+s.x).replace(/^@/,''))}" target="_blank" rel="noopener" class="psocial" title="X"><span class="mi">tag</span></a>`);
+  if(s.x)     links.push(`<a href="https://x.com/${encodeURIComponent((''+s.x).replace(/^@/,''))}" target="_blank" rel="noopener" class="psocial" title="X"><span class="psoc-x">X</span></a>`);
   if(s.yt)    links.push(`<a href="https://youtube.com/${encodeURIComponent((''+s.yt))}" target="_blank" rel="noopener" class="psocial" title="YouTube"><span class="mi">smart_display</span></a>`);
   if(u.website) links.push(`<a href="${escHtml(u.website)}" target="_blank" rel="noopener" class="psocial" title="Website"><span class="mi">link</span></a>`);
   el.innerHTML = links.join('');
@@ -6197,6 +6206,7 @@ function _pvAddControls(thumb){
 // mode 'long' → play normally (no cuts), muted, looping, + volume/pause buttons
 // mode 'short' → cut-cut sampled snippet preview (always muted, no controls)
 function _pvPlay(card, mode){
+  if (user && user.settings && user.settings.autoplay === false) return;   // Additional settings → Autoplay off
   const vurl=card.getAttribute('data-vurl'); if(!vurl) return;
   if (_pvCard===card) return;
   _pvStop();

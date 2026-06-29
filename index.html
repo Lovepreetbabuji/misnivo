@@ -11,7 +11,7 @@
 <link href="https://fonts.googleapis.com/icon?family=Material+Icons+Round" rel="stylesheet"/>
 
 <!-- App Styles -->
-<link rel="stylesheet" href="/css/styles.css?v=20260629b"/>
+<link rel="stylesheet" href="/css/styles.css?v=20260629c"/>
 
 <!-- Firebase CDN -->
 <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
@@ -291,16 +291,11 @@
     <!-- PROFILE -->
     <div class="page" id="pageProfile">
 
-      <!-- Mobile-only header bar (replaces topbar on profile) -->
-      <div class="prof-mobile-bar">
-        <button class="pmb-btn" onclick="openSettings()" aria-label="Settings"><span class="mi">settings</span></button>
-        <span class="pmb-title">Profile</span>
-        <button class="pmb-btn" onclick="_profileBack()" aria-label="Back"><span class="mi">arrow_back</span></button>
-      </div>
-
-      <!-- Banner (decorative — shows brand on mobile, hidden on desktop) -->
+      <!-- Banner: brand text + Back (left) / Settings (right) overlaid — mobile only -->
       <div class="profile-banner" id="profBanner">
+        <button class="pmb-btn pmb-back" onclick="_profileBack()" aria-label="Back"><span class="mi">arrow_back</span></button>
         <span class="profile-banner-brand">Mission Markit</span>
+        <button class="pmb-btn pmb-set" onclick="openSettings()" aria-label="Settings"><span class="mi">settings</span></button>
       </div>
 
       <!-- Profile Header Row -->
@@ -313,6 +308,7 @@
           <div class="profile-handle" id="profHandle">@—</div>
           <div class="profile-bio" id="profBio" style="display:none;"></div>
           <div class="profile-actions">
+            <button class="prof-edit-btn" onclick="openProfileEdit()">Edit Profile</button>
             <button class="prof-count-box" onclick="_ppFollowList('followers')">
               <span class="pcb-v" id="profFollowers">0</span><span class="pcb-l">Followers</span>
             </button>
@@ -514,6 +510,8 @@
       <span class="mi smr-ic">person</span><span class="smr-t">Edit Profile</span><span class="mi smr-arrow">chevron_right</span></button>
     <button class="set-menu-row" onclick="openNotifSettings()">
       <span class="mi smr-ic">notifications</span><span class="smr-t">Notifications</span><span class="mi smr-arrow">chevron_right</span></button>
+    <button class="set-menu-row" onclick="openMoreSettings()">
+      <span class="mi smr-ic">tune</span><span class="smr-t">Additional settings</span><span class="mi smr-arrow">chevron_right</span></button>
     <div class="set-sec-label">Privacy</div>
     <label class="set-row"><div><div class="set-t">Private profile</div><div class="set-s">Hide your videos &amp; dares from others</div></div>
       <span class="switch"><input type="checkbox" id="setPrivate" onchange="_saveSettings()"><span class="sl"></span></span></label>
@@ -542,6 +540,18 @@
       <span class="switch"><input type="checkbox" id="setNotifFollow" onchange="_saveSettings()"><span class="sl"></span></span></label>
     <label class="set-row"><div class="set-t">Dare updates</div>
       <span class="switch"><input type="checkbox" id="setNotifDares" onchange="_saveSettings()"><span class="sl"></span></span></label>
+  </div>
+</div>
+
+<!-- ══ ADDITIONAL SETTINGS (sub-screen) ══ -->
+<div class="overlay" id="moreSettingsOverlay">
+  <div class="modal wallet-modal">
+    <div class="modal-hdr">
+      <button class="modal-close" onclick="closeWalletModal('moreSettingsOverlay');openSettings()" aria-label="Back"><span class="mi">arrow_back</span></button>
+      <div class="modal-title" style="flex:1;margin-left:6px;">Additional settings</div>
+      <button class="modal-close" onclick="closeWalletModal('moreSettingsOverlay')"><span class="mi">close</span></button></div>
+    <label class="set-row"><div><div class="set-t">Autoplay videos</div><div class="set-s">Play videos automatically on hover &amp; scroll</div></div>
+      <span class="switch"><input type="checkbox" id="setAutoplay" onchange="_saveSettings()"><span class="sl"></span></span></label>
   </div>
 </div>
 
@@ -609,7 +619,7 @@
       <div class="pe-field">
         <div class="pe-label">Social links <span>Optional — handles only</span></div>
         <div class="pe-social-row"><span class="mi">photo_camera</span><input class="pe-input" id="peInsta" type="text" placeholder="Instagram username" maxlength="40"/></div>
-        <div class="pe-social-row"><span class="mi">tag</span><input class="pe-input" id="peX" type="text" placeholder="X (Twitter) username" maxlength="40"/></div>
+        <div class="pe-social-row"><span class="pe-x-logo">X</span><input class="pe-input" id="peX" type="text" placeholder="X (Twitter) username" maxlength="40"/></div>
         <div class="pe-social-row"><span class="mi">smart_display</span><input class="pe-input" id="peYt" type="text" placeholder="YouTube @handle" maxlength="40"/></div>
       </div>
 
@@ -999,7 +1009,7 @@
 <div class="toast" id="toast"></div>
 
 <!-- App Logic -->
-<script src="/js/app.js?v=20260629b"></script>
+<script src="/js/app.js?v=20260629c"></script>
 
 <!-- ══ v0.19 NEW MODALS ══ -->
 
