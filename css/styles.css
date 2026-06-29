@@ -821,7 +821,8 @@ body{
 /* ═══════════════════════════════════════════════════════
    PROFILE
 ═══════════════════════════════════════════════════════ */
-/* Desktop: no banner box. Avatar sits at the top of the page. */
+/* Desktop: center the whole profile block (Instagram-style), no banner box. */
+#pageProfile{max-width:935px;margin:0 auto;}
 .profile-banner{display:none;}
 .profile-banner-brand{
   font-family:'Roboto',sans-serif;font-weight:900;letter-spacing:.5px;
@@ -869,21 +870,18 @@ body{
 .btn-customize:hover{background:rgba(255,255,255,0.08);border-color:rgba(255,255,255,0.08);}
 .btn-customize .mi{font-size:18px;}
 
-/* ── Profile: 3-option row — Edit Profile · Followers · Following ── */
+/* ── Profile: 3-option row — Edit Profile · Followers · Following (identical design) ── */
 .profile-actions{display:flex;gap:12px;margin-top:18px;flex-wrap:wrap;align-items:center;}
-.prof-edit-btn{display:inline-flex;align-items:center;justify-content:center;
-  background:var(--glass2);border:1px solid var(--border);border-radius:12px;
-  color:var(--t1);font-weight:700;font-size:14px;padding:11px 26px;cursor:pointer;font-family:inherit;
+.prof-edit-btn, .prof-count-box{
+  display:inline-flex;align-items:center;justify-content:center;gap:6px;cursor:pointer;
+  background:var(--glass);border:1px solid var(--border);border-radius:12px;
+  padding:12px 22px;min-height:46px;font-family:inherit;
   transition:background .15s,border-color .15s;
   box-shadow:3px 3px 8px var(--neu-dark),-2px -2px 5px var(--neu-light);}
-.prof-edit-btn:hover{background:var(--glass);border-color:var(--border2);}
-.prof-count-box{display:inline-flex;align-items:baseline;gap:6px;cursor:pointer;
-  background:var(--glass);border:1px solid var(--border);border-radius:12px;padding:11px 20px;
-  font-family:inherit;transition:border-color .15s,background .15s;
-  box-shadow:3px 3px 8px var(--neu-dark),-2px -2px 5px var(--neu-light);}
-.prof-count-box:hover{background:var(--glass2);border-color:var(--border2);}
+.prof-edit-btn:hover, .prof-count-box:hover{background:var(--glass2);border-color:var(--border2);}
+.prof-edit-btn{color:var(--t1);font-weight:700;font-size:14px;}
 .pcb-v{font-size:16px;font-weight:800;color:var(--t1);font-family:'Roboto',sans-serif;}
-.pcb-l{font-size:12px;color:var(--t3);font-weight:600;}
+.pcb-l{font-size:13px;color:var(--t3);font-weight:600;}
 
 /* X (Twitter) logo — replaces the old hashtag/tag icon */
 .pe-x-logo{font-family:'Roboto',sans-serif;font-weight:900;font-size:18px;color:var(--t3);
@@ -898,10 +896,12 @@ body{
 .pmb-back{left:14px;}
 .pmb-set{right:14px;}
 
-/* ── Topbar gear (desktop: replaces avatar on profile page) ── */
+/* ── Topbar gear (desktop: replaces avatar on profile page) ──
+   :not(.detail-open):not(.shorts-open) → topbar stays NORMAL when a video/dare/shorts
+   overlay is open over the profile (topbar only changes on the bare profile page). */
 .topbar-gear{display:none;}
-body.profile-open .topbar-gear{display:flex;}
-body.profile-open .user-menu{display:none;}
+body.profile-open:not(.detail-open):not(.shorts-open) .topbar-gear{display:flex;}
+body.profile-open:not(.detail-open):not(.shorts-open) .user-menu{display:none;}
 
 /* ── Settings menu rows (Edit Profile · Notifications) ── */
 .set-menu-row{display:flex;align-items:center;gap:12px;width:100%;background:transparent;border:none;
@@ -921,10 +921,26 @@ body.profile-open .user-menu{display:none;}
 .fl-follow:hover{opacity:.85;}
 .fl-follow.following{background:var(--glass);color:var(--t1);border:1px solid var(--border2);}
 
+/* ── Skeleton loading (shimmer) — used wherever data is loading ── */
+@keyframes skelShimmer{0%{background-position:-600px 0;}100%{background-position:600px 0;}}
+.skel{background:#1c1c1c;border-radius:8px;
+  background-image:linear-gradient(90deg,#1c1c1c 0,#262626 40px,#1c1c1c 80px);
+  background-size:600px 100%;animation:skelShimmer 1.3s ease-in-out infinite;}
+.skel-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:18px;padding:8px 0;}
+.skel-card{display:flex;flex-direction:column;gap:10px;}
+.skel-thumb{width:100%;aspect-ratio:16/9;border-radius:12px;}
+.skel-line{height:12px;border-radius:6px;}
+.sl-40{width:40%;} .sl-60{width:60%;} .sl-80{width:80%;}
+.skel-card-info{display:flex;gap:10px;align-items:flex-start;}
+.skel-av{width:36px;height:36px;border-radius:50%;flex-shrink:0;}
+.skel-meta{flex:1;display:flex;flex-direction:column;gap:8px;min-width:0;}
+.skel-row{display:flex;align-items:center;gap:12px;padding:11px 6px;}
+@media(max-width:768px){ .skel-grid{grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:12px;} }
+
 /* ── Mobile: profile page — topbar hidden, full-bleed banner with overlaid Back/Settings ── */
 @media(max-width:768px){
-  body.profile-open .topbar{display:none !important;}
-  body.profile-open .main{margin-top:0;padding-top:0;}
+  body.profile-open:not(.detail-open):not(.shorts-open) .topbar{display:none !important;}
+  body.profile-open:not(.detail-open):not(.shorts-open) .main{margin-top:0;padding-top:0;}
   .profile-banner{display:flex;align-items:center;justify-content:center;height:150px;
     border-radius:0 0 18px 18px;overflow:hidden;position:relative;background:#161616;margin:0 -12px;
     box-shadow:0 8px 18px rgba(0,0,0,.4);}
@@ -934,6 +950,11 @@ body.profile-open .user-menu{display:none;}
   .profile-pic{width:92px;height:92px;font-size:34px;}
   .profile-pic-wrap{margin-top:-44px;}
   .profile-header{align-items:flex-start;gap:16px;padding:10px 4px 16px;}
+  /* 3 action buttons fit on a single line */
+  .profile-actions{flex-wrap:nowrap;gap:8px;}
+  .prof-edit-btn, .prof-count-box{flex:1;min-width:0;padding:9px 6px;min-height:44px;white-space:nowrap;}
+  .prof-edit-btn{font-size:12.5px;}
+  .pcb-v{font-size:14px;} .pcb-l{font-size:11px;}
 }
 .profile-stats{margin:16px 0 6px;}
 .pstat-verified{display:inline-flex;align-items:center;gap:5px;font-size:12px;font-weight:700;color:var(--green);

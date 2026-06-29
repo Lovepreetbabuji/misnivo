@@ -416,6 +416,8 @@ async function initUser(fbUser) {
       user.bio      = d.bio      || '';
       userLikes = d.likedProofs || [];
       user.website  = d.website  || '';
+      user.socials  = d.socials  || {};   // persist Instagram/X/YouTube links across reloads
+      user.settings = d.settings || {};   // persist notif/privacy/autoplay settings across reloads
       if (d.photoURL) user.picture = d.photoURL;  // saved photo always wins
     }
   } catch(e) {
@@ -645,13 +647,31 @@ function _closeAdcMenus(){ document.querySelectorAll('.adc-menu-wrap.open').forE
 document.addEventListener('click', _closeAdcMenus);
 
 // ─── MAIN HOME RENDER ────────────────────────────────────
+// ── Skeleton loaders (shimmer placeholders) ──
+function _skelCards(n){
+  let c='';
+  for(let i=0;i<(n||8);i++){
+    c+=`<div class="skel-card"><div class="skel skel-thumb"></div>
+      <div class="skel-card-info"><div class="skel skel-av"></div>
+        <div class="skel-meta"><div class="skel skel-line sl-80"></div><div class="skel skel-line sl-40"></div></div>
+      </div></div>`;
+  }
+  return `<div class="skel-grid">${c}</div>`;
+}
+function _skelRows(n){
+  let r='';
+  for(let i=0;i<(n||6);i++){
+    r+=`<div class="skel-row"><div class="skel skel-av" style="width:42px;height:42px;"></div>
+      <div class="skel-meta"><div class="skel skel-line sl-60"></div><div class="skel skel-line sl-40"></div></div></div>`;
+  }
+  return r;
+}
+
 async function renderHome(cat) {
   if (cat) homeFilterCat = cat;
 
   const grid = document.getElementById('homeVideoGrid');
-  if (grid) grid.innerHTML = `<div class="empty" style="padding:40px;">
-    <span class="mi" style="font-size:36px;opacity:.4;">hourglass_empty</span>
-    <div class="empty-title">Loading...</div></div>`;
+  if (grid) grid.innerHTML = _skelCards(8);
 
   try {
     const snap = await db.collection('proofs').where('status','==','approved').get();
@@ -2091,6 +2111,7 @@ function closeReview() {
 // ════════════════════════════
 async function loadLeaderboard() {
   const el = document.getElementById('lbContent');
+  if (el) el.innerHTML = _skelRows(6);
   try {
     const snap = await db.collection('proofs').where('status','==','approved').get();
     const map  = {};
@@ -2450,7 +2471,7 @@ async function _ppFollowList(type){
   document.getElementById('flTitle').textContent = type==='followers'?'Followers':'Following';
   const body=document.getElementById('flBody');
   const search=document.getElementById('flSearch'); if(search) search.value='';
-  body.innerHTML='<div style="text-align:center;padding:24px;color:var(--t3);font-size:13px;">Loading…</div>';
+  body.innerHTML=_skelRows(6);
   document.getElementById('followListOverlay').classList.add('open');
   const field = type==='followers'?'targetUid':'followerUid';
   const other = type==='followers'?'followerUid':'targetUid';
@@ -4531,7 +4552,7 @@ function _showInlineAd(player, p) {
 
 async function renderExplorer() {
   const container=document.getElementById('explorerContent'); if(!container) return;
-  container.innerHTML=`<div class="empty" style="padding:40px;"><span class="mi" style="font-size:36px;opacity:.4;">hourglass_empty</span><div class="empty-title">Loading...</div></div>`;
+  container.innerHTML=_skelCards(8);
   try {
     const snap=await db.collection('proofs').where('status','==','approved').limit(100).get();
     allProofs=snap.docs.map(doc=>({id:doc.id,...doc.data()}));
