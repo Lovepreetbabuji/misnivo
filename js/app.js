@@ -543,7 +543,13 @@ async function logout() {
 // ════════════════════════════
 //  NAVIGATION
 // ════════════════════════════
-function goPage(pg) {
+// Back-button navigation state (see BACK-BUTTON STACK section below)
+let _ovStack = [];          // open tracked modals (ids), in open order
+let _ovInPop = false;       // guard while a close is driven by popstate / our own rewind
+let _curPage = null;        // last page shown (avoid duplicate history pushes)
+let _pageNavInit = false;   // first goPage uses replaceState, rest pushState
+
+function goPage(pg, _fromPop) {
   _searchReturn = null;
   try{ _pvStop(); }catch(e){}
   if (typeof _closeDetailOverlays === 'function') _closeDetailOverlays();
@@ -561,6 +567,14 @@ function goPage(pg) {
   if (pg === 'profile')     renderProfile();
   if (pg === 'wallet')      renderWallet();
   if (pg === 'leaderboard') loadLeaderboard();
+  // History entry so the BACK button steps between main pages (not "all back").
+  // Only manage the root "/" pages here — detail views (/watch,/shorts,/dare,/u) own their URLs.
+  if (!_navBack && !_fromPop && location.pathname === '/') {
+    const st = { _page: pg };
+    if (!_pageNavInit) { _pageNavInit = true; try{ history.replaceState(st, ''); }catch(e){} }
+    else if (_curPage !== pg) { try{ history.pushState(st, ''); }catch(e){} }
+  }
+  _curPage = pg;
 }
 
 // Mobile profile mini-bar — back button
@@ -1069,10 +1083,11 @@ function openPost() {
   const btn = document.getElementById('submitDareBtn');
   if (btn) { btn.disabled = false; btn.innerHTML = '<span class="mi">bolt</span> Post Dare'; }
 
-  document.getElementById('postOverlay').classList.add('open');
+  _ovOpen('postOverlay');
 }
 
 function closePost() {
+  _ovSync('postOverlay');
   document.getElementById('postOverlay').classList.remove('open');
   // Revoke object URLs to free memory
   const vidEl = document.getElementById('previewVidPlayer');
@@ -1599,11 +1614,12 @@ function openProof(dareId) {
   btn.disabled = true;
   btn.innerHTML = '<span class="mi">upload</span>Submit Proof';
 
-  document.getElementById('proofOverlay').classList.add('open');
+  _ovOpen('proofOverlay');
 }
 
 // ── Close proof modal — keeps active upload running in background ─────────────
 function closeProof() {
+  _ovSync('proofOverlay');
   document.getElementById('proofOverlay').classList.remove('open');
   // If upload is in progress, let it continue in background
   if (activeUploadTask) {
@@ -1767,7 +1783,7 @@ function _showBgUploadIndicator() {
         <div style="font-size:12px;font-weight:600;color:var(--t1);">Uploading proof...</div>
         <div style="font-size:11px;color:var(--t3);" id="bgUploadIndPct">0%</div>
       </div>
-      <button onclick="document.getElementById('proofOverlay').classList.add('open')"
+      <button onclick="_ovOpen('proofOverlay')"
         style="background:rgba(255,255,255,.1);border:none;cursor:pointer;
                color:var(--t2);font-size:12px;padding:4px 10px;border-radius:6px;
                font-family:inherit;">View</button>`;
@@ -2523,7 +2539,7 @@ function openSettings(){
   document.getElementById('setNotifFollow').checked = s.notifFollow !== false;
   document.getElementById('setNotifDares').checked  = s.notifDares  !== false;
   document.getElementById('setPrivate').checked     = s.private === true;
-  document.getElementById('settingsOverlay').classList.add('open');
+  _ovOpen('settingsOverlay');
 }
 function openNotifSettings(){
   if(!user){ showToast('Sign in first'); return; }
@@ -2531,15 +2547,13 @@ function openNotifSettings(){
   document.getElementById('setNotifLikes').checked  = s.notifLikes  !== false;
   document.getElementById('setNotifFollow').checked = s.notifFollow !== false;
   document.getElementById('setNotifDares').checked  = s.notifDares  !== false;
-  document.getElementById('settingsOverlay').classList.remove('open');
-  document.getElementById('notifSettingsOverlay').classList.add('open');
+  _settingsSub('notifSettingsOverlay');   // sub-screen of the same history layer
 }
 function openMoreSettings(){
   if(!user){ showToast('Sign in first'); return; }
   const s=user.settings||{};
   document.getElementById('setAutoplay').checked = s.autoplay !== false;   // default ON
-  document.getElementById('settingsOverlay').classList.remove('open');
-  document.getElementById('moreSettingsOverlay').classList.add('open');
+  _settingsSub('moreSettingsOverlay');    // sub-screen of the same history layer
 }
 function _saveSettings(){
   if(!user) return;
@@ -2694,10 +2708,11 @@ function openProfileEdit() {
   document.getElementById('peHandleStatus').className   = 'pe-status ok';
   document.getElementById('peSaveBtn').disabled = false;
 
-  document.getElementById('profileEditOverlay').classList.add('open');
+  _ovOpen('profileEditOverlay');
 }
 
 function cancelProfileEdit() {
+  _ovSync('profileEditOverlay');
   peSelectedPhotoFile = null;
   document.getElementById('profileEditOverlay').classList.remove('open');
 }
@@ -4098,13 +4113,73 @@ function _maybeInitialRoute(){
     : [...(typeof homeProofs!=='undefined'?homeProofs:[]),...(typeof allProofs!=='undefined'?allProofs:[])].some(p=>p.id===id);
   if (ready){ _routedInitial = true; _dmRouteFromUrl(); }
 }
-window.addEventListener('popstate', function(){
+// ════════════════════════════════════════════════════════════════════
+//  BACK-BUTTON STACK (phase 1) — main task modals get their own history
+//  entry, so the phone/browser BACK button closes ONE layer at a time
+//  (YouTube-style) instead of leaving the whole page ("all back").
+//  Tracked: Post Dare · Submit Proof · Settings flow · Deposit · Withdraw
+//  · Edit Profile.  (Detail views / public profile already use URLs above.)
+// ════════════════════════════════════════════════════════════════════
+function _ovOpen(id){
+  const el = document.getElementById(id); if(!el) return;
+  el.classList.add('open');
+  if(_ovStack.includes(id)) return;            // already tracked — don't double-push
+  _ovStack.push(id);
+  try{ history.pushState({ _ov:id }, ''); }catch(e){}
+}
+// Call at the TOP of a modal's close fn. Rewinds history to stay in sync when
+// the modal is closed by UI/code (no-op when popstate already drove the close).
+function _ovSync(id){
+  if(_ovInPop) return;
+  const i = _ovStack.lastIndexOf(id); if(i<0) return;
+  const steps = _ovStack.length - i;           // this modal + anything stacked above
+  _ovStack.length = i;
+  _ovInPop = true;
+  try{ history.go(-steps); }catch(e){ _ovInPop = false; }
+}
+// popstate-driven close (phone BACK) → run the modal's real close fn.
+const _OV_CLOSERS = {
+  postOverlay:        () => closePost(),
+  proofOverlay:       () => closeProof(),
+  profileEditOverlay: () => cancelProfileEdit(),
+  depositOverlay:     () => closeWalletModal('depositOverlay'),
+  withdrawOverlay:    () => closeWalletModal('withdrawOverlay'),
+  settingsOverlay:    () => _closeSettingsAll(),
+};
+function _ovCloseById(id){
+  const f = _OV_CLOSERS[id];
+  if(f){ try{ f(); return; }catch(e){} }
+  const el = document.getElementById(id); if(el) el.classList.remove('open');
+}
+// Settings flow = ONE history layer; sub-screens navigate in-place (no extra entry).
+function _settingsSub(id){
+  const s=document.getElementById('settingsOverlay'); if(s) s.classList.remove('open');
+  const e=document.getElementById(id); if(e) e.classList.add('open');
+}
+function _settingsBackToRoot(){
+  ['notifSettingsOverlay','moreSettingsOverlay'].forEach(x=>{ const e=document.getElementById(x); if(e) e.classList.remove('open'); });
+  const s=document.getElementById('settingsOverlay'); if(s) s.classList.add('open');
+}
+function _closeSettingsAll(){
+  ['notifSettingsOverlay','moreSettingsOverlay'].forEach(x=>{ const e=document.getElementById(x); if(e) e.classList.remove('open'); });
+  closeWalletModal('settingsOverlay');         // _ovSync handles the history rewind
+}
+
+window.addEventListener('popstate', function(e){
+  if(_ovInPop){ _ovInPop = false; return; }              // our own _ovSync rewind — already handled
+  if(_ovStack.length){                                    // a tracked modal is open → close topmost
+    const id = _ovStack[_ovStack.length-1];
+    _ovInPop = true; _ovCloseById(id); _ovInPop = false;
+    _ovStack.pop();
+    return;
+  }
   const isOpen = id => { const el=document.getElementById(id); return el && el.classList.contains('open'); };
   // close any open sub-layer first (keep a guard state)
   if (isOpen('ddCommentsBox')){ closeDareComments(); _dmPush(); return; }
   if (isOpen('shortsDetailsDrawer')){ shortsCloseDetails(); _dmPush(); return; }
   if (isOpen('collabModal')){ closeCollabModal(); _dmPush(); return; }
   if (typeof _sidebarOpen!=='undefined' && _sidebarOpen){ closeSidebar(); return; }
+  if (e && e.state && e.state._page){ goPage(e.state._page, true); return; }   // back between main pages
   _dmRouteFromUrl();   // the URL is the source of truth — open/close to match it
 });
 // 3-dots on the dare actions row → Share / Report menu
@@ -5500,7 +5575,7 @@ function openDepositModal(){
   const inp=document.getElementById('depositAmt'); if(inp) inp.value='';
   const chips=document.getElementById('depositChips');
   if(chips) chips.innerHTML=[500,1000,5000,10000].map(a=>`<button class="wchip" onclick="document.getElementById('depositAmt').value=${a}">+Rs.${a.toLocaleString('en-IN')}</button>`).join('');
-  document.getElementById('depositOverlay').classList.add('open');
+  _ovOpen('depositOverlay');
   setTimeout(()=>inp&&inp.focus(),50);
 }
 function doDeposit(){
@@ -5518,7 +5593,7 @@ function openWithdrawModal(){
   if(!user){ showToast('Sign in first'); return; }
   const inp=document.getElementById('withdrawAmt'); if(inp) inp.value='';
   const av=document.getElementById('withdrawAvail'); if(av) av.textContent='Available: Rs. '+(wallet.balance||0).toLocaleString('en-IN');
-  document.getElementById('withdrawOverlay').classList.add('open');
+  _ovOpen('withdrawOverlay');
   setTimeout(()=>inp&&inp.focus(),50);
 }
 function doWithdraw(){
@@ -5555,7 +5630,7 @@ function claimPending(){
   showToast(`Rs.${amt.toLocaleString('en-IN')} moved to balance`);
   renderWallet();
 }
-function closeWalletModal(id){ const el=document.getElementById(id); if(el) el.classList.remove('open'); }
+function closeWalletModal(id){ _ovSync(id); const el=document.getElementById(id); if(el) el.classList.remove('open'); }
 
 // ── KYC ──
 function openKycModal(){
