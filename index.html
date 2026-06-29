@@ -11,7 +11,7 @@
 <link href="https://fonts.googleapis.com/icon?family=Material+Icons+Round" rel="stylesheet"/>
 
 <!-- App Styles -->
-<link rel="stylesheet" href="/css/styles.css?v=20260629e"/>
+<link rel="stylesheet" href="/css/styles.css?v=20260629f"/>
 
 <!-- Firebase CDN -->
 <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
@@ -531,7 +531,7 @@
 <div class="overlay" id="notifSettingsOverlay">
   <div class="modal wallet-modal">
     <div class="modal-hdr">
-      <button class="modal-close" onclick="_settingsBackToRoot()" aria-label="Back"><span class="mi">arrow_back</span></button>
+      <button class="modal-close" onclick="_settingsBack('notifSettingsOverlay')" aria-label="Back"><span class="mi">arrow_back</span></button>
       <div class="modal-title" style="flex:1;margin-left:6px;">Notifications</div>
       <button class="modal-close" onclick="_closeSettingsAll()"><span class="mi">close</span></button></div>
     <label class="set-row"><div class="set-t">Likes &amp; comments</div>
@@ -547,7 +547,7 @@
 <div class="overlay" id="moreSettingsOverlay">
   <div class="modal wallet-modal">
     <div class="modal-hdr">
-      <button class="modal-close" onclick="_settingsBackToRoot()" aria-label="Back"><span class="mi">arrow_back</span></button>
+      <button class="modal-close" onclick="_settingsBack('moreSettingsOverlay')" aria-label="Back"><span class="mi">arrow_back</span></button>
       <div class="modal-title" style="flex:1;margin-left:6px;">Additional settings</div>
       <button class="modal-close" onclick="_closeSettingsAll()"><span class="mi">close</span></button></div>
     <label class="set-row"><div><div class="set-t">Autoplay videos</div><div class="set-s">Play videos automatically on hover &amp; scroll</div></div>
@@ -1009,7 +1009,7 @@
 <div class="toast" id="toast"></div>
 
 <!-- App Logic -->
-<script src="/js/app.js?v=20260629e"></script>
+<script src="/js/app.js?v=20260629f"></script>
 
 <!-- ══ v0.19 NEW MODALS ══ -->
 

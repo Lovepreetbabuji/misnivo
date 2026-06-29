@@ -352,7 +352,7 @@ auth.onAuthStateChanged(async (fbUser) => {
   if(typeof startNotificationsListener==="function") startNotificationsListener();
     startDaresListener();
     AdManager.initScrollAds();   // start scroll ad tracker
-    goPage('home');
+    _bootRoute();                // open the page/modal the URL points to (deep-link / refresh)
   } else {
     document.getElementById('loadScreen').style.display = 'none';
     document.getElementById('authScreen').style.display = 'flex';
@@ -549,6 +549,14 @@ let _ovInPop = false;       // guard while a close is driven by popstate / our o
 let _curPage = null;        // last page shown (avoid duplicate history pushes)
 let _pageNavInit = false;   // first goPage uses replaceState, rest pushState
 
+// Real URLs (slash-style, YouTube-like) for tracked pages + modals
+const _PAGE_URL  = { home:'/', explore:'/explore', dares:'/dares', accepted:'/accepted', wallet:'/wallet', profile:'/profile', leaderboard:'/leaderboard' };
+const _MODAL_URL = { postOverlay:'/post', proofOverlay:'/submit-proof', settingsOverlay:'/settings',
+  notifSettingsOverlay:'/settings/notifications', moreSettingsOverlay:'/settings/more',
+  profileEditOverlay:'/settings/edit', depositOverlay:'/wallet/deposit', withdrawOverlay:'/wallet/withdraw' };
+const _URL_PAGE  = Object.fromEntries(Object.entries(_PAGE_URL ).map(([k,v])=>[v,k]));
+const _URL_MODAL = Object.fromEntries(Object.entries(_MODAL_URL).map(([k,v])=>[v,k]));
+
 function goPage(pg, _fromPop) {
   _searchReturn = null;
   try{ _pvStop(); }catch(e){}
@@ -567,12 +575,11 @@ function goPage(pg, _fromPop) {
   if (pg === 'profile')     renderProfile();
   if (pg === 'wallet')      renderWallet();
   if (pg === 'leaderboard') loadLeaderboard();
-  // History entry so the BACK button steps between main pages (not "all back").
-  // Only manage the root "/" pages here — detail views (/watch,/shorts,/dare,/u) own their URLs.
-  if (!_navBack && !_fromPop && location.pathname === '/') {
-    const st = { _page: pg };
-    if (!_pageNavInit) { _pageNavInit = true; try{ history.replaceState(st, ''); }catch(e){} }
-    else if (_curPage !== pg) { try{ history.pushState(st, ''); }catch(e){} }
+  // History entry so the BACK button steps between main pages — each page has its own URL.
+  if (!_navBack && !_fromPop) {
+    const st = { _page: pg }, url = _PAGE_URL[pg] || '/';
+    if (!_pageNavInit) { _pageNavInit = true; try{ history.replaceState(st, '', url); }catch(e){} }
+    else if (_curPage !== pg) { try{ history.pushState(st, '', url); }catch(e){} }
   }
   _curPage = pg;
 }
@@ -4099,6 +4106,8 @@ function _dmRouteFromUrl(){
   } else {
     if (typeof closePublicProfile==='function') closePublicProfile();
     _closeCurrentView();                            // root / page URL → no overlay
+    const pg = _URL_PAGE[(location.pathname||'/').replace(/\/+$/,'')||'/'];
+    if (pg && pg !== _curPage) goPage(pg, true);     // sync page to URL (forward/back fallback)
   }
   _navBack = false;
 }
@@ -4125,7 +4134,7 @@ function _ovOpen(id){
   el.classList.add('open');
   if(_ovStack.includes(id)) return;            // already tracked — don't double-push
   _ovStack.push(id);
-  try{ history.pushState({ _ov:id }, ''); }catch(e){}
+  try{ history.pushState({ _ov:id }, '', _MODAL_URL[id] || location.pathname); }catch(e){}
 }
 // Call at the TOP of a modal's close fn. Rewinds history to stay in sync when
 // the modal is closed by UI/code (no-op when popstate already drove the close).
@@ -4139,30 +4148,66 @@ function _ovSync(id){
 }
 // popstate-driven close (phone BACK) → run the modal's real close fn.
 const _OV_CLOSERS = {
-  postOverlay:        () => closePost(),
-  proofOverlay:       () => closeProof(),
-  profileEditOverlay: () => cancelProfileEdit(),
-  depositOverlay:     () => closeWalletModal('depositOverlay'),
-  withdrawOverlay:    () => closeWalletModal('withdrawOverlay'),
-  settingsOverlay:    () => _closeSettingsAll(),
+  postOverlay:          () => closePost(),
+  proofOverlay:         () => closeProof(),
+  profileEditOverlay:   () => cancelProfileEdit(),
+  depositOverlay:       () => closeWalletModal('depositOverlay'),
+  withdrawOverlay:      () => closeWalletModal('withdrawOverlay'),
+  settingsOverlay:      () => { const e=document.getElementById('settingsOverlay'); if(e) e.classList.remove('open'); },
+  notifSettingsOverlay: () => _settingsRevealRoot('notifSettingsOverlay'),
+  moreSettingsOverlay:  () => _settingsRevealRoot('moreSettingsOverlay'),
 };
 function _ovCloseById(id){
   const f = _OV_CLOSERS[id];
   if(f){ try{ f(); return; }catch(e){} }
   const el = document.getElementById(id); if(el) el.classList.remove('open');
 }
-// Settings flow = ONE history layer; sub-screens navigate in-place (no extra entry).
+// Settings sub-screens — each gets its own URL + history entry (/settings/notifications etc.).
+// Opening hides the root; back reveals it again.
 function _settingsSub(id){
   const s=document.getElementById('settingsOverlay'); if(s) s.classList.remove('open');
-  const e=document.getElementById(id); if(e) e.classList.add('open');
+  _ovOpen(id);                                   // pushes the sub-screen URL
 }
-function _settingsBackToRoot(){
-  ['notifSettingsOverlay','moreSettingsOverlay'].forEach(x=>{ const e=document.getElementById(x); if(e) e.classList.remove('open'); });
+function _settingsRevealRoot(subId){             // popstate-driven close of a sub-screen
+  const e=document.getElementById(subId); if(e) e.classList.remove('open');
   const s=document.getElementById('settingsOverlay'); if(s) s.classList.add('open');
 }
-function _closeSettingsAll(){
-  ['notifSettingsOverlay','moreSettingsOverlay'].forEach(x=>{ const e=document.getElementById(x); if(e) e.classList.remove('open'); });
-  closeWalletModal('settingsOverlay');         // _ovSync handles the history rewind
+function _settingsBack(subId){                    // on-screen back arrow (UI): sub → root
+  closeWalletModal(subId);                        // hides sub + rewinds history to /settings
+  const s=document.getElementById('settingsOverlay'); if(s) s.classList.add('open');
+}
+function _closeSettingsAll(){                      // on-screen X: close the whole settings flow
+  const i=_ovStack.indexOf('settingsOverlay');
+  ['notifSettingsOverlay','moreSettingsOverlay','settingsOverlay'].forEach(x=>{ const e=document.getElementById(x); if(e) e.classList.remove('open'); });
+  if(i<0) return;
+  const steps=_ovStack.length-i; _ovStack.length=i;
+  if(!_ovInPop){ _ovInPop=true; try{ history.go(-steps); }catch(e){ _ovInPop=false; } }
+}
+
+// Open the page/modal that the URL points to (deep-link / refresh / address-bar visit)
+function _bootRoute(){
+  const path=(location.pathname||'/').replace(/\/+$/,'')||'/';
+  if(/^\/(watch|shorts|dare|u)\//.test(path)){ goPage('home'); return; }   // detail view → _maybeInitialRoute opens it after data loads
+  const pg=_URL_PAGE[path];
+  if(pg){ goPage(pg); return; }
+  const mid=_URL_MODAL[path];
+  if(mid){
+    const base=(mid==='depositOverlay'||mid==='withdrawOverlay')?'wallet':'home';
+    goPage(base); _openModalById(mid); return;
+  }
+  goPage('home');
+}
+function _openModalById(id){
+  switch(id){
+    case 'settingsOverlay':      openSettings(); break;
+    case 'notifSettingsOverlay': openSettings(); openNotifSettings(); break;
+    case 'moreSettingsOverlay':  openSettings(); openMoreSettings(); break;
+    case 'profileEditOverlay':   openProfileEdit(); break;
+    case 'postOverlay':          openPost(); break;
+    case 'depositOverlay':       openDepositModal(); break;
+    case 'withdrawOverlay':      openWithdrawModal(); break;
+    // proofOverlay needs a dare context — not deep-linkable
+  }
 }
 
 window.addEventListener('popstate', function(e){
