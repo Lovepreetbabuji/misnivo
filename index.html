@@ -11,7 +11,7 @@
 <link href="https://fonts.googleapis.com/icon?family=Material+Icons+Round" rel="stylesheet"/>
 
 <!-- App Styles -->
-<link rel="stylesheet" href="/css/styles.css?v=20260616f"/>
+<link rel="stylesheet" href="/css/styles.css?v=20260629a"/>
 
 <!-- Firebase CDN -->
 <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
@@ -158,6 +158,8 @@
       <div class="notif-wrap">
         <button class="icon-btn notif-btn" onclick="toggleNotifPanel()"><span class="mi">notifications</span><div class="notif-badge" id="notifBadge" style="display:none;">0</div></button>
       </div>
+      <!-- Profile-page only: replaces the avatar with Settings on desktop -->
+      <button class="icon-btn topbar-gear" id="topGearBtn" onclick="openSettings()" aria-label="Settings"><span class="mi">settings</span></button>
       <div class="user-menu">
         <div class="user-av" id="topAv" onclick="toggleDD()"></div>
         <div class="dropdown" id="userDD">
@@ -288,12 +290,17 @@
 
     <!-- PROFILE -->
     <div class="page" id="pageProfile">
-      <!-- Banner (clickable to customize) -->
-      <div class="profile-banner" id="profBanner" onclick="openProfileEdit()">
-        <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;opacity:0;transition:opacity .2s;"
-             class="banner-edit-hint">
-          <span class="mi" style="font-size:28px;color:#fff;">edit</span>
-        </div>
+
+      <!-- Mobile-only header bar (replaces topbar on profile) -->
+      <div class="prof-mobile-bar">
+        <button class="pmb-btn" onclick="openSettings()" aria-label="Settings"><span class="mi">settings</span></button>
+        <span class="pmb-title">Profile</span>
+        <button class="pmb-btn" onclick="_profileBack()" aria-label="Back"><span class="mi">arrow_back</span></button>
+      </div>
+
+      <!-- Banner (decorative — shows brand on mobile, hidden on desktop) -->
+      <div class="profile-banner" id="profBanner">
+        <span class="profile-banner-brand">Mission Markit</span>
       </div>
 
       <!-- Profile Header Row -->
@@ -309,10 +316,12 @@
           <div class="profile-handle" id="profHandle">@—</div>
           <div class="profile-bio" id="profBio" style="display:none;"></div>
           <div class="profile-actions">
-            <button class="btn-customize" onclick="openProfileEdit()">
-              <span class="mi">edit</span> Customize Profile
+            <button class="prof-count-box" onclick="_ppFollowList('followers')">
+              <span class="pcb-v" id="profFollowers">0</span><span class="pcb-l">Followers</span>
             </button>
-            <span class="profile-provider" id="profProvider">—</span>
+            <button class="prof-count-box" onclick="_ppFollowList('following')">
+              <span class="pcb-v" id="profFollowing">0</span><span class="pcb-l">Following</span>
+            </button>
           </div>
           <div class="profile-socials" id="profSocials"></div>
         </div>
@@ -493,28 +502,43 @@
   <div class="modal wallet-modal">
     <div class="modal-hdr"><div class="modal-title" id="flTitle">Followers</div>
       <button class="modal-close" onclick="closeWalletModal('followListOverlay')"><span class="mi">close</span></button></div>
+    <div class="fl-search"><span class="mi">search</span>
+      <input id="flSearch" placeholder="Search by username" oninput="_flFilter(this.value)" autocomplete="off"/></div>
     <div id="flBody" class="fl-body"></div>
   </div>
 </div>
 
-<!-- ══ SETTINGS ══ -->
+<!-- ══ SETTINGS (menu) ══ -->
 <div class="overlay" id="settingsOverlay">
   <div class="modal wallet-modal">
     <div class="modal-hdr"><div class="modal-title">Settings</div>
       <button class="modal-close" onclick="closeWalletModal('settingsOverlay')"><span class="mi">close</span></button></div>
-    <div class="set-sec-label">Notifications</div>
-    <label class="set-row"><div class="set-t">Likes &amp; comments</div>
-      <span class="switch"><input type="checkbox" id="setNotifLikes" onchange="_saveSettings()"><span class="sl"></span></span></label>
-    <label class="set-row"><div class="set-t">New followers</div>
-      <span class="switch"><input type="checkbox" id="setNotifFollow" onchange="_saveSettings()"><span class="sl"></span></span></label>
-    <label class="set-row"><div class="set-t">Dare updates</div>
-      <span class="switch"><input type="checkbox" id="setNotifDares" onchange="_saveSettings()"><span class="sl"></span></span></label>
+    <button class="set-menu-row" onclick="closeWalletModal('settingsOverlay');openProfileEdit()">
+      <span class="mi smr-ic">person</span><span class="smr-t">Edit Profile</span><span class="mi smr-arrow">chevron_right</span></button>
+    <button class="set-menu-row" onclick="openNotifSettings()">
+      <span class="mi smr-ic">notifications</span><span class="smr-t">Notifications</span><span class="mi smr-arrow">chevron_right</span></button>
     <div class="set-sec-label">Privacy</div>
     <label class="set-row"><div><div class="set-t">Private profile</div><div class="set-s">Hide your videos &amp; dares from others</div></div>
       <span class="switch"><input type="checkbox" id="setPrivate" onchange="_saveSettings()"><span class="sl"></span></span></label>
     <div class="set-sec-label">Account</div>
     <button class="set-btn" onclick="logout()"><span class="mi">logout</span> Log out</button>
     <button class="set-btn danger" onclick="deleteAccount()"><span class="mi">delete_forever</span> Delete account</button>
+  </div>
+</div>
+
+<!-- ══ NOTIFICATION SETTINGS (sub-screen) ══ -->
+<div class="overlay" id="notifSettingsOverlay">
+  <div class="modal wallet-modal">
+    <div class="modal-hdr">
+      <button class="modal-close" onclick="closeWalletModal('notifSettingsOverlay');openSettings()" aria-label="Back"><span class="mi">arrow_back</span></button>
+      <div class="modal-title" style="flex:1;margin-left:6px;">Notifications</div>
+      <button class="modal-close" onclick="closeWalletModal('notifSettingsOverlay')"><span class="mi">close</span></button></div>
+    <label class="set-row"><div class="set-t">Likes &amp; comments</div>
+      <span class="switch"><input type="checkbox" id="setNotifLikes" onchange="_saveSettings()"><span class="sl"></span></span></label>
+    <label class="set-row"><div class="set-t">New followers</div>
+      <span class="switch"><input type="checkbox" id="setNotifFollow" onchange="_saveSettings()"><span class="sl"></span></span></label>
+    <label class="set-row"><div class="set-t">Dare updates</div>
+      <span class="switch"><input type="checkbox" id="setNotifDares" onchange="_saveSettings()"><span class="sl"></span></span></label>
   </div>
 </div>
 
@@ -972,7 +996,7 @@
 <div class="toast" id="toast"></div>
 
 <!-- App Logic -->
-<script src="/js/app.js?v=20260616f"></script>
+<script src="/js/app.js?v=20260629a"></script>
 
 <!-- ══ v0.19 NEW MODALS ══ -->
 

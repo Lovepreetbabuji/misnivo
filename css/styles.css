@@ -821,16 +821,15 @@ body{
 /* ═══════════════════════════════════════════════════════
    PROFILE
 ═══════════════════════════════════════════════════════ */
-.profile-banner{
-  height:180px;border-radius:16px;overflow:hidden;position:relative;cursor:pointer;
-  background:#272727;
-  box-shadow:8px 8px 22px var(--neu-dark),-3px -3px 10px var(--neu-light);
+/* Desktop: no banner box. Avatar sits at the top of the page. */
+.profile-banner{display:none;}
+.profile-banner-brand{
+  font-family:'Roboto',sans-serif;font-weight:900;letter-spacing:.5px;
+  font-size:20px;background:linear-gradient(90deg,var(--t1),var(--blue2));
+  -webkit-background-clip:text;background-clip:text;color:transparent;
 }
-.profile-banner::before{content:'';position:absolute;inset:0;background:radial-gradient(ellipse at 30% 50%,rgba(255,255,255,0.08),transparent 60%);}
-.profile-banner img{width:100%;height:100%;object-fit:cover;display:block;}
-.profile-banner:hover .banner-edit-hint{opacity:1 !important;}
-.profile-header{display:flex;align-items:flex-start;gap:20px;padding:16px 4px 18px;position:relative;z-index:1;}
-.profile-pic-wrap{position:relative;flex-shrink:0;margin-top:-48px;}
+.profile-header{display:flex;align-items:flex-start;gap:20px;padding:18px 4px;position:relative;z-index:1;}
+.profile-pic-wrap{position:relative;flex-shrink:0;}
 .profile-pic{
   width:100px;height:100px;border-radius:50%;
   background:#373737;
@@ -858,6 +857,61 @@ body{
 }
 .btn-customize:hover{background:rgba(255,255,255,0.08);border-color:rgba(255,255,255,0.08);}
 .btn-customize .mi{font-size:18px;}
+
+/* ── Profile: Followers / Following count boxes (replaced GOOGLE tag) ── */
+.prof-count-box{display:inline-flex;align-items:baseline;gap:6px;cursor:pointer;
+  background:var(--glass);border:1px solid var(--border);border-radius:14px;padding:9px 16px;
+  font-family:inherit;transition:border-color .15s,background .15s;
+  box-shadow:3px 3px 8px var(--neu-dark),-2px -2px 5px var(--neu-light);}
+.prof-count-box:hover{background:var(--glass2);border-color:var(--border2);}
+.pcb-v{font-size:16px;font-weight:800;color:var(--t1);font-family:'Roboto',sans-serif;}
+.pcb-l{font-size:12px;color:var(--t3);font-weight:600;}
+
+/* ── Profile: mobile-only top bar (Settings · Back) ── */
+.prof-mobile-bar{display:none;}
+.pmb-btn{width:40px;height:40px;border-radius:50%;display:flex;align-items:center;justify-content:center;
+  background:var(--glass);border:1px solid var(--border);color:var(--t1);cursor:pointer;}
+.pmb-btn:hover{background:var(--glass2);}
+.pmb-title{flex:1;text-align:center;font-size:16px;font-weight:700;color:var(--t1);font-family:'Roboto',sans-serif;}
+
+/* ── Topbar gear (desktop: replaces avatar on profile page) ── */
+.topbar-gear{display:none;}
+body.profile-open .topbar-gear{display:flex;}
+body.profile-open .user-menu{display:none;}
+
+/* ── Settings menu rows (Edit Profile · Notifications) ── */
+.set-menu-row{display:flex;align-items:center;gap:12px;width:100%;background:transparent;border:none;
+  border-bottom:1px solid var(--border);color:var(--t1);padding:14px 2px;cursor:pointer;font-family:inherit;}
+.set-menu-row:hover{background:var(--glass2);border-radius:8px;}
+.set-menu-row .smr-ic{font-size:20px;color:var(--t2);}
+.smr-t{flex:1;text-align:left;font-size:14px;font-weight:600;}
+.set-menu-row .smr-arrow{font-size:20px;color:var(--t3);}
+
+/* ── Follow-list: search box + per-row Follow/Unfollow button ── */
+.fl-search{display:flex;align-items:center;gap:8px;background:var(--glass2);border:1px solid var(--border);
+  border-radius:10px;padding:8px 12px;margin-bottom:10px;}
+.fl-search .mi{font-size:18px;color:var(--t3);}
+.fl-search input{flex:1;background:none;border:none;outline:none;color:var(--t1);font-size:13px;font-family:inherit;}
+.fl-follow{flex-shrink:0;background:var(--t1);color:#0a0a0a;border:none;border-radius:50px;padding:7px 16px;
+  font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;transition:opacity .15s;}
+.fl-follow:hover{opacity:.85;}
+.fl-follow.following{background:var(--glass);color:var(--t1);border:1px solid var(--border2);}
+
+/* ── Mobile: profile page replaces the topbar with its own mini-bar + small banner ── */
+@media(max-width:768px){
+  body.profile-open .topbar{display:none !important;}
+  body.profile-open .main{margin-top:0;}
+  .prof-mobile-bar{display:flex;align-items:center;gap:10px;padding:8px 0 10px;
+    position:sticky;top:0;z-index:50;background:var(--bg);}
+  .profile-banner{display:flex;align-items:center;justify-content:center;height:84px;
+    border-radius:14px;overflow:hidden;position:relative;background:#1a1a1a;
+    box-shadow:6px 6px 16px var(--neu-dark),-2px -2px 8px var(--neu-light);}
+  .profile-banner::before{content:'';position:absolute;inset:0;
+    background:radial-gradient(ellipse at 30% 50%,rgba(255,255,255,0.06),transparent 60%);}
+  .profile-banner-brand{font-size:18px;position:relative;z-index:1;}
+  .profile-pic-wrap{margin-top:-40px;}
+  .profile-header{padding-top:10px;}
+}
 .profile-stats{margin:16px 0 6px;}
 .pstat-verified{display:inline-flex;align-items:center;gap:5px;font-size:12px;font-weight:700;color:var(--green);
   background:rgba(0,200,83,.14);border:1px solid rgba(0,200,83,.4);border-radius:50px;padding:4px 12px;margin-bottom:12px;}

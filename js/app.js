@@ -551,6 +551,7 @@ function goPage(pg) {
   document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
   const nav = document.getElementById('nav-' + pg);
   if (nav) nav.classList.add('active');
+  document.body.classList.toggle('profile-open', pg === 'profile');   // swaps topbar avatar→gear (desktop) / hides topbar (mobile)
   if (pg === 'home')        renderHome();
   if (pg === 'explore')     renderExplorer();
   if (pg === 'dares')       renderDaresPage();
@@ -559,6 +560,9 @@ function goPage(pg) {
   if (pg === 'wallet')      renderWallet();
   if (pg === 'leaderboard') loadLeaderboard();
 }
+
+// Mobile profile mini-bar — back button
+function _profileBack(){ goPage('home'); }
 
 // ════════════════════════════════════════════════════════
 //  HOME — 3-SECTION YOUTUBE-STYLE PAGE (v0.15)
@@ -2137,7 +2141,11 @@ function renderProfile() {
 
   document.getElementById('profName').textContent     = user.name;
   document.getElementById('profHandle').textContent   = '@' + (user.username || '—');
-  document.getElementById('profProvider').textContent = user.provider;
+  _ppUid = null;   // own-profile context for follow lists
+  _profileFollowCounts(user.uid).then(({followers,following})=>{
+    const a=document.getElementById('profFollowers'); if(a)a.textContent=_fmtCount(followers);
+    const b=document.getElementById('profFollowing'); if(b)b.textContent=_fmtCount(following);
+  });
 
   const bioEl = document.getElementById('profBio');
   if (user.bio && user.bio.trim()) {
@@ -2427,10 +2435,12 @@ function _pubShare(){
   else if(navigator.clipboard){ navigator.clipboard.writeText(url).then(()=>showToast('Profile link copied')).catch(()=>showToast(url)); }
   else showToast(url);
 }
+let _flUsers=[], _flFollowing=new Set();
 async function _ppFollowList(type){
   const uid=_ppUid||user?.uid; if(!uid) return;
   document.getElementById('flTitle').textContent = type==='followers'?'Followers':'Following';
   const body=document.getElementById('flBody');
+  const search=document.getElementById('flSearch'); if(search) search.value='';
   body.innerHTML='<div style="text-align:center;padding:24px;color:var(--t3);font-size:13px;">Loading…</div>';
   document.getElementById('followListOverlay').classList.add('open');
   const field = type==='followers'?'targetUid':'followerUid';
@@ -2438,13 +2448,39 @@ async function _ppFollowList(type){
   try{
     const snap=await db.collection('follows').where(field,'==',uid).limit(50).get();
     const uids=[...new Set(snap.docs.map(d=>d.data()[other]))];
-    if(!uids.length){ body.innerHTML='<div style="text-align:center;padding:24px;color:var(--t3);font-size:13px;">No '+(type)+' yet</div>'; return; }
-    const users=(await Promise.all(uids.map(u=>db.collection('users').doc(u).get().then(d=>d.exists?{uid:u,...d.data()}:null).catch(()=>null)))).filter(Boolean);
-    body.innerHTML = users.map(u=>`<div class="fl-row" onclick="closeWalletModal('followListOverlay');openPublicProfile('${u.uid}')">
+    if(!uids.length){ _flUsers=[]; body.innerHTML='<div style="text-align:center;padding:24px;color:var(--t3);font-size:13px;">No '+type+' yet</div>'; return; }
+    // who the current user already follows → label Follow / Following buttons
+    _flFollowing=new Set();
+    if(user){ try{ const mine=await db.collection('follows').where('followerUid','==',user.uid).get();
+      mine.docs.forEach(d=>_flFollowing.add(d.data().targetUid)); }catch(e){} }
+    _flUsers=(await Promise.all(uids.map(u=>db.collection('users').doc(u).get().then(d=>d.exists?{uid:u,...d.data()}:null).catch(()=>null)))).filter(Boolean);
+    _flRender(_flUsers);
+  }catch(e){ body.innerHTML='<div style="text-align:center;padding:24px;color:var(--t3);font-size:13px;">Could not load</div>'; }
+}
+function _flRender(list){
+  const body=document.getElementById('flBody'); if(!body) return;
+  if(!list.length){ body.innerHTML='<div style="text-align:center;padding:24px;color:var(--t3);font-size:13px;">No users found</div>'; return; }
+  body.innerHTML=list.map(u=>{
+    const isMe=user&&u.uid===user.uid;
+    const f=_flFollowing.has(u.uid);
+    const btn=isMe?'':`<button class="fl-follow${f?' following':''}" onclick="event.stopPropagation();_flToggleFollow('${u.uid}',this)">${f?'Following':'Follow'}</button>`;
+    return `<div class="fl-row" onclick="closeWalletModal('followListOverlay');openPublicProfile('${u.uid}')">
       <div class="fl-av">${_avHtml(u.picture,u.name)}</div>
       <div class="fl-info"><div class="fl-name">${escHtml(u.name||'User')}</div><div class="fl-handle">@${escHtml(u.username||'user')}</div></div>
-      <span class="mi" style="color:var(--t3);">chevron_right</span></div>`).join('');
-  }catch(e){ body.innerHTML='<div style="text-align:center;padding:24px;color:var(--t3);font-size:13px;">Could not load</div>'; }
+      ${btn}</div>`;
+  }).join('');
+}
+function _flFilter(q){
+  q=(q||'').toLowerCase().trim();
+  const list=!q?_flUsers:_flUsers.filter(u=>((u.username||'').toLowerCase().includes(q)||(u.name||'').toLowerCase().includes(q)));
+  _flRender(list);
+}
+async function _flToggleFollow(uid,btn){
+  if(!user){ showToast('Sign in first'); return; }
+  const nowF=!_flFollowing.has(uid);            // state after toggle
+  await toggleFollow(uid,'creator');
+  if(nowF)_flFollowing.add(uid); else _flFollowing.delete(uid);
+  if(btn){ btn.textContent=nowF?'Following':'Follow'; btn.classList.toggle('following',nowF); }
 }
 
 // ════════════════════════════════════════════════════════════════════
@@ -2458,6 +2494,15 @@ function openSettings(){
   document.getElementById('setNotifDares').checked  = s.notifDares  !== false;
   document.getElementById('setPrivate').checked     = s.private === true;
   document.getElementById('settingsOverlay').classList.add('open');
+}
+function openNotifSettings(){
+  if(!user){ showToast('Sign in first'); return; }
+  const s=user.settings||{};
+  document.getElementById('setNotifLikes').checked  = s.notifLikes  !== false;
+  document.getElementById('setNotifFollow').checked = s.notifFollow !== false;
+  document.getElementById('setNotifDares').checked  = s.notifDares  !== false;
+  document.getElementById('settingsOverlay').classList.remove('open');
+  document.getElementById('notifSettingsOverlay').classList.add('open');
 }
 function _saveSettings(){
   if(!user) return;
