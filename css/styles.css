@@ -840,8 +840,18 @@ body{
   cursor:pointer;
 }
 .profile-pic img{width:100%;height:100%;object-fit:cover;}
-.profile-pic-edit{position:absolute;bottom:2px;right:2px;width:26px;height:26px;border-radius:50%;background:#1a0808;border:2px solid var(--bg);display:flex;align-items:center;justify-content:center;cursor:pointer;box-shadow:2px 2px 5px var(--neu-dark);}
-.profile-pic-edit .mi{font-size:14px;color:var(--t1);}
+
+/* Profile photo fullscreen viewer (lightbox) */
+.photo-viewer{position:fixed;inset:0;z-index:9800;background:rgba(0,0,0,.92);
+  display:none;align-items:center;justify-content:center;cursor:zoom-out;
+  backdrop-filter:blur(8px) !important;-webkit-backdrop-filter:blur(8px) !important;}
+.photo-viewer.open{display:flex;}
+.photo-viewer img{max-width:92vw;max-height:86vh;border-radius:14px;object-fit:contain;cursor:default;
+  box-shadow:0 24px 70px rgba(0,0,0,.7);}
+.pv-close{position:absolute;top:18px;right:18px;width:44px;height:44px;border-radius:50%;
+  background:rgba(255,255,255,.12);border:1px solid var(--border);color:#fff;cursor:pointer;
+  display:flex;align-items:center;justify-content:center;}
+.pv-close:hover{background:rgba(255,255,255,.22);}
 .profile-info{flex:1;padding-top:8px;}
 .profile-name{font-size:22px;font-weight:700;line-height:1.2;letter-spacing:-.4px;font-family:'Roboto',sans-serif;}
 .profile-handle{font-size:13px;color:var(--t3);margin-top:3px;font-family:'Roboto',sans-serif;}

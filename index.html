@@ -11,7 +11,7 @@
 <link href="https://fonts.googleapis.com/icon?family=Material+Icons+Round" rel="stylesheet"/>
 
 <!-- App Styles -->
-<link rel="stylesheet" href="/css/styles.css?v=20260629a"/>
+<link rel="stylesheet" href="/css/styles.css?v=20260629b"/>
 
 <!-- Firebase CDN -->
 <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
@@ -306,10 +306,7 @@
       <!-- Profile Header Row -->
       <div class="profile-header">
         <div class="profile-pic-wrap">
-          <div class="profile-pic" id="profPic" onclick="openProfileEdit()"></div>
-          <div class="profile-pic-edit" onclick="openProfileEdit()">
-            <span class="mi">edit</span>
-          </div>
+          <div class="profile-pic" id="profPic" onclick="_viewProfilePhoto()" title="View photo"></div>
         </div>
         <div class="profile-info">
           <div class="profile-name" id="profName">—</div>
@@ -524,6 +521,12 @@
     <button class="set-btn" onclick="logout()"><span class="mi">logout</span> Log out</button>
     <button class="set-btn danger" onclick="deleteAccount()"><span class="mi">delete_forever</span> Delete account</button>
   </div>
+</div>
+
+<!-- ══ PHOTO VIEWER (profile photo lightbox) ══ -->
+<div class="photo-viewer" id="photoViewer" onclick="closePhotoViewer()">
+  <button class="pv-close" onclick="closePhotoViewer()" aria-label="Close"><span class="mi">close</span></button>
+  <img id="photoViewerImg" alt="Profile photo" onclick="event.stopPropagation()"/>
 </div>
 
 <!-- ══ NOTIFICATION SETTINGS (sub-screen) ══ -->
@@ -996,7 +999,7 @@
 <div class="toast" id="toast"></div>
 
 <!-- App Logic -->
-<script src="/js/app.js?v=20260629a"></script>
+<script src="/js/app.js?v=20260629b"></script>
 
 <!-- ══ v0.19 NEW MODALS ══ -->
 

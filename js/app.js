@@ -564,6 +564,15 @@ function goPage(pg) {
 // Mobile profile mini-bar — back button
 function _profileBack(){ goPage('home'); }
 
+// Profile photo → open in a fullscreen viewer (no edit). Initials = nothing to show.
+function _viewProfilePhoto(){
+  const img=document.querySelector('#profPic img');
+  if(!img||!img.src){ return; }
+  document.getElementById('photoViewerImg').src=img.src;
+  document.getElementById('photoViewer').classList.add('open');
+}
+function closePhotoViewer(){ document.getElementById('photoViewer').classList.remove('open'); }
+
 // ════════════════════════════════════════════════════════
 //  HOME — 3-SECTION YOUTUBE-STYLE PAGE (v0.15)
 //
