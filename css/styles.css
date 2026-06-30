@@ -945,13 +945,16 @@ body.profile-open:not(.detail-open):not(.shorts-open) .user-menu{display:none;}
 .skel-meta{flex:1;display:flex;flex-direction:column;gap:8px;min-width:0;}
 .skel-row{display:flex;align-items:center;gap:12px;padding:11px 6px;}
 
-/* Loading splash — branded skeleton (logo shine + shimmer lines) instead of a spinner */
-.load-skel{display:flex;flex-direction:column;align-items:center;gap:10px;margin-top:22px;}
-@keyframes logoSweep{0%{transform:translateX(-130%);}100%{transform:translateX(130%);}}
-.skel-logo{position:relative;overflow:hidden;}
-.skel-logo::after{content:'';position:absolute;top:0;bottom:0;left:0;width:45%;pointer-events:none;
-  background:linear-gradient(90deg,transparent,rgba(255,255,255,.28),transparent);
-  animation:logoSweep 1.4s ease-in-out infinite;}
+/* Loading splash — just the brand bolt as a shimmering skeleton (no box, no text) */
+.load-bolt{line-height:1;}
+.load-bolt .mi{font-size:112px;line-height:1;
+  background:linear-gradient(100deg,#5a1020 18%,#ff3d5a 50%,#5a1020 82%);
+  background-size:220% 100%;
+  -webkit-background-clip:text;background-clip:text;
+  color:transparent;-webkit-text-fill-color:transparent;
+  filter:drop-shadow(0 6px 22px rgba(255,45,74,.4));
+  animation:boltShimmer 1.4s ease-in-out infinite;}
+@keyframes boltShimmer{0%{background-position:220% 0;}100%{background-position:-220% 0;}}
 
 /* Banner socials show only on mobile (inside the profile banner); hidden on desktop */
 .banner-socials{display:none;}
@@ -966,9 +969,9 @@ body.profile-open:not(.detail-open):not(.shorts-open) .user-menu{display:none;}
   .profile-banner::before{content:'';position:absolute;inset:0;
     background:radial-gradient(ellipse at 30% 40%,rgba(255,255,255,0.07),transparent 60%);}
   .profile-banner-brand{font-size:26px;position:relative;z-index:1;}
-  /* social links sit in the banner's TOP ROW, centered between Back and Settings */
-  .banner-socials{display:flex;gap:10px;position:absolute;top:15px;left:50%;transform:translateX(-50%);z-index:2;margin:0;}
-  .banner-socials .psocial{width:36px;height:36px;}
+  /* social links sit in the banner's TOP ROW, in one straight line with Back / Settings */
+  .banner-socials{display:flex;gap:10px;align-items:center;position:absolute;top:14px;left:50%;transform:translateX(-50%);z-index:2;margin:0;}
+  .banner-socials .psocial{width:40px;height:40px;text-decoration:none;}
   #profSocials{display:none;}                                            /* hide the in-body socials on mobile */
   .profile-pic{width:92px;height:92px;font-size:34px;}
   .profile-pic-wrap{margin-top:-44px;}
@@ -1044,7 +1047,7 @@ body.profile-open:not(.detail-open):not(.shorts-open) .user-menu{display:none;}
 .pbadge .mi{font-size:15px;}
 .profile-socials{display:flex;gap:8px;margin-top:10px;}
 .psocial{width:34px;height:34px;border-radius:50%;display:flex;align-items:center;justify-content:center;
-  background:var(--glass);border:1px solid var(--border);color:var(--t1);transition:all .15s;}
+  background:var(--glass);border:1px solid var(--border);color:var(--t1);transition:all .15s;text-decoration:none;}
 .psocial:hover{background:var(--glass2);border-color:var(--border2);color:var(--blue);}
 .psocial .mi{font-size:18px;}
 .pe-social-row{display:flex;align-items:center;gap:10px;margin-bottom:8px;}
@@ -2486,8 +2489,15 @@ textarea.f-input{resize:vertical;min-height:84px;}
 @media(max-width:768px){
   #videoDetailOverlay .vd2-player-wrap{ position:fixed; top:56px; left:0; right:0; width:100%; margin:0; border-radius:0; z-index:7; }
   #videoDetailOverlay .dd-col1{ padding-top:calc(56.25vw + 14px); }
-  /* drop the light-black content box → seamless pure black like the rest of the app */
-  #dareDetailOverlay .dd-bar, #videoDetailOverlay .dd-bar{ background:transparent; border:none; border-radius:0; padding:14px 0; margin-bottom:0; }
+  /* drop the light-black content box → seamless pure black (keep padding so the
+     fixed-video clearance on .dd-col1 isn't clobbered — .dd-col1 is also a .dd-bar) */
+  #dareDetailOverlay .dd-bar, #videoDetailOverlay .dd-bar{ background:transparent; border:none; border-radius:0; }
+  /* Dare / Accepted detail: float the back (+ menu) bar ON TOP of the thumbnail */
+  #dareDetailOverlay .dd-wrap{ position:relative; }
+  #dareDetailOverlay .dd-topbar{ position:absolute; top:0; left:0; right:0; z-index:6;
+    background:transparent !important; box-shadow:none !important; border:none !important; padding:12px 14px; }
+  #dareDetailOverlay .dd-topbar .vd-topbar-title{ display:none; }
+  #dareDetailOverlay .dd-col1{ padding-top:0; }
 }
 /* Hamburger drawer must also work on 600–768px widths (matches JS isMobile≤768) */
 @media(min-width:600px) and (max-width:768px){
