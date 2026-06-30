@@ -592,9 +592,9 @@ function _viewProfilePhoto(){
   const img=document.querySelector('#profPic img');
   if(!img||!img.src){ return; }
   document.getElementById('photoViewerImg').src=img.src;
-  document.getElementById('photoViewer').classList.add('open');
+  _ovOpen('photoViewer');
 }
-function closePhotoViewer(){ document.getElementById('photoViewer').classList.remove('open'); }
+function closePhotoViewer(){ _ovSync('photoViewer'); document.getElementById('photoViewer').classList.remove('open'); }
 
 // ════════════════════════════════════════════════════════
 //  HOME — 3-SECTION YOUTUBE-STYLE PAGE (v0.15)
@@ -938,10 +938,11 @@ function openVideoPlay(proofId) {
     const player = document.getElementById('vpPlayer');
     player.src = p.videoURL;
     player.load();
-    document.getElementById('videoPlayOverlay').classList.add('open');
+    _ovOpen('videoPlayOverlay');
   });
 }
 function closeVideoPlay() {
+  _ovSync('videoPlayOverlay');
   document.getElementById('videoPlayOverlay').classList.remove('open');
   const p = document.getElementById('vpPlayer');
   p.pause(); p.src = '';
@@ -1958,7 +1959,7 @@ async function openReviewModal(dareId) {
   document.getElementById('rvProofsList').innerHTML   =
     `<div class="review-empty"><span class="mi">hourglass_empty</span><p>Loading proofs...</p></div>`;
 
-  document.getElementById('reviewOverlay').classList.add('open');
+  _ovOpen('reviewOverlay');
 
   try {
     const snap = await db.collection('proofs').where('dareId','==', dareId).get();
@@ -2083,9 +2084,10 @@ async function approveProof(proofId) {
 function openRejectModal(proofId) {
   rejectProofId = proofId;
   document.getElementById('rejectReason').value = '';
-  document.getElementById('rejectOverlay').classList.add('open');
+  _ovOpen('rejectOverlay');
 }
 function closeRejectModal() {
+  _ovSync('rejectOverlay');
   document.getElementById('rejectOverlay').classList.remove('open');
   rejectProofId = null;
 }
@@ -2125,6 +2127,7 @@ async function confirmReject() {
 }
 
 function closeReview() {
+  _ovSync('reviewOverlay');
   document.getElementById('reviewOverlay').classList.remove('open');
   reviewDareId = null; currentProofs = [];
 }
@@ -2495,7 +2498,7 @@ async function _ppFollowList(type){
   const body=document.getElementById('flBody');
   const search=document.getElementById('flSearch'); if(search) search.value='';
   body.innerHTML=_skelRows(6);
-  document.getElementById('followListOverlay').classList.add('open');
+  _ovOpen('followListOverlay');
   const field = type==='followers'?'targetUid':'followerUid';
   const other = type==='followers'?'followerUid':'targetUid';
   try{
@@ -2517,7 +2520,7 @@ function _flRender(list){
     const isMe=user&&u.uid===user.uid;
     const f=_flFollowing.has(u.uid);
     const btn=isMe?'':`<button class="fl-follow${f?' following':''}" onclick="event.stopPropagation();_flToggleFollow('${u.uid}',this)">${f?'Following':'Follow'}</button>`;
-    return `<div class="fl-row" onclick="closeWalletModal('followListOverlay');openPublicProfile('${u.uid}')">
+    return `<div class="fl-row" onclick="_flGoProfile('${u.uid}')">
       <div class="fl-av">${_avHtml(u.picture,u.name)}</div>
       <div class="fl-info"><div class="fl-name">${escHtml(u.name||'User')}</div><div class="fl-handle">@${escHtml(u.username||'user')}</div></div>
       ${btn}</div>`;
@@ -2534,6 +2537,15 @@ async function _flToggleFollow(uid,btn){
   await toggleFollow(uid,'creator');
   if(nowF)_flFollowing.add(uid); else _flFollowing.delete(uid);
   if(btn){ btn.textContent=nowF?'Following':'Follow'; btn.classList.toggle('following',nowF); }
+}
+// Row tap → open that user's profile. REPLACE the follow-list history entry with the
+// /u/:id entry (no extra entry, no desync) so Back from the profile lands where the list was opened.
+function _flGoProfile(uid){
+  const i=_ovStack.lastIndexOf('followListOverlay');
+  const el=document.getElementById('followListOverlay'); if(el) el.classList.remove('open');
+  if(i>=0) _ovStack.splice(i,1);                 // untrack without rewinding history
+  try{ history.replaceState({dm:'u',id:uid}, '', '/u/'+encodeURIComponent(uid)); }catch(e){}
+  _navBack=true; openPublicProfile(uid); _navBack=false;   // _navBack → openPublicProfile won't push again
 }
 
 // ════════════════════════════════════════════════════════════════════
@@ -2944,7 +2956,7 @@ async function openEditDare(id) {
   const btn = document.getElementById('submitDareBtn');
   if (btn) { btn.disabled=false; btn.innerHTML='<span class="mi">save</span> Save Changes'; }
 
-  document.getElementById('postOverlay').classList.add('open');
+  _ovOpen('postOverlay');
 }
 
 // ── DELETE DARE ──────────────────────────────────────────────────────
@@ -3004,9 +3016,10 @@ function openReportModal(targetType, targetId, targetName, extra) {
   if (titleEl) titleEl.textContent = `Report ${label}`;
   document.getElementById('reportReason').value = '';
   document.getElementById('reportType').value = 'inappropriate';
-  document.getElementById('reportOverlay').classList.add('open');
+  _ovOpen('reportOverlay');
 }
 function closeReportModal2() {
+  _ovSync('reportOverlay');
   document.getElementById('reportOverlay').classList.remove('open');
   reportTargetInfo = null;
 }
@@ -3049,7 +3062,7 @@ async function openAdminReports() {
   if (!user || user.uid !== ADMIN_UID) {
     showToast('Admin access required'); return;
   }
-  document.getElementById('adminReportsOverlay').classList.add('open');
+  _ovOpen('adminReportsOverlay');
   document.getElementById('adminReportsList').innerHTML =
     '<div class="empty" style="padding:40px;"><span class="mi">hourglass_empty</span><div class="empty-title">Loading reports...</div></div>';
   try {
@@ -3090,6 +3103,7 @@ async function dismissReport(id) {
   openAdminReports();
 }
 function closeAdminReports() {
+  _ovSync('adminReportsOverlay');
   document.getElementById('adminReportsOverlay').classList.remove('open');
 }
 
@@ -3100,7 +3114,7 @@ async function openSelectTakersModal(dareId) {
   if (!d) return;
 
   document.getElementById('selectTakersDareTitle').textContent = d.caption||d.title||'Dare';
-  document.getElementById('selectTakersOverlay').classList.add('open');
+  _ovOpen('selectTakersOverlay');
   document.getElementById('applicantsList').innerHTML =
     '<div class="empty" style="padding:32px;"><span class="mi">hourglass_empty</span><div class="empty-title">Loading applicants...</div></div>';
 
@@ -3210,6 +3224,7 @@ async function revokeTaker(dareId, takerUid) {
 }
 
 function closeSelectTakersModal() {
+  _ovSync('selectTakersOverlay');
   document.getElementById('selectTakersOverlay').classList.remove('open');
   selectTakersDareId = null;
   currentApplicants = [];
@@ -4156,6 +4171,19 @@ const _OV_CLOSERS = {
   settingsOverlay:      () => { const e=document.getElementById('settingsOverlay'); if(e) e.classList.remove('open'); },
   notifSettingsOverlay: () => _settingsRevealRoot('notifSettingsOverlay'),
   moreSettingsOverlay:  () => _settingsRevealRoot('moreSettingsOverlay'),
+  // phase 2 — remaining popups (back closes one step; no shareable URL, they're contextual)
+  photoViewer:          () => closePhotoViewer(),
+  videoPlayOverlay:     () => closeVideoPlay(),
+  reviewOverlay:        () => closeReview(),
+  rejectOverlay:        () => closeRejectModal(),
+  reportOverlay:        () => closeReportModal2(),
+  adminReportsOverlay:  () => closeAdminReports(),
+  selectTakersOverlay:  () => closeSelectTakersModal(),
+  followListOverlay:    () => closeWalletModal('followListOverlay'),
+  kycOverlay:           () => closeWalletModal('kycOverlay'),
+  methodOverlay:        () => closeWalletModal('methodOverlay'),
+  pinOverlay:           () => closeWalletModal('pinOverlay'),
+  txnDetailOverlay:     () => closeWalletModal('txnDetailOverlay'),
 };
 function _ovCloseById(id){
   const f = _OV_CLOSERS[id];
@@ -5611,7 +5639,7 @@ function openTxnDetail(id){
     ${row('Status', `<span class="txn-status ${t.status||'completed'}">${t.status||'completed'}</span>`)}
     ${row('Date', t.date||'—')}
     ${row('Reference', t.ref||'—')}`;
-  document.getElementById('txnDetailOverlay').classList.add('open');
+  _ovOpen('txnDetailOverlay');
 }
 
 // ── Deposit / Withdraw (testnet) ──
@@ -5684,7 +5712,7 @@ function openKycModal(){
   if(wallet.kyc.status==='verified'){ showToast('KYC already verified ✓'); return; }
   document.getElementById('kycName').value = wallet.kyc.name||'';
   document.getElementById('kycPan').value  = wallet.kyc.pan||'';
-  document.getElementById('kycOverlay').classList.add('open');
+  _ovOpen('kycOverlay');
 }
 function submitKyc(){
   const name=(document.getElementById('kycName').value||'').trim();
@@ -5708,7 +5736,7 @@ function _methodTab(t){
 function openMethodModal(){
   if(!user){ showToast('Sign in first'); return; }
   ['mUpi','mBankName','mBankNum','mBankIfsc'].forEach(id=>{ const e=document.getElementById(id); if(e) e.value=''; });
-  _methodTab('upi'); document.getElementById('methodOverlay').classList.add('open');
+  _methodTab('upi'); _ovOpen('methodOverlay');
 }
 function addMethod(){
   wallet.methods=wallet.methods||[]; let m=null;
@@ -5741,7 +5769,7 @@ function openPinModal(){
   document.getElementById('pinNote').innerHTML = '<span class="mi">lock</span> A 4-digit PIN protects your withdrawals.';
   document.getElementById('pinSubmitBtn').textContent='Save PIN';
   document.getElementById('pinInput').value='';
-  document.getElementById('pinOverlay').classList.add('open');
+  _ovOpen('pinOverlay');
   setTimeout(()=>document.getElementById('pinInput').focus(),60);
 }
 function _pinVerify(cb){
@@ -5750,7 +5778,7 @@ function _pinVerify(cb){
   document.getElementById('pinNote').innerHTML='<span class="mi">lock</span> Enter your 4-digit PIN to confirm.';
   document.getElementById('pinSubmitBtn').textContent='Confirm';
   document.getElementById('pinInput').value='';
-  document.getElementById('pinOverlay').classList.add('open');
+  _ovOpen('pinOverlay');
   setTimeout(()=>document.getElementById('pinInput').focus(),60);
 }
 function _pinSubmit(){
