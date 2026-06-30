@@ -11,7 +11,7 @@
 <link href="https://fonts.googleapis.com/icon?family=Material+Icons+Round" rel="stylesheet"/>
 
 <!-- App Styles -->
-<link rel="stylesheet" href="/css/styles.css?v=20260629h"/>
+<link rel="stylesheet" href="/css/styles.css?v=20260629i"/>
 
 <!-- Firebase CDN -->
 <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
@@ -47,10 +47,12 @@
 
 <!-- LOADING -->
 <div id="loadScreen">
-  <div class="load-logo"><span class="mi">bolt</span></div>
+  <div class="load-logo skel-logo"><span class="mi">bolt</span></div>
   <div class="load-name"><span style="color:var(--t1)">Dare</span><span style="color:var(--blue2)">Market</span></div>
-  <div class="spinner"></div>
-  <div class="load-txt">Connecting...</div>
+  <div class="load-skel">
+    <span class="skel skel-line" style="width:170px;height:11px;"></span>
+    <span class="skel skel-line" style="width:120px;height:11px;"></span>
+  </div>
 </div>
 
 <!-- ════════ AUTH ════════ -->
@@ -553,6 +555,9 @@
       <button class="modal-close" onclick="_closeSettingsAll()"><span class="mi">close</span></button></div>
     <label class="set-row"><div><div class="set-t">Autoplay videos</div><div class="set-s">Play videos automatically on hover &amp; scroll</div></div>
       <span class="switch"><input type="checkbox" id="setAutoplay" onchange="_saveSettings()"><span class="sl"></span></span></label>
+    <div class="set-sec-label">Accessibility</div>
+    <label class="set-row"><div><div class="set-t">Page animations</div><div class="set-s">Slide transitions when you switch pages</div></div>
+      <span class="switch"><input type="checkbox" id="setPageAnim" onchange="_saveSettings()"><span class="sl"></span></span></label>
   </div>
 </div>
 
@@ -1010,7 +1015,7 @@
 <div class="toast" id="toast"></div>
 
 <!-- App Logic -->
-<script src="/js/app.js?v=20260629h"></script>
+<script src="/js/app.js?v=20260629i"></script>
 
 <!-- ══ v0.19 NEW MODALS ══ -->
 

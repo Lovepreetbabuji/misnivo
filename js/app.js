@@ -566,8 +566,10 @@ function goPage(pg, _fromPop) {
   if (el) {
     el.classList.remove('nav-fwd','nav-back');
     el.classList.add('active');
-    // mobile slide direction: back (popstate) = L→R, forward = R→L. Skip the boot render.
-    if (_pageNavInit) el.classList.add(_fromPop ? 'nav-back' : 'nav-fwd');
+    // mobile slide direction: back (popstate) = L→R, forward = R→L. Skip boot + when the
+    // user turned page animations off in Accessibility settings.
+    if (_pageNavInit && !(user && user.settings && user.settings.pageAnim === false))
+      el.classList.add(_fromPop ? 'nav-back' : 'nav-fwd');
   }
   document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
   const nav = document.getElementById('nav-' + pg);
@@ -2265,6 +2267,25 @@ function renderProfile() {
   _renderProfileVideos();
   _renderMyDares();
   _renderAcceptedDares();
+
+  // On a direct /profile refresh the home feed hasn't run, so the proofs pool can be
+  // empty → "No Videos Yet". Fetch proofs once, then re-render the Completed tab.
+  if (!((typeof allProofs!=='undefined' && allProofs.length) || (typeof homeProofs!=='undefined' && homeProofs.length))) {
+    const tv = document.getElementById('tVideos'); if (tv) tv.innerHTML = _skelCards(3);
+    _ensureProofsLoaded().then(() => { _renderProfileVideos(); });
+  }
+}
+let _proofsLoading = false;
+async function _ensureProofsLoaded(){
+  if (_proofsLoading) return;
+  if ((typeof allProofs!=='undefined' && allProofs.length) || (typeof homeProofs!=='undefined' && homeProofs.length)) return;
+  _proofsLoading = true;
+  try {
+    const snap = await db.collection('proofs').where('status','==','approved').get();
+    homeProofs = snap.docs.map(d => ({ id:d.id, ...d.data() }));
+    allProofs = homeProofs;
+  } catch(e){}
+  _proofsLoading = false;
 }
 
 // ── Profile dare card (your posted dares) — thumbnail + 3-dot actions (top-left) ──
@@ -2583,17 +2604,20 @@ function openMoreSettings(){
   if(!user){ showToast('Sign in first'); return; }
   const s=user.settings||{};
   document.getElementById('setAutoplay').checked = s.autoplay !== false;   // default ON
+  document.getElementById('setPageAnim').checked = s.pageAnim !== false;   // default ON
   _settingsSub('moreSettingsOverlay');    // sub-screen of the same history layer
 }
 function _saveSettings(){
   if(!user) return;
   const _ap=document.getElementById('setAutoplay');
+  const _pa=document.getElementById('setPageAnim');
   user.settings={
     notifLikes:  document.getElementById('setNotifLikes').checked,
     notifFollow: document.getElementById('setNotifFollow').checked,
     notifDares:  document.getElementById('setNotifDares').checked,
     private:     document.getElementById('setPrivate').checked,
-    autoplay:    _ap ? _ap.checked : (user.settings?.autoplay !== false)
+    autoplay:    _ap ? _ap.checked : (user.settings?.autoplay !== false),
+    pageAnim:    _pa ? _pa.checked : (user.settings?.pageAnim !== false)
   };
   db.collection('users').doc(user.uid).update({ settings:user.settings }).catch(()=>{});
 }
