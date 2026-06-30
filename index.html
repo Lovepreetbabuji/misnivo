@@ -20,7 +20,7 @@
 <link href="https://fonts.googleapis.com/icon?family=Material+Icons+Round" rel="stylesheet"/>
 
 <!-- App Styles -->
-<link rel="stylesheet" href="/css/styles.css?v=20260629j"/>
+<link rel="stylesheet" href="/css/styles.css?v=20260629k"/>
 
 <!-- Firebase CDN -->
 <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
@@ -297,12 +297,14 @@
     <!-- PROFILE -->
     <div class="page" id="pageProfile">
 
-      <!-- Banner: brand text + Back (left) / Settings (right) overlaid — mobile only -->
+      <!-- Banner: top row (Back · socials · Settings) + brand — mobile only -->
       <div class="profile-banner" id="profBanner">
-        <button class="pmb-btn pmb-back" onclick="_profileBack()" aria-label="Back"><span class="mi">arrow_back</span></button>
+        <div class="pmb-top">
+          <button class="pmb-btn pmb-back" onclick="_profileBack()" aria-label="Back"><span class="mi">arrow_back</span></button>
+          <div class="profile-socials banner-socials" id="profSocialsTop"></div>
+          <button class="pmb-btn pmb-set" onclick="openSettings()" aria-label="Settings"><span class="mi">settings</span></button>
+        </div>
         <span class="profile-banner-brand">Mission Markit</span>
-        <div class="profile-socials banner-socials" id="profSocialsTop"></div>
-        <button class="pmb-btn pmb-set" onclick="openSettings()" aria-label="Settings"><span class="mi">settings</span></button>
       </div>
 
       <!-- Profile Header Row -->
@@ -1021,7 +1023,7 @@
 <div class="toast" id="toast"></div>
 
 <!-- App Logic -->
-<script src="/js/app.js?v=20260629j"></script>
+<script src="/js/app.js?v=20260629k"></script>
 
 <!-- ══ v0.19 NEW MODALS ══ -->
 

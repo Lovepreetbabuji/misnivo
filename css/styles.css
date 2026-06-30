@@ -834,6 +834,8 @@ body{
 /* Desktop: center the whole profile block (Instagram-style), no banner box. */
 #pageProfile{max-width:935px;margin:0 auto;}
 .profile-banner{display:none;}
+/* Desktop: the 3-option row sits under the name/bio column (avatar 148 + gap 46 + pad 12), like before */
+@media(min-width:769px){ #pageProfile .profile-actions{ margin-left:206px; } }
 .profile-banner-brand{
   font-family:'Roboto',sans-serif;font-weight:900;letter-spacing:.5px;
   font-size:20px;background:linear-gradient(90deg,var(--t1),var(--blue2));
@@ -898,13 +900,12 @@ body{
   width:20px;text-align:center;flex-shrink:0;line-height:1;}
 .psoc-x{font-family:'Roboto',sans-serif;font-weight:900;font-size:15px;line-height:1;}
 
-/* ── Profile mobile banner buttons (Back · Settings) — overlaid on the banner box ── */
-.pmb-btn{width:40px;height:40px;border-radius:50%;display:flex;align-items:center;justify-content:center;
-  background:rgba(0,0,0,.45);border:1px solid rgba(255,255,255,.18);color:#fff;cursor:pointer;
-  position:absolute;top:14px;z-index:2;}
+/* ── Profile mobile banner top row (Back · socials · Settings) — one straight line ── */
+.pmb-top{position:absolute;top:0;left:0;right:0;z-index:2;display:flex;align-items:center;gap:8px;padding:14px;}
+.pmb-btn{width:40px;height:40px;border-radius:50%;flex-shrink:0;display:flex;align-items:center;justify-content:center;
+  background:rgba(0,0,0,.45);border:1px solid rgba(255,255,255,.18);color:#fff;cursor:pointer;}
+.pmb-btn .mi{font-size:22px;}
 .pmb-btn:hover{background:rgba(0,0,0,.65);}
-.pmb-back{left:14px;}
-.pmb-set{right:14px;}
 
 /* ── Topbar gear (desktop: replaces avatar on profile page) ──
    :not(.detail-open):not(.shorts-open) → topbar stays NORMAL when a video/dare/shorts
@@ -945,16 +946,11 @@ body.profile-open:not(.detail-open):not(.shorts-open) .user-menu{display:none;}
 .skel-meta{flex:1;display:flex;flex-direction:column;gap:8px;min-width:0;}
 .skel-row{display:flex;align-items:center;gap:12px;padding:11px 6px;}
 
-/* Loading splash — just the brand bolt as a shimmering skeleton (no box, no text) */
+/* Loading splash — just the brand bolt as a grey shimmering skeleton (no box, no text, no red) */
 .load-bolt{line-height:1;}
-.load-bolt .mi{font-size:112px;line-height:1;
-  background:linear-gradient(100deg,#5a1020 18%,#ff3d5a 50%,#5a1020 82%);
-  background-size:220% 100%;
-  -webkit-background-clip:text;background-clip:text;
-  color:transparent;-webkit-text-fill-color:transparent;
-  filter:drop-shadow(0 6px 22px rgba(255,45,74,.4));
-  animation:boltShimmer 1.4s ease-in-out infinite;}
-@keyframes boltShimmer{0%{background-position:220% 0;}100%{background-position:-220% 0;}}
+.load-bolt .mi{font-size:112px;line-height:1;color:#333;
+  animation:boltSkel 1.2s ease-in-out infinite;}
+@keyframes boltSkel{0%,100%{color:#2b2b2b;}50%{color:#5c5c5c;}}
 
 /* Banner socials show only on mobile (inside the profile banner); hidden on desktop */
 .banner-socials{display:none;}
@@ -969,20 +965,18 @@ body.profile-open:not(.detail-open):not(.shorts-open) .user-menu{display:none;}
   .profile-banner::before{content:'';position:absolute;inset:0;
     background:radial-gradient(ellipse at 30% 40%,rgba(255,255,255,0.07),transparent 60%);}
   .profile-banner-brand{font-size:26px;position:relative;z-index:1;}
-  /* social links sit in the banner's TOP ROW, in one straight line with Back / Settings */
-  .banner-socials{display:flex;gap:10px;align-items:center;position:absolute;top:14px;left:50%;transform:translateX(-50%);z-index:2;margin:0;}
+  /* social links centered in the top row, same line/size as Back / Settings */
+  .banner-socials{display:flex;gap:10px;align-items:center;justify-content:center;flex:1;margin:0;}
   .banner-socials .psocial{width:40px;height:40px;text-decoration:none;}
+  .banner-socials .psocial .mi{font-size:20px;}
   #profSocials{display:none;}                                            /* hide the in-body socials on mobile */
   .profile-pic{width:92px;height:92px;font-size:34px;}
   .profile-pic-wrap{margin-top:-44px;}
   .profile-header{align-items:flex-start;gap:16px;padding:10px 4px 16px;}
-  /* 3 action buttons = ONE segmented control, matching the Completed/My Dares/Accepted tabs */
-  .profile-actions{flex-wrap:nowrap;gap:4px;background:var(--glass);border:1px solid var(--border);
-    border-radius:14px;padding:4px;box-shadow:4px 4px 12px var(--neu-dark),-2px -2px 7px var(--neu-light);}
-  .prof-edit-btn, .prof-count-box{flex:1;min-width:0;flex-direction:column;gap:1px;padding:8px 4px;min-height:46px;
-    white-space:nowrap;background:transparent;border:none;box-shadow:none;border-radius:11px;}
-  .prof-edit-btn:active, .prof-count-box:active{background:rgba(255,255,255,0.07);}
-  .prof-edit-btn{font-size:13px;color:var(--t1);justify-content:center;}
+  /* 3 SEPARATE action buttons, equal width, spanning the full width */
+  .profile-actions{flex-wrap:nowrap;gap:8px;}
+  .prof-edit-btn, .prof-count-box{flex:1;min-width:0;flex-direction:column;gap:1px;padding:9px 4px;min-height:50px;white-space:nowrap;}
+  .prof-edit-btn{font-size:13px;}
   .pcb-v{font-size:15px;} .pcb-l{font-size:10.5px;}
 }
 .profile-stats{margin:16px 0 6px;}
@@ -2492,6 +2486,8 @@ textarea.f-input{resize:vertical;min-height:84px;}
   /* drop the light-black content box → seamless pure black (keep padding so the
      fixed-video clearance on .dd-col1 isn't clobbered — .dd-col1 is also a .dd-bar) */
   #dareDetailOverlay .dd-bar, #videoDetailOverlay .dd-bar{ background:transparent; border:none; border-radius:0; }
+  /* details + related videos span the FULL width — drop the side padding (keep top/bottom) */
+  #videoDetailOverlay .dd-col1, #dareDetailOverlay .dd-col1{ padding-left:0; padding-right:0; }
   /* Dare / Accepted detail: float the back (+ menu) bar ON TOP of the thumbnail */
   #dareDetailOverlay .dd-wrap{ position:relative; }
   #dareDetailOverlay .dd-topbar{ position:absolute; top:0; left:0; right:0; z-index:6;
