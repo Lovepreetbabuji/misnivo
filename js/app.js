@@ -563,7 +563,12 @@ function goPage(pg, _fromPop) {
   if (typeof _closeDetailOverlays === 'function') _closeDetailOverlays();
   document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
   const el = document.getElementById('page' + pg.charAt(0).toUpperCase() + pg.slice(1));
-  if (el) el.classList.add('active');
+  if (el) {
+    el.classList.remove('nav-fwd','nav-back');
+    el.classList.add('active');
+    // mobile slide direction: back (popstate) = L→R, forward = R→L. Skip the boot render.
+    if (_pageNavInit) el.classList.add(_fromPop ? 'nav-back' : 'nav-fwd');
+  }
   document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
   const nav = document.getElementById('nav-' + pg);
   if (nav) nav.classList.add('active');
@@ -670,14 +675,19 @@ document.addEventListener('click', _closeAdcMenus);
 // ─── MAIN HOME RENDER ────────────────────────────────────
 // ── Skeleton loaders (shimmer placeholders) ──
 function _skelCards(n){
+  // mirror the real long-video feed (.feed-longs > .yt-card) so the loader matches the UI
   let c='';
-  for(let i=0;i<(n||8);i++){
-    c+=`<div class="skel-card"><div class="skel skel-thumb"></div>
-      <div class="skel-card-info"><div class="skel skel-av"></div>
-        <div class="skel-meta"><div class="skel skel-line sl-80"></div><div class="skel skel-line sl-40"></div></div>
-      </div></div>`;
+  for(let i=0;i<(n||5);i++){
+    c+=`<div class="yt-card skel-yt">
+      <div class="yt-thumb"><span class="skel skel-fill"></span></div>
+      <div class="yt-info">
+        <div class="yt-av"><span class="skel" style="display:block;width:100%;height:100%;border-radius:50%;"></span></div>
+        <div class="yt-meta" style="flex:1;min-width:0;">
+          <span class="skel skel-line" style="display:block;width:88%;"></span>
+          <span class="skel skel-line" style="display:block;width:52%;height:11px;margin-top:9px;"></span>
+        </div></div></div>`;
   }
-  return `<div class="skel-grid">${c}</div>`;
+  return `<div class="feed-longs">${c}</div>`;
 }
 function _skelRows(n){
   let r='';
@@ -2251,6 +2261,7 @@ function renderProfile() {
 
   // Tabs: Completed (your won videos) · My Dares · Accepted — all card-style + sub-filters
   _renderProfileSocials(user, 'profSocials');
+  _renderProfileSocials(user, 'profSocialsTop');   // mobile: socials shown in the profile banner
   _renderProfileVideos();
   _renderMyDares();
   _renderAcceptedDares();

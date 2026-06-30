@@ -360,6 +360,16 @@ body{
 .page{display:none;}
 .page.active{display:block;animation:fadeUp .3s cubic-bezier(.4,0,.2,1) both;}
 
+/* Mobile page transitions: forward = slide in from right · back = slide in from left (L→R) */
+@keyframes pgInRight{from{transform:translateX(100%);}to{transform:translateX(0);}}
+@keyframes pgInLeft{from{transform:translateX(-100%);}to{transform:translateX(0);}}
+@media(max-width:768px){
+  .main{overflow-x:clip;}
+  .page.active{animation:none;}
+  .page.active.nav-fwd{animation:pgInRight .28s cubic-bezier(.33,1,.68,1) both;}
+  .page.active.nav-back{animation:pgInLeft .28s cubic-bezier(.33,1,.68,1) both;}
+}
+
 /* ═══════════════════════════════════════════════════════
    CHIPS BAR — Glass + minimal mono font
 ═══════════════════════════════════════════════════════ */
@@ -921,40 +931,43 @@ body.profile-open:not(.detail-open):not(.shorts-open) .user-menu{display:none;}
 .fl-follow:hover{opacity:.85;}
 .fl-follow.following{background:var(--glass);color:var(--t1);border:1px solid var(--border2);}
 
-/* ── Skeleton loading (shimmer) — used wherever data is loading ── */
+/* ── Skeleton loading (shimmer) — mirrors the real card UI (.feed-longs > .yt-card) ── */
 @keyframes skelShimmer{0%{background-position:-600px 0;}100%{background-position:600px 0;}}
-.skel{background:#1c1c1c;border-radius:8px;
-  background-image:linear-gradient(90deg,#1c1c1c 0,#262626 40px,#1c1c1c 80px);
+.skel{background:#161616;border-radius:8px;
+  background-image:linear-gradient(90deg,#161616 0,#222 40px,#161616 80px);
   background-size:600px 100%;animation:skelShimmer 1.3s ease-in-out infinite;}
-.skel-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:18px;padding:8px 0;}
-.skel-card{display:flex;flex-direction:column;gap:10px;}
-.skel-thumb{width:100%;aspect-ratio:16/9;border-radius:12px;}
+.skel-fill{position:absolute;inset:0;border-radius:inherit;display:block;}
+.skel-yt{pointer-events:none;}
+.skel-yt::after{display:none !important;}
 .skel-line{height:12px;border-radius:6px;}
 .sl-40{width:40%;} .sl-60{width:60%;} .sl-80{width:80%;}
-.skel-card-info{display:flex;gap:10px;align-items:flex-start;}
 .skel-av{width:36px;height:36px;border-radius:50%;flex-shrink:0;}
 .skel-meta{flex:1;display:flex;flex-direction:column;gap:8px;min-width:0;}
 .skel-row{display:flex;align-items:center;gap:12px;padding:11px 6px;}
-@media(max-width:768px){ .skel-grid{grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:12px;} }
+
+/* Banner socials show only on mobile (inside the profile banner); hidden on desktop */
+.banner-socials{display:none;}
 
 /* ── Mobile: profile page — topbar hidden, full-bleed banner with overlaid Back/Settings ── */
 @media(max-width:768px){
   body.profile-open:not(.detail-open):not(.shorts-open) .topbar{display:none !important;}
   body.profile-open:not(.detail-open):not(.shorts-open) .main{margin-top:0;padding-top:0;}
-  .profile-banner{display:flex;align-items:center;justify-content:center;height:150px;
+  .profile-banner{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;height:150px;
     border-radius:0 0 18px 18px;overflow:hidden;position:relative;background:#161616;margin:0 -12px;
     box-shadow:0 8px 18px rgba(0,0,0,.4);}
   .profile-banner::before{content:'';position:absolute;inset:0;
     background:radial-gradient(ellipse at 30% 40%,rgba(255,255,255,0.07),transparent 60%);}
   .profile-banner-brand{font-size:26px;position:relative;z-index:1;}
+  .banner-socials{display:flex;position:relative;z-index:1;margin:0;}   /* social links live in the banner on mobile */
+  #profSocials{display:none;}                                            /* hide the in-body socials on mobile */
   .profile-pic{width:92px;height:92px;font-size:34px;}
   .profile-pic-wrap{margin-top:-44px;}
   .profile-header{align-items:flex-start;gap:16px;padding:10px 4px 16px;}
-  /* 3 action buttons fit on a single line */
+  /* 3 action buttons = equal segments, aligned like the Completed/My Dares/Accepted tabs */
   .profile-actions{flex-wrap:nowrap;gap:8px;}
-  .prof-edit-btn, .prof-count-box{flex:1;min-width:0;padding:9px 6px;min-height:44px;white-space:nowrap;}
-  .prof-edit-btn{font-size:12.5px;}
-  .pcb-v{font-size:14px;} .pcb-l{font-size:11px;}
+  .prof-edit-btn, .prof-count-box{flex:1;min-width:0;flex-direction:column;gap:2px;padding:8px 4px;min-height:50px;white-space:nowrap;}
+  .prof-edit-btn{font-size:13px;}
+  .pcb-v{font-size:15px;} .pcb-l{font-size:10.5px;}
 }
 .profile-stats{margin:16px 0 6px;}
 .pstat-verified{display:inline-flex;align-items:center;gap:5px;font-size:12px;font-weight:700;color:var(--green);
@@ -2529,8 +2542,8 @@ body.detail-open .topbar{ background:#050505 !important; backdrop-filter:none !i
 .dd-col2-close{ display:none; }
 @media(max-width:768px){
   .dd-col2-close{ display:inline-flex; align-items:center; justify-content:center; float:right; width:34px; height:34px; border-radius:50%; background:var(--bg3); border:1px solid var(--border); color:var(--t1); cursor:pointer; margin:-4px -4px 6px 6px; }
-  /* glassy details drawer */
-  #dareDetailOverlay .dd-col2, #videoDetailOverlay .dd-col2{ background:rgba(16,16,16,.72) !important; backdrop-filter:var(--blur) !important; -webkit-backdrop-filter:var(--blur) !important; border-left:1px solid rgba(255,255,255,.12) !important; }
+  /* details drawer — pure black (match the rest of the app, no glass box) */
+  #dareDetailOverlay .dd-col2, #videoDetailOverlay .dd-col2{ background:var(--bg) !important; backdrop-filter:none !important; -webkit-backdrop-filter:none !important; border-left:1px solid var(--border) !important; }
 }
 
 /* ─── Comments box (scrollable, with close — desktop + mobile) ─── */
