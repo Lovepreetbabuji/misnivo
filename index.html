@@ -20,7 +20,7 @@
 <link href="https://fonts.googleapis.com/icon?family=Material+Icons+Round" rel="stylesheet"/>
 
 <!-- App Styles -->
-<link rel="stylesheet" href="/css/styles.css?v=20260629u"/>
+<link rel="stylesheet" href="/css/styles.css?v=20260629v"/>
 
 <!-- Firebase CDN -->
 <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
@@ -167,7 +167,8 @@
       <!-- Profile-page only: replaces the avatar with Settings on desktop -->
       <button class="icon-btn topbar-gear" id="topGearBtn" onclick="openSettings()" aria-label="Settings"><span class="mi">settings</span></button>
       <div class="user-menu">
-        <div class="user-av" id="topAv" onclick="toggleDD()"></div>
+        <!-- Avatar → straight to the profile page (no dropdown) -->
+        <div class="user-av" id="topAv" onclick="goPage('profile')" title="My Profile"></div>
         <div class="dropdown" id="userDD">
           <div class="dd-info">
             <div class="dd-name"  id="ddName">—</div>
@@ -589,7 +590,6 @@
 <div class="profile-edit-overlay as-page" id="profileEditOverlay" onclick="if(event.target===this)cancelProfileEdit()">
   <div class="profile-edit-modal">
     <div class="pe-header">
-      <div class="pe-title">Customize Profile</div>
       <button class="pe-close" onclick="cancelProfileEdit()"><span class="mi">close</span></button>
     </div>
     <div class="pe-body">
@@ -1040,7 +1040,7 @@
 <div class="toast" id="toast"></div>
 
 <!-- App Logic -->
-<script src="/js/app.js?v=20260629u"></script>
+<script src="/js/app.js?v=20260629v"></script>
 
 <!-- ══ v0.19 NEW MODALS ══ -->
 

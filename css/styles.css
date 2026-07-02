@@ -1112,7 +1112,7 @@ body{
 .profile-edit-overlay{position:fixed;inset:0;z-index:300;background:rgba(0,0,0,0.45);display:none;align-items:center;justify-content:center;padding:20px;}
 .profile-edit-overlay.open{display:flex;}
 .profile-edit-modal{background:rgba(16,8,8,0.96);border:1px solid var(--border2);border-radius:20px;width:100%;max-width:540px;max-height:90vh;overflow-y:auto;box-shadow:10px 10px 32px var(--neu-dark);}
-.pe-header{display:flex;align-items:center;justify-content:space-between;padding:20px 24px 16px;border-bottom:1px solid var(--border);position:sticky;top:0;background:rgba(16,8,8,0.98);z-index:1;}
+.pe-header{display:flex;align-items:center;justify-content:flex-end;padding:16px 18px 0;background:transparent;z-index:1;}
 .pe-title{font-size:17px;font-weight:700;font-family:'Roboto',sans-serif;}
 .pe-close{background:none;border:none;color:var(--t2);cursor:pointer;padding:4px;}
 .pe-close .mi{font-size:22px;}
