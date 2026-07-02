@@ -20,7 +20,7 @@
 <link href="https://fonts.googleapis.com/icon?family=Material+Icons+Round" rel="stylesheet"/>
 
 <!-- App Styles -->
-<link rel="stylesheet" href="/css/styles.css?v=20260629k"/>
+<link rel="stylesheet" href="/css/styles.css?v=20260629l"/>
 
 <!-- Firebase CDN -->
 <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
@@ -316,19 +316,18 @@
           <div class="profile-name" id="profName">—</div>
           <div class="profile-handle" id="profHandle">@—</div>
           <div class="profile-bio" id="profBio" style="display:none;"></div>
+          <!-- 3 options — right under the bio (mobile: stretched full width via CSS) -->
+          <div class="profile-actions">
+            <button class="prof-edit-btn" onclick="openProfileEdit()">Edit Profile</button>
+            <button class="prof-count-box" onclick="_ppFollowList('followers')">
+              <span class="pcb-v" id="profFollowers">0</span><span class="pcb-l">Followers</span>
+            </button>
+            <button class="prof-count-box" onclick="_ppFollowList('following')">
+              <span class="pcb-v" id="profFollowing">0</span><span class="pcb-l">Following</span>
+            </button>
+          </div>
           <div class="profile-socials" id="profSocials"></div>
         </div>
-      </div>
-
-      <!-- 3 options — full width, below the header -->
-      <div class="profile-actions">
-        <button class="prof-edit-btn" onclick="openProfileEdit()">Edit Profile</button>
-        <button class="prof-count-box" onclick="_ppFollowList('followers')">
-          <span class="pcb-v" id="profFollowers">0</span><span class="pcb-l">Followers</span>
-        </button>
-        <button class="prof-count-box" onclick="_ppFollowList('following')">
-          <span class="pcb-v" id="profFollowing">0</span><span class="pcb-l">Following</span>
-        </button>
       </div>
 
       <!-- Tabs -->
@@ -1023,7 +1022,7 @@
 <div class="toast" id="toast"></div>
 
 <!-- App Logic -->
-<script src="/js/app.js?v=20260629k"></script>
+<script src="/js/app.js?v=20260629l"></script>
 
 <!-- ══ v0.19 NEW MODALS ══ -->
 

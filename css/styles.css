@@ -834,8 +834,6 @@ body{
 /* Desktop: center the whole profile block (Instagram-style), no banner box. */
 #pageProfile{max-width:935px;margin:0 auto;}
 .profile-banner{display:none;}
-/* Desktop: the 3-option row sits under the name/bio column (avatar 148 + gap 46 + pad 12), like before */
-@media(min-width:769px){ #pageProfile .profile-actions{ margin-left:206px; } }
 .profile-banner-brand{
   font-family:'Roboto',sans-serif;font-weight:900;letter-spacing:.5px;
   font-size:20px;background:linear-gradient(90deg,var(--t1),var(--blue2));
@@ -964,7 +962,7 @@ body.profile-open:not(.detail-open):not(.shorts-open) .user-menu{display:none;}
     box-shadow:0 8px 18px rgba(0,0,0,.4);}
   .profile-banner::before{content:'';position:absolute;inset:0;
     background:radial-gradient(ellipse at 30% 40%,rgba(255,255,255,0.07),transparent 60%);}
-  .profile-banner-brand{font-size:26px;position:relative;z-index:1;}
+  .profile-banner-brand{font-size:26px;position:relative;z-index:1;margin-top:30px;}
   /* social links centered in the top row, same line/size as Back / Settings */
   .banner-socials{display:flex;gap:10px;align-items:center;justify-content:center;flex:1;margin:0;}
   .banner-socials .psocial{width:40px;height:40px;text-decoration:none;}
@@ -973,8 +971,9 @@ body.profile-open:not(.detail-open):not(.shorts-open) .user-menu{display:none;}
   .profile-pic{width:92px;height:92px;font-size:34px;}
   .profile-pic-wrap{margin-top:-44px;}
   .profile-header{align-items:flex-start;gap:16px;padding:10px 4px 16px;}
-  /* 3 SEPARATE action buttons, equal width, spanning the full width */
-  .profile-actions{flex-wrap:nowrap;gap:8px;}
+  /* 3 SEPARATE action buttons right under the bio — stretched to full width
+     (negative margin pulls them left across the avatar column: 92px avatar + 16px gap) */
+  .profile-actions{flex-wrap:nowrap;gap:8px;margin-left:-108px;margin-top:14px;}
   .prof-edit-btn, .prof-count-box{flex:1;min-width:0;flex-direction:column;gap:1px;padding:9px 4px;min-height:50px;white-space:nowrap;}
   .prof-edit-btn{font-size:13px;}
   .pcb-v{font-size:15px;} .pcb-l{font-size:10.5px;}
@@ -2486,8 +2485,9 @@ textarea.f-input{resize:vertical;min-height:84px;}
   /* drop the light-black content box → seamless pure black (keep padding so the
      fixed-video clearance on .dd-col1 isn't clobbered — .dd-col1 is also a .dd-bar) */
   #dareDetailOverlay .dd-bar, #videoDetailOverlay .dd-bar{ background:transparent; border:none; border-radius:0; }
-  /* details + related videos span the FULL width — drop the side padding (keep top/bottom) */
-  #videoDetailOverlay .dd-col1, #dareDetailOverlay .dd-col1{ padding-left:0; padding-right:0; }
+  /* details + related videos/more dares span the FULL width — drop the side padding (keep top/bottom) */
+  #videoDetailOverlay .dd-col1, #dareDetailOverlay .dd-col1,
+  #videoDetailOverlay .dd-col3, #dareDetailOverlay .dd-col3{ padding-left:0; padding-right:0; }
   /* Dare / Accepted detail: float the back (+ menu) bar ON TOP of the thumbnail */
   #dareDetailOverlay .dd-wrap{ position:relative; }
   #dareDetailOverlay .dd-topbar{ position:absolute; top:0; left:0; right:0; z-index:6;
