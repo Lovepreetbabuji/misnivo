@@ -4986,7 +4986,7 @@ function _shortsSlideHtml(p, i) {
     </div>
 
     <div class="shorts-slide-box">
-      <video class="shorts-snap-video" src="${p.videoURL}" loop playsinline preload="metadata"
+      <video class="shorts-snap-video" data-src="${p.videoURL}" poster="${vidThumb(p,480)}" loop playsinline preload="metadata"
         onclick="shortsSlideTogglePlay(this)" ontimeupdate="shortsSlideOnTime(this)"></video>
 
       <div class="shorts-top-ctrl">
@@ -6183,12 +6183,14 @@ function _renderShortsSnapStack() {
   const c = document.getElementById('shortsSnapContainer');
   if (!c) return;
   c.innerHTML = shortsFeed.map((p,i) => _shortsSlideHtml(p,i)).join('');
-  // Jump to current index, then play it
-  setTimeout(() => {
-    const items = c.querySelectorAll('.shorts-snap-item');
-    if (items[shortsIndex]) items[shortsIndex].scrollIntoView({ behavior:'auto', block:'start' });
-    _shortsPlayCurrent();
-  }, 30);
+  // Jump STRAIGHT to the clicked short, instantly and synchronously. The container
+  // has CSS scroll-behavior:smooth, so scrollIntoView (even behavior:'auto') would
+  // ANIMATE through every earlier short — the "sab shorts scroll hote dikhte" flash.
+  const items = c.querySelectorAll('.shorts-snap-item');
+  c.style.scrollBehavior = 'auto';
+  if (items[shortsIndex]) c.scrollTop = items[shortsIndex].offsetTop - items[0].offsetTop;
+  requestAnimationFrame(() => { c.style.scrollBehavior = ''; });
+  _shortsPlayCurrent();
   // On scroll-end, detect current index and play it
   if (!c._snapBound) {
     c._snapBound = true;
@@ -6218,6 +6220,15 @@ function _shortsPlayCurrent() {
   if (!c) return;
   c.querySelectorAll('video').forEach(v => { try { v.pause(); v.muted = true; } catch(e){} });
   const items = c.querySelectorAll('.shorts-snap-item');
+  // Lazy-load: only the current short ±1 hold a real src; everything else unloads
+  items.forEach((it, i) => {
+    const v = it.querySelector('video'); if (!v) return;
+    if (Math.abs(i - shortsIndex) <= 1) {
+      if (!v.getAttribute('src') && v.dataset.src) v.src = v.dataset.src;
+    } else if (v.getAttribute('src')) {
+      try { v.pause(); v.removeAttribute('src'); v.load(); } catch(e){}
+    }
+  });
   const cur = items[shortsIndex];
   if (cur) {
     const v = cur.querySelector('video');
