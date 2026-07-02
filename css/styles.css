@@ -49,8 +49,13 @@
 *{margin:0;padding:0;box-sizing:border-box;}
 html{scroll-behavior:smooth;}
 body{
-  background:#050505;color:var(--t1);
+  background:#020705;color:var(--t1);
 }
+/* App-wide background: dark → green gradient with a soft grain (used on every page) */
+:root{ --page-grad:
+  url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3CfeComponentTransfer%3E%3CfeFuncA type='linear' slope='0.05'/%3E%3C/feComponentTransfer%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23n)'/%3E%3C/svg%3E") repeat,
+  linear-gradient(180deg,#010604 0%,#04231b 40%,#09503f 74%,#128a66 100%); }
+body::before{content:'';position:fixed;inset:0;z-index:-1;background:var(--page-grad);}
 .mi{font-family:'Material Icons Round';font-style:normal;font-size:20px;line-height:1;user-select:none;}
 ::-webkit-scrollbar{width:4px;height:4px;}
 ::-webkit-scrollbar-track{background:transparent;}
@@ -992,7 +997,7 @@ body{
 @media(max-width:380px){ .pstat-grid{grid-template-columns:repeat(2,1fr);} }
 
 /* ── Public profile overlay ── */
-.pubprof-overlay{position:fixed;inset:0;z-index:9300;background:var(--bg);overflow-y:auto;
+.pubprof-overlay{position:fixed;inset:0;z-index:9300;background:var(--page-grad) #020705;overflow-y:auto;
   opacity:0;pointer-events:none;transition:opacity .2s;}
 .pubprof-overlay.open{opacity:1;pointer-events:all;}
 .pubprof-wrap{max-width:1100px;margin:0 auto;padding:0 16px 60px;}
@@ -3302,7 +3307,7 @@ html{scroll-behavior:smooth;}
   background: #1f1f1f !important;
 }
 /* Full-screen detail overlays = near-black page bg (rows/cards stay lighter) */
-.video-detail-overlay { background: #050505 !important; box-shadow: none !important; }
+.video-detail-overlay { background: var(--page-grad) #020705 !important; box-shadow: none !important; }
 
 /* Remove all transition: all (performance) */
 .yt-card, .dare-list-card, .chip, .nav-item, .bn-item, .btn-post, .icon-btn {
@@ -3606,4 +3611,35 @@ html{scroll-behavior:smooth;}
   background:rgba(18,18,18,.78) !important;
   backdrop-filter:var(--blur) !important;
   -webkit-backdrop-filter:var(--blur) !important;
+}
+
+/* ═══════════════════════════════════════════════════════
+   POPUP → FULL PAGE ("as-page"): the 20 tracked modals render as
+   real screens (own URL + back button) instead of floating boxes.
+═══════════════════════════════════════════════════════ */
+.overlay.as-page{
+  background:var(--page-grad) #020705;
+  backdrop-filter:none !important;-webkit-backdrop-filter:none !important;
+  align-items:flex-start;justify-content:center;padding:0;overflow-y:auto;z-index:9500;
+}
+.overlay.as-page .modal{
+  background:transparent !important;
+  backdrop-filter:none !important;-webkit-backdrop-filter:none !important;
+  border:none;border-radius:0;box-shadow:none;
+  width:100%;max-width:600px;max-height:none;overflow:visible;
+  padding:22px 18px 90px;margin:0 auto;transform:none;
+}
+.overlay.as-page.open .modal{transform:none;}
+
+.profile-edit-overlay.as-page{
+  background:var(--page-grad) #020705;align-items:flex-start;padding:0;overflow-y:auto;z-index:9500;
+}
+.profile-edit-overlay.as-page .profile-edit-modal{
+  background:transparent;border:none;border-radius:0;box-shadow:none;
+  width:100%;max-width:600px;max-height:none;overflow:visible;margin:0 auto;padding-bottom:70px;
+}
+
+.video-modal-overlay.as-page{
+  background:var(--page-grad) #020705;
+  backdrop-filter:none !important;-webkit-backdrop-filter:none !important;z-index:9500;
 }

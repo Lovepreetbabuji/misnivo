@@ -20,7 +20,7 @@
 <link href="https://fonts.googleapis.com/icon?family=Material+Icons+Round" rel="stylesheet"/>
 
 <!-- App Styles -->
-<link rel="stylesheet" href="/css/styles.css?v=20260629n"/>
+<link rel="stylesheet" href="/css/styles.css?v=20260629o"/>
 
 <!-- Firebase CDN -->
 <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
@@ -387,7 +387,7 @@
     </div>
 
     <!-- ══ WALLET MODALS ══ -->
-    <div class="overlay wallet-ov" id="depositOverlay">
+    <div class="overlay wallet-ov as-page" id="depositOverlay">
       <div class="modal wallet-modal">
         <div class="modal-hdr"><div class="modal-title">Add Money</div>
           <button class="modal-close" onclick="closeWalletModal('depositOverlay')"><span class="mi">close</span></button></div>
@@ -399,7 +399,7 @@
       </div>
     </div>
 
-    <div class="overlay wallet-ov" id="withdrawOverlay">
+    <div class="overlay wallet-ov as-page" id="withdrawOverlay">
       <div class="modal wallet-modal">
         <div class="modal-hdr"><div class="modal-title">Withdraw</div>
           <button class="modal-close" onclick="closeWalletModal('withdrawOverlay')"><span class="mi">close</span></button></div>
@@ -411,7 +411,7 @@
       </div>
     </div>
 
-    <div class="overlay wallet-ov" id="txnDetailOverlay">
+    <div class="overlay wallet-ov as-page" id="txnDetailOverlay">
       <div class="modal wallet-modal">
         <div class="modal-hdr"><div class="modal-title">Transaction</div>
           <button class="modal-close" onclick="closeWalletModal('txnDetailOverlay')"><span class="mi">close</span></button></div>
@@ -419,7 +419,7 @@
       </div>
     </div>
 
-    <div class="overlay wallet-ov" id="kycOverlay">
+    <div class="overlay wallet-ov as-page" id="kycOverlay">
       <div class="modal wallet-modal">
         <div class="modal-hdr"><div class="modal-title">Verify KYC</div>
           <button class="modal-close" onclick="closeWalletModal('kycOverlay')"><span class="mi">close</span></button></div>
@@ -432,7 +432,7 @@
       </div>
     </div>
 
-    <div class="overlay wallet-ov" id="methodOverlay">
+    <div class="overlay wallet-ov as-page" id="methodOverlay">
       <div class="modal wallet-modal">
         <div class="modal-hdr"><div class="modal-title">Add account</div>
           <button class="modal-close" onclick="closeWalletModal('methodOverlay')"><span class="mi">close</span></button></div>
@@ -456,7 +456,7 @@
       </div>
     </div>
 
-    <div class="overlay wallet-ov" id="pinOverlay">
+    <div class="overlay wallet-ov as-page" id="pinOverlay">
       <div class="modal wallet-modal">
         <div class="modal-hdr"><div class="modal-title" id="pinTitle">Set transaction PIN</div>
           <button class="modal-close" onclick="closeWalletModal('pinOverlay')"><span class="mi">close</span></button></div>
@@ -502,7 +502,7 @@
 </div>
 
 <!-- ══ FOLLOWERS / FOLLOWING LIST ══ -->
-<div class="overlay" id="followListOverlay">
+<div class="overlay as-page" id="followListOverlay">
   <div class="modal wallet-modal">
     <div class="modal-hdr"><div class="modal-title" id="flTitle">Followers</div>
       <button class="modal-close" onclick="closeWalletModal('followListOverlay')"><span class="mi">close</span></button></div>
@@ -513,7 +513,7 @@
 </div>
 
 <!-- ══ SETTINGS (menu) ══ -->
-<div class="overlay" id="settingsOverlay">
+<div class="overlay as-page" id="settingsOverlay">
   <div class="modal wallet-modal">
     <div class="modal-hdr"><div class="modal-title">Settings</div>
       <button class="modal-close" onclick="closeWalletModal('settingsOverlay')"><span class="mi">close</span></button></div>
@@ -539,7 +539,7 @@
 </div>
 
 <!-- ══ NOTIFICATION SETTINGS (sub-screen) ══ -->
-<div class="overlay" id="notifSettingsOverlay">
+<div class="overlay as-page" id="notifSettingsOverlay">
   <div class="modal wallet-modal">
     <div class="modal-hdr">
       <button class="modal-close" onclick="_settingsBack('notifSettingsOverlay')" aria-label="Back"><span class="mi">arrow_back</span></button>
@@ -555,7 +555,7 @@
 </div>
 
 <!-- ══ ADDITIONAL SETTINGS (sub-screen) ══ -->
-<div class="overlay" id="moreSettingsOverlay">
+<div class="overlay as-page" id="moreSettingsOverlay">
   <div class="modal wallet-modal">
     <div class="modal-hdr">
       <button class="modal-close" onclick="_settingsBack('moreSettingsOverlay')" aria-label="Back"><span class="mi">arrow_back</span></button>
@@ -569,7 +569,7 @@
   </div>
 </div>
 
-<div class="profile-edit-overlay" id="profileEditOverlay" onclick="if(event.target===this)cancelProfileEdit()">
+<div class="profile-edit-overlay as-page" id="profileEditOverlay" onclick="if(event.target===this)cancelProfileEdit()">
   <div class="profile-edit-modal">
     <div class="pe-header">
       <div class="pe-title">Customize Profile</div>
@@ -650,7 +650,7 @@
 </div>
 
 <!-- VIDEO PLAY MODAL -->
-<div class="video-modal-overlay" id="videoPlayOverlay" onclick="if(event.target===this)closeVideoPlay()">
+<div class="video-modal-overlay as-page" id="videoPlayOverlay" onclick="if(event.target===this)closeVideoPlay()">
   <div class="video-modal-inner">
     <div class="video-modal-header">
       <div class="video-modal-title" id="vpTitle">—</div>
@@ -668,7 +668,7 @@
 </div>
 
 <!-- POST DARE MODAL — v0.15 (Caption · Media · Tags · Rules · Schedule) -->
-<div class="overlay" id="postOverlay">
+<div class="overlay as-page" id="postOverlay">
   <div class="modal post-dare-modal">
     <div class="modal-hdr">
       <div class="modal-title">Post a New Dare</div>
@@ -790,7 +790,7 @@
 </div>
 
 <!-- VIDEO PROOF MODAL — v0.16 (Checklist · Frame Picker · Cancel · Background Upload) -->
-<div class="overlay" id="proofOverlay">
+<div class="overlay as-page" id="proofOverlay">
   <div class="modal proof-modal-v16">
     <div class="modal-hdr">
       <div class="modal-title">Submit Video Proof</div>
@@ -919,7 +919,7 @@
 </div>
 
 <!-- REVIEW PROOFS MODAL -->
-<div class="overlay" id="reviewOverlay">
+<div class="overlay as-page" id="reviewOverlay">
   <div class="modal" style="max-width:560px;">
     <div class="modal-hdr">
       <div class="modal-title">Review Proofs</div>
@@ -937,7 +937,7 @@
 </div>
 
 <!-- REJECT REASON MODAL -->
-<div class="overlay" id="rejectOverlay">
+<div class="overlay as-page" id="rejectOverlay">
   <div class="modal" style="max-width:400px;">
     <div class="modal-hdr">
       <div class="modal-title">Reject Proof</div>
@@ -1023,12 +1023,12 @@
 <div class="toast" id="toast"></div>
 
 <!-- App Logic -->
-<script src="/js/app.js?v=20260629n"></script>
+<script src="/js/app.js?v=20260629o"></script>
 
 <!-- ══ v0.19 NEW MODALS ══ -->
 
 <!-- REPORT MODAL -->
-<div class="overlay" id="reportOverlay">
+<div class="overlay as-page" id="reportOverlay">
   <div class="modal" style="max-width:420px;">
     <div class="modal-hdr">
       <div class="modal-title" id="reportModalTitle">Report</div>
@@ -1060,7 +1060,7 @@
 </div>
 
 <!-- SELECT TAKERS MODAL -->
-<div class="overlay" id="selectTakersOverlay">
+<div class="overlay as-page" id="selectTakersOverlay">
   <div class="modal" style="max-width:580px;max-height:90vh;overflow-y:auto;scrollbar-width:thin;">
     <div class="modal-hdr">
       <div>
@@ -1118,7 +1118,7 @@
 </div>
 
 <!-- ADMIN REPORTS -->
-<div class="overlay" id="adminReportsOverlay">
+<div class="overlay as-page" id="adminReportsOverlay">
   <div class="modal" style="max-width:640px;max-height:90vh;overflow-y:auto;">
     <div class="modal-hdr">
       <div class="modal-title">🛡️ Admin — Reports</div>
