@@ -20,7 +20,7 @@
 <link href="https://fonts.googleapis.com/icon?family=Material+Icons+Round" rel="stylesheet"/>
 
 <!-- App Styles -->
-<link rel="stylesheet" href="/css/styles.css?v=20260629s"/>
+<link rel="stylesheet" href="/css/styles.css?v=20260629t"/>
 
 <!-- Firebase CDN -->
 <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
@@ -509,6 +509,23 @@
     <div class="fl-search"><span class="mi">search</span>
       <input id="flSearch" placeholder="Search by username" oninput="_flFilter(this.value)" autocomplete="off"/></div>
     <div id="flBody" class="fl-body"></div>
+  </div>
+</div>
+
+<!-- ══ SEARCH (mobile page — real search box + button) ══ -->
+<div class="overlay as-page" id="searchOverlay">
+  <div class="modal wallet-modal">
+    <div class="modal-hdr">
+      <button class="modal-close" onclick="closeWalletModal('searchOverlay')" aria-label="Back"><span class="mi">arrow_back</span></button>
+      <div class="modal-title" style="flex:1;margin-left:6px;">Search</div>
+    </div>
+    <div class="fl-search">
+      <span class="mi">search</span>
+      <input id="mSearchInput" placeholder="Search dares, videos, creators" autocomplete="off"
+             onkeydown="if(event.key==='Enter'){event.preventDefault();_mSearchGo();}"/>
+      <button class="msearch-go" onclick="_mSearchGo()" aria-label="Search"><span class="mi">arrow_forward</span></button>
+    </div>
+    <div class="msearch-hint">Dare titles, video titles ya @username search karo</div>
   </div>
 </div>
 
@@ -1023,7 +1040,7 @@
 <div class="toast" id="toast"></div>
 
 <!-- App Logic -->
-<script src="/js/app.js?v=20260629s"></script>
+<script src="/js/app.js?v=20260629t"></script>
 
 <!-- ══ v0.19 NEW MODALS ══ -->
 

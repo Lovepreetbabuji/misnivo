@@ -2519,7 +2519,7 @@ textarea.f-input{resize:vertical;min-height:84px;}
 /* Keep the main topbar visible — the dare / video page opens BELOW it */
 #dareDetailOverlay, #videoDetailOverlay{ top:56px; }
 /* Topbar turns solid (not transparent) while a detail overlay is open */
-body.detail-open .topbar{ background:#050505 !important; backdrop-filter:none !important; -webkit-backdrop-filter:none !important; }
+body.detail-open .topbar{ background:rgba(18,18,18,.78) !important; backdrop-filter:var(--blur) !important; -webkit-backdrop-filter:var(--blur) !important; }
 
 /* Scroll-to-top arrow (appears after scrolling the comments/columns down) */
 .dd-scrolltop{ position:fixed; right:22px; bottom:22px; width:46px; height:46px; border-radius:50%; border:1px solid var(--border2); background:#1a1a1a; color:var(--t1); cursor:pointer; display:none; align-items:center; justify-content:center; z-index:170; box-shadow:0 6px 20px rgba(0,0,0,.55); }
@@ -3636,7 +3636,9 @@ html{scroll-behavior:smooth;}
   align-items:flex-start;padding:0;overflow-y:auto;z-index:9500;
 }
 .profile-edit-overlay.as-page .profile-edit-modal{
-  background:transparent;border:none;border-radius:0;box-shadow:none;
+  background:transparent !important;
+  backdrop-filter:none !important;-webkit-backdrop-filter:none !important;
+  border:none;border-radius:0;box-shadow:none;
   width:100%;max-width:600px;max-height:none;overflow:visible;margin:0 auto;padding-bottom:70px;
   position:static;bottom:auto;left:auto;right:auto;
 }
@@ -3659,11 +3661,25 @@ html{scroll-behavior:smooth;}
 .modal, .profile-edit-modal, .notif-panel,
 .dropdown, .search-suggestions,
 .adc-menu, .dd-action-menu, .shorts-menu, .cmt-menu,
-.shorts-comments, .collab-sheet, .dd-cbox, .shorts-details-drawer {
+.shorts-comments, .collab-sheet, .dd-cbox, .shorts-details-drawer, .dd-topbar {
   background: rgba(18,18,18,.78) !important;
   backdrop-filter: var(--blur) !important;
   -webkit-backdrop-filter: var(--blur) !important;
 }
+
+/* Small round buttons (topbar back/settings/socials, search icon) keep their
+   light tint but get REAL blur too */
+.icon-btn, .psocial, .search-icon-btn {
+  backdrop-filter: var(--blur) !important;
+  -webkit-backdrop-filter: var(--blur) !important;
+}
+
+/* ── Mobile search page ── */
+#searchOverlay .fl-search{padding:11px 14px;margin-bottom:14px;}
+#searchOverlay .fl-search input{font-size:15px;}
+.msearch-go{width:38px;height:38px;border-radius:50%;flex-shrink:0;display:flex;align-items:center;justify-content:center;
+  background:rgba(255,255,255,.08);border:1px solid var(--border);color:var(--t1);cursor:pointer;}
+.msearch-hint{font-size:12px;color:var(--t3);text-align:center;padding:8px 0;}
 
 /* Page-modal open → background page can't scroll behind it */
 body.ov-open{overflow:hidden;}

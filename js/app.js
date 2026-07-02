@@ -560,7 +560,8 @@ const _MODAL_URL = { postOverlay:'/post', proofOverlay:'/submit-proof', settings
   kycOverlay:'/wallet/kyc', methodOverlay:'/wallet/account', pinOverlay:'/wallet/pin',
   txnDetailOverlay:'/wallet/transaction', followListOverlay:'/followers', photoViewer:'/profile/photo',
   reviewOverlay:'/review-proofs', rejectOverlay:'/reject-proof', reportOverlay:'/report',
-  adminReportsOverlay:'/admin-reports', selectTakersOverlay:'/select-takers', videoPlayOverlay:'/play' };
+  adminReportsOverlay:'/admin-reports', selectTakersOverlay:'/select-takers', videoPlayOverlay:'/play',
+  searchOverlay:'/search' };
 const _URL_PAGE  = Object.fromEntries(Object.entries(_PAGE_URL ).map(([k,v])=>[v,k]));
 const _URL_MODAL = Object.fromEntries(Object.entries(_MODAL_URL).map(([k,v])=>[v,k]));
 
@@ -3426,14 +3427,23 @@ function syncBottomNav(pg) {
 
 // PURPOSE: Mobile search icon tap → go to dares page + focus search
 function openMobileSearch() {
-  const sw = document.querySelector('.search-wrap');
-  if (sw) sw.classList.add('mobile-open');
-  const inp = document.getElementById('searchInput');
-  if (inp) { setTimeout(()=>inp.focus(), 50); }
+  _ovOpen('searchOverlay', '/search');
+  const inp = document.getElementById('mSearchInput');
+  if (inp){ inp.value = document.getElementById('searchInput')?.value || ''; setTimeout(()=>inp.focus(), 80); }
 }
 function closeMobileSearch() {
+  const ov = document.getElementById('searchOverlay');
+  if (ov && ov.classList.contains('open')) closeWalletModal('searchOverlay');
   const sw = document.querySelector('.search-wrap');
-  if (sw) sw.classList.remove('mobile-open');
+  if (sw) sw.classList.remove('mobile-open');   // legacy inline-expand cleanup
+}
+// Search page → run the normal search pipeline through the main input
+function _mSearchGo(){
+  const v = (document.getElementById('mSearchInput')?.value || '').trim();
+  if (!v) return;
+  const main = document.getElementById('searchInput'); if (main) main.value = v;
+  closeWalletModal('searchOverlay');
+  handleSearchImmediate();
 }
 
 // Patch goPage to also call syncBottomNav
@@ -4248,6 +4258,7 @@ const _OV_CLOSERS = {
   methodOverlay:        () => closeWalletModal('methodOverlay'),
   pinOverlay:           () => closeWalletModal('pinOverlay'),
   txnDetailOverlay:     () => closeWalletModal('txnDetailOverlay'),
+  searchOverlay:        () => closeWalletModal('searchOverlay'),
 };
 function _ovCloseById(id){
   const f = _OV_CLOSERS[id];
@@ -4314,6 +4325,7 @@ function _openModalById(id){
     case 'adminReportsOverlay':  openAdminReports(); break;
     case 'followListOverlay':    _ppFollowList('followers'); break;
     case 'photoViewer':          _viewProfilePhoto(); break;
+    case 'searchOverlay':        openMobileSearch(); break;
     // contextual — URL dikhta hai par refresh restore nahi (need a dare/proof/txn id):
     // proofOverlay, reviewOverlay, rejectOverlay, reportOverlay, selectTakersOverlay,
     // videoPlayOverlay, pinOverlay, txnDetailOverlay
