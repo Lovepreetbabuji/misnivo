@@ -2569,8 +2569,8 @@ body.detail-open .topbar{ background:#050505 !important; backdrop-filter:none !i
 .dd-col2-close{ display:none; }
 @media(max-width:768px){
   .dd-col2-close{ display:inline-flex; align-items:center; justify-content:center; float:right; width:34px; height:34px; border-radius:50%; background:var(--bg3); border:1px solid var(--border); color:var(--t1); cursor:pointer; margin:-4px -4px 6px 6px; }
-  /* details drawer — pure black (match the rest of the app, no glass box) */
-  #dareDetailOverlay .dd-col2, #videoDetailOverlay .dd-col2{ background:var(--bg) !important; backdrop-filter:none !important; -webkit-backdrop-filter:none !important; border-left:1px solid var(--border) !important; }
+  /* details drawer — notification-panel glass (site glass standard) */
+  #dareDetailOverlay .dd-col2, #videoDetailOverlay .dd-col2{ background:rgba(18,18,18,.78) !important; backdrop-filter:var(--blur) !important; -webkit-backdrop-filter:var(--blur) !important; border-left:1px solid var(--border) !important; }
 }
 
 /* ─── Comments box (scrollable, with close — desktop + mobile) ─── */
@@ -3658,9 +3658,13 @@ html{scroll-behavior:smooth;}
 .topbar, .bottom-nav, .sidebar,
 .modal, .profile-edit-modal, .notif-panel,
 .dropdown, .search-suggestions,
-.adc-menu, .dd-action-menu, .shorts-menu,
-.shorts-comments, .collab-sheet, .dd-cbox {
+.adc-menu, .dd-action-menu, .shorts-menu, .cmt-menu,
+.shorts-comments, .collab-sheet, .dd-cbox, .shorts-details-drawer {
   background: rgba(18,18,18,.78) !important;
   backdrop-filter: var(--blur) !important;
   -webkit-backdrop-filter: var(--blur) !important;
 }
+
+/* Page-modal open → background page can't scroll behind it */
+body.ov-open{overflow:hidden;}
+.overlay.as-page, .profile-edit-overlay.as-page, .video-modal-overlay.as-page{overscroll-behavior:contain;}

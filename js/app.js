@@ -566,6 +566,8 @@ const _URL_MODAL = Object.fromEntries(Object.entries(_MODAL_URL).map(([k,v])=>[v
 
 function goPage(pg, _fromPop) {
   _searchReturn = null;
+  // Navigating to a page closes any open page-modal (its history entry gets REPLACED below)
+  const _ovWasOpen = (!_fromPop && !_navBack && _ovStack.length) ? _ovCloseAllSilent() : false;
   try{ _pvStop(); }catch(e){}
   if (typeof _closeDetailOverlays === 'function') _closeDetailOverlays();
   document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
@@ -593,6 +595,7 @@ function goPage(pg, _fromPop) {
   if (!_navBack && !_fromPop) {
     const st = { _page: pg }, url = _PAGE_URL[pg] || '/';
     if (!_pageNavInit) { _pageNavInit = true; try{ history.replaceState(st, '', url); }catch(e){} }
+    else if (_ovWasOpen) { try{ history.replaceState(st, '', url); }catch(e){} }   // swap the modal's entry for the page
     else if (_curPage !== pg) { try{ history.pushState(st, '', url); }catch(e){} }
   }
   _curPage = pg;
@@ -2586,6 +2589,7 @@ function _flGoProfile(uid){
   const i=_ovStack.lastIndexOf('followListOverlay');
   const el=document.getElementById('followListOverlay'); if(el) el.classList.remove('open');
   if(i>=0) _ovStack.splice(i,1);                 // untrack without rewinding history
+  _ovLock();
   try{ history.replaceState({dm:'u',id:uid}, '', '/u/'+encodeURIComponent(uid)); }catch(e){}
   _navBack=true; openPublicProfile(uid); _navBack=false;   // _navBack → openPublicProfile won't push again
 }
@@ -4189,11 +4193,25 @@ function _maybeInitialRoute(){
 //  Tracked: Post Dare · Submit Proof · Settings flow · Deposit · Withdraw
 //  · Edit Profile.  (Detail views / public profile already use URLs above.)
 // ════════════════════════════════════════════════════════════════════
+// Body scroll-lock while any page-modal is open (background must not scroll)
+function _ovLock(){ document.body.classList.toggle('ov-open', _ovStack.length > 0); }
+// Close every tracked overlay VISUALLY only (no history rewind) — caller fixes the URL
+function _ovCloseAllSilent(){
+  let closed = false;
+  while(_ovStack.length){
+    const id = _ovStack[_ovStack.length-1];
+    _ovInPop = true; try{ _ovCloseById(id); }catch(e){} _ovInPop = false;
+    _ovStack.pop(); closed = true;
+  }
+  _ovLock();
+  return closed;
+}
 function _ovOpen(id, url){
   const el = document.getElementById(id); if(!el) return;
   el.classList.add('open');
   if(_ovStack.includes(id)) return;            // already tracked — don't double-push
   _ovStack.push(id);
+  _ovLock();
   try{ history.pushState({ _ov:id }, '', url || _MODAL_URL[id] || location.pathname); }catch(e){}
 }
 // Call at the TOP of a modal's close fn. Rewinds history to stay in sync when
@@ -4203,6 +4221,7 @@ function _ovSync(id){
   const i = _ovStack.lastIndexOf(id); if(i<0) return;
   const steps = _ovStack.length - i;           // this modal + anything stacked above
   _ovStack.length = i;
+  _ovLock();
   _ovInPop = true;
   try{ history.go(-steps); }catch(e){ _ovInPop = false; }
 }
@@ -4254,8 +4273,17 @@ function _closeSettingsAll(){                      // on-screen X: close the who
   ['notifSettingsOverlay','moreSettingsOverlay','settingsOverlay'].forEach(x=>{ const e=document.getElementById(x); if(e) e.classList.remove('open'); });
   if(i<0) return;
   const steps=_ovStack.length-i; _ovStack.length=i;
+  _ovLock();
   if(!_ovInPop){ _ovInPop=true; try{ history.go(-steps); }catch(e){ _ovInPop=false; } }
 }
+
+// Click on the empty area around a page-modal's content column → close it (desktop)
+document.addEventListener('click', (e)=>{
+  const t = e.target;
+  if (t && t.classList && t.classList.contains('as-page') && t.classList.contains('open')){
+    _ovCloseById(t.id);
+  }
+});
 
 // Open the page/modal that the URL points to (deep-link / refresh / address-bar visit)
 function _bootRoute(){
@@ -4298,6 +4326,7 @@ window.addEventListener('popstate', function(e){
     const id = _ovStack[_ovStack.length-1];
     _ovInPop = true; _ovCloseById(id); _ovInPop = false;
     _ovStack.pop();
+    _ovLock();
     return;
   }
   const isOpen = id => { const el=document.getElementById(id); return el && el.classList.contains('open'); };
