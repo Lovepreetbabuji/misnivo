@@ -556,7 +556,11 @@ let _pageNavInit = false;   // first goPage uses replaceState, rest pushState
 const _PAGE_URL  = { home:'/', explore:'/explore', dares:'/dares', accepted:'/accepted', wallet:'/wallet', profile:'/profile', leaderboard:'/leaderboard' };
 const _MODAL_URL = { postOverlay:'/post', proofOverlay:'/submit-proof', settingsOverlay:'/settings',
   notifSettingsOverlay:'/settings/notifications', moreSettingsOverlay:'/settings/more',
-  profileEditOverlay:'/settings/edit', depositOverlay:'/wallet/deposit', withdrawOverlay:'/wallet/withdraw' };
+  profileEditOverlay:'/settings/edit', depositOverlay:'/wallet/deposit', withdrawOverlay:'/wallet/withdraw',
+  kycOverlay:'/wallet/kyc', methodOverlay:'/wallet/account', pinOverlay:'/wallet/pin',
+  txnDetailOverlay:'/wallet/transaction', followListOverlay:'/followers', photoViewer:'/profile/photo',
+  reviewOverlay:'/review-proofs', rejectOverlay:'/reject-proof', reportOverlay:'/report',
+  adminReportsOverlay:'/admin-reports', selectTakersOverlay:'/select-takers', videoPlayOverlay:'/play' };
 const _URL_PAGE  = Object.fromEntries(Object.entries(_PAGE_URL ).map(([k,v])=>[v,k]));
 const _URL_MODAL = Object.fromEntries(Object.entries(_MODAL_URL).map(([k,v])=>[v,k]));
 
@@ -2536,7 +2540,7 @@ async function _ppFollowList(type){
   const body=document.getElementById('flBody');
   const search=document.getElementById('flSearch'); if(search) search.value='';
   body.innerHTML=_skelRows(6);
-  _ovOpen('followListOverlay');
+  _ovOpen('followListOverlay', type==='following' ? '/following' : '/followers');
   const field = type==='followers'?'targetUid':'followerUid';
   const other = type==='followers'?'followerUid':'targetUid';
   try{
@@ -4185,12 +4189,12 @@ function _maybeInitialRoute(){
 //  Tracked: Post Dare · Submit Proof · Settings flow · Deposit · Withdraw
 //  · Edit Profile.  (Detail views / public profile already use URLs above.)
 // ════════════════════════════════════════════════════════════════════
-function _ovOpen(id){
+function _ovOpen(id, url){
   const el = document.getElementById(id); if(!el) return;
   el.classList.add('open');
   if(_ovStack.includes(id)) return;            // already tracked — don't double-push
   _ovStack.push(id);
-  try{ history.pushState({ _ov:id }, '', _MODAL_URL[id] || location.pathname); }catch(e){}
+  try{ history.pushState({ _ov:id }, '', url || _MODAL_URL[id] || location.pathname); }catch(e){}
 }
 // Call at the TOP of a modal's close fn. Rewinds history to stay in sync when
 // the modal is closed by UI/code (no-op when popstate already drove the close).
@@ -4259,9 +4263,11 @@ function _bootRoute(){
   if(/^\/(watch|shorts|dare|u)\//.test(path)){ goPage('home'); return; }   // detail view → _maybeInitialRoute opens it after data loads
   const pg=_URL_PAGE[path];
   if(pg){ goPage(pg); return; }
+  if(path==='/following'){ goPage('profile'); _ppFollowList('following'); return; }
   const mid=_URL_MODAL[path];
   if(mid){
-    const base=(mid==='depositOverlay'||mid==='withdrawOverlay')?'wallet':'home';
+    const base = path.startsWith('/wallet') ? 'wallet'
+      : (path.startsWith('/profile') || path==='/followers') ? 'profile' : 'home';
     goPage(base); _openModalById(mid); return;
   }
   goPage('home');
@@ -4275,7 +4281,14 @@ function _openModalById(id){
     case 'postOverlay':          openPost(); break;
     case 'depositOverlay':       openDepositModal(); break;
     case 'withdrawOverlay':      openWithdrawModal(); break;
-    // proofOverlay needs a dare context — not deep-linkable
+    case 'kycOverlay':           openKycModal(); break;
+    case 'methodOverlay':        openMethodModal(); break;
+    case 'adminReportsOverlay':  openAdminReports(); break;
+    case 'followListOverlay':    _ppFollowList('followers'); break;
+    case 'photoViewer':          _viewProfilePhoto(); break;
+    // contextual — URL dikhta hai par refresh restore nahi (need a dare/proof/txn id):
+    // proofOverlay, reviewOverlay, rejectOverlay, reportOverlay, selectTakersOverlay,
+    // videoPlayOverlay, pinOverlay, txnDetailOverlay
   }
 }
 
