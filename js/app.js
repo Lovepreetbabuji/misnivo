@@ -449,20 +449,23 @@ async function initUser(fbUser) {
 // ════════════════════════════
 //  REAL-TIME DARES LISTENER
 // ════════════════════════════
+let _daresLoaded = false;   // first snapshot arrived? (gates the skeleton loaders)
 function startDaresListener() {
   if (daresUnsub) daresUnsub();
   daresUnsub = db.collection('dares')
     .orderBy('createdAt', 'desc')
     .onSnapshot((snap) => {
       dares = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      _daresLoaded = true;
       _reconcileTakerApprovals();   // creator picked me? → unlock Submit Proof
       if (typeof _maybeInitialRoute === 'function') _maybeInitialRoute();   // deep-link /dare/:id
       // Refresh whichever page is active
       const activePage = document.querySelector('.page.active');
       if (activePage?.id === 'pageDares')    renderDaresPage();
       if (activePage?.id === 'pageAccepted') renderAcceptedPage();
-      // Also refresh active dares section on home
-
+      if (activePage?.id === 'pageProfile' && user){ _renderMyDares(); _renderAcceptedDares(); }
+      // Also refresh the Live Dares strip on home
+      if (activePage?.id === 'pageHome'){ const r=document.getElementById('homeDaresRow'); if(r) r.outerHTML=_homeDaresHtml(); }
     }, (err) => {
       console.error('Dares listener error:', err);
       showToast('Connection issue — please refresh');
@@ -704,7 +707,8 @@ async function renderHome(cat) {
   if (cat) homeFilterCat = cat;
 
   const grid = document.getElementById('homeVideoGrid');
-  if (grid) grid.innerHTML = _skelCards(8);
+  // skeleton only when nothing is cached yet (slow network) — instant data = no flash
+  if (grid && !(homeProofs && homeProofs.length)) grid.innerHTML = _skelCards(5);
 
   try {
     const snap = await db.collection('proofs').where('status','==','approved').get();
@@ -965,6 +969,7 @@ function closeVideoPlay() {
 // ════════════════════════════
 function renderDaresPage() {
   const feed = document.getElementById('daresPageFeed');
+  if (feed && !_daresLoaded){ feed.innerHTML = _skelCards(4); return; }   // still loading (snapshot re-renders)
   const now  = new Date();
 
   // Filter: not completed + not expired
@@ -2263,7 +2268,7 @@ function renderProfile() {
 
   // Tabs: Completed (your won videos) · My Dares · Accepted — all card-style + sub-filters
   _renderProfileSocials(user, 'profSocials');
-  _renderProfileSocials(user, 'profSocialsTop');   // mobile: socials shown in the profile banner
+  _renderProfileSocials(user, 'profSocialsBar');   // mobile: socials shown in the glassy topbar
   _renderProfileVideos();
   _renderMyDares();
   _renderAcceptedDares();
@@ -2346,6 +2351,7 @@ function _setMyFilter(k){ _pMyFilter=k; _renderMyDares(); }
 function _setAccFilter(k){ _pAccFilter=k; _renderAcceptedDares(); }
 function _renderMyDares(){
   const el=document.getElementById('tMyDares'); if(!el||!user) return;
+  if(!_daresLoaded){ el.innerHTML=_skelCards(2); return; }   // dares still loading (slow network)
   let list=(dares||[]).filter(d=>d.creatorUid===user.uid);
   list.sort((a,b)=>{ const ap=pinnedDares.includes(a.id)?1:0,bp=pinnedDares.includes(b.id)?1:0; if(bp!==ap)return bp-ap;
     return (b.createdAt?.toDate?.()?.getTime()||0)-(a.createdAt?.toDate?.()?.getTime()||0); });
@@ -4735,7 +4741,8 @@ function _showInlineAd(player, p) {
 
 async function renderExplorer() {
   const container=document.getElementById('explorerContent'); if(!container) return;
-  container.innerHTML=_skelCards(8);
+  // skeleton only when nothing is cached yet (slow network)
+  if(!(typeof allProofs!=='undefined' && allProofs.length)) container.innerHTML=_skelCards(6);
   try {
     const snap=await db.collection('proofs').where('status','==','approved').limit(100).get();
     allProofs=snap.docs.map(doc=>({id:doc.id,...doc.data()}));
@@ -5989,12 +5996,33 @@ function closeCollabModal() {
 
 // #7: Interleaved infinite feed — mixes long videos & shorts rows in random chunks
 let _feedLong = [], _feedShorts = [], _feedLongIdx = 0, _feedScrollBound = false, _shortsRowShown = false;
+// ── Home: Live (active) Dares strip — shown inside the feed like the Shorts shelf ──
+let _daresRowShown = false;
+function _homeDaresHtml(){
+  const now = new Date();
+  const active = (dares||[]).filter(d=>{
+    if (d.completed) return false;
+    if (d.expiresAt){ const exp=d.expiresAt.toDate?d.expiresAt.toDate():new Date(d.expiresAt); if (exp<now) return false; }
+    return true;
+  }).slice(0, 4);
+  if (!active.length) return '';
+  return `<div class="home-section" id="homeDaresRow">
+    <div class="home-sec-hdr">
+      <span class="mi" style="color:var(--blue2);font-size:20px;">bolt</span>
+      <span class="home-sec-title">Live Dares</span>
+      <span class="home-sec-sub">Accept &amp; earn</span>
+      <span class="home-sec-viewall" onclick="goPage('dares')">View All →</span>
+    </div>
+    <div class="active-dare-grid">${active.map(_activeDareCard).join('')}</div>
+  </div>`;
+}
 function _renderInterleavedFeed(longVids, shorts) {
   try{ _pvStop(); }catch(e){}   // kill any running hover/scroll preview before wiping the feed
   _feedLong = longVids || [];
   _feedShorts = shorts || [];
   _feedLongIdx = 0;
   _shortsRowShown = false;
+  _daresRowShown = false;
   const container = document.getElementById('homeVideoGrid');
   if (!container) return;
   if (!_feedLong.length && !_feedShorts.length) {
@@ -6002,10 +6030,12 @@ function _renderInterleavedFeed(longVids, shorts) {
       <div class="empty-title">No Videos Yet</div>
       <p class="empty-desc">Complete a dare and submit video proof — it will appear here!</p>
       <button class="btn-empty" onclick="goPage('dares')"><span class="mi">bolt</span>Browse Dares</button></div>`;
+    container.insertAdjacentHTML('beforeend', _homeDaresHtml());   // still show live dares
     return;
   }
   container.innerHTML = '';
   if (!_feedLong.length && _feedShorts.length) {
+    container.insertAdjacentHTML('beforeend', _homeDaresHtml()); _daresRowShown = true;
     // only shorts exist: show one shorts section
     container.insertAdjacentHTML('beforeend', _shortsRowHtml(_feedShorts));
     return;
@@ -6048,6 +6078,11 @@ function _appendFeedChunk() {
     _shortsRowShown = true;
     const someShorts = _shuffle(_feedShorts).slice(0, Math.min(12, _feedShorts.length));
     container.insertAdjacentHTML('beforeend', _shortsRowHtml(someShorts));
+  }
+  // Live Dares strip once, right after the shorts shelf / first chunk
+  if (!_daresRowShown) {
+    _daresRowShown = true;
+    container.insertAdjacentHTML('beforeend', _homeDaresHtml());
   }
 }
 function _longCardHtml(p) {

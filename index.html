@@ -20,7 +20,7 @@
 <link href="https://fonts.googleapis.com/icon?family=Material+Icons+Round" rel="stylesheet"/>
 
 <!-- App Styles -->
-<link rel="stylesheet" href="/css/styles.css?v=20260629l"/>
+<link rel="stylesheet" href="/css/styles.css?v=20260629m"/>
 
 <!-- Firebase CDN -->
 <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
@@ -182,6 +182,12 @@
         </div>
       </div>
     </div>
+    <!-- Profile mode (mobile): same glassy topbar, buttons swap to Back · socials · Settings -->
+    <div class="topbar-profile" id="topbarProfile">
+      <button class="icon-btn" onclick="_profileBack()" aria-label="Back"><span class="mi">arrow_back</span></button>
+      <div class="profile-socials tp-socials" id="profSocialsBar"></div>
+      <button class="icon-btn" onclick="openSettings()" aria-label="Settings"><span class="mi">settings</span></button>
+    </div>
   </header>
 
   <!-- SIDEBAR -->
@@ -297,13 +303,8 @@
     <!-- PROFILE -->
     <div class="page" id="pageProfile">
 
-      <!-- Banner: top row (Back · socials · Settings) + brand — mobile only -->
+      <!-- Banner: brand only — buttons live in the (glassy) topbar now — mobile only -->
       <div class="profile-banner" id="profBanner">
-        <div class="pmb-top">
-          <button class="pmb-btn pmb-back" onclick="_profileBack()" aria-label="Back"><span class="mi">arrow_back</span></button>
-          <div class="profile-socials banner-socials" id="profSocialsTop"></div>
-          <button class="pmb-btn pmb-set" onclick="openSettings()" aria-label="Settings"><span class="mi">settings</span></button>
-        </div>
         <span class="profile-banner-brand">Mission Markit</span>
       </div>
 
@@ -1022,7 +1023,7 @@
 <div class="toast" id="toast"></div>
 
 <!-- App Logic -->
-<script src="/js/app.js?v=20260629l"></script>
+<script src="/js/app.js?v=20260629m"></script>
 
 <!-- ══ v0.19 NEW MODALS ══ -->
 

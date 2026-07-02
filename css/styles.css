@@ -898,19 +898,27 @@ body{
   width:20px;text-align:center;flex-shrink:0;line-height:1;}
 .psoc-x{font-family:'Roboto',sans-serif;font-weight:900;font-size:15px;line-height:1;}
 
-/* ── Profile mobile banner top row (Back · socials · Settings) — one straight line ── */
-.pmb-top{position:absolute;top:0;left:0;right:0;z-index:2;display:flex;align-items:center;gap:8px;padding:14px;}
-.pmb-btn{width:40px;height:40px;border-radius:50%;flex-shrink:0;display:flex;align-items:center;justify-content:center;
-  background:rgba(0,0,0,.45);border:1px solid rgba(255,255,255,.18);color:#fff;cursor:pointer;}
-.pmb-btn .mi{font-size:22px;}
-.pmb-btn:hover{background:rgba(0,0,0,.65);}
+/* ── Topbar profile mode (mobile): Back · socials · Settings in the SAME glassy topbar ── */
+.topbar-profile{display:none;align-items:center;gap:8px;flex:1;}
+.tp-socials{display:flex;flex:1;justify-content:center;gap:10px;margin:0 !important;}
+.tp-socials .psocial{text-decoration:none;}
 
 /* ── Topbar gear (desktop: replaces avatar on profile page) ──
    :not(.detail-open):not(.shorts-open) → topbar stays NORMAL when a video/dare/shorts
    overlay is open over the profile (topbar only changes on the bare profile page). */
 .topbar-gear{display:none;}
-body.profile-open:not(.detail-open):not(.shorts-open) .topbar-gear{display:flex;}
-body.profile-open:not(.detail-open):not(.shorts-open) .user-menu{display:none;}
+@media(min-width:769px){
+  body.profile-open:not(.detail-open):not(.shorts-open) .topbar-gear{display:flex;}
+  body.profile-open:not(.detail-open):not(.shorts-open) .user-menu{display:none;}
+}
+/* Mobile profile: normal topbar controls swap out, profile controls swap in (same glassy bar) */
+@media(max-width:768px){
+  body.profile-open:not(.detail-open):not(.shorts-open) .topbar-profile{display:flex;}
+  body.profile-open:not(.detail-open):not(.shorts-open) .topbar-left,
+  body.profile-open:not(.detail-open):not(.shorts-open) .search-wrap,
+  body.profile-open:not(.detail-open):not(.shorts-open) .search-icon-btn,
+  body.profile-open:not(.detail-open):not(.shorts-open) .topbar-right{display:none !important;}
+}
 
 /* ── Settings menu rows (Edit Profile · Notifications) ── */
 .set-menu-row{display:flex;align-items:center;gap:12px;width:100%;background:transparent;border:none;
@@ -950,24 +958,15 @@ body.profile-open:not(.detail-open):not(.shorts-open) .user-menu{display:none;}
   animation:boltSkel 1.2s ease-in-out infinite;}
 @keyframes boltSkel{0%,100%{color:#2b2b2b;}50%{color:#5c5c5c;}}
 
-/* Banner socials show only on mobile (inside the profile banner); hidden on desktop */
-.banner-socials{display:none;}
-
-/* ── Mobile: profile page — topbar hidden, full-bleed banner with overlaid Back/Settings ── */
+/* ── Mobile: profile page — full-bleed banner (brand only) below the normal glassy topbar ── */
 @media(max-width:768px){
-  body.profile-open:not(.detail-open):not(.shorts-open) .topbar{display:none !important;}
-  body.profile-open:not(.detail-open):not(.shorts-open) .main{margin-top:0;padding-top:0;}
-  .profile-banner{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;height:150px;
+  .profile-banner{display:flex;align-items:center;justify-content:center;height:130px;
     border-radius:0 0 18px 18px;overflow:hidden;position:relative;background:#161616;margin:0 -12px;
     box-shadow:0 8px 18px rgba(0,0,0,.4);}
   .profile-banner::before{content:'';position:absolute;inset:0;
     background:radial-gradient(ellipse at 30% 40%,rgba(255,255,255,0.07),transparent 60%);}
-  .profile-banner-brand{font-size:26px;position:relative;z-index:1;margin-top:30px;}
-  /* social links centered in the top row, same line/size as Back / Settings */
-  .banner-socials{display:flex;gap:10px;align-items:center;justify-content:center;flex:1;margin:0;}
-  .banner-socials .psocial{width:40px;height:40px;text-decoration:none;}
-  .banner-socials .psocial .mi{font-size:20px;}
-  #profSocials{display:none;}                                            /* hide the in-body socials on mobile */
+  .profile-banner-brand{font-size:26px;position:relative;z-index:1;}
+  #profSocials{display:none;}                                            /* mobile socials live in the topbar */
   .profile-pic{width:92px;height:92px;font-size:34px;}
   .profile-pic-wrap{margin-top:-44px;}
   .profile-header{align-items:flex-start;gap:16px;padding:10px 4px 16px;}
@@ -2488,6 +2487,11 @@ textarea.f-input{resize:vertical;min-height:84px;}
   /* details + related videos/more dares span the FULL width — drop the side padding (keep top/bottom) */
   #videoDetailOverlay .dd-col1, #dareDetailOverlay .dd-col1,
   #videoDetailOverlay .dd-col3, #dareDetailOverlay .dd-col3{ padding-left:0; padding-right:0; }
+  /* related long-video cards bleed edge-to-edge like the home feed (wrap has 16px side padding) */
+  #vdRelated .feed-longs{ margin:0 -16px !important; }
+  #vdRelated .feed-longs .yt-thumb{ border-radius:0 !important; }
+  #vdRelated .shorts-home-sec{ margin-left:-16px; margin-right:-16px; }
+  #vdRelated .shorts-home-sec .home-sec-hdr, #vdRelated .shorts-row{ padding-left:16px; }
   /* Dare / Accepted detail: float the back (+ menu) bar ON TOP of the thumbnail */
   #dareDetailOverlay .dd-wrap{ position:relative; }
   #dareDetailOverlay .dd-topbar{ position:absolute; top:0; left:0; right:0; z-index:6;
