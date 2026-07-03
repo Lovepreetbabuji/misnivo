@@ -3614,11 +3614,11 @@ html{scroll-behavior:smooth;}
    POPUP → FULL PAGE ("as-page"): the 20 tracked modals render as
    real screens (own URL + back button) instead of floating boxes.
 ═══════════════════════════════════════════════════════ */
-/* Solid, uniform page surface (site-black) — no translucent glass: the blur
-   showed the page behind as a lighter "box" silhouette. Content column centered. */
+/* Glassy page surface — dark enough that the page behind doesn't read as a
+   lighter "box" silhouette (deeper tint than the notif panel). Column centered. */
 .overlay.as-page{
-  background:var(--page-grad);
-  backdrop-filter:none !important;-webkit-backdrop-filter:none !important;
+  background:rgba(8,8,8,.88);
+  backdrop-filter:var(--blur) !important;-webkit-backdrop-filter:var(--blur) !important;
   align-items:flex-start;justify-content:center;padding:0;overflow-y:auto;z-index:9500;
 }
 .overlay.as-page .modal{
@@ -3633,8 +3633,8 @@ html{scroll-behavior:smooth;}
 .overlay.as-page.open .modal{transform:none;}
 
 .profile-edit-overlay.as-page{
-  background:var(--page-grad);
-  backdrop-filter:none !important;-webkit-backdrop-filter:none !important;
+  background:rgba(8,8,8,.88);
+  backdrop-filter:var(--blur) !important;-webkit-backdrop-filter:var(--blur) !important;
   align-items:flex-start;justify-content:center;padding:0;overflow-y:auto;z-index:9500;
 }
 .profile-edit-overlay.as-page .profile-edit-modal{
@@ -3646,8 +3646,8 @@ html{scroll-behavior:smooth;}
 }
 
 .video-modal-overlay.as-page{
-  background:var(--page-grad);
-  backdrop-filter:none !important;-webkit-backdrop-filter:none !important;z-index:9500;
+  background:rgba(8,8,8,.88);
+  backdrop-filter:var(--blur) !important;-webkit-backdrop-filter:var(--blur) !important;z-index:9500;
   align-items:flex-start;justify-content:center;overflow-y:auto;
 }
 .video-modal-overlay.as-page .video-modal-inner{margin:24px auto 60px;}
