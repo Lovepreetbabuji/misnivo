@@ -2609,14 +2609,42 @@ function openSettings(){
   document.getElementById('setAutoplay').checked    = s.autoplay !== false;   // default ON
   document.getElementById('setPageAnim').checked    = s.pageAnim !== false;   // default ON
   _ovOpen('settingsOverlay');
+  // desktop two-pane: make sure the right pane shows a section (a mobile round-trip
+  // can leave every section display:none)
+  if (window.innerWidth > 768){
+    const cur = document.querySelector('#settingsOverlay .set-nav-item.active');
+    _setSecById((cur && cur.dataset.sec) || 'secNotif');
+  }
 }
+const _SEC_META = { secNotif:['Notifications','/settings/notifications'], secMore:['Additional settings','/settings/more'],
+  secPrivacy:['Privacy','/settings/privacy'], secAccount:['Account','/settings/account'] };
 function _setSec(btn, id){
+  if (window.innerWidth <= 768){ _openSecPage(id); return; }   // mobile: section opens as its OWN page
   document.querySelectorAll('#settingsOverlay .set-nav-item').forEach(b=>b.classList.toggle('active', b===btn));
   document.querySelectorAll('#settingsOverlay .set-sec').forEach(sec=>{ sec.style.display = sec.id===id ? 'block' : 'none'; });
 }
 function _setSecById(id){
   const btn=document.querySelector(`#settingsOverlay .set-nav-item[data-sec="${id}"]`);
   if(btn) _setSec(btn, id);
+}
+// Mobile: move the section's DOM into the dedicated page overlay (no duplicate ids)
+function _openSecPage(id){
+  const sec=document.getElementById(id); if(!sec) return;
+  const meta=_SEC_META[id]||['Settings','/settings'];
+  document.getElementById('setSecTitle').textContent=meta[0];
+  document.getElementById('setSecBody').appendChild(sec);
+  sec.style.display='block';
+  _ovOpen('setSecOverlay', meta[1]);
+}
+function closeSetSec(){
+  _ovSync('setSecOverlay');
+  const ov=document.getElementById('setSecOverlay'); if(ov) ov.classList.remove('open');
+  // move the section back home (hidden) so desktop two-pane keeps working
+  const body=document.getElementById('setSecBody');
+  const content=document.querySelector('#settingsOverlay .set-content');
+  while(body && content && body.firstElementChild){
+    const sec=body.firstElementChild; sec.style.display='none'; content.appendChild(sec);
+  }
 }
 // Deep links (/settings/notifications, /settings/more) land on the right section
 function openNotifSettings(){ openSettings(); _setSecById('secNotif'); }
@@ -4256,6 +4284,7 @@ const _OV_CLOSERS = {
   pinOverlay:           () => closeWalletModal('pinOverlay'),
   txnDetailOverlay:     () => closeWalletModal('txnDetailOverlay'),
   searchOverlay:        () => closeWalletModal('searchOverlay'),
+  setSecOverlay:        () => closeSetSec(),
 };
 function _ovCloseById(id){
   const f = _OV_CLOSERS[id];

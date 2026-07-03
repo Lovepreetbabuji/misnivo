@@ -20,7 +20,7 @@
 <link href="https://fonts.googleapis.com/icon?family=Material+Icons+Round" rel="stylesheet"/>
 
 <!-- App Styles -->
-<link rel="stylesheet" href="/css/styles.css?v=20260630a"/>
+<link rel="stylesheet" href="/css/styles.css?v=20260630b"/>
 
 <!-- Firebase CDN -->
 <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
@@ -576,6 +576,17 @@
   </div>
 </div>
 
+<!-- ══ SETTINGS SECTION PAGE (mobile): a tapped section opens as its own page ══ -->
+<div class="overlay as-page" id="setSecOverlay">
+  <div class="modal wallet-modal">
+    <div class="modal-hdr">
+      <button class="modal-close" onclick="closeSetSec()" aria-label="Back"><span class="mi">arrow_back</span></button>
+      <div class="modal-title" style="flex:1;margin-left:6px;" id="setSecTitle">Settings</div>
+    </div>
+    <div id="setSecBody"></div>
+  </div>
+</div>
+
 <!-- ══ PHOTO VIEWER (profile photo lightbox) ══ -->
 <div class="photo-viewer" id="photoViewer" onclick="closePhotoViewer()">
   <button class="pv-close" onclick="closePhotoViewer()" aria-label="Close"><span class="mi">close</span></button>
@@ -1035,7 +1046,7 @@
 <div class="toast" id="toast"></div>
 
 <!-- App Logic -->
-<script src="/js/app.js?v=20260630a"></script>
+<script src="/js/app.js?v=20260630b"></script>
 
 <!-- ══ v0.19 NEW MODALS ══ -->
 

@@ -3705,10 +3705,12 @@ body.ov-open .main, body.ov-open .sidebar, body.ov-open .topbar, body.ov-open .b
 .set-content .set-sec-label{margin-top:0;}
 .set-content .set-sec .set-sec-label + .set-row{border-top:none;}
 .set-content .set-sec .set-sec-label:not(:first-child){margin-top:22px;}
+/* Mobile: Settings = plain button list (old menu); a tap opens the section's OWN page */
 @media(max-width:768px){
-  .set-layout{flex-direction:column;gap:14px;}
-  .set-nav{width:100%;flex-direction:row;overflow-x:auto;gap:6px;padding-bottom:4px;scrollbar-width:none;}
-  .set-nav::-webkit-scrollbar{display:none;}
-  .set-nav-item{flex-shrink:0;padding:9px 14px;border:1px solid var(--border);border-radius:50px;}
-  .set-nav-item.active{background:rgba(255,255,255,.14);}
+  .set-layout{flex-direction:column;gap:0;}
+  .set-nav{width:100%;flex-direction:column;gap:0;}
+  .set-nav-item{width:100%;border-radius:0;border-bottom:1px solid var(--border);padding:16px 4px;color:var(--t1);}
+  .set-nav-item::after{content:'chevron_right';font-family:'Material Icons Round';font-size:20px;color:var(--t3);margin-left:auto;}
+  .set-nav-item:hover,.set-nav-item.active{background:transparent;}
+  #settingsOverlay .set-content{display:none;}   /* sections open as their own page (setSecOverlay) */
 }
