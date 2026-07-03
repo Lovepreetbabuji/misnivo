@@ -3614,48 +3614,61 @@ html{scroll-behavior:smooth;}
    POPUP → FULL PAGE ("as-page"): the 20 tracked modals render as
    real screens (own URL + back button) instead of floating boxes.
 ═══════════════════════════════════════════════════════ */
+/* Solid, uniform page surface — no translucent glass here: the blur showed the
+   page behind as a lighter "box" silhouette. Mobile: fills the whole screen. */
 .overlay.as-page{
-  background:rgba(18,18,18,.78);
-  backdrop-filter:var(--blur) !important;-webkit-backdrop-filter:var(--blur) !important;
-  align-items:flex-start;justify-content:center;padding:0;overflow-y:auto;z-index:9500;
+  background:var(--page-grad);
+  backdrop-filter:none !important;-webkit-backdrop-filter:none !important;
+  align-items:flex-start;justify-content:flex-start;padding:0;overflow-y:auto;z-index:9500;
 }
 .overlay.as-page .modal{
   background:transparent !important;
   backdrop-filter:none !important;-webkit-backdrop-filter:none !important;
   border:none;border-radius:0;box-shadow:none;
-  width:100%;max-width:600px;max-height:none;overflow:visible;
-  padding:22px 18px 90px;margin:0 auto;transform:none;
+  width:100%;max-width:720px;max-height:none;overflow:visible;
+  padding:22px 18px 90px;margin:0;transform:none;
   /* beat the mobile bottom-sheet rule (.modal{position:fixed;bottom:0}) — always start from the TOP */
   position:static;bottom:auto;left:auto;right:auto;
 }
 .overlay.as-page.open .modal{transform:none;}
 
 .profile-edit-overlay.as-page{
-  background:rgba(18,18,18,.78);
-  backdrop-filter:var(--blur) !important;-webkit-backdrop-filter:var(--blur) !important;
-  align-items:flex-start;padding:0;overflow-y:auto;z-index:9500;
+  background:var(--page-grad);
+  backdrop-filter:none !important;-webkit-backdrop-filter:none !important;
+  align-items:flex-start;justify-content:flex-start;padding:0;overflow-y:auto;z-index:9500;
 }
 .profile-edit-overlay.as-page .profile-edit-modal{
   background:transparent !important;
   backdrop-filter:none !important;-webkit-backdrop-filter:none !important;
   border:none;border-radius:0;box-shadow:none;
-  width:100%;max-width:600px;max-height:none;overflow:visible;margin:0 auto;padding-bottom:70px;
+  width:100%;max-width:720px;max-height:none;overflow:visible;margin:0;padding-bottom:70px;
   position:static;bottom:auto;left:auto;right:auto;
 }
 
 .video-modal-overlay.as-page{
-  background:rgba(18,18,18,.78);
-  backdrop-filter:var(--blur) !important;-webkit-backdrop-filter:var(--blur) !important;z-index:9500;
-  align-items:flex-start;overflow-y:auto;
+  background:var(--page-grad);
+  backdrop-filter:none !important;-webkit-backdrop-filter:none !important;z-index:9500;
+  align-items:flex-start;justify-content:flex-start;overflow-y:auto;
 }
-.video-modal-overlay.as-page .video-modal-inner{margin:24px auto 60px;}
+.video-modal-overlay.as-page .video-modal-inner{margin:24px 0 60px;}
+
+/* Desktop: align like YouTube's settings page — content starts from a left
+   gutter (not a centered island) with a consistent column width */
+@media(min-width:769px){
+  .overlay.as-page .modal,
+  .profile-edit-overlay.as-page .profile-edit-modal{
+    margin-left:clamp(48px, 14vw, 260px);
+    padding-left:0;padding-right:32px;padding-top:30px;
+  }
+  .video-modal-overlay.as-page .video-modal-inner{margin-left:clamp(48px, 14vw, 260px);}
+}
 
 /* ═══════════════════════════════════════════════════════
    GLASS STANDARD — every glassy/translucent surface uses the SAME
    frosted glass as the notification panel: rgba(18,18,18,.78) + --blur.
    (Feed cards stay flat for scroll performance. Exceptions that keep
-   their own look: as-page modal boxes are transparent, .dd-col2 is pure
-   black, topbar goes opaque while a detail page is open.)
+   their own look: as-page modals are SOLID full pages — glass there showed
+   the page behind as a lighter "box" silhouette.)
 ═══════════════════════════════════════════════════════ */
 .topbar, .bottom-nav, .sidebar,
 .modal, .profile-edit-modal, .notif-panel,
