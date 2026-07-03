@@ -20,7 +20,7 @@
 <link href="https://fonts.googleapis.com/icon?family=Material+Icons+Round" rel="stylesheet"/>
 
 <!-- App Styles -->
-<link rel="stylesheet" href="/css/styles.css?v=20260630b"/>
+<link rel="stylesheet" href="/css/styles.css?v=20260630c"/>
 
 <!-- Firebase CDN -->
 <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
@@ -595,8 +595,9 @@
 
 <div class="profile-edit-overlay as-page" id="profileEditOverlay" onclick="if(event.target===this)cancelProfileEdit()">
   <div class="profile-edit-modal">
-    <div class="pe-header">
-      <button class="pe-close" onclick="cancelProfileEdit()"><span class="mi">close</span></button>
+    <div class="modal-hdr" style="padding:20px 24px 0;margin-bottom:0;">
+      <div class="modal-title">Edit Profile</div>
+      <button class="modal-close" onclick="cancelProfileEdit()"><span class="mi">close</span></button>
     </div>
     <div class="pe-body">
 
@@ -1046,7 +1047,7 @@
 <div class="toast" id="toast"></div>
 
 <!-- App Logic -->
-<script src="/js/app.js?v=20260630b"></script>
+<script src="/js/app.js?v=20260630c"></script>
 
 <!-- ══ v0.19 NEW MODALS ══ -->
 
