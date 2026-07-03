@@ -20,7 +20,7 @@
 <link href="https://fonts.googleapis.com/icon?family=Material+Icons+Round" rel="stylesheet"/>
 
 <!-- App Styles -->
-<link rel="stylesheet" href="/css/styles.css?v=20260630d"/>
+<link rel="stylesheet" href="/css/styles.css?v=20260630e"/>
 
 <!-- Firebase CDN -->
 <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
@@ -604,16 +604,13 @@
     </div>
     <div class="set-layout">
       <div class="set-nav">
-        <button class="set-nav-item active" data-sec="epPhoto" data-title="Photo" data-url="/settings/edit/photo" onclick="_tpSec(this)"><span class="mi">account_circle</span><span class="smr-t">Photo</span></button>
-        <button class="set-nav-item" data-sec="epName" data-title="Name &amp; Username" data-url="/settings/edit/name" onclick="_tpSec(this)"><span class="mi">badge</span><span class="smr-t">Name &amp; Username</span></button>
-        <button class="set-nav-item" data-sec="epBio" data-title="Bio" data-url="/settings/edit/bio" onclick="_tpSec(this)"><span class="mi">notes</span><span class="smr-t">Bio</span></button>
+        <button class="set-nav-item active" data-sec="epProfile" data-title="Profile" data-url="/settings/edit/profile" onclick="_tpSec(this)"><span class="mi">account_circle</span><span class="smr-t">Profile</span></button>
         <button class="set-nav-item" data-sec="epLinks" data-title="Links" data-url="/settings/edit/links" onclick="_tpSec(this)"><span class="mi">link</span><span class="smr-t">Links</span></button>
         <button class="set-nav-item" data-sec="epVis" data-title="Profile visibility" data-url="/settings/edit/visibility" onclick="_tpSec(this)"><span class="mi">visibility</span><span class="smr-t">Profile visibility</span></button>
       </div>
       <div class="set-content">
 
-        <div class="set-sec" id="epPhoto">
-          <div class="set-sec-label">Photo</div>
+        <div class="set-sec" id="epProfile">
           <div class="pe-avatar-row">
             <div class="pe-big-av" id="peAvatar" onclick="document.getElementById('pePhotoInput').click()"></div>
             <div>
@@ -624,10 +621,6 @@
               <div class="pe-av-note" style="margin-top:8px;">JPG, PNG — max 5 MB</div>
             </div>
           </div>
-        </div>
-
-        <div class="set-sec" id="epName" style="display:none;">
-          <div class="set-sec-label">Name &amp; Username</div>
           <div class="pe-field">
             <div class="pe-label">Display Name</div>
             <input class="pe-input" id="peName" type="text" placeholder="Your full name" maxlength="60"/>
@@ -640,10 +633,6 @@
             </div>
             <div class="pe-status" id="peHandleStatus"></div>
           </div>
-        </div>
-
-        <div class="set-sec" id="epBio" style="display:none;">
-          <div class="set-sec-label">Bio</div>
           <div class="pe-field">
             <div class="pe-label">Bio <span id="peBioCount">0 / 160</span></div>
             <textarea class="pe-input pe-textarea" id="peBio" placeholder="Tell the community about yourself..." maxlength="160"
@@ -652,7 +641,6 @@
         </div>
 
         <div class="set-sec" id="epLinks" style="display:none;">
-          <div class="set-sec-label">Links</div>
           <div class="pe-field">
             <div class="pe-label">Website / Contact Link <span>Website, email or contact info</span></div>
             <input class="pe-input" id="peWebsite" type="url" placeholder="https://yourwebsite.com"/>
@@ -666,7 +654,6 @@
         </div>
 
         <div class="set-sec" id="epVis" style="display:none;">
-          <div class="set-sec-label">Profile visibility</div>
           <label class="set-row"><div><div class="set-t">Private profile</div><div class="set-s">Hide your videos &amp; dares from others</div></div>
             <span class="switch"><input type="checkbox" id="pePrivate" onchange="_pePrivacyChange(this)"><span class="sl"></span></span></label>
         </div>
@@ -716,7 +703,6 @@
       <div class="set-content">
 
         <div class="set-sec" id="pdCaption">
-          <div class="set-sec-label">Caption</div>
           <div class="f-group">
             <label class="f-label">Caption</label>
             <input class="f-input" id="pCaption" type="text" placeholder="e.g. Run 5km in under 30 minutes"/>
@@ -730,7 +716,6 @@
         </div>
 
         <div class="set-sec" id="pdMedia" style="display:none;">
-          <div class="set-sec-label">Thumbnail</div>
           <div class="f-group">
             <label class="f-label">Dare Thumbnail <span class="f-opt-tag">Optional</span></label>
             <div id="mediaTabImg">
@@ -753,7 +738,6 @@
         </div>
 
         <div class="set-sec" id="pdTags" style="display:none;">
-          <div class="set-sec-label">Tags &amp; Reward</div>
           <div class="f-group">
             <label class="f-label">Tags</label>
             <div class="tags-field" id="tagsField">
@@ -771,7 +755,6 @@
         </div>
 
         <div class="set-sec" id="pdRules" style="display:none;">
-          <div class="set-sec-label">Rules</div>
           <div class="f-group">
             <label class="f-label">Rules <span class="f-opt-tag">Optional</span></label>
             <div id="rulesList"></div>
@@ -780,7 +763,6 @@
         </div>
 
         <div class="set-sec" id="pdVis" style="display:none;">
-          <div class="set-sec-label">Visibility</div>
           <div class="f-group">
             <label class="f-label">Publish</label>
             <div class="vis-toggle-row">
@@ -800,7 +782,6 @@
         </div>
 
         <div class="set-sec" id="pdTakers" style="display:none;">
-          <div class="set-sec-label">Takers</div>
           <div class="f-group">
             <label class="f-label">Who can submit proof?</label>
             <div class="vis-toggle-row">
@@ -1050,7 +1031,7 @@
 <div class="toast" id="toast"></div>
 
 <!-- App Logic -->
-<script src="/js/app.js?v=20260630d"></script>
+<script src="/js/app.js?v=20260630e"></script>
 
 <!-- ══ v0.19 NEW MODALS ══ -->
 

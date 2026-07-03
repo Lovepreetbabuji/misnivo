@@ -3711,8 +3711,14 @@ body.ov-open .main, body.ov-open .sidebar, body.ov-open .topbar, body.ov-open .b
   .set-nav{width:100%;flex-direction:column;gap:0;}
   .set-nav-item{width:100%;border-radius:0;border-bottom:1px solid var(--border);padding:16px 4px;color:var(--t1);}
   .set-nav-item::after{content:'chevron_right';font-family:'Material Icons Round';font-size:20px;color:var(--t3);margin-left:auto;}
+  .set-nav-item .smr-t{flex:1;}
   .set-nav-item:hover,.set-nav-item.active{background:transparent;}
-  #settingsOverlay .set-content{display:none;}   /* sections open as their own page (setSecOverlay) */
+  /* ALL two-pane modals (settings/post/edit): hide the right pane — sections open
+     as their own page (setSecOverlay). Otherwise the whole form stacked under the nav. */
+  .set-content{display:none;}
+  /* header stays on one row: title truncates, action button compact */
+  #postOverlay .modal-title, #profileEditOverlay .modal-title{ flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:18px; }
+  .modal-hdr{ gap:8px; }
 }
 
 /* ── Two-pane header action (Post Dare / Save Changes) + wide modals ── */
