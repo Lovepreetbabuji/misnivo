@@ -3617,8 +3617,8 @@ html{scroll-behavior:smooth;}
 /* Glassy page surface — dark enough that the page behind doesn't read as a
    lighter "box" silhouette (deeper tint than the notif panel). Column centered. */
 .overlay.as-page{
-  background:rgba(8,8,8,.88);
-  backdrop-filter:var(--blur) !important;-webkit-backdrop-filter:var(--blur) !important;
+  background:rgba(8,8,8,.80);
+  backdrop-filter:blur(64px) saturate(160%) !important;-webkit-backdrop-filter:blur(64px) saturate(160%) !important;
   align-items:flex-start;justify-content:center;padding:0;overflow-y:auto;z-index:9500;
 }
 .overlay.as-page .modal{
@@ -3633,8 +3633,8 @@ html{scroll-behavior:smooth;}
 .overlay.as-page.open .modal{transform:none;}
 
 .profile-edit-overlay.as-page{
-  background:rgba(8,8,8,.88);
-  backdrop-filter:var(--blur) !important;-webkit-backdrop-filter:var(--blur) !important;
+  background:rgba(8,8,8,.80);
+  backdrop-filter:blur(64px) saturate(160%) !important;-webkit-backdrop-filter:blur(64px) saturate(160%) !important;
   align-items:flex-start;justify-content:center;padding:0;overflow-y:auto;z-index:9500;
 }
 .profile-edit-overlay.as-page .profile-edit-modal{
@@ -3646,8 +3646,8 @@ html{scroll-behavior:smooth;}
 }
 
 .video-modal-overlay.as-page{
-  background:rgba(8,8,8,.88);
-  backdrop-filter:var(--blur) !important;-webkit-backdrop-filter:var(--blur) !important;z-index:9500;
+  background:rgba(8,8,8,.80);
+  backdrop-filter:blur(64px) saturate(160%) !important;-webkit-backdrop-filter:blur(64px) saturate(160%) !important;z-index:9500;
   align-items:flex-start;justify-content:center;overflow-y:auto;
 }
 .video-modal-overlay.as-page .video-modal-inner{margin:24px auto 60px;}
@@ -3685,4 +3685,9 @@ html{scroll-behavior:smooth;}
 
 /* Page-modal open → background page can't scroll behind it */
 body.ov-open{overflow:hidden;}
+/* …and the page behind is blurred + dimmed itself, so its content column can't
+   read as a lighter "box" through the glass — only a uniform frosted haze */
+body.ov-open .main, body.ov-open .sidebar, body.ov-open .topbar, body.ov-open .bottom-nav{
+  filter:blur(26px) brightness(.6);
+}
 .overlay.as-page, .profile-edit-overlay.as-page, .video-modal-overlay.as-page{overscroll-behavior:contain;}
