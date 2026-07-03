@@ -20,7 +20,7 @@
 <link href="https://fonts.googleapis.com/icon?family=Material+Icons+Round" rel="stylesheet"/>
 
 <!-- App Styles -->
-<link rel="stylesheet" href="/css/styles.css?v=20260629z"/>
+<link rel="stylesheet" href="/css/styles.css?v=20260630a"/>
 
 <!-- Firebase CDN -->
 <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
@@ -530,23 +530,49 @@
   </div>
 </div>
 
-<!-- ══ SETTINGS (menu) ══ -->
+<!-- ══ SETTINGS — YouTube-style: left nav · right options ══ -->
 <div class="overlay as-page" id="settingsOverlay">
-  <div class="modal wallet-modal">
+  <div class="modal wallet-modal set-modal">
     <div class="modal-hdr"><div class="modal-title">Settings</div>
       <button class="modal-close" onclick="closeWalletModal('settingsOverlay')"><span class="mi">close</span></button></div>
-    <button class="set-menu-row" onclick="closeWalletModal('settingsOverlay');openProfileEdit()">
-      <span class="mi smr-ic">person</span><span class="smr-t">Edit Profile</span><span class="mi smr-arrow">chevron_right</span></button>
-    <button class="set-menu-row" onclick="openNotifSettings()">
-      <span class="mi smr-ic">notifications</span><span class="smr-t">Notifications</span><span class="mi smr-arrow">chevron_right</span></button>
-    <button class="set-menu-row" onclick="openMoreSettings()">
-      <span class="mi smr-ic">tune</span><span class="smr-t">Additional settings</span><span class="mi smr-arrow">chevron_right</span></button>
-    <div class="set-sec-label">Privacy</div>
-    <label class="set-row"><div><div class="set-t">Private profile</div><div class="set-s">Hide your videos &amp; dares from others</div></div>
-      <span class="switch"><input type="checkbox" id="setPrivate" onchange="_saveSettings()"><span class="sl"></span></span></label>
-    <div class="set-sec-label">Account</div>
-    <button class="set-btn" onclick="logout()"><span class="mi">logout</span> Log out</button>
-    <button class="set-btn danger" onclick="deleteAccount()"><span class="mi">delete_forever</span> Delete account</button>
+    <div class="set-layout">
+      <div class="set-nav">
+        <button class="set-nav-item" onclick="openProfileEdit()"><span class="mi">person</span>Edit Profile</button>
+        <button class="set-nav-item active" data-sec="secNotif" onclick="_setSec(this,'secNotif')"><span class="mi">notifications</span>Notifications</button>
+        <button class="set-nav-item" data-sec="secMore" onclick="_setSec(this,'secMore')"><span class="mi">tune</span>Additional settings</button>
+        <button class="set-nav-item" data-sec="secPrivacy" onclick="_setSec(this,'secPrivacy')"><span class="mi">lock</span>Privacy</button>
+        <button class="set-nav-item" data-sec="secAccount" onclick="_setSec(this,'secAccount')"><span class="mi">manage_accounts</span>Account</button>
+      </div>
+      <div class="set-content">
+        <div class="set-sec" id="secNotif">
+          <div class="set-sec-label">Notifications</div>
+          <label class="set-row"><div class="set-t">Likes &amp; comments</div>
+            <span class="switch"><input type="checkbox" id="setNotifLikes" onchange="_saveSettings()"><span class="sl"></span></span></label>
+          <label class="set-row"><div class="set-t">New followers</div>
+            <span class="switch"><input type="checkbox" id="setNotifFollow" onchange="_saveSettings()"><span class="sl"></span></span></label>
+          <label class="set-row"><div class="set-t">Dare updates</div>
+            <span class="switch"><input type="checkbox" id="setNotifDares" onchange="_saveSettings()"><span class="sl"></span></span></label>
+        </div>
+        <div class="set-sec" id="secMore" style="display:none;">
+          <div class="set-sec-label">Additional settings</div>
+          <label class="set-row"><div><div class="set-t">Autoplay videos</div><div class="set-s">Play videos automatically on hover &amp; scroll</div></div>
+            <span class="switch"><input type="checkbox" id="setAutoplay" onchange="_saveSettings()"><span class="sl"></span></span></label>
+          <div class="set-sec-label">Accessibility</div>
+          <label class="set-row"><div><div class="set-t">Page animations</div><div class="set-s">Slide transitions when you switch pages</div></div>
+            <span class="switch"><input type="checkbox" id="setPageAnim" onchange="_saveSettings()"><span class="sl"></span></span></label>
+        </div>
+        <div class="set-sec" id="secPrivacy" style="display:none;">
+          <div class="set-sec-label">Privacy</div>
+          <label class="set-row"><div><div class="set-t">Private profile</div><div class="set-s">Hide your videos &amp; dares from others</div></div>
+            <span class="switch"><input type="checkbox" id="setPrivate" onchange="_saveSettings()"><span class="sl"></span></span></label>
+        </div>
+        <div class="set-sec" id="secAccount" style="display:none;">
+          <div class="set-sec-label">Account</div>
+          <button class="set-btn" onclick="logout()"><span class="mi">logout</span> Log out</button>
+          <button class="set-btn danger" onclick="deleteAccount()"><span class="mi">delete_forever</span> Delete account</button>
+        </div>
+      </div>
+    </div>
   </div>
 </div>
 
@@ -554,37 +580,6 @@
 <div class="photo-viewer" id="photoViewer" onclick="closePhotoViewer()">
   <button class="pv-close" onclick="closePhotoViewer()" aria-label="Close"><span class="mi">close</span></button>
   <img id="photoViewerImg" alt="Profile photo" onclick="event.stopPropagation()"/>
-</div>
-
-<!-- ══ NOTIFICATION SETTINGS (sub-screen) ══ -->
-<div class="overlay as-page" id="notifSettingsOverlay">
-  <div class="modal wallet-modal">
-    <div class="modal-hdr">
-      <button class="modal-close" onclick="_settingsBack('notifSettingsOverlay')" aria-label="Back"><span class="mi">arrow_back</span></button>
-      <div class="modal-title" style="flex:1;margin-left:6px;">Notifications</div>
-      <button class="modal-close" onclick="_closeSettingsAll()"><span class="mi">close</span></button></div>
-    <label class="set-row"><div class="set-t">Likes &amp; comments</div>
-      <span class="switch"><input type="checkbox" id="setNotifLikes" onchange="_saveSettings()"><span class="sl"></span></span></label>
-    <label class="set-row"><div class="set-t">New followers</div>
-      <span class="switch"><input type="checkbox" id="setNotifFollow" onchange="_saveSettings()"><span class="sl"></span></span></label>
-    <label class="set-row"><div class="set-t">Dare updates</div>
-      <span class="switch"><input type="checkbox" id="setNotifDares" onchange="_saveSettings()"><span class="sl"></span></span></label>
-  </div>
-</div>
-
-<!-- ══ ADDITIONAL SETTINGS (sub-screen) ══ -->
-<div class="overlay as-page" id="moreSettingsOverlay">
-  <div class="modal wallet-modal">
-    <div class="modal-hdr">
-      <button class="modal-close" onclick="_settingsBack('moreSettingsOverlay')" aria-label="Back"><span class="mi">arrow_back</span></button>
-      <div class="modal-title" style="flex:1;margin-left:6px;">Additional settings</div>
-      <button class="modal-close" onclick="_closeSettingsAll()"><span class="mi">close</span></button></div>
-    <label class="set-row"><div><div class="set-t">Autoplay videos</div><div class="set-s">Play videos automatically on hover &amp; scroll</div></div>
-      <span class="switch"><input type="checkbox" id="setAutoplay" onchange="_saveSettings()"><span class="sl"></span></span></label>
-    <div class="set-sec-label">Accessibility</div>
-    <label class="set-row"><div><div class="set-t">Page animations</div><div class="set-s">Slide transitions when you switch pages</div></div>
-      <span class="switch"><input type="checkbox" id="setPageAnim" onchange="_saveSettings()"><span class="sl"></span></span></label>
-  </div>
 </div>
 
 <div class="profile-edit-overlay as-page" id="profileEditOverlay" onclick="if(event.target===this)cancelProfileEdit()">
@@ -1040,7 +1035,7 @@
 <div class="toast" id="toast"></div>
 
 <!-- App Logic -->
-<script src="/js/app.js?v=20260629z"></script>
+<script src="/js/app.js?v=20260630a"></script>
 
 <!-- ══ v0.19 NEW MODALS ══ -->
 

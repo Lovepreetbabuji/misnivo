@@ -2598,6 +2598,7 @@ function _flGoProfile(uid){
 // ════════════════════════════════════════════════════════════════════
 //  PROFILE — settings, achievements, social links
 // ════════════════════════════════════════════════════════════════════
+// Settings — YouTube-style two-pane page: left nav picks a section, right shows it
 function openSettings(){
   if(!user){ showToast('Sign in first'); return; }
   const s=user.settings||{};
@@ -2605,23 +2606,21 @@ function openSettings(){
   document.getElementById('setNotifFollow').checked = s.notifFollow !== false;
   document.getElementById('setNotifDares').checked  = s.notifDares  !== false;
   document.getElementById('setPrivate').checked     = s.private === true;
+  document.getElementById('setAutoplay').checked    = s.autoplay !== false;   // default ON
+  document.getElementById('setPageAnim').checked    = s.pageAnim !== false;   // default ON
   _ovOpen('settingsOverlay');
 }
-function openNotifSettings(){
-  if(!user){ showToast('Sign in first'); return; }
-  const s=user.settings||{};
-  document.getElementById('setNotifLikes').checked  = s.notifLikes  !== false;
-  document.getElementById('setNotifFollow').checked = s.notifFollow !== false;
-  document.getElementById('setNotifDares').checked  = s.notifDares  !== false;
-  _settingsSub('notifSettingsOverlay');   // sub-screen of the same history layer
+function _setSec(btn, id){
+  document.querySelectorAll('#settingsOverlay .set-nav-item').forEach(b=>b.classList.toggle('active', b===btn));
+  document.querySelectorAll('#settingsOverlay .set-sec').forEach(sec=>{ sec.style.display = sec.id===id ? 'block' : 'none'; });
 }
-function openMoreSettings(){
-  if(!user){ showToast('Sign in first'); return; }
-  const s=user.settings||{};
-  document.getElementById('setAutoplay').checked = s.autoplay !== false;   // default ON
-  document.getElementById('setPageAnim').checked = s.pageAnim !== false;   // default ON
-  _settingsSub('moreSettingsOverlay');    // sub-screen of the same history layer
+function _setSecById(id){
+  const btn=document.querySelector(`#settingsOverlay .set-nav-item[data-sec="${id}"]`);
+  if(btn) _setSec(btn, id);
 }
+// Deep links (/settings/notifications, /settings/more) land on the right section
+function openNotifSettings(){ openSettings(); _setSecById('secNotif'); }
+function openMoreSettings(){ openSettings(); _setSecById('secMore'); }
 function _saveSettings(){
   if(!user) return;
   const _ap=document.getElementById('setAutoplay');
@@ -4243,8 +4242,6 @@ const _OV_CLOSERS = {
   depositOverlay:       () => closeWalletModal('depositOverlay'),
   withdrawOverlay:      () => closeWalletModal('withdrawOverlay'),
   settingsOverlay:      () => { const e=document.getElementById('settingsOverlay'); if(e) e.classList.remove('open'); },
-  notifSettingsOverlay: () => _settingsRevealRoot('notifSettingsOverlay'),
-  moreSettingsOverlay:  () => _settingsRevealRoot('moreSettingsOverlay'),
   // phase 2 — remaining popups (back closes one step; no shareable URL, they're contextual)
   photoViewer:          () => closePhotoViewer(),
   videoPlayOverlay:     () => closeVideoPlay(),
@@ -4265,28 +4262,8 @@ function _ovCloseById(id){
   if(f){ try{ f(); return; }catch(e){} }
   const el = document.getElementById(id); if(el) el.classList.remove('open');
 }
-// Settings sub-screens — each gets its own URL + history entry (/settings/notifications etc.).
-// Opening hides the root; back reveals it again.
-function _settingsSub(id){
-  const s=document.getElementById('settingsOverlay'); if(s) s.classList.remove('open');
-  _ovOpen(id);                                   // pushes the sub-screen URL
-}
-function _settingsRevealRoot(subId){             // popstate-driven close of a sub-screen
-  const e=document.getElementById(subId); if(e) e.classList.remove('open');
-  const s=document.getElementById('settingsOverlay'); if(s) s.classList.add('open');
-}
-function _settingsBack(subId){                    // on-screen back arrow (UI): sub → root
-  closeWalletModal(subId);                        // hides sub + rewinds history to /settings
-  const s=document.getElementById('settingsOverlay'); if(s) s.classList.add('open');
-}
-function _closeSettingsAll(){                      // on-screen X: close the whole settings flow
-  const i=_ovStack.indexOf('settingsOverlay');
-  ['notifSettingsOverlay','moreSettingsOverlay','settingsOverlay'].forEach(x=>{ const e=document.getElementById(x); if(e) e.classList.remove('open'); });
-  if(i<0) return;
-  const steps=_ovStack.length-i; _ovStack.length=i;
-  _ovLock();
-  if(!_ovInPop){ _ovInPop=true; try{ history.go(-steps); }catch(e){ _ovInPop=false; } }
-}
+// (Settings is now a single two-pane page — sections switch in-place via _setSec;
+//  the old sub-screen overlays and their helpers are gone.)
 
 // Click on the empty area around a page-modal's content column → close it (desktop)
 document.addEventListener('click', (e)=>{
@@ -4314,8 +4291,8 @@ function _bootRoute(){
 function _openModalById(id){
   switch(id){
     case 'settingsOverlay':      openSettings(); break;
-    case 'notifSettingsOverlay': openSettings(); openNotifSettings(); break;
-    case 'moreSettingsOverlay':  openSettings(); openMoreSettings(); break;
+    case 'notifSettingsOverlay': openNotifSettings(); break;
+    case 'moreSettingsOverlay':  openMoreSettings(); break;
     case 'profileEditOverlay':   openProfileEdit(); break;
     case 'postOverlay':          openPost(); break;
     case 'depositOverlay':       openDepositModal(); break;
