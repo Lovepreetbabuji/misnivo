@@ -3714,3 +3714,16 @@ body.ov-open .main, body.ov-open .sidebar, body.ov-open .topbar, body.ov-open .b
   .set-nav-item:hover,.set-nav-item.active{background:transparent;}
   #settingsOverlay .set-content{display:none;}   /* sections open as their own page (setSecOverlay) */
 }
+
+/* ── Two-pane header action (Post Dare / Save Changes) + wide modals ── */
+.tp-hdr-right{display:flex;align-items:center;gap:10px;}
+.tp-action{width:auto !important;margin:0 !important;padding:9px 18px !important;font-size:13.5px !important;
+  border-radius:50px !important;white-space:nowrap;flex-shrink:0;min-height:0 !important;}
+.tp-action .mi{font-size:17px;}
+@media(min-width:769px){
+  .overlay.as-page .modal.set-modal,
+  .profile-edit-overlay.as-page .profile-edit-modal.set-modal{ max-width:880px; }
+}
+@media(max-width:768px){
+  .tp-action{padding:8px 14px !important;font-size:13px !important;}
+}

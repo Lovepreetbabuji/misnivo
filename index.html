@@ -20,7 +20,7 @@
 <link href="https://fonts.googleapis.com/icon?family=Material+Icons+Round" rel="stylesheet"/>
 
 <!-- App Styles -->
-<link rel="stylesheet" href="/css/styles.css?v=20260630c"/>
+<link rel="stylesheet" href="/css/styles.css?v=20260630d"/>
 
 <!-- Firebase CDN -->
 <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
@@ -537,11 +537,11 @@
       <button class="modal-close" onclick="closeWalletModal('settingsOverlay')"><span class="mi">close</span></button></div>
     <div class="set-layout">
       <div class="set-nav">
-        <button class="set-nav-item" onclick="openProfileEdit()"><span class="mi">person</span>Edit Profile</button>
-        <button class="set-nav-item active" data-sec="secNotif" onclick="_setSec(this,'secNotif')"><span class="mi">notifications</span>Notifications</button>
-        <button class="set-nav-item" data-sec="secMore" onclick="_setSec(this,'secMore')"><span class="mi">tune</span>Additional settings</button>
-        <button class="set-nav-item" data-sec="secPrivacy" onclick="_setSec(this,'secPrivacy')"><span class="mi">lock</span>Privacy</button>
-        <button class="set-nav-item" data-sec="secAccount" onclick="_setSec(this,'secAccount')"><span class="mi">manage_accounts</span>Account</button>
+        <button class="set-nav-item" onclick="openProfileEdit()"><span class="mi">person</span><span class="smr-t">Edit Profile</span></button>
+        <button class="set-nav-item active" data-sec="secNotif" data-title="Notifications" data-url="/settings/notifications" onclick="_tpSec(this)"><span class="mi">notifications</span><span class="smr-t">Notifications</span></button>
+        <button class="set-nav-item" data-sec="secMore" data-title="Additional settings" data-url="/settings/more" onclick="_tpSec(this)"><span class="mi">tune</span><span class="smr-t">Additional settings</span></button>
+        <button class="set-nav-item" data-sec="secPrivacy" data-title="Privacy" data-url="/settings/privacy" onclick="_tpSec(this)"><span class="mi">lock</span><span class="smr-t">Privacy</span></button>
+        <button class="set-nav-item" data-sec="secAccount" data-title="Account" data-url="/settings/account" onclick="_tpSec(this)"><span class="mi">manage_accounts</span><span class="smr-t">Account</span></button>
       </div>
       <div class="set-content">
         <div class="set-sec" id="secNotif">
@@ -594,81 +594,84 @@
 </div>
 
 <div class="profile-edit-overlay as-page" id="profileEditOverlay" onclick="if(event.target===this)cancelProfileEdit()">
-  <div class="profile-edit-modal">
-    <div class="modal-hdr" style="padding:20px 24px 0;margin-bottom:0;">
+  <div class="profile-edit-modal set-modal">
+    <div class="modal-hdr">
       <div class="modal-title">Edit Profile</div>
-      <button class="modal-close" onclick="cancelProfileEdit()"><span class="mi">close</span></button>
+      <div class="tp-hdr-right">
+        <button class="pe-btn-save tp-action" id="peSaveBtn" onclick="saveProfile()"><span class="mi">check</span> Save Changes</button>
+        <button class="modal-close" onclick="cancelProfileEdit()"><span class="mi">close</span></button>
+      </div>
     </div>
-    <div class="pe-body">
+    <div class="set-layout">
+      <div class="set-nav">
+        <button class="set-nav-item active" data-sec="epPhoto" data-title="Photo" data-url="/settings/edit/photo" onclick="_tpSec(this)"><span class="mi">account_circle</span><span class="smr-t">Photo</span></button>
+        <button class="set-nav-item" data-sec="epName" data-title="Name &amp; Username" data-url="/settings/edit/name" onclick="_tpSec(this)"><span class="mi">badge</span><span class="smr-t">Name &amp; Username</span></button>
+        <button class="set-nav-item" data-sec="epBio" data-title="Bio" data-url="/settings/edit/bio" onclick="_tpSec(this)"><span class="mi">notes</span><span class="smr-t">Bio</span></button>
+        <button class="set-nav-item" data-sec="epLinks" data-title="Links" data-url="/settings/edit/links" onclick="_tpSec(this)"><span class="mi">link</span><span class="smr-t">Links</span></button>
+        <button class="set-nav-item" data-sec="epVis" data-title="Profile visibility" data-url="/settings/edit/visibility" onclick="_tpSec(this)"><span class="mi">visibility</span><span class="smr-t">Profile visibility</span></button>
+      </div>
+      <div class="set-content">
 
-      <!-- Avatar upload -->
-      <div class="pe-avatar-row">
-        <div class="pe-big-av" id="peAvatar" onclick="document.getElementById('pePhotoInput').click()"></div>
-        <div>
-          <div class="pe-av-btns">
-            <input type="file" id="pePhotoInput" accept="image/*" style="display:none;"
-                   onchange="onProfilePhotoSelected(event)"/>
-            <button class="pe-av-upload" onclick="document.getElementById('pePhotoInput').click()">
-              <span class="mi">photo_camera</span> Change Photo
-            </button>
+        <div class="set-sec" id="epPhoto">
+          <div class="set-sec-label">Photo</div>
+          <div class="pe-avatar-row">
+            <div class="pe-big-av" id="peAvatar" onclick="document.getElementById('pePhotoInput').click()"></div>
+            <div>
+              <div class="pe-av-btns">
+                <input type="file" id="pePhotoInput" accept="image/*" style="display:none;" onchange="onProfilePhotoSelected(event)"/>
+                <button class="pe-av-upload" onclick="document.getElementById('pePhotoInput').click()"><span class="mi">photo_camera</span> Change Photo</button>
+              </div>
+              <div class="pe-av-note" style="margin-top:8px;">JPG, PNG — max 5 MB</div>
+            </div>
           </div>
-          <div class="pe-av-note" style="margin-top:8px;">JPG, PNG — max 5 MB</div>
         </div>
-      </div>
 
-      <!-- Display Name -->
-      <div class="pe-field">
-        <div class="pe-label">Display Name</div>
-        <input class="pe-input" id="peName" type="text" placeholder="Your full name" maxlength="60"/>
-      </div>
-
-      <!-- Username / Handle -->
-      <div class="pe-field">
-        <div class="pe-label">
-          Username (handle)
-          <span>Only letters, numbers, _ and . — unique</span>
+        <div class="set-sec" id="epName" style="display:none;">
+          <div class="set-sec-label">Name &amp; Username</div>
+          <div class="pe-field">
+            <div class="pe-label">Display Name</div>
+            <input class="pe-input" id="peName" type="text" placeholder="Your full name" maxlength="60"/>
+          </div>
+          <div class="pe-field">
+            <div class="pe-label">Username (handle) <span>Only letters, numbers, _ and . — unique</span></div>
+            <div class="pe-handle-wrap">
+              <span class="pe-handle-prefix">@</span>
+              <input class="pe-input" id="peHandle" type="text" placeholder="yourhandle" maxlength="30" oninput="onHandleInput()" style="padding-left:28px;"/>
+            </div>
+            <div class="pe-status" id="peHandleStatus"></div>
+          </div>
         </div>
-        <div class="pe-handle-wrap">
-          <span class="pe-handle-prefix">@</span>
-          <input class="pe-input" id="peHandle" type="text" placeholder="yourhandle"
-                 maxlength="30" oninput="onHandleInput()"
-                 style="padding-left:28px;"/>
+
+        <div class="set-sec" id="epBio" style="display:none;">
+          <div class="set-sec-label">Bio</div>
+          <div class="pe-field">
+            <div class="pe-label">Bio <span id="peBioCount">0 / 160</span></div>
+            <textarea class="pe-input pe-textarea" id="peBio" placeholder="Tell the community about yourself..." maxlength="160"
+                      oninput="document.getElementById('peBioCount').textContent=this.value.length+' / 160'"></textarea>
+          </div>
         </div>
-        <div class="pe-status" id="peHandleStatus"></div>
-      </div>
 
-      <!-- Bio -->
-      <div class="pe-field">
-        <div class="pe-label">
-          Bio <span id="peBioCount">0 / 160</span>
+        <div class="set-sec" id="epLinks" style="display:none;">
+          <div class="set-sec-label">Links</div>
+          <div class="pe-field">
+            <div class="pe-label">Website / Contact Link <span>Website, email or contact info</span></div>
+            <input class="pe-input" id="peWebsite" type="url" placeholder="https://yourwebsite.com"/>
+          </div>
+          <div class="pe-field">
+            <div class="pe-label">Social links <span>Optional — handles only</span></div>
+            <div class="pe-social-row"><span class="mi">photo_camera</span><input class="pe-input" id="peInsta" type="text" placeholder="Instagram username" maxlength="40"/></div>
+            <div class="pe-social-row"><span class="pe-x-logo">X</span><input class="pe-input" id="peX" type="text" placeholder="X (Twitter) username" maxlength="40"/></div>
+            <div class="pe-social-row"><span class="mi">smart_display</span><input class="pe-input" id="peYt" type="text" placeholder="YouTube @handle" maxlength="40"/></div>
+          </div>
         </div>
-        <textarea class="pe-input pe-textarea" id="peBio" placeholder="Tell the community about yourself..."
-                  maxlength="160"
-                  oninput="document.getElementById('peBioCount').textContent=this.value.length+' / 160'"></textarea>
-      </div>
 
-      <!-- Website / Contact -->
-      <div class="pe-field">
-        <div class="pe-label">Website / Contact Link <span>Optional</span></div>
-        <input class="pe-input" id="peWebsite" type="url" placeholder="https://yourwebsite.com"/>
-      </div>
+        <div class="set-sec" id="epVis" style="display:none;">
+          <div class="set-sec-label">Profile visibility</div>
+          <label class="set-row"><div><div class="set-t">Private profile</div><div class="set-s">Hide your videos &amp; dares from others</div></div>
+            <span class="switch"><input type="checkbox" id="pePrivate" onchange="_pePrivacyChange(this)"><span class="sl"></span></span></label>
+        </div>
 
-      <!-- Social links -->
-      <div class="pe-field">
-        <div class="pe-label">Social links <span>Optional — handles only</span></div>
-        <div class="pe-social-row"><span class="mi">photo_camera</span><input class="pe-input" id="peInsta" type="text" placeholder="Instagram username" maxlength="40"/></div>
-        <div class="pe-social-row"><span class="pe-x-logo">X</span><input class="pe-input" id="peX" type="text" placeholder="X (Twitter) username" maxlength="40"/></div>
-        <div class="pe-social-row"><span class="mi">smart_display</span><input class="pe-input" id="peYt" type="text" placeholder="YouTube @handle" maxlength="40"/></div>
       </div>
-
-      <!-- Actions -->
-      <div class="pe-footer">
-        <button class="pe-btn-cancel" onclick="cancelProfileEdit()">Cancel</button>
-        <button class="pe-btn-save" id="peSaveBtn" onclick="saveProfile()">
-          <span class="mi">check</span> Save Changes
-        </button>
-      </div>
-
     </div>
   </div>
 </div>
@@ -691,125 +694,125 @@
   </div>
 </div>
 
-<!-- POST DARE MODAL — v0.15 (Caption · Media · Tags · Rules · Schedule) -->
+<!-- POST DARE MODAL — two-pane (left sections · right fields) -->
 <div class="overlay as-page" id="postOverlay">
-  <div class="modal post-dare-modal">
+  <div class="modal post-dare-modal set-modal">
     <div class="modal-hdr">
       <div class="modal-title">Post a New Dare</div>
-      <button class="modal-close" onclick="closePost()"><span class="mi">close</span></button>
+      <div class="tp-hdr-right">
+        <button class="btn-fill tp-action" onclick="submitDare()" id="submitDareBtn"><span class="mi">bolt</span> Post Dare</button>
+        <button class="modal-close" onclick="closePost()"><span class="mi">close</span></button>
+      </div>
     </div>
+    <div class="set-layout">
+      <div class="set-nav">
+        <button class="set-nav-item active" data-sec="pdCaption" data-title="Caption" data-url="/post/caption" onclick="_tpSec(this)"><span class="mi">title</span><span class="smr-t">Caption</span></button>
+        <button class="set-nav-item" data-sec="pdMedia" data-title="Thumbnail" data-url="/post/media" onclick="_tpSec(this)"><span class="mi">image</span><span class="smr-t">Thumbnail</span></button>
+        <button class="set-nav-item" data-sec="pdTags" data-title="Tags &amp; Reward" data-url="/post/tags" onclick="_tpSec(this)"><span class="mi">sell</span><span class="smr-t">Tags &amp; Reward</span></button>
+        <button class="set-nav-item" data-sec="pdRules" data-title="Rules" data-url="/post/rules" onclick="_tpSec(this)"><span class="mi">rule</span><span class="smr-t">Rules</span></button>
+        <button class="set-nav-item" data-sec="pdVis" data-title="Visibility" data-url="/post/visibility" onclick="_tpSec(this)"><span class="mi">visibility</span><span class="smr-t">Visibility</span></button>
+        <button class="set-nav-item" data-sec="pdTakers" data-title="Takers" data-url="/post/takers" onclick="_tpSec(this)"><span class="mi">group</span><span class="smr-t">Takers</span></button>
+      </div>
+      <div class="set-content">
 
-    <!-- ① CAPTION -->
-    <div class="f-group">
-      <label class="f-label">Caption</label>
-      <input class="f-input" id="pCaption" type="text" placeholder="e.g. Run 5km in under 30 minutes"/>
-    </div>
-
-    <!-- ② DARE THUMBNAIL (16:9, optional) -->
-    <div class="f-group">
-      <label class="f-label">Dare Thumbnail <span class="f-opt-tag">Optional</span></label>
-      <div id="mediaTabImg">
-        <input type="file" id="thumbInput" accept="image/*" style="display:none;" onchange="onThumbSelected(event)"/>
-        <div class="dare-media-dz" id="thumbDZ" onclick="document.getElementById('thumbInput').click()">
-          <img id="thumbPreview" style="display:none;width:100%;height:100%;object-fit:cover;border-radius:10px;position:absolute;top:0;left:0;"/>
-          <div class="dz-inner" id="thumbDZInner">
-            <span class="mi" style="font-size:32px;color:var(--t3);">add_photo_alternate</span>
-            <div style="font-size:13px;font-weight:600;color:var(--t2);">Click to add thumbnail</div>
-            <div style="font-size:11px;color:var(--t3);">JPG, PNG, WEBP · Max 5MB</div>
+        <div class="set-sec" id="pdCaption">
+          <div class="set-sec-label">Caption</div>
+          <div class="f-group">
+            <label class="f-label">Caption</label>
+            <input class="f-input" id="pCaption" type="text" placeholder="e.g. Run 5km in under 30 minutes"/>
+          </div>
+          <div class="f-group">
+            <label class="f-label">Description</label>
+            <textarea class="f-input" id="pDesc"
+              placeholder="Describe the challenge — what to do, where, and how..."
+              style="min-height:80px;resize:vertical;"></textarea>
           </div>
         </div>
-        <div class="dz-action-row" id="thumbEditRow" style="display:none;">
-          <button class="dz-action-btn" onclick="adjustThumb()" type="button">
-            <span class="mi">crop</span> Adjust
-          </button>
-          <button class="dz-action-btn" onclick="document.getElementById('thumbInput').click()" type="button">
-            <span class="mi">edit</span> Change
-          </button>
-          <button class="dz-action-btn dz-remove-btn" onclick="removeThumb()" type="button">
-            <span class="mi">delete</span> Remove
-          </button>
+
+        <div class="set-sec" id="pdMedia" style="display:none;">
+          <div class="set-sec-label">Thumbnail</div>
+          <div class="f-group">
+            <label class="f-label">Dare Thumbnail <span class="f-opt-tag">Optional</span></label>
+            <div id="mediaTabImg">
+              <input type="file" id="thumbInput" accept="image/*" style="display:none;" onchange="onThumbSelected(event)"/>
+              <div class="dare-media-dz" id="thumbDZ" onclick="document.getElementById('thumbInput').click()">
+                <img id="thumbPreview" style="display:none;width:100%;height:100%;object-fit:cover;border-radius:10px;position:absolute;top:0;left:0;"/>
+                <div class="dz-inner" id="thumbDZInner">
+                  <span class="mi" style="font-size:32px;color:var(--t3);">add_photo_alternate</span>
+                  <div style="font-size:13px;font-weight:600;color:var(--t2);">Click to add thumbnail</div>
+                  <div style="font-size:11px;color:var(--t3);">JPG, PNG, WEBP · Max 5MB</div>
+                </div>
+              </div>
+              <div class="dz-action-row" id="thumbEditRow" style="display:none;">
+                <button class="dz-action-btn" onclick="adjustThumb()" type="button"><span class="mi">crop</span> Adjust</button>
+                <button class="dz-action-btn" onclick="document.getElementById('thumbInput').click()" type="button"><span class="mi">edit</span> Change</button>
+                <button class="dz-action-btn dz-remove-btn" onclick="removeThumb()" type="button"><span class="mi">delete</span> Remove</button>
+              </div>
+            </div>
+          </div>
         </div>
+
+        <div class="set-sec" id="pdTags" style="display:none;">
+          <div class="set-sec-label">Tags &amp; Reward</div>
+          <div class="f-group">
+            <label class="f-label">Tags</label>
+            <div class="tags-field" id="tagsField">
+              <div class="post-tag-chips" id="tagChips"></div>
+              <input class="tags-inner-input" id="tagInput" type="text"
+                placeholder="Tag likho + Enter dabaao (e.g. fitness)"
+                onkeydown="handleTagInput(event)"/>
+            </div>
+            <div class="f-hint"># symbol auto-added · Max 5 tags</div>
+          </div>
+          <div class="f-group">
+            <label class="f-label">Reward Amount (Rs.)</label>
+            <input class="f-input" id="pReward" type="number" min="0" placeholder="0  (minimum zero, no upper limit)"/>
+          </div>
+        </div>
+
+        <div class="set-sec" id="pdRules" style="display:none;">
+          <div class="set-sec-label">Rules</div>
+          <div class="f-group">
+            <label class="f-label">Rules <span class="f-opt-tag">Optional</span></label>
+            <div id="rulesList"></div>
+            <button class="add-rule-btn" onclick="addRule()" type="button"><span class="mi">add_circle</span> Add a Rule</button>
+          </div>
+        </div>
+
+        <div class="set-sec" id="pdVis" style="display:none;">
+          <div class="set-sec-label">Visibility</div>
+          <div class="f-group">
+            <label class="f-label">Publish</label>
+            <div class="vis-toggle-row">
+              <button class="vis-opt active" id="visNow" onclick="switchVis('now')" type="button"><span class="mi">public</span> Publish Now</button>
+              <button class="vis-opt" id="visSched" onclick="switchVis('scheduled')" type="button"><span class="mi">schedule</span> Schedule for Later</button>
+            </div>
+            <div id="scheduleBox" style="display:none;margin-top:10px;">
+              <input class="f-input" id="scheduleDate" type="datetime-local" style="margin:0;"/>
+              <div class="f-hint">Your dare will be published automatically at this time.</div>
+            </div>
+          </div>
+          <div class="f-group">
+            <label class="f-label">Dare Expiry <span class="f-opt-tag">Optional</span></label>
+            <input class="f-input" id="pExpiry" type="datetime-local" style="margin:0;"/>
+            <div class="f-hint">Dare auto-closes after this time and disappears from the feed.</div>
+          </div>
+        </div>
+
+        <div class="set-sec" id="pdTakers" style="display:none;">
+          <div class="set-sec-label">Takers</div>
+          <div class="f-group">
+            <label class="f-label">Who can submit proof?</label>
+            <div class="vis-toggle-row">
+              <button class="vis-opt active" id="tmOpen" onclick="switchTakerMode('open')" type="button"><span class="mi">people</span> Anyone (Open)</button>
+              <button class="vis-opt" id="tmPick" onclick="switchTakerMode('creator_picks')" type="button"><span class="mi">how_to_reg</span> I'll Select Takers</button>
+            </div>
+            <div class="f-hint" id="takerModeHint">Anyone who accepts can submit proof immediately.</div>
+          </div>
+        </div>
+
       </div>
     </div>
-
-    <!-- ③ TAGS (replaces Category) -->
-    <div class="f-group">
-      <label class="f-label">Tags</label>
-      <div class="tags-field" id="tagsField">
-        <div class="post-tag-chips" id="tagChips"></div>
-        <input class="tags-inner-input" id="tagInput" type="text"
-          placeholder="Tag likho + Enter dabaao (e.g. fitness)"
-          onkeydown="handleTagInput(event)"/>
-      </div>
-      <div class="f-hint"># symbol auto-added · Max 5 tags</div>
-    </div>
-
-    <!-- ④ REWARD AMOUNT -->
-    <div class="f-group">
-      <label class="f-label">Reward Amount (Rs.)</label>
-      <input class="f-input" id="pReward" type="number" min="0" placeholder="0  (minimum zero, no upper limit)"/>
-    </div>
-
-    <!-- ⑤ DESCRIPTION -->
-    <div class="f-group">
-      <label class="f-label">Description</label>
-      <textarea class="f-input" id="pDesc"
-        placeholder="Describe the challenge — what to do, where, and how..."
-        style="min-height:80px;resize:vertical;"></textarea>
-    </div>
-
-    <!-- ⑥ RULES (dynamic add/remove) -->
-    <div class="f-group">
-      <label class="f-label">Rules <span class="f-opt-tag">Optional</span></label>
-      <div id="rulesList"></div>
-      <button class="add-rule-btn" onclick="addRule()" type="button">
-        <span class="mi">add_circle</span> Add a Rule
-      </button>
-    </div>
-
-    <!-- ⑦ VISIBILITY (Publish Now / Schedule) -->
-    <div class="f-group">
-      <label class="f-label">Visibility</label>
-      <div class="vis-toggle-row">
-        <button class="vis-opt active" id="visNow" onclick="switchVis('now')" type="button">
-          <span class="mi">public</span> Publish Now
-        </button>
-        <button class="vis-opt" id="visSched" onclick="switchVis('scheduled')" type="button">
-          <span class="mi">schedule</span> Schedule for Later
-        </button>
-      </div>
-      <div id="scheduleBox" style="display:none;margin-top:10px;">
-        <input class="f-input" id="scheduleDate" type="datetime-local" style="margin:0;"/>
-        <div class="f-hint">Your dare will be published automatically at this time.</div>
-      </div>
-    </div>
-
-    <!-- ⑧ TAKER SELECTION MODE (v0.19) -->
-    <div class="f-group">
-      <label class="f-label">Who can submit proof?</label>
-      <div class="vis-toggle-row">
-        <button class="vis-opt active" id="tmOpen" onclick="switchTakerMode('open')" type="button">
-          <span class="mi">people</span> Anyone (Open)
-        </button>
-        <button class="vis-opt" id="tmPick" onclick="switchTakerMode('creator_picks')" type="button">
-          <span class="mi">how_to_reg</span> I'll Select Takers
-        </button>
-      </div>
-      <div class="f-hint" id="takerModeHint">Anyone who accepts can submit proof immediately.</div>
-    </div>
-
-    <!-- ⑨ DARE EXPIRY (v0.19 · Optional) -->
-    <div class="f-group">
-      <label class="f-label">Dare Expiry <span class="f-opt-tag">Optional</span></label>
-      <input class="f-input" id="pExpiry" type="datetime-local" style="margin:0;"/>
-      <div class="f-hint">Dare auto-closes after this time and disappears from the feed.</div>
-    </div>
-
-    <!-- SUBMIT -->
-    <button class="btn-fill" onclick="submitDare()" id="submitDareBtn">
-      <span class="mi">bolt</span> Post Dare
-    </button>
-
   </div>
 </div>
 
@@ -1047,7 +1050,7 @@
 <div class="toast" id="toast"></div>
 
 <!-- App Logic -->
-<script src="/js/app.js?v=20260630c"></script>
+<script src="/js/app.js?v=20260630d"></script>
 
 <!-- ══ v0.19 NEW MODALS ══ -->
 

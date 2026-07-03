@@ -1117,6 +1117,7 @@ function openPost() {
   if (btn) { btn.disabled = false; btn.innerHTML = '<span class="mi">bolt</span> Post Dare'; }
 
   _ovOpen('postOverlay');
+  _tpInit('postOverlay');   // desktop: show the first section (Caption) in the right pane
 }
 
 function closePost() {
@@ -2609,46 +2610,46 @@ function openSettings(){
   document.getElementById('setAutoplay').checked    = s.autoplay !== false;   // default ON
   document.getElementById('setPageAnim').checked    = s.pageAnim !== false;   // default ON
   _ovOpen('settingsOverlay');
-  // desktop two-pane: make sure the right pane shows a section (a mobile round-trip
-  // can leave every section display:none)
-  if (window.innerWidth > 768){
-    const cur = document.querySelector('#settingsOverlay .set-nav-item.active');
-    _setSecById((cur && cur.dataset.sec) || 'secNotif');
-  }
+  _tpInit('settingsOverlay');   // desktop: show the active/first section in the right pane
 }
-const _SEC_META = { secNotif:['Notifications','/settings/notifications'], secMore:['Additional settings','/settings/more'],
-  secPrivacy:['Privacy','/settings/privacy'], secAccount:['Account','/settings/account'] };
-function _setSec(btn, id){
-  if (window.innerWidth <= 768){ _openSecPage(id); return; }   // mobile: section opens as its OWN page
-  document.querySelectorAll('#settingsOverlay .set-nav-item').forEach(b=>b.classList.toggle('active', b===btn));
-  document.querySelectorAll('#settingsOverlay .set-sec').forEach(sec=>{ sec.style.display = sec.id===id ? 'block' : 'none'; });
+// ── Generic two-pane (Settings / Post Dare / Edit Profile): left nav → right section.
+//    Desktop switches in place; mobile opens the tapped section as its OWN page. ──
+function _tpSec(btn){
+  const secId = btn.dataset.sec; const sec = document.getElementById(secId); if(!sec) return;
+  if (window.innerWidth <= 768){ _openSecPage(secId, btn.dataset.title || 'Settings', btn.dataset.url || ''); return; }
+  const layout = btn.closest('.set-layout'); if(!layout) return;
+  layout.querySelectorAll('.set-nav-item').forEach(b=>b.classList.toggle('active', b===btn));
+  layout.querySelectorAll('.set-sec').forEach(s=>{ s.style.display = s.id===secId ? 'block' : 'none'; });
 }
-function _setSecById(id){
-  const btn=document.querySelector(`#settingsOverlay .set-nav-item[data-sec="${id}"]`);
-  if(btn) _setSec(btn, id);
+function _tpSecById(secId){ const b=document.querySelector(`.set-nav-item[data-sec="${secId}"]`); if(b) _tpSec(b); }
+// Desktop: after opening a two-pane page, show the active (or first) section in the right pane
+function _tpInit(overlayId){
+  if (window.innerWidth <= 768) return;
+  const nav=document.querySelector(`#${overlayId} .set-nav`); if(!nav) return;
+  const b=nav.querySelector('.set-nav-item.active[data-sec]') || nav.querySelector('.set-nav-item[data-sec]');
+  if(b) _tpSec(b);
 }
-// Mobile: move the section's DOM into the dedicated page overlay (no duplicate ids)
-function _openSecPage(id){
-  const sec=document.getElementById(id); if(!sec) return;
-  const meta=_SEC_META[id]||['Settings','/settings'];
-  document.getElementById('setSecTitle').textContent=meta[0];
+// Mobile: move the section's DOM into the shared page overlay (no duplicate ids); remembers home
+function _openSecPage(secId, title, url){
+  const sec=document.getElementById(secId); if(!sec) return;
+  if(!sec._homeParent) sec._homeParent = sec.parentElement;
+  document.getElementById('setSecTitle').textContent = title || '';
   document.getElementById('setSecBody').appendChild(sec);
   sec.style.display='block';
-  _ovOpen('setSecOverlay', meta[1]);
+  _ovOpen('setSecOverlay', url || location.pathname);
 }
 function closeSetSec(){
   _ovSync('setSecOverlay');
   const ov=document.getElementById('setSecOverlay'); if(ov) ov.classList.remove('open');
-  // move the section back home (hidden) so desktop two-pane keeps working
   const body=document.getElementById('setSecBody');
-  const content=document.querySelector('#settingsOverlay .set-content');
-  while(body && content && body.firstElementChild){
-    const sec=body.firstElementChild; sec.style.display='none'; content.appendChild(sec);
+  while(body && body.firstElementChild){
+    const sec=body.firstElementChild; sec.style.display='none';
+    (sec._homeParent || document.body).appendChild(sec);
   }
 }
 // Deep links (/settings/notifications, /settings/more) land on the right section
-function openNotifSettings(){ openSettings(); _setSecById('secNotif'); }
-function openMoreSettings(){ openSettings(); _setSecById('secMore'); }
+function openNotifSettings(){ openSettings(); _tpSecById('secNotif'); }
+function openMoreSettings(){ openSettings(); _tpSecById('secMore'); }
 function _saveSettings(){
   if(!user) return;
   const _ap=document.getElementById('setAutoplay');
@@ -2803,8 +2804,18 @@ function openProfileEdit() {
   document.getElementById('peHandleStatus').textContent = '';
   document.getElementById('peHandleStatus').className   = 'pe-status ok';
   document.getElementById('peSaveBtn').disabled = false;
+  const _pp = document.getElementById('pePrivate'); if(_pp) _pp.checked = (user.settings && user.settings.private === true);
 
   _ovOpen('profileEditOverlay');
+  _tpInit('profileEditOverlay');   // desktop: show the first section (Photo) in the right pane
+}
+// Edit Profile → Profile visibility toggle (mirrors Settings > Privacy > Private profile)
+function _pePrivacyChange(el){
+  if(!user) return;
+  user.settings = user.settings || {};
+  user.settings.private = el.checked;
+  const sp = document.getElementById('setPrivate'); if(sp) sp.checked = el.checked;
+  db.collection('users').doc(user.uid).update({ settings:user.settings }).catch(()=>{});
 }
 
 function cancelProfileEdit() {
