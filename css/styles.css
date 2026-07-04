@@ -3617,8 +3617,8 @@ html{scroll-behavior:smooth;}
 /* Glassy page surface — dark enough that the page behind doesn't read as a
    lighter "box" silhouette (deeper tint than the notif panel). Column centered. */
 .overlay.as-page{
-  background:rgba(8,8,8,.80);
-  backdrop-filter:blur(64px) saturate(160%) !important;-webkit-backdrop-filter:blur(64px) saturate(160%) !important;
+  background:rgba(10,10,10,.92);
+  backdrop-filter:blur(10px) !important;-webkit-backdrop-filter:blur(10px) !important;
   align-items:flex-start;justify-content:center;padding:0;overflow-y:auto;z-index:9500;
 }
 .overlay.as-page .modal{
@@ -3633,8 +3633,8 @@ html{scroll-behavior:smooth;}
 .overlay.as-page.open .modal{transform:none;}
 
 .profile-edit-overlay.as-page{
-  background:rgba(8,8,8,.80);
-  backdrop-filter:blur(64px) saturate(160%) !important;-webkit-backdrop-filter:blur(64px) saturate(160%) !important;
+  background:rgba(10,10,10,.92);
+  backdrop-filter:blur(10px) !important;-webkit-backdrop-filter:blur(10px) !important;
   align-items:flex-start;justify-content:center;padding:0;overflow-y:auto;z-index:9500;
 }
 .profile-edit-overlay.as-page .profile-edit-modal{
@@ -3646,8 +3646,8 @@ html{scroll-behavior:smooth;}
 }
 
 .video-modal-overlay.as-page{
-  background:rgba(8,8,8,.80);
-  backdrop-filter:blur(64px) saturate(160%) !important;-webkit-backdrop-filter:blur(64px) saturate(160%) !important;z-index:9500;
+  background:rgba(10,10,10,.92);
+  backdrop-filter:blur(10px) !important;-webkit-backdrop-filter:blur(10px) !important;z-index:9500;
   align-items:flex-start;justify-content:center;overflow-y:auto;
 }
 .video-modal-overlay.as-page .video-modal-inner{margin:24px auto 60px;}
@@ -3669,11 +3669,12 @@ html{scroll-behavior:smooth;}
   -webkit-backdrop-filter: var(--blur) !important;
 }
 
-/* Small round buttons (topbar back/settings/socials, search icon) keep their
-   light tint but get REAL blur too */
+/* Small round buttons: NO backdrop-blur — there are many of them (social icons,
+   avatars, action buttons) and each blur surface is a per-frame GPU cost. They
+   sit on solid bars anyway, so a plain tint looks the same. */
 .icon-btn, .psocial, .search-icon-btn {
-  backdrop-filter: var(--blur) !important;
-  -webkit-backdrop-filter: var(--blur) !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
 }
 
 /* ── Mobile search page ── */
@@ -3685,11 +3686,9 @@ html{scroll-behavior:smooth;}
 
 /* Page-modal open → background page can't scroll behind it */
 body.ov-open{overflow:hidden;}
-/* …and the page behind is blurred + dimmed itself, so its content column can't
-   read as a lighter "box" through the glass — only a uniform frosted haze */
-body.ov-open .main, body.ov-open .sidebar, body.ov-open .topbar, body.ov-open .bottom-nav{
-  filter:blur(26px) brightness(.6);
-}
+/* (Removed the body.ov-open full-page filter:blur — the as-page surface already
+   covers the whole screen and is ~92% opaque, so blurring the page behind it was
+   pure GPU cost for no visible gain. Big perf win on modal open.) */
 .overlay.as-page, .profile-edit-overlay.as-page, .video-modal-overlay.as-page{overscroll-behavior:contain;}
 
 /* ── SETTINGS: YouTube-style two-pane (left nav · right options) ── */
@@ -3732,4 +3731,14 @@ body.ov-open .main, body.ov-open .sidebar, body.ov-open .topbar, body.ov-open .b
 }
 @media(max-width:768px){
   .tp-action{padding:8px 14px !important;font-size:13px !important;}
+}
+
+/* ── PERF: mobile GPUs choke on backdrop-blur that recomputes on every scroll
+   frame. The fixed topbar / bottom-nav are ALWAYS on screen, so drop their blur
+   on mobile (near-solid tint looks the same on a dark bg). Desktop keeps glass. ── */
+@media(max-width:768px){
+  .topbar, .bottom-nav{
+    backdrop-filter:none !important;-webkit-backdrop-filter:none !important;
+    background:rgba(12,12,12,.97) !important;
+  }
 }
