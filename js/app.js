@@ -960,7 +960,7 @@ function openVideoPlay(proofId) {
     document.getElementById('vpSub').textContent    = `By ${p.takerName} • Rs.${(p.dareBounty||0).toLocaleString('en-IN')} bounty won`;
     document.getElementById('vpAv').textContent     = (p.takerName||'?')[0].toUpperCase();
     const player = document.getElementById('vpPlayer');
-    player.src = p.videoURL;
+    player.src = _optVid(p.videoURL, _vidMaxW());
     player.load();
     _ovOpen('videoPlayOverlay');
   });
@@ -2023,7 +2023,7 @@ function renderProofsList() {
 
 function proofItemHTML(p) {
   const videoSection = p.videoURL
-    ? `<video src="${p.videoURL}" controls playsinline
+    ? `<video src="${_optVid(p.videoURL, _vidMaxW())}" controls playsinline
         style="width:100%;border-radius:14px;margin-bottom:12px;max-height:260px;background:#000;display:block;">
        </video>`
     : `<div class="proof-file-row"><span class="mi">video_file</span>${p.videoFilename||'—'}<span style="margin-left:auto;font-size:11px;color:var(--t3);">${p.videoSize||''}</span></div>`;
@@ -4756,7 +4756,7 @@ async function openVideoDetail(proofId) {
   } else if (player) {
     // already-seen (or short) → play directly, resuming where you left off
     const resume = _vdResumePos[p.id] || 0;
-    player.src = p.videoURL;
+    player.src = _optVid(p.videoURL, _vidMaxW());
     if (resume){ const _seek=()=>{ try{ player.currentTime = resume; }catch(e){} player.removeEventListener('loadedmetadata', _seek); }; player.addEventListener('loadedmetadata', _seek); }
     player.play().catch(()=>{});
   }
@@ -4795,7 +4795,7 @@ function _showInlineAd(player, p) {
     const open = document.getElementById('videoDetailOverlay')?.classList.contains('open');
     if (!open) return;
     if (typeof activeProof !== 'undefined' && activeProof && activeProof.id !== p.id) return;
-    player.src = p.videoURL; player.play().catch(()=>{});
+    player.src = _optVid(p.videoURL, _vidMaxW()); player.play().catch(()=>{});
   };
   _vdAdTick = setInterval(() => {
     secs--;
@@ -5003,7 +5003,7 @@ function _shortsSlideHtml(p, i) {
     </div>
 
     <div class="shorts-slide-box">
-      <video class="shorts-snap-video" data-src="${p.videoURL}" poster="${vidThumb(p,480)}" loop playsinline preload="metadata"
+      <video class="shorts-snap-video" data-src="${_optVid(p.videoURL, 720)}" poster="${vidThumb(p,480)}" loop playsinline preload="metadata"
         onclick="shortsSlideTogglePlay(this)" ontimeupdate="shortsSlideOnTime(this)"></video>
 
       <div class="shorts-top-ctrl">
@@ -6270,6 +6270,15 @@ function vidThumb(p, w) {
   }
   return ''; // non-cloudinary: no thumb
 }
+// Cloudinary on-the-fly video optimization: best format + auto quality + resolution
+// cap. Turns the raw upload into a much lighter stream (adaptive-ish, YouTube-style);
+// Cloudinary transcodes once then serves it from the CDN cache.
+function _optVid(url, w){
+  if(!url || !url.includes('res.cloudinary.com') || !url.includes('/video/upload/')) return url;
+  if(/\/video\/upload\/[^/]*[,_](?:q|w|f)_/.test(url)) return url;   // already transformed
+  return url.replace('/video/upload/', `/video/upload/f_auto,q_auto${w?`,w_${w},c_limit`:''}/`);
+}
+function _vidMaxW(){ return (typeof window!=='undefined' && window.innerWidth<=768) ? 720 : 1280; }
 
 // ════════════════════════════════════════════════════════════════════
 //  THUMBNAIL ADJUSTER — crop any image to 16:9 (long) or 9:16 (short) with drag + zoom
@@ -6534,7 +6543,7 @@ function _pvPlay(card, mode){
   _pvCard=card;
   const thumb=card.querySelector('.yt-thumb, .short-thumb'); if(!thumb){ _pvCard=null; return; }
   const v=document.createElement('video');
-  v.src=vurl; v.playsInline=true; v.setAttribute('playsinline','');
+  v.src=_optVid(vurl, 400); v.playsInline=true; v.setAttribute('playsinline','');
   v.preload='auto'; v.className='yt-preview-vid';
   thumb.appendChild(v); _pvVideo=v; thumb.classList.add('playing');
 
