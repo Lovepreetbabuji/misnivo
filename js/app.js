@@ -651,7 +651,7 @@ function _activeDareCard(d){
   let expiry='';
   if (d.expiresAt){ const exp=d.expiresAt.toDate?d.expiresAt.toDate():new Date(d.expiresAt); const ms=exp-Date.now();
     if (ms>0){ const h=Math.floor(ms/3600000); expiry=`<span class="adc-expiry"><span class="mi">schedule</span>${h>=24?Math.floor(h/24)+'d':h+'h'} left</span>`; } }
-  const inner = thumb ? `<img src="${thumb}" loading="lazy"/>`
+  const inner = thumb ? `<img src="${thumb}" loading="lazy" decoding="async"/>`
     : `<div class="adc-thumb-bg" style="background:linear-gradient(135deg,${color}22,${color}55);"><span class="mi" style="color:${color};">${icon}</span></div>`;
   const cAv = _avHtml(d.creatorPhotoURL || (isMine?(user&&user.picture):''), d.creator);
   const safe = (''+title).replace(/[\\'"<>]/g,'');
@@ -791,7 +791,7 @@ function _renderVideoGrid(proofs) {
     <div class="yt-card" onclick="openVideoDetail('${p.id}')">
       <div class="yt-thumb">
         ${vidThumb(p,640)
-          ? `<img src="${vidThumb(p,640)}" alt="" loading="lazy" style="width:100%;height:100%;object-fit:cover;display:block;"/>`
+          ? `<img src="${vidThumb(p,640)}" alt="" loading="lazy" decoding="async" style="width:100%;height:100%;object-fit:cover;display:block;"/>`
           : `<div class="yt-thumb-bg"><span class="mi">${icon}</span></div>`
         }
         <div class="yt-play-over"><span class="mi">play_circle</span></div>
@@ -840,7 +840,7 @@ function _renderShortsSection(shorts) {
     <div class="short-card" onclick="openShorts('${p.id}')" data-vurl="${p.videoURL||''}" data-dur="${p.videoDuration||0}">
       <div class="short-thumb">
         ${vidThumb(p,360)
-          ? `<img src="${vidThumb(p,360)}" alt="" loading="lazy" style="width:100%;height:100%;object-fit:cover;display:block;"/>`
+          ? `<img src="${vidThumb(p,360)}" alt="" loading="lazy" decoding="async" style="width:100%;height:100%;object-fit:cover;display:block;"/>`
           : `<div class="short-thumb-bg" style="background:#272727;"><span class="mi" style="color:${color};">${icon}</span></div>`
         }
         <div class="short-play-over"><span class="mi">play_circle</span></div>
@@ -2309,7 +2309,7 @@ function _profileDareCard(d){
   const reward=d.rewardAmount ?? d.bounty ?? 0;
   const thumb=d.thumbnailURL||'';
   const color=CAT_C[cat]||'#FF2D4A', icon=CAT_I[cat]||'bolt';
-  const inner=thumb?`<img src="${thumb}" loading="lazy"/>`:`<div class="adc-thumb-bg" style="background:linear-gradient(135deg,${color}22,${color}55);"><span class="mi" style="color:${color};">${icon}</span></div>`;
+  const inner=thumb?`<img src="${thumb}" loading="lazy" decoding="async"/>`:`<div class="adc-thumb-bg" style="background:linear-gradient(135deg,${color}22,${color}55);"><span class="mi" style="color:${color};">${icon}</span></div>`;
   const isPinned=(typeof pinnedDares!=='undefined'&&pinnedDares.includes(d.id));
   const proofs=d.proofCount||0;
   const cAv=_avHtml(d.creatorPhotoURL||(user&&user.picture),d.creator||user?.name);
@@ -2339,7 +2339,7 @@ function _profileAcceptedCard(a){
   const reward=a.bounty ?? d.rewardAmount ?? d.bounty ?? 0;
   const thumb=d.thumbnailURL||a.thumbnailURL||'';
   const cat=d.tags?.[0]||d.cat||a.cat||'fitness'; const color=CAT_C[cat]||'#FF2D4A', icon=CAT_I[cat]||'bolt';
-  const inner=thumb?`<img src="${thumb}" loading="lazy"/>`:`<div class="adc-thumb-bg" style="background:linear-gradient(135deg,${color}22,${color}55);"><span class="mi" style="color:${color};">${icon}</span></div>`;
+  const inner=thumb?`<img src="${thumb}" loading="lazy" decoding="async"/>`:`<div class="adc-thumb-bg" style="background:linear-gradient(135deg,${color}22,${color}55);"><span class="mi" style="color:${color};">${icon}</span></div>`;
   let badge, action='';
   if(a.applicantStatus==='pending'){ badge='<span class="pdc-status applied">Applied</span>'; }
   else if(a.proofStatus==='approved'){ badge='<span class="pdc-status done">Approved · Live</span>'; }
@@ -3624,7 +3624,7 @@ function _explorerVideoCard(p) {
   const dur=p.videoDuration?(p.videoDuration>=60?Math.floor(p.videoDuration/60)+':'+String(p.videoDuration%60).padStart(2,'0'):p.videoDuration+'s'):'';
   return `<div class="yt-card" onclick="openVideo('${p.id}')">
     <div class="yt-thumb">
-      ${vidThumb(p,480)?`<img src="${vidThumb(p,480)}" alt="" loading="lazy" style="width:100%;height:100%;object-fit:cover;display:block;"/>`:`<div class="yt-thumb-bg"><span class="mi">${icon}</span></div>`}
+      ${vidThumb(p,480)?`<img src="${vidThumb(p,480)}" alt="" loading="lazy" decoding="async" style="width:100%;height:100%;object-fit:cover;display:block;"/>`:`<div class="yt-thumb-bg"><span class="mi">${icon}</span></div>`}
       <div class="yt-play-over"><span class="mi">play_circle</span></div>
       <div class="yt-bounty">$${(p.dareBounty||0).toLocaleString('en-IN')}</div>
       ${dur?`<div style="position:absolute;bottom:8px;right:8px;background:rgba(0,0,0,.8);color:#fff;font-size:10px;font-weight:600;padding:2px 7px;border-radius:5px;">${dur}</div>`:''}
@@ -3762,7 +3762,7 @@ function _vdRelLongCard(p){
   const cat=p.cat||'fitness';const color=CAT_C[cat]||'#717171';const t=vidThumb(p,320);
   const badge=`<span class="dd-rel-badge">$${(p.dareBounty||0).toLocaleString('en-IN')}</span>`;
   const thumb = t
-    ? `<div class="dd-rel-thumb"><img src="${t}" loading="lazy"/>${badge}</div>`
+    ? `<div class="dd-rel-thumb"><img src="${t}" loading="lazy" decoding="async"/>${badge}</div>`
     : `<div class="dd-rel-thumb dd-rel-thumb-bg" style="background:linear-gradient(135deg,${color}22,${color}55);"><span class="mi" style="color:${color};">play_circle</span>${badge}</div>`;
   return `<div class="dd-rel-card" onclick="openVideo('${p.id}')">${thumb}
     <div class="dd-rel-title">${escHtml(p.dareTitle||'Dare Video')}</div>
@@ -3771,7 +3771,7 @@ function _vdRelLongCard(p){
 }
 function _vdRelShortCard(p){
   const cat=p.cat||'fitness';const color=CAT_C[cat]||'#717171';const t=vidThumb(p,240);
-  const inner = t ? `<img src="${t}" loading="lazy"/>` : `<div class="dd-rel-short-bg" style="background:linear-gradient(135deg,${color}22,${color}55);"><span class="mi" style="color:${color};">play_circle</span></div>`;
+  const inner = t ? `<img src="${t}" loading="lazy" decoding="async"/>` : `<div class="dd-rel-short-bg" style="background:linear-gradient(135deg,${color}22,${color}55);"><span class="mi" style="color:${color};">play_circle</span></div>`;
   return `<div class="dd-rel-short" onclick="openVideo('${p.id}')">
     <div class="dd-rel-short-thumb">${inner}<span class="dd-rel-badge">$${(p.dareBounty||0).toLocaleString('en-IN')}</span></div>
     <div class="dd-rel-short-title">${escHtml(p.dareTitle||'')}</div>
@@ -3990,7 +3990,7 @@ function _videoCardSearch(p) {
   const dur=p.videoDuration?(p.videoDuration>=60?Math.floor(p.videoDuration/60)+':'+String(p.videoDuration%60).padStart(2,'0'):p.videoDuration+'s'):'';
   return `<div class="yt-card" onclick="openVideo('${p.id}')">
     <div class="yt-thumb">
-      ${vidThumb(p,480)?`<img src="${vidThumb(p,480)}" alt="" loading="lazy" style="width:100%;height:100%;object-fit:cover;display:block;"/>`:`<div class="yt-thumb-bg"><span class="mi">${icon}</span></div>`}
+      ${vidThumb(p,480)?`<img src="${vidThumb(p,480)}" alt="" loading="lazy" decoding="async" style="width:100%;height:100%;object-fit:cover;display:block;"/>`:`<div class="yt-thumb-bg"><span class="mi">${icon}</span></div>`}
       <div class="yt-play-over"><span class="mi">play_circle</span></div>
       <div class="yt-bounty">$${(p.dareBounty||0).toLocaleString('en-IN')}</div>
       ${dur?`<div style="position:absolute;bottom:8px;right:8px;background:rgba(0,0,0,.8);color:#fff;font-size:10px;font-weight:600;padding:2px 7px;border-radius:5px;">${dur}</div>`:''}
@@ -6162,7 +6162,7 @@ function _longCardHtml(p) {
   return `
     <div class="yt-card" onclick="openVideoDetail('${p.id}')" data-vurl="${p.videoURL||''}" data-dur="${p.videoDuration||0}">
       <div class="yt-thumb">
-        ${t ? `<img src="${t}" alt="" loading="lazy" onerror="this.style.display='none'"/>` : `<div class="yt-thumb-bg"><span class="mi">bolt</span></div>`}
+        ${t ? `<img src="${t}" alt="" loading="lazy" decoding="async" onerror="this.style.display='none'"/>` : `<div class="yt-thumb-bg"><span class="mi">bolt</span></div>`}
         ${dur?`<div class="yt-dur">${dur}</div>`:''}
         <div class="yt-bounty">$${(p.dareBounty||0).toLocaleString('en-IN')}</div>
       </div>
@@ -6186,7 +6186,7 @@ function _shortsRowHtml(shorts) {
       return `
       <div class="short-card" onclick="openShorts('${p.id}')" data-vurl="${p.videoURL||''}" data-dur="${p.videoDuration||0}">
         <div class="short-thumb">
-          ${t ? `<img src="${t}" alt="" loading="lazy" onerror="this.style.display='none'"/>` : `<div class="yt-thumb-bg"><span class="mi">bolt</span></div>`}
+          ${t ? `<img src="${t}" alt="" loading="lazy" decoding="async" onerror="this.style.display='none'"/>` : `<div class="yt-thumb-bg"><span class="mi">bolt</span></div>`}
           <div class="short-bounty-tag">$${(p.dareBounty||0).toLocaleString('en-IN')}</div>
         </div>
         <div class="short-cap">${escHtml(_cap)}</div>

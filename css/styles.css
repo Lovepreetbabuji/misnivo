@@ -2519,7 +2519,7 @@ textarea.f-input{resize:vertical;min-height:84px;}
 /* Keep the main topbar visible — the dare / video page opens BELOW it */
 #dareDetailOverlay, #videoDetailOverlay{ top:56px; }
 /* Topbar turns solid (not transparent) while a detail overlay is open */
-body.detail-open .topbar{ background:rgba(18,18,18,.78) !important; backdrop-filter:var(--blur) !important; -webkit-backdrop-filter:var(--blur) !important; }
+body.detail-open .topbar{ background:rgba(10,10,10,.98) !important; backdrop-filter:none !important; -webkit-backdrop-filter:none !important; }
 
 /* Scroll-to-top arrow (appears after scrolling the comments/columns down) */
 .dd-scrolltop{ position:fixed; right:22px; bottom:22px; width:46px; height:46px; border-radius:50%; border:1px solid var(--border2); background:#1a1a1a; color:var(--t1); cursor:pointer; display:none; align-items:center; justify-content:center; z-index:170; box-shadow:0 6px 20px rgba(0,0,0,.55); }
@@ -3741,4 +3741,19 @@ body.ov-open{overflow:hidden;}
     backdrop-filter:none !important;-webkit-backdrop-filter:none !important;
     background:rgba(12,12,12,.97) !important;
   }
+}
+
+/* ═══════════════════════════════════════════════════════
+   PERF (desktop + mobile)
+═══════════════════════════════════════════════════════ */
+/* 1) Virtualize the long-video feed the cheap CSS way — off-screen cards skip
+   layout & paint entirely (YouTube renders only what's visible). */
+.feed-longs > .yt-card{ content-visibility:auto; contain-intrinsic-size:auto 480px; }
+@media(max-width:768px){ .feed-longs > .yt-card{ contain-intrinsic-size:auto 300px; } }
+
+/* 2) Fixed bars: solid tint, NO backdrop-blur — a blurred fixed bar recomputes on
+   every scroll frame (cost on desktop too, not just mobile). Near-identical look. */
+.topbar, .bottom-nav{
+  backdrop-filter:none !important;-webkit-backdrop-filter:none !important;
+  background:rgba(14,14,14,.98) !important;
 }
