@@ -581,6 +581,7 @@ function goPage(pg, _fromPop) {
   // Navigating to a page closes any open page-modal (its history entry gets REPLACED below)
   const _ovWasOpen = (!_fromPop && !_navBack && _ovStack.length) ? _ovCloseAllSilent() : false;
   try{ _pvStop(); }catch(e){}
+  try{ _pauseAllMedia(false); }catch(e){}   // leaving a page stops everything it was playing
   if (typeof _closeDetailOverlays === 'function') _closeDetailOverlays();
   document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
   const el = document.getElementById('page' + pg.charAt(0).toUpperCase() + pg.slice(1));
@@ -611,6 +612,8 @@ function goPage(pg, _fromPop) {
     else if (_curPage !== pg) { try{ history.pushState(st, '', url); }catch(e){} }
   }
   _curPage = pg;
+  // coming (back) onto a page: restart the mobile scroll-autoplay for the centered card
+  if (typeof _pvIsTouch === 'function' && _pvIsTouch()) setTimeout(()=>{ try{ _pvPlayCentered(); }catch(e){} }, 900);
 }
 
 // Mobile profile mini-bar — back button
@@ -968,8 +971,7 @@ function openVideoPlay(proofId) {
     document.getElementById('vpSub').textContent    = `By ${p.takerName} • Rs.${(p.dareBounty||0).toLocaleString('en-IN')} bounty won`;
     document.getElementById('vpAv').textContent     = (p.takerName||'?')[0].toUpperCase();
     const player = document.getElementById('vpPlayer');
-    player.src = _optVid(p.videoURL, _vidMaxW());
-    player.load();
+    _playSmart(player, p.videoURL, { autoplay:false, maxW: _vidMaxW() });
     _ovOpen('videoPlayOverlay');
   });
 }
@@ -4283,6 +4285,7 @@ function _ovOpen(id, url){
   const el = document.getElementById(id); if(!el) return;
   el.classList.add('open');
   if(_ovStack.includes(id)) return;            // already tracked — don't double-push
+  try{ _pauseAllMedia(true); }catch(e){}       // popup on top → pause everything behind it
   _ovStack.push(id);
   _ovLock();
   try{ history.pushState({ _ov:id }, '', url || _MODAL_URL[id] || location.pathname); }catch(e){}
@@ -4297,6 +4300,7 @@ function _ovSync(id){
   _ovLock();
   _ovInPop = true;
   try{ history.go(-steps); }catch(e){ _ovInPop = false; }
+  if(!_ovStack.length) setTimeout(_resumeBgMedia, 80);   // last popup gone → resume what it paused
 }
 // popstate-driven close (phone BACK) → run the modal's real close fn.
 const _OV_CLOSERS = {
@@ -4381,6 +4385,7 @@ window.addEventListener('popstate', function(e){
     _ovInPop = true; _ovCloseById(id); _ovInPop = false;
     _ovStack.pop();
     _ovLock();
+    if(!_ovStack.length) setTimeout(_resumeBgMedia, 80);  // last popup gone → resume what it paused
     return;
   }
   const isOpen = id => { const el=document.getElementById(id); return el && el.classList.contains('open'); };
@@ -4781,9 +4786,7 @@ async function openVideoDetail(proofId) {
   } else if (player) {
     // already-seen (or short) → play directly, resuming where you left off
     const resume = _vdResumePos[p.id] || 0;
-    player.src = _optVid(p.videoURL, _vidMaxW());
-    if (resume){ const _seek=()=>{ try{ player.currentTime = resume; }catch(e){} player.removeEventListener('loadedmetadata', _seek); }; player.addEventListener('loadedmetadata', _seek); }
-    player.play().catch(()=>{});
+    _playSmart(player, p.videoURL, { resume, maxW: _vidMaxW() });
   }
 }
 let _vdAdShown = new Set();   // proofs that already showed their pre-roll this session
@@ -4820,7 +4823,7 @@ function _showInlineAd(player, p) {
     const open = document.getElementById('videoDetailOverlay')?.classList.contains('open');
     if (!open) return;
     if (typeof activeProof !== 'undefined' && activeProof && activeProof.id !== p.id) return;
-    player.src = _optVid(p.videoURL, _vidMaxW()); player.play().catch(()=>{});
+    _playSmart(player, p.videoURL, { maxW: _vidMaxW() });
   };
   _vdAdTick = setInterval(() => {
     secs--;
@@ -5028,7 +5031,7 @@ function _shortsSlideHtml(p, i) {
     </div>
 
     <div class="shorts-slide-box">
-      <video class="shorts-snap-video" data-src="${_optVid(p.videoURL, 720)}" poster="${vidThumb(p,480)}" loop playsinline preload="metadata"
+      <video class="shorts-snap-video" data-src="${p.videoURL||''}" poster="${vidThumb(p,480)}" loop playsinline preload="metadata"
         onclick="shortsSlideTogglePlay(this)" ontimeupdate="shortsSlideOnTime(this)"></video>
 
       <div class="shorts-top-ctrl">
@@ -5302,6 +5305,7 @@ function _shortsBuildMenu(p){
     </div>
     <button class="shorts-menu-action" onclick="shortsDownload()"><span class="mi">download</span> Download</button>
     <button class="shorts-menu-action" onclick="shortsCycleSpeed()"><span class="mi">slow_motion_video</span> Playback speed <span id="shortsSpeedLbl" style="margin-left:auto;color:var(--t3);">${_SHORTS_SPEEDS[_shortsSpeedIdx]}x</span></button>
+    <button class="shorts-menu-action" onclick="shortsQuality()"><span class="mi">tune</span> Quality <span id="shortsQLbl" style="margin-left:auto;color:var(--t3);">${_vqLabel()}</span></button>
     <button class="shorts-menu-action" onclick="shortsToggleAutoScroll()"><span class="mi">smart_display</span> Auto-scroll <span id="shortsAutoLbl" style="margin-left:auto;color:var(--t3);">${_shortsAutoScroll?'On':'Off'}</span></button>
     <button class="shorts-menu-action" onclick="shortsPiP()"><span class="mi">picture_in_picture_alt</span> Picture-in-picture</button>
     <button class="shorts-menu-report" onclick="openReportModal('proof','${p.id}')"><span class="mi">flag</span> Report</button>
@@ -6277,8 +6281,10 @@ function _shortsPlayCurrent() {
   items.forEach((it, i) => {
     const v = it.querySelector('video'); if (!v) return;
     if (Math.abs(i - shortsIndex) <= 1) {
-      if (!v.getAttribute('src') && v.dataset.src) v.src = v.dataset.src;
-    } else if (v.getAttribute('src')) {
+      if (!v._vqLoaded && v.dataset.src){ v._vqLoaded = true; _playSmart(v, v.dataset.src, { autoplay:false, maxW:720 }); }
+    } else if (v._vqLoaded || v.getAttribute('src')) {
+      v._vqLoaded = false;
+      _vqDestroy(v);
       try { v.pause(); v.removeAttribute('src'); v.load(); } catch(e){}
     }
   });
@@ -6573,6 +6579,7 @@ function _pvAddControls(thumb){
 // mode 'short' → cut-cut sampled snippet preview (always muted, no controls)
 function _pvPlay(card, mode){
   if (user && user.settings && user.settings.autoplay === false) return;   // Additional settings → Autoplay off
+  if (_ovStack.length || document.body.classList.contains('ov-open')) return;  // never preview behind a popup
   const vurl=card.getAttribute('data-vurl'); if(!vurl) return;
   if (_pvCard===card) return;
   _pvStop();
@@ -6733,3 +6740,178 @@ function _winScan(){
     .observe(document.body, { childList: true, subtree: true });
   setTimeout(_winScan, 800);
 })();
+
+// ════════════════════════════════════════════════════════════════════
+//  ADAPTIVE STREAMING (YouTube-style) — Cloudinary HLS (sp_auto) + hls.js.
+//  Quality steps up/down with the network mid-playback. Per-video quality
+//  menu (3-dots → Quality): Auto (Adaptive) or a locked resolution.
+//  If HLS fails (plan/transcode/unsupported) → silent fallback to the
+//  existing capped-MP4 path (_optVid), where manual quality reloads the src.
+// ════════════════════════════════════════════════════════════════════
+let _hlsLibP = null;
+function _ensureHls(){
+  if (window.Hls) return Promise.resolve();
+  if (_hlsLibP) return _hlsLibP;
+  _hlsLibP = new Promise((res, rej)=>{
+    const s = document.createElement('script');
+    s.src = 'https://cdn.jsdelivr.net/npm/hls.js@1.5.20/dist/hls.min.js';
+    s.onload = res; s.onerror = ()=>{ _hlsLibP = null; rej(); };
+    document.head.appendChild(s);
+  });
+  return _hlsLibP;
+}
+function _vidHlsUrl(url){
+  if(!url || !url.includes('res.cloudinary.com') || !url.includes('/video/upload/')) return null;
+  if(/\/video\/upload\/[^/]*sp_/.test(url)) return url;
+  return url.replace('/video/upload/', '/video/upload/sp_auto/')
+            .replace(/\.(mp4|webm|mov|mkv|avi)(\?.*)?$/i, '.m3u8');
+}
+// user quality preference: 'auto' (adaptive) or a number = shorter-side pixels
+let _vqPref = (function(){ try{ const v=localStorage.getItem('dm_vq'); return v && v!=='auto' ? +v : 'auto'; }catch(e){ return 'auto'; } })();
+const _VQ_W = { 1080:1920, 720:1280, 480:854, 360:640 };   // shorter-side → mp4 width cap
+function _vqDestroy(v){ if(v && v._hls){ try{ v._hls.destroy(); }catch(e){} v._hls=null; } if(v) v._isHls=false; }
+function _vqMp4W(maxW){
+  if(_vqPref==='auto') return maxW || _vidMaxW();
+  return Math.min(_VQ_W[_vqPref] || 1280, maxW || 99999);
+}
+function _playSmart(v, rawUrl, opts){
+  opts = opts || {};
+  if(!v || !rawUrl) return;
+  _vqDestroy(v);
+  v._rawUrl = rawUrl;
+  const done = ()=>{
+    if(opts.resume){ const s=()=>{ try{ v.currentTime = opts.resume; }catch(e){} };
+      if(v.readyState >= 1) s(); else v.addEventListener('loadedmetadata', s, { once:true }); }
+    if(opts.autoplay !== false) v.play().catch(()=>{});
+  };
+  const mp4 = ()=>{ _vqDestroy(v); v.src = _optVid(rawUrl, _vqMp4W(opts.maxW)); done(); };
+  const hlsUrl = _vidHlsUrl(rawUrl);
+  if(!hlsUrl){ mp4(); return; }
+  if(v.canPlayType('application/vnd.apple.mpegurl')){          // Safari: native HLS
+    v._isHls = 'native';
+    const bail = ()=>{ mp4(); };
+    v.addEventListener('error', bail, { once:true });
+    v.src = hlsUrl; done(); return;
+  }
+  _ensureHls().then(()=>{
+    if(!window.Hls || !Hls.isSupported()){ mp4(); return; }
+    const h = new Hls({ capLevelToPlayerSize:true, maxBufferLength:20, backBufferLength:30 });
+    v._hls = h; v._isHls = true;
+    h.on(Hls.Events.ERROR, (e, data)=>{ if(data && data.fatal){ _vqDestroy(v); mp4(); } });
+    h.on(Hls.Events.MANIFEST_PARSED, ()=>{ _vqApply(v); done(); });
+    h.loadSource(hlsUrl);
+    h.attachMedia(v);
+  }).catch(mp4);
+}
+// apply the current preference to a video (hls: level lock / auto; mp4: reload src)
+function _vqApply(v){
+  if(!v) return;
+  if(v._hls && v._hls.levels && v._hls.levels.length){
+    if(_vqPref === 'auto'){ v._hls.currentLevel = -1; return; }
+    let best = -1, bestD = 1e9;
+    v._hls.levels.forEach((L, i)=>{
+      const side = Math.min(L.width||0, L.height||0) || (L.height||0);
+      const d = Math.abs(side - _vqPref);
+      if(d < bestD){ bestD = d; best = i; }
+    });
+    v._hls.currentLevel = best;
+    return;
+  }
+  if(v._rawUrl && !v._isHls){                                   // capped-MP4 mode → reload at new cap
+    const t = v.currentTime || 0, playing = !v.paused && !v.ended;
+    v.src = _optVid(v._rawUrl, _vqMp4W());
+    v.addEventListener('loadedmetadata', ()=>{ try{ v.currentTime = t; }catch(e){} if(playing) v.play().catch(()=>{}); }, { once:true });
+  }
+}
+function _vqLabel(){ return _vqPref==='auto' ? 'Auto' : _vqPref+'p'; }
+
+// ── Quality menu (micro panel — same policy as dropdowns: no URL/back entry) ──
+let _vqTarget = null;
+function openQualityMenu(v){
+  if(!v) return;
+  _vqTarget = v;
+  let w = document.getElementById('vqWrap');
+  if(!w){
+    w = document.createElement('div');
+    w.id = 'vqWrap'; w.className = 'vq-wrap';
+    w.innerHTML = '<div class="vq-dim" onclick="closeQualityMenu()"></div><div class="vq-menu" id="vqMenu"></div>';
+    document.body.appendChild(w);
+  }
+  // resolutions: from the HLS ladder when available, else the standard set
+  let opts = [1080, 720, 480, 360];
+  if(v._hls && v._hls.levels && v._hls.levels.length){
+    const set = [...new Set(v._hls.levels.map(L=>Math.min(L.width||0,L.height||0)||L.height||0))].filter(Boolean);
+    if(set.length) opts = set.sort((a,b)=>b-a);
+  }
+  const m = document.getElementById('vqMenu');
+  const item = (val, lbl, sub)=>{
+    const sel = String(_vqPref) === String(val);
+    return '<button class="vq-item'+(sel?' sel':'')+'" onclick="_vqChoose(\''+val+'\')">'
+      + '<span class="mi">'+(sel?'check':(val==='auto'?'autorenew':'high_quality'))+'</span>'
+      + '<span>'+lbl+(sub?' <span class="vq-sub">'+sub+'</span>':'')+'</span></button>';
+  };
+  m.innerHTML = '<div class="vq-title">Video quality</div>'
+    + item('auto', 'Auto (Adaptive)', 'network ke hisaab se')
+    + opts.map(o=>item(o, o+'p')).join('');
+  w.classList.add('open');
+}
+function closeQualityMenu(){ const w=document.getElementById('vqWrap'); if(w) w.classList.remove('open'); }
+function _vqChoose(val){
+  _vqPref = (val==='auto') ? 'auto' : +val;
+  try{ localStorage.setItem('dm_vq', String(_vqPref)); }catch(e){}
+  if(_vqTarget) _vqApply(_vqTarget);
+  const l = document.getElementById('shortsQLbl'); if(l) l.textContent = _vqLabel();
+  closeQualityMenu();
+  showToast(_vqPref==='auto' ? 'Quality: Auto (Adaptive)' : 'Quality: '+_vqPref+'p');
+}
+function shortsQuality(){
+  const c = document.getElementById('shortsSnapContainer'); if(!c) return;
+  const it = c.querySelectorAll('.shorts-snap-item')[shortsIndex];
+  const v = it && it.querySelector('video');
+  if(v) openQualityMenu(v);
+}
+
+// ── Buffering spinner: any long/short player that stalls on the network shows
+//    a centered loading circle (media events don't bubble — use capture). ──
+(function(){
+  const SEL = '#vdPlayer, #vpPlayer, .shorts-snap-video';
+  function spinFor(v, make){
+    const p = v.parentElement; if(!p) return null;
+    if(!p._vspin && make){
+      if(getComputedStyle(p).position === 'static') p.style.position = 'relative';
+      const s = document.createElement('div'); s.className = 'vspin'; s.style.display = 'none';
+      p.appendChild(s); p._vspin = s;
+    }
+    return p._vspin || null;
+  }
+  const isV = e => e.target instanceof HTMLVideoElement && e.target.matches(SEL);
+  const show = e => { if(!isV(e)) return; const s = spinFor(e.target, true); if(s) s.style.display = 'block'; };
+  const hide = e => { if(!isV(e)) return; const s = spinFor(e.target, false); if(s) s.style.display = 'none'; };
+  ['waiting','stalled','seeking'].forEach(ev => document.addEventListener(ev, show, true));
+  ['playing','canplay','pause','emptied','error','seeked'].forEach(ev => document.addEventListener(ev, hide, true));
+  document.addEventListener('play', e => { if(isV(e) && e.target.readyState < 3) show(e); }, true);
+})();
+
+// ── Pause the world behind popups / page switches; resume on the way back ──
+let _bgPaused = [];
+function _pauseAllMedia(track){
+  try{ _pvStop(); }catch(e){}
+  document.querySelectorAll('video').forEach(v=>{
+    if(!v.paused && !v.ended){
+      if(track){ v._bgResume = true; _bgPaused.push(v); }
+      try{ v.pause(); }catch(e){}
+    }
+  });
+  if(!track) _bgPaused = [];        // page switch → nothing should auto-resume later
+}
+function _resumeBgMedia(){
+  const list = _bgPaused; _bgPaused = [];
+  list.forEach(v=>{
+    if(!v._bgResume || !v.isConnected) return;
+    v._bgResume = false;
+    const ov = v.closest('.overlay, .video-detail-overlay, #shortsOverlay');
+    const pg = v.closest('.page');
+    const visible = (ov && ov.classList.contains('open')) || (pg && pg.classList.contains('active'));
+    if(visible) v.play().catch(()=>{});
+  });
+}
