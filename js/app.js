@@ -6688,3 +6688,48 @@ _pvBindScroll();
   };
   window.addEventListener('scroll', onScroll, { passive:true });
 })();
+
+// ════════════════════════════════════════════════════════════════════
+//  DOM WINDOWING — the real YouTube technique. content-visibility already
+//  skips off-screen LAYOUT+PAINT, but the nodes (and their decoded images)
+//  stay in the DOM / GPU memory. Here, cards far outside the viewport
+//  (±1500px) get their innerHTML swapped for a fixed-height empty shell and
+//  restored as they scroll back near. Cuts GPU memory + per-frame raster.
+// ════════════════════════════════════════════════════════════════════
+const _WIN_SEL = '.yt-card, .dare-list-card, .active-dare-card, .short-card';
+let _winIO = null;
+function _winEmpty(el, h){
+  if (el._winOut || !h) return;          // h=0 → card inside a hidden page, skip
+  el._winHtml = el.innerHTML;
+  el.style.height = h + 'px';            // exact height → zero layout shift
+  el.innerHTML = '';
+  el._winOut = true;
+}
+function _winRestore(el){
+  if (!el._winOut) return;
+  el.innerHTML = el._winHtml || '';
+  el._winHtml = null;
+  el.style.height = '';
+  el._winOut = false;
+}
+function _winScan(){
+  if (!_winIO){
+    _winIO = new IntersectionObserver((ents)=>{
+      for (const en of ents){
+        const el = en.target;
+        if (en.isIntersecting) _winRestore(el);
+        else if (el.isConnected) _winEmpty(el, en.boundingClientRect.height);
+      }
+    }, { rootMargin: '1500px' });
+  }
+  document.querySelectorAll(_WIN_SEL).forEach(c=>{
+    if (!c._winObs && !c.classList.contains('skel-yt')){ c._winObs = true; _winIO.observe(c); }
+  });
+}
+// One hook covers every render path: whenever a feed re-renders, re-scan.
+(function(){
+  let _wTO = null;
+  new MutationObserver(()=>{ if (_wTO) clearTimeout(_wTO); _wTO = setTimeout(_winScan, 180); })
+    .observe(document.body, { childList: true, subtree: true });
+  setTimeout(_winScan, 800);
+})();
