@@ -6783,9 +6783,13 @@ function _playSmart(v, rawUrl, opts){
   _vqDestroy(v);
   v._rawUrl = rawUrl;
   const done = ()=>{
-    if(opts.resume){ const s=()=>{ try{ v.currentTime = opts.resume; }catch(e){} };
-      if(v.readyState >= 1) s(); else v.addEventListener('loadedmetadata', s, { once:true }); }
-    if(opts.autoplay !== false) v.play().catch(()=>{});
+    // seek FIRST, play AFTER — playing before the seek lands means the user
+    // hears the first seconds of audio before the video jumps to the resume point
+    const start = ()=>{ if(opts.autoplay !== false) v.play().catch(()=>{}); };
+    if(opts.resume){
+      const s = ()=>{ try{ v.currentTime = opts.resume; }catch(e){} start(); };
+      if(v.readyState >= 1) s(); else v.addEventListener('loadedmetadata', s, { once:true });
+    } else start();
   };
   const hlsUrl = _vidHlsUrl(rawUrl);
   let _fellBack = false;
@@ -6898,17 +6902,44 @@ function shortsQuality(){
     if(!p._vspin && make){
       if(getComputedStyle(p).position === 'static') p.style.position = 'relative';
       const s = document.createElement('div'); s.className = 'vspin'; s.style.display = 'none';
+      s.innerHTML = '<span class="mi">bolt</span>';           // brand loader — the shimmering bolt
       p.appendChild(s); p._vspin = s;
     }
     return p._vspin || null;
   }
   const isV = e => e.target instanceof HTMLVideoElement && e.target.matches(SEL);
-  const show = e => { if(!isV(e)) return; const s = spinFor(e.target, true); if(s) s.style.display = 'block'; };
+  const show = e => { if(!isV(e)) return;
+    if(!navigator.onLine) e.target._netErr = true;            // stalled offline → retry when back online
+    const s = spinFor(e.target, true); if(s) s.style.display = 'block'; };
   const hide = e => { if(!isV(e)) return; const s = spinFor(e.target, false); if(s) s.style.display = 'none'; };
   ['waiting','stalled','seeking'].forEach(ev => document.addEventListener(ev, show, true));
-  ['playing','canplay','pause','emptied','error','seeked'].forEach(ev => document.addEventListener(ev, hide, true));
+  ['playing','canplay','pause','emptied','seeked'].forEach(ev => document.addEventListener(ev, hide, true));
   document.addEventListener('play', e => { if(isV(e) && e.target.readyState < 3) show(e); }, true);
+  // load error while OFFLINE: keep the bolt pulsing (it will auto-retry on reconnect);
+  // a real error while online just hides the loader
+  document.addEventListener('error', e => {
+    if(!isV(e)) return;
+    const v = e.target;
+    if(!navigator.onLine){ v._netErr = true; const s = spinFor(v, true); if(s) s.style.display = 'block'; }
+    else { const s = spinFor(v, false); if(s) s.style.display = 'none'; }
+  }, true);
 })();
+
+// ── Offline / online: tell the user + auto-recover interrupted videos ──
+window.addEventListener('offline', ()=>{ try{ showToast('No internet connection'); }catch(e){} });
+window.addEventListener('online', ()=>{
+  try{ showToast('Back online'); }catch(e){}
+  document.querySelectorAll('video').forEach(v=>{
+    if(!v._netErr || !v.isConnected || !v._rawUrl) return;
+    v._netErr = false;
+    const host = v.closest('.overlay.open, .video-detail-overlay.open, #shortsOverlay.open, .page.active');
+    if(host) _playSmart(v, v._rawUrl, { resume: v.currentTime || 0,
+      maxW: v.classList.contains('shorts-snap-video') ? 720 : _vidMaxW() });
+  });
+});
+
+// ── Offline app shell (fonts/css/js survive refresh without network) ──
+if ('serviceWorker' in navigator) { try{ navigator.serviceWorker.register('/sw.js'); }catch(e){} }
 
 // ── Pause the world behind popups / page switches; resume on the way back ──
 let _bgPaused = [];
