@@ -3844,3 +3844,22 @@ body.scrolling .yt-card, body.scrolling .active-dare-card, body.scrolling .short
   .vq-menu{top:auto;bottom:0;left:0;right:0;transform:none;border-radius:18px 18px 0 0;
     min-width:0;max-width:none;padding-bottom:max(8px, env(safe-area-inset-bottom));}
 }
+
+/* ═══ App chrome stays visible under full-page modals (DESKTOP) ═══════════
+   User request: the topbar and the left sidebar must never disappear behind
+   as-page popups (Settings/Post/Deposit/…) — like YouTube, the chrome is
+   permanent and clicking it navigates away (goPage already closes modals).
+   Modals now open BELOW the topbar and RIGHT of the sidebar. Mobile keeps
+   true full-screen modals (they have their own back-arrow header). */
+@media(min-width:769px){
+  .overlay.as-page,
+  .profile-edit-overlay.as-page,
+  .video-modal-overlay.as-page{ top:56px; left:var(--sw); }
+}
+@media(min-width:769px) and (max-width:900px){
+  .overlay.as-page,
+  .profile-edit-overlay.as-page,
+  .video-modal-overlay.as-page{ left:72px; }   /* collapsed sidebar width */
+}
+/* Topbar popovers (notifications) must open ABOVE an open as-page modal */
+.notif-panel{ z-index:9650 !important; }
