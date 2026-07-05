@@ -3863,3 +3863,19 @@ body.scrolling .yt-card, body.scrolling .active-dare-card, body.scrolling .short
 }
 /* Topbar popovers (notifications) must open ABOVE an open as-page modal */
 .notif-panel{ z-index:9650 !important; }
+
+/* Desktop as-page modals: SOLID page surface. With the topbar+sidebar now
+   visible, the old translucent glass showed the feed half-bleeding through —
+   read as a weird floating box. Solid bg = it reads as a real page swap
+   (YouTube-style). Blur is pointless over a solid bg → off (GPU saving).
+   Mobile keeps the full-screen glass look. */
+@media(min-width:769px){
+  .overlay.as-page,
+  .profile-edit-overlay.as-page,
+  .video-modal-overlay.as-page{ background:var(--bg); }
+  .overlay.as-page.open,
+  .profile-edit-overlay.as-page.open,
+  .video-modal-overlay.as-page.open{
+    backdrop-filter:none !important; -webkit-backdrop-filter:none !important;
+  }
+}
