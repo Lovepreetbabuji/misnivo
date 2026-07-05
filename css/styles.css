@@ -3624,7 +3624,6 @@ html{scroll-behavior:smooth;}
    lighter "box" silhouette (deeper tint than the notif panel). Column centered. */
 .overlay.as-page{
   background:rgba(10,10,10,.92);
-  backdrop-filter:blur(10px) !important;-webkit-backdrop-filter:blur(10px) !important;
   align-items:flex-start;justify-content:center;padding:0;overflow-y:auto;z-index:9500;
 }
 .overlay.as-page .modal{
@@ -3640,7 +3639,6 @@ html{scroll-behavior:smooth;}
 
 .profile-edit-overlay.as-page{
   background:rgba(10,10,10,.92);
-  backdrop-filter:blur(10px) !important;-webkit-backdrop-filter:blur(10px) !important;
   align-items:flex-start;justify-content:center;padding:0;overflow-y:auto;z-index:9500;
 }
 .profile-edit-overlay.as-page .profile-edit-modal{
@@ -3653,7 +3651,7 @@ html{scroll-behavior:smooth;}
 
 .video-modal-overlay.as-page{
   background:rgba(10,10,10,.92);
-  backdrop-filter:blur(10px) !important;-webkit-backdrop-filter:blur(10px) !important;z-index:9500;
+  z-index:9500;
   align-items:flex-start;justify-content:center;overflow-y:auto;
 }
 .video-modal-overlay.as-page .video-modal-inner{margin:24px auto 60px;}
@@ -3778,3 +3776,23 @@ body.ov-open{overflow:hidden;}
 /* PERF: while scrolling, cards ignore the pointer so their :hover transform / preview
    can't fire on every card sliding under a stationary cursor (desktop scroll jank). */
 body.scrolling .yt-card, body.scrolling .active-dare-card, body.scrolling .short-card{ pointer-events:none; }
+
+/* ═══ THE REAL LAG FIX (proven by CDP layer dump) ═══════════════════════
+   All ~20 closed as-page modals sat in the DOM at opacity:0 with an ACTIVE
+   backdrop-filter — every one kept a full-screen compositor layer + per-frame
+   backdrop snapshot alive (~80 layers, 68ms/frame draw vs YouTube's 1.2ms).
+   Blur exists ONLY while a modal is actually open; closed overlays are fully
+   retired from the compositor via visibility (transition-friendly: fade-out
+   still plays, visibility flips at transition end). */
+.overlay.as-page.open,
+.profile-edit-overlay.as-page.open,
+.video-modal-overlay.as-page.open{
+  backdrop-filter:blur(10px) !important;-webkit-backdrop-filter:blur(10px) !important;
+}
+.as-page:not(.open){ visibility:hidden; }
+
+/* fadeUp/pgIn* used fill-mode "both" — a FINISHED fill-mode animation stays
+   "active" forever, keeping the whole page promoted as a compositor layer.
+   Keyframes end at the natural state, so no fill is needed. */
+.page.active{animation-fill-mode:none;}
+.page.active.nav-fwd,.page.active.nav-back{animation-fill-mode:none;}
