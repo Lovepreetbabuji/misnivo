@@ -4741,7 +4741,7 @@ function enterGuestMode() {
   // Load dares (public read — no auth needed for Firestore read)
   startDaresListener();
   AdManager.initScrollAds();
-  goPage('home');
+  _bootRoute();   // respect a shared deep link (/watch/...) instead of always landing home
 }
 
 function guestCheck(actionKey) {
