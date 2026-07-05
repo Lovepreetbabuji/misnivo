@@ -4212,6 +4212,7 @@ function _closeDetailOverlays(){
 //    browser/phone back-forward work natively and links are shareable. ──
 let _navBack = false;            // true while opening in response to a route (don't push a new URL)
 let _routedInitial = false;      // deep-link handled?
+let _deepLinkPath  = null;       // /watch|/shorts|/dare|/u path saved at boot — goPage('home') rewrites the URL to '/' before the data arrives
 let _vdResumePos = {};           // proofId → seconds (resume long videos where you left)
 function _dmPush(){ try{ history.pushState({dm:Date.now()},''); }catch(e){} }   // for sub-layers (comment box etc.)
 function _pauseBackgroundMedia(){
@@ -4253,13 +4254,24 @@ function _dmRouteFromUrl(){
 // On cold load / refresh of a deep link, open it once the data is available
 function _maybeInitialRoute(){
   if (_routedInitial) return;
-  const m = (location.pathname||'').match(/^\/(watch|shorts|dare|u)\/([^/?#]+)/);
+  // boot rewrote the URL to '/' (goPage home) — route from the SAVED deep link
+  const src = _deepLinkPath || (location.pathname||'');
+  const m = src.match(/^\/(watch|shorts|dare|u)\/([^/?#]+)/);
   if (!m){ _routedInitial = true; return; }
   const id = decodeURIComponent(m[2]);
   const ready = (m[1]==='u') ? true                 // public profile fetches its own user doc
     : (m[1]==='dare') ? (dares||[]).some(d=>d.id===id)
     : [...(typeof homeProofs!=='undefined'?homeProofs:[]),...(typeof allProofs!=='undefined'?allProofs:[])].some(p=>p.id===id);
-  if (ready){ _routedInitial = true; _dmRouteFromUrl(); }
+  if (ready){
+    _routedInitial = true; _deepLinkPath = null;
+    // open NORMALLY (not via _dmRouteFromUrl) so _enterView pushes the real
+    // /watch|/shorts|/dare|/u URL on top of home — refresh restores the page,
+    // and BACK from it lands on home
+    if (m[1]==='watch')       openVideoDetail(id);
+    else if (m[1]==='shorts') openShorts(id);
+    else if (m[1]==='u')      openPublicProfile(id);
+    else                      openDareDetail(id);
+  }
 }
 // ════════════════════════════════════════════════════════════════════
 //  BACK-BUTTON STACK (phase 1) — main task modals get their own history
@@ -4345,7 +4357,10 @@ document.addEventListener('click', (e)=>{
 // Open the page/modal that the URL points to (deep-link / refresh / address-bar visit)
 function _bootRoute(){
   const path=(location.pathname||'/').replace(/\/+$/,'')||'/';
-  if(/^\/(watch|shorts|dare|u)\//.test(path)){ goPage('home'); return; }   // detail view → _maybeInitialRoute opens it after data loads
+  if(/^\/(watch|shorts|dare|u)\//.test(path)){
+    _deepLinkPath = path;          // goPage('home') replaces the URL with '/' — save it first
+    goPage('home'); return;        // → _maybeInitialRoute opens it once the data loads
+  }
   const pg=_URL_PAGE[path];
   if(pg){ goPage(pg); return; }
   if(path==='/following'){ goPage('profile'); _ppFollowList('following'); return; }
@@ -6125,17 +6140,18 @@ function _renderInterleavedFeed(longVids, shorts) {
   _daresRowShown = false;
   const container = document.getElementById('homeVideoGrid');
   if (!container) return;
+  // Home order (fixed): Live/Active Dares FIRST → long videos → Shorts shelf LAST
   if (!_feedLong.length && !_feedShorts.length) {
-    container.innerHTML = `<div class="empty"><span class="mi">play_circle</span>
+    container.innerHTML = _homeDaresHtml();                        // live dares on top
+    container.insertAdjacentHTML('beforeend', `<div class="empty"><span class="mi">play_circle</span>
       <div class="empty-title">No Videos Yet</div>
       <p class="empty-desc">Complete a dare and submit video proof — it will appear here!</p>
-      <button class="btn-empty" onclick="goPage('dares')"><span class="mi">bolt</span>Browse Dares</button></div>`;
-    container.insertAdjacentHTML('beforeend', _homeDaresHtml());   // still show live dares
+      <button class="btn-empty" onclick="goPage('dares')"><span class="mi">bolt</span>Browse Dares</button></div>`);
     return;
   }
-  container.innerHTML = '';
+  container.innerHTML = _homeDaresHtml();                          // live dares on top
+  _daresRowShown = true;
   if (!_feedLong.length && _feedShorts.length) {
-    container.insertAdjacentHTML('beforeend', _homeDaresHtml()); _daresRowShown = true;
     // only shorts exist: show one shorts section
     container.insertAdjacentHTML('beforeend', _shortsRowHtml(_feedShorts));
     return;
@@ -6184,17 +6200,8 @@ function _appendFeedChunk() {
     _feedLongIdx++;
   }
   if (longHtml) container.insertAdjacentHTML('beforeend', `<div class="feed-longs">${longHtml}</div>`);
-  // Show the Shorts shelf once, after the first long chunk (independent of how many longs remain)
-  if (_feedShorts.length && !_shortsRowShown) {
-    _shortsRowShown = true;
-    const someShorts = _shuffle(_feedShorts).slice(0, Math.min(12, _feedShorts.length));
-    container.insertAdjacentHTML('beforeend', _shortsRowHtml(someShorts));
-  }
-  // Live Dares strip once, right after the shorts shelf / first chunk
-  if (!_daresRowShown) {
-    _daresRowShown = true;
-    container.insertAdjacentHTML('beforeend', _homeDaresHtml());
-  }
+  // (Shorts shelf appears once ALL longs are shown — see the exhausted branch above.
+  //  Live Dares strip is rendered at the very top by _renderInterleavedFeed.)
 }
 function _longCardHtml(p) {
   const dur = p.videoDuration ? (p.videoDuration>=60?Math.floor(p.videoDuration/60)+':'+String(p.videoDuration%60).padStart(2,'0'):'0:'+String(p.videoDuration).padStart(2,'0')) : '';
