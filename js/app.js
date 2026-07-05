@@ -12,6 +12,9 @@ const firebaseConfig = {
 firebase.initializeApp(firebaseConfig);
 const auth = firebase.auth();
 const db   = firebase.firestore();
+// Offline cache: repeat reads (page switches, re-opens) are served instantly from
+// local IndexedDB instead of a fresh network round-trip. Must run before any query.
+try { db.enablePersistence({ synchronizeTabs: true }).catch(()=>{}); } catch(e){}
 // Firebase Storage removed — requires paid plan.
 // Using Cloudinary (free, no credit card needed) instead.
 
@@ -467,6 +470,7 @@ function startDaresListener() {
   if (daresUnsub) daresUnsub();
   daresUnsub = db.collection('dares')
     .orderBy('createdAt', 'desc')
+    .limit(60)                       // newest 60 — cap the payload as the collection grows
     .onSnapshot((snap) => {
       dares = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
       _daresLoaded = true;
@@ -720,52 +724,49 @@ function _skelRows(n){
 
 async function renderHome(cat) {
   if (cat) homeFilterCat = cat;
-
   const grid = document.getElementById('homeVideoGrid');
-  // skeleton only when nothing is cached yet (slow network) — instant data = no flash
-  if (grid && !(homeProofs && homeProofs.length)) grid.innerHTML = _skelCards(5);
 
+  // 1) INSTANT paint from what we already have (memory this session, else the local
+  //    IndexedDB cache) — no waiting on the network for repeat opens.
+  if (homeProofs && homeProofs.length) {
+    _homeRenderFeed();
+  } else {
+    if (grid) grid.innerHTML = _skelCards(5);
+    try {
+      const c = await db.collection('proofs').where('status','==','approved').get({ source:'cache' });
+      if (!c.empty) { homeProofs = c.docs.map(d=>({id:d.id,...d.data()})); allProofs = homeProofs;
+        if (typeof _maybeInitialRoute === 'function') _maybeInitialRoute(); _homeRenderFeed(); }
+    } catch(e){}
+  }
+
+  // 2) REFRESH from the server in the background (stale-while-revalidate)
   try {
     const snap = await db.collection('proofs').where('status','==','approved').get();
     homeProofs = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
     allProofs = homeProofs; // sync for explorer/search/related
     if (typeof _maybeInitialRoute === 'function') _maybeInitialRoute();   // deep-link /watch|/shorts
-
-    const filtered = homeFilterCat === 'all'
-      ? homeProofs
-      : homeProofs.filter(p => {
-          // Check proof tags AND parent dare's tags
-          const parentDare = dares.find(d => d.id === p.dareId);
-          const pTags = [
-            ...(p.tags || (p.cat ? [p.cat] : [])),
-            ...(parentDare?.tags || (parentDare?.cat ? [parentDare.cat] : []))
-          ];
-          return pTags.some(t => t.toLowerCase() === homeFilterCat.toLowerCase());
-        });
-
-    // Split by video duration:
-    //   shorts  = videoDuration > 0 AND < 60 seconds
-    //   regular = no duration stored OR duration >= 60 seconds
-    // Route by aspect ratio: vertical (9:16) → shorts, horizontal (16:9) → long
-    // Fallback for old videos without dimensions: duration < 60 = short
-    // Routing: under 1 min OR 9:16 → Shorts; 1 min+ and 16:9 → Long (see _isShortVideo)
-    const shorts  = filtered.filter(p => _isShortVideo(p));
-    const regular = filtered.filter(p => !_isShortVideo(p));
-
-    // #7: Build interleaved infinite feed (long + shorts mixed, never-ending)
-    _renderInterleavedFeed(regular, shorts);
-    // Hide the old separate shorts section (now interleaved)
-    const oldShorts = document.getElementById('homeShortsSection');
-    if (oldShorts) oldShorts.style.display = 'none';
-
-    _renderHomeChips(homeProofs);
-
+    _homeRenderFeed();
   } catch(e) {
-    if (grid) grid.innerHTML = `<div class="empty">
+    if (grid && !(homeProofs && homeProofs.length)) grid.innerHTML = `<div class="empty">
       <span class="mi">error_outline</span>
       <div class="empty-title">Load Error</div>
       <p class="empty-desc">${e.message}</p></div>`;
   }
+}
+function _homeRenderFeed() {
+  const filtered = homeFilterCat === 'all'
+    ? homeProofs
+    : homeProofs.filter(p => {
+        const parentDare = dares.find(d => d.id === p.dareId);
+        const pTags = [ ...(p.tags || (p.cat ? [p.cat] : [])), ...(parentDare?.tags || (parentDare?.cat ? [parentDare.cat] : [])) ];
+        return pTags.some(t => t.toLowerCase() === homeFilterCat.toLowerCase());
+      });
+  const shorts  = filtered.filter(p => _isShortVideo(p));
+  const regular = filtered.filter(p => !_isShortVideo(p));
+  _renderInterleavedFeed(regular, shorts);
+  const oldShorts = document.getElementById('homeShortsSection');
+  if (oldShorts) oldShorts.style.display = 'none';
+  _renderHomeChips(homeProofs);
 }
 
 // ─── SECTION 1: DARE VIDEOS GRID ─────────────────────────
