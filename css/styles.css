@@ -3752,10 +3752,21 @@ body.ov-open{overflow:hidden;}
 /* ═══════════════════════════════════════════════════════
    PERF (desktop + mobile)
 ═══════════════════════════════════════════════════════ */
-/* 1) Virtualize the long-video feed the cheap CSS way — off-screen cards skip
-   layout & paint entirely (YouTube renders only what's visible). */
+/* 1) Virtualize EVERY card grid the cheap CSS way — off-screen cards skip layout &
+   paint entirely (YouTube renders only what's visible). Trace proved Rendering+Painting
+   (not JS) was the bottleneck: profile/explore/dares grids were painting all off-screen
+   cards. Targeting the card classes covers them in any container (grid OR column). */
 .feed-longs > .yt-card{ content-visibility:auto; contain-intrinsic-size:auto 480px; }
-@media(max-width:768px){ .feed-longs > .yt-card{ contain-intrinsic-size:auto 300px; } }
+.yt-grid > .yt-card,
+.dare-grid > *,
+.active-dare-grid > *,
+.dare-list-card,
+.active-dare-card{ content-visibility:auto; contain-intrinsic-size:auto 340px; }
+@media(max-width:768px){
+  .feed-longs > .yt-card{ contain-intrinsic-size:auto 300px; }
+  .yt-grid > .yt-card, .dare-grid > *, .active-dare-grid > *,
+  .dare-list-card, .active-dare-card{ contain-intrinsic-size:auto 260px; }
+}
 
 /* 2) Fixed bars: solid tint, NO backdrop-blur — a blurred fixed bar recomputes on
    every scroll frame (cost on desktop too, not just mobile). Near-identical look. */
