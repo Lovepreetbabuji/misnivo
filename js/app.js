@@ -6763,8 +6763,11 @@ function _ensureHls(){
 function _vidHlsUrl(url){
   if(!url || !url.includes('res.cloudinary.com') || !url.includes('/video/upload/')) return null;
   if(/\/video\/upload\/[^/]*sp_/.test(url)) return url;
-  return url.replace('/video/upload/', '/video/upload/sp_auto/')
-            .replace(/\.(mp4|webm|mov|mkv|avi)(\?.*)?$/i, '.m3u8');
+  let u = url.replace('/video/upload/', '/video/upload/sp_auto/');
+  if(/\.(mp4|webm|mov|mkv|avi)(\?.*)?$/i.test(u)) u = u.replace(/\.(mp4|webm|mov|mkv|avi)(\?.*)?$/i, '.m3u8');
+  else if(u.includes('?')) u = u.replace('?', '.m3u8?');
+  else u += '.m3u8';                    // extension-less Cloudinary URL → force HLS format
+  return u;
 }
 // user quality preference: 'auto' (adaptive) or a number = shorter-side pixels
 let _vqPref = (function(){ try{ const v=localStorage.getItem('dm_vq'); return v && v!=='auto' ? +v : 'auto'; }catch(e){ return 'auto'; } })();
@@ -6784,24 +6787,39 @@ function _playSmart(v, rawUrl, opts){
       if(v.readyState >= 1) s(); else v.addEventListener('loadedmetadata', s, { once:true }); }
     if(opts.autoplay !== false) v.play().catch(()=>{});
   };
-  const mp4 = ()=>{ _vqDestroy(v); v.src = _optVid(rawUrl, _vqMp4W(opts.maxW)); done(); };
   const hlsUrl = _vidHlsUrl(rawUrl);
+  let _fellBack = false;
+  const mp4 = ()=>{
+    if(_fellBack) return; _fellBack = true;
+    _vqDestroy(v); v.src = _optVid(rawUrl, _vqMp4W(opts.maxW)); done();
+    // warm the HLS derivation in the background so the NEXT play streams adaptively
+    if(hlsUrl){ try{ fetch(hlsUrl, { mode:'no-cors' }).catch(()=>{}); }catch(e){} }
+  };
   if(!hlsUrl){ mp4(); return; }
-  if(v.canPlayType('application/vnd.apple.mpegurl')){          // Safari: native HLS
+  const native = ()=>{                                          // Safari: native HLS
     v._isHls = 'native';
-    const bail = ()=>{ mp4(); };
-    v.addEventListener('error', bail, { once:true });
-    v.src = hlsUrl; done(); return;
-  }
+    v.addEventListener('error', mp4, { once:true });
+    // watchdog — some browsers claim HLS support but never load data
+    const wd = setTimeout(()=>{ if(v.readyState === 0) mp4(); }, 6000);
+    v.addEventListener('loadeddata', ()=>clearTimeout(wd), { once:true });
+    v.src = hlsUrl; done();
+  };
+  // hls.js FIRST (Chrome/Edge/Firefox claim "maybe" for HLS but can't really play it)
   _ensureHls().then(()=>{
-    if(!window.Hls || !Hls.isSupported()){ mp4(); return; }
-    const h = new Hls({ capLevelToPlayerSize:true, maxBufferLength:20, backBufferLength:30 });
+    if(!window.Hls || !Hls.isSupported()){
+      if(v.canPlayType('application/vnd.apple.mpegurl')) native(); else mp4();
+      return;
+    }
+    const h = new Hls({ capLevelToPlayerSize:true, maxBufferLength:20, backBufferLength:30,
+                        manifestLoadingMaxRetry:2, manifestLoadingRetryDelay:1000 });
     v._hls = h; v._isHls = true;
     h.on(Hls.Events.ERROR, (e, data)=>{ if(data && data.fatal){ _vqDestroy(v); mp4(); } });
     h.on(Hls.Events.MANIFEST_PARSED, ()=>{ _vqApply(v); done(); });
     h.loadSource(hlsUrl);
     h.attachMedia(v);
-  }).catch(mp4);
+  }).catch(()=>{
+    if(v.canPlayType('application/vnd.apple.mpegurl')) native(); else mp4();
+  });
 }
 // apply the current preference to a video (hls: level lock / auto; mp4: reload src)
 function _vqApply(v){
