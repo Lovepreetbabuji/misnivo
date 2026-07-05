@@ -1337,10 +1337,27 @@ function escHtml(str) {
 
 // Avatar inner-HTML: real profile photo if present, else the name's first letter.
 // Drop into any circular avatar container (it centers text / the img fills it).
+// Avatars show up on EVERY card/comment/list row. Serving the raw upload (often
+// 1000–3000px) means a heavy main-thread decode per avatar → scroll/load stutter.
+// Shrink to a tiny thumbnail on the CDN + async-decode + lazy-load.
+function _optAv(url) {
+  if (!url) return url;
+  // Cloudinary image upload → 96px square, face-aware, auto format/quality
+  if (url.includes('res.cloudinary.com') && url.includes('/image/upload/')) {
+    if (/\/image\/upload\/[a-z]+_[^/]*\//.test(url)) return url; // already transformed
+    return url.replace('/image/upload/', '/image/upload/w_96,h_96,c_fill,g_face,q_auto,f_auto/');
+  }
+  // Google profile photos support a size suffix — normalise to s96
+  if (url.includes('googleusercontent.com')) {
+    return /=s\d+/.test(url) ? url.replace(/=s\d+(-c)?/, '=s96-c')
+                             : (url.includes('=') ? url : url + '=s96-c');
+  }
+  return url;
+}
 function _avHtml(photoURL, name) {
   const letter = (String(name||'?').trim().charAt(0) || '?').toUpperCase().replace(/['"\\<>]/g,'');
   return photoURL
-    ? `<img src="${photoURL}" alt="" style="width:100%;height:100%;object-fit:cover;border-radius:50%;display:block;" onerror="this.parentElement.textContent='${letter}'"/>`
+    ? `<img src="${_optAv(photoURL)}" alt="" loading="lazy" decoding="async" style="width:100%;height:100%;object-fit:cover;border-radius:50%;display:block;" onerror="this.parentElement.textContent='${letter}'"/>`
     : letter;
 }
 
