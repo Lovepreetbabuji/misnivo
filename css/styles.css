@@ -414,8 +414,10 @@ body{
 }
 .sec-dot{
   width:8px;height:8px;background:var(--blue);border-radius:50%;
-  box-shadow:0 0 10px var(--blue);animation:pulse 2s infinite;
+  box-shadow:0 0 10px var(--blue);animation:secDot 2s ease-in-out infinite;
 }
+/* opacity+transform = compositor only (old box-shadow pulse repainted each frame) */
+@keyframes secDot{0%,100%{opacity:1;transform:scale(1);}50%{opacity:.55;transform:scale(.82);}}
 
 /* Home section headers */
 .home-section{margin-bottom:44px;animation:fadeUp .4s ease both;}
@@ -941,10 +943,14 @@ body{
 .fl-follow.following{background:var(--glass);color:var(--t1);border:1px solid var(--border2);}
 
 /* ── Skeleton loading (shimmer) — mirrors the real card UI (.feed-longs > .yt-card) ── */
-@keyframes skelShimmer{0%{background-position:-600px 0;}100%{background-position:600px 0;}}
-.skel{background:#161616;border-radius:8px;
-  background-image:linear-gradient(90deg,#161616 0,#222 40px,#161616 80px);
-  background-size:600px 100%;animation:skelShimmer 1.3s ease-in-out infinite;}
+/* Sweep runs on the compositor (transform only) — NO per-frame repaint, unlike the
+   old background-position shimmer which repainted every skeleton on every frame. */
+@keyframes skelSweep{100%{transform:translateX(100%);}}
+.skel{background:#161616;border-radius:8px;position:relative;overflow:hidden;}
+.skel::before{content:"";position:absolute;inset:0;
+  background:linear-gradient(90deg,transparent 0,rgba(255,255,255,.06) 50%,transparent 100%);
+  transform:translateX(-100%);animation:skelSweep 1.3s ease-in-out infinite;
+  will-change:transform;}
 .skel-fill{position:absolute;inset:0;border-radius:inherit;display:block;}
 .skel-yt{pointer-events:none;}
 .skel-yt::after{display:none !important;}
