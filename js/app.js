@@ -6911,7 +6911,11 @@ function shortsQuality(){
   const show = e => { if(!isV(e)) return;
     if(!navigator.onLine) e.target._netErr = true;            // stalled offline → retry when back online
     const s = spinFor(e.target, true); if(s) s.style.display = 'block'; };
-  const hide = e => { if(!isV(e)) return; const s = spinFor(e.target, false); if(s) s.style.display = 'none'; };
+  const hide = e => { if(!isV(e)) return;
+    // offline failure pending auto-retry → keep the bolt pulsing (the play()
+    // rejection fires a trailing 'pause' that would otherwise hide it)
+    if(e.type !== 'emptied' && e.target._netErr && !navigator.onLine) return;
+    const s = spinFor(e.target, false); if(s) s.style.display = 'none'; };
   ['waiting','stalled','seeking'].forEach(ev => document.addEventListener(ev, show, true));
   ['playing','canplay','pause','emptied','seeked'].forEach(ev => document.addEventListener(ev, hide, true));
   document.addEventListener('play', e => { if(isV(e) && e.target.readyState < 3) show(e); }, true);
