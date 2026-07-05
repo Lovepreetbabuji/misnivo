@@ -3757,3 +3757,7 @@ body.ov-open{overflow:hidden;}
   backdrop-filter:none !important;-webkit-backdrop-filter:none !important;
   background:rgba(14,14,14,.98) !important;
 }
+
+/* PERF: while scrolling, cards ignore the pointer so their :hover transform / preview
+   can't fire on every card sliding under a stationary cursor (desktop scroll jank). */
+body.scrolling .yt-card, body.scrolling .active-dare-card, body.scrolling .short-card{ pointer-events:none; }

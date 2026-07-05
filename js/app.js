@@ -6119,17 +6119,28 @@ function _renderInterleavedFeed(longVids, shorts) {
     return;
   }
   _appendFeedChunk(); _appendFeedChunk(); // initial chunks
-  // Infinite scroll: append more when near bottom (window is the scroller — .main has no overflow)
-  if (!_feedScrollBound) {
-    _feedScrollBound = true;
-    window.addEventListener('scroll', _feedMaybeLoadMore, { passive:true });
-  }
+  _feedEnsureSentinel(container);         // infinite scroll via IntersectionObserver
 }
-function _feedMaybeLoadMore() {
-  const home = document.getElementById('pageHome');
-  if (!home || !home.classList.contains('active')) return;
-  const nearBottom = (window.innerHeight + window.scrollY) >= (document.body.offsetHeight - 800);
-  if (nearBottom) _appendFeedChunk();
+// Infinite scroll WITHOUT reading layout on scroll: a 1px sentinel at the feed's end,
+// watched by an IntersectionObserver (rootMargin prefetches early). The old handler
+// read document.body.offsetHeight on every scroll event = forced reflow every frame.
+let _feedIO = null;
+function _feedEnsureSentinel(container){
+  let s = document.getElementById('feedSentinel');
+  if(!s){ s=document.createElement('div'); s.id='feedSentinel'; s.setAttribute('aria-hidden','true'); s.style.cssText='height:1px;width:100%;'; }
+  container.appendChild(s);   // keep it the last child
+  if(!_feedIO){
+    _feedIO = new IntersectionObserver((ents)=>{
+      if(!ents.some(e=>e.isIntersecting)) return;
+      const home=document.getElementById('pageHome');
+      if(home && home.classList.contains('active')){
+        _appendFeedChunk();
+        const c=document.getElementById('homeVideoGrid'), sn=document.getElementById('feedSentinel');
+        if(c && sn) c.appendChild(sn);   // move sentinel back to the end
+      }
+    }, { rootMargin:'1000px 0px' });
+    _feedIO.observe(s);
+  }
 }
 function _shuffle(a){const b=[...a];for(let i=b.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[b[i],b[j]]=[b[j],b[i]];}return b;}
 function _appendFeedChunk() {
@@ -6644,3 +6655,18 @@ function _pvStopOnNav(){ _pvStop(); }
 
 _pvBindHover();
 _pvBindScroll();
+
+// While actively scrolling, mark the body so hover effects on cards are suppressed —
+// otherwise every card that slides under a stationary cursor fires its :hover
+// transform/transition = repaint churn = dropped frames (desktop). Cheap: one class
+// toggled at scroll start, cleared 140ms after the last scroll event.
+(function(){
+  let _scrTO=null;
+  const onScroll=()=>{
+    const b=document.body;
+    if(!b.classList.contains('scrolling')) b.classList.add('scrolling');
+    if(_scrTO) clearTimeout(_scrTO);
+    _scrTO=setTimeout(()=>b.classList.remove('scrolling'), 140);
+  };
+  window.addEventListener('scroll', onScroll, { passive:true });
+})();
