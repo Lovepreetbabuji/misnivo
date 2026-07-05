@@ -3796,3 +3796,21 @@ body.scrolling .yt-card, body.scrolling .active-dare-card, body.scrolling .short
    Keyframes end at the natural state, so no fill is needed. */
 .page.active{animation-fill-mode:none;}
 .page.active.nav-fwd,.page.active.nav-back{animation-fill-mode:none;}
+
+/* ═══ Layer-audit leftovers (post THE-fix sweep) ═══════════════════════ */
+/* 1) Sidebar was the LAST element with a live backdrop-filter — a full-height
+      compositor layer + per-frame backdrop snapshot on every page. Solid tint
+      over the black bg is visually near-identical. */
+#sidebar, .sidebar{
+  backdrop-filter:none !important; -webkit-backdrop-filter:none !important;
+  background:rgba(11,8,8,.97) !important;
+}
+/* 2) Closed video/dare detail views sat at opacity:0 with a live blurred fixed
+      topbar inside (same disease as the as-page modals). visibility added to the
+      transition so the .25s fade-out still plays before the layer is retired. */
+.video-detail-overlay{ transition:opacity .25s ease, visibility .25s; }
+.video-detail-overlay:not(.open){ visibility:hidden; }
+/* 3) Finished entrance animations with fill-mode "both" keep every home/explore
+      section + comments promoted as compositor layers forever (7+ page-sized
+      layers found idle). Keyframes end at the natural state — no fill needed. */
+.home-section,.exp-section,.proof-item,.vd-comment,.ad-box{ animation-fill-mode:none; }
