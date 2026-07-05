@@ -450,6 +450,19 @@ async function initUser(fbUser) {
 //  REAL-TIME DARES LISTENER
 // ════════════════════════════
 let _daresLoaded = false;   // first snapshot arrived? (gates the skeleton loaders)
+// Re-render only the active page, debounced so a burst of dare doc-changes rebuilds once
+let _daresRerenderTO = null;
+function _daresRerenderDebounced(){
+  if (_daresRerenderTO) clearTimeout(_daresRerenderTO);
+  _daresRerenderTO = setTimeout(() => {
+    const activePage = document.querySelector('.page.active');
+    if (!activePage) return;
+    if (activePage.id === 'pageDares')    renderDaresPage();
+    if (activePage.id === 'pageAccepted') renderAcceptedPage();
+    if (activePage.id === 'pageProfile' && user){ _renderMyDares(); _renderAcceptedDares(); }
+    if (activePage.id === 'pageHome'){ const r=document.getElementById('homeDaresRow'); if(r) r.outerHTML=_homeDaresHtml(); }
+  }, 180);
+}
 function startDaresListener() {
   if (daresUnsub) daresUnsub();
   daresUnsub = db.collection('dares')
@@ -459,13 +472,7 @@ function startDaresListener() {
       _daresLoaded = true;
       _reconcileTakerApprovals();   // creator picked me? → unlock Submit Proof
       if (typeof _maybeInitialRoute === 'function') _maybeInitialRoute();   // deep-link /dare/:id
-      // Refresh whichever page is active
-      const activePage = document.querySelector('.page.active');
-      if (activePage?.id === 'pageDares')    renderDaresPage();
-      if (activePage?.id === 'pageAccepted') renderAcceptedPage();
-      if (activePage?.id === 'pageProfile' && user){ _renderMyDares(); _renderAcceptedDares(); }
-      // Also refresh the Live Dares strip on home
-      if (activePage?.id === 'pageHome'){ const r=document.getElementById('homeDaresRow'); if(r) r.outerHTML=_homeDaresHtml(); }
+      _daresRerenderDebounced();    // batch bursts of doc changes into one rebuild
     }, (err) => {
       console.error('Dares listener error:', err);
       showToast('Connection issue — please refresh');
@@ -6575,41 +6582,49 @@ function _pvPlay(card, mode){
   v.play().catch(()=>{});
 }
 
-// ── Desktop: hover to preview (long = normal play, short = cut-cut) ──
+// ── Desktop: hover to preview (with ~280ms hover-intent so sweeping the mouse
+//    across the feed doesn't spawn a video on every card) ──
+let _pvHoverTO=null;
 function _pvBindHover(){
   document.addEventListener('mouseover', (e)=>{
     if(_pvIsTouch()) return;
     const longC=e.target.closest('.feed-longs .yt-card');
     const shortC=e.target.closest('.short-card');
     const card=longC||shortC; if(!card) return;
-    // don't preview inside a detail overlay (related rail) — it competes with the main video
     if(card.closest('#videoDetailOverlay,#shortsOverlay,#dareDetailOverlay')) return;
-    if(card!==_pvCard) _pvPlay(card, longC ? 'long' : 'short');
+    if(card!==_pvCard){ clearTimeout(_pvHoverTO); _pvHoverTO=setTimeout(()=>_pvPlay(card, longC?'long':'short'), 280); }
   });
   document.addEventListener('mouseout', (e)=>{
     if(_pvIsTouch()) return;
     const card=e.target.closest('.feed-longs .yt-card, .short-card'); if(!card) return;
     const to=e.relatedTarget;
-    // only stop if we're truly leaving the card that's actually previewing
-    if(card===_pvCard && (!to || !card.contains(to))) _pvStop();
+    if(card===_pvCard && (!to || !card.contains(to))){ clearTimeout(_pvHoverTO); _pvStop(); }
+    else if(!to || !card.contains(to)){ clearTimeout(_pvHoverTO); }
   });
 }
 
-// ── Mobile: stop scrolling 3s on a centered card → it plays ──
-let _pvScrollTO=null;
+// ── Mobile: stop scrolling on a centered card → it plays. Uses an IntersectionObserver
+//    so we only measure ON-SCREEN cards (no getBoundingClientRect on the whole feed =
+//    no forced reflow, and it plays nice with content-visibility). ──
+let _pvScrollTO=null, _pvVisible=new Set(), _pvIO=null;
+function _pvObserveCards(){
+  if(!_pvIO){
+    _pvIO=new IntersectionObserver((ents)=>{
+      for(const en of ents){ if(en.isIntersecting) _pvVisible.add(en.target); else _pvVisible.delete(en.target); }
+    }, { threshold:0 });
+  }
+  document.querySelectorAll('.feed-longs .yt-card[data-vurl]').forEach(c=>{ if(!c._pvObs){ c._pvObs=true; _pvIO.observe(c); } });
+}
 function _pvPlayCentered(){
   if(!_pvIsTouch()) return;
-  // only the active home/explore page feed — never the watch-page related rail
-  const cards=[...document.querySelectorAll('.page.active .feed-longs .yt-card[data-vurl]')].filter(c=>c.getAttribute('data-vurl'));
-  if(!cards.length){ _pvStop(); return; }
+  _pvObserveCards();                                  // pick up newly-appended cards (no layout cost)
   const cy=window.innerHeight/2; let best=null, bestD=1e9;
-  for(const c of cards){
-    const r=c.getBoundingClientRect();
-    if(r.bottom<80 || r.top>window.innerHeight-80) continue;
+  for(const c of _pvVisible){
+    if(!c.isConnected || !c.closest('.page.active') || !c.getAttribute('data-vurl')) continue;
+    const r=c.getBoundingClientRect();               // only on-screen cards → cheap, already laid out
     const d=Math.abs((r.top+r.height/2)-cy);
     if(d<bestD){ bestD=d; best=c; }
   }
-  // nothing reasonably centered (within 32% of viewport) → stop any off-screen preview
   if(!best || bestD > window.innerHeight*0.32){ _pvStop(); return; }
   if(best!==_pvCard) _pvPlay(best, 'long');
 }
@@ -6621,7 +6636,6 @@ function _pvBindScroll(){
   };
   window.addEventListener('scroll', onScroll, { passive:true });
   const main=document.querySelector('.main'); if(main) main.addEventListener('scroll', onScroll, { passive:true });
-  // also try once shortly after load / page change
   setTimeout(()=>{ if(_pvIsTouch()) _pvPlayCentered(); }, 2200);
 }
 
