@@ -20,7 +20,7 @@
 <link href="https://fonts.googleapis.com/icon?family=Material+Icons+Round" rel="stylesheet"/>
 
 <!-- App Styles -->
-<link rel="stylesheet" href="/css/styles.css?v=20260706b"/>
+<link rel="stylesheet" href="/css/styles.css?v=20260706c"/>
 
 <!-- Firebase CDN -->
 <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
@@ -233,13 +233,9 @@
         <button class="chip active" onclick="homeFilter('all',this)">All</button>
       </div>
 
-      <!-- ══ SECTION 1: DARE VIDEOS (main grid) ══ -->
+      <!-- ══ SECTION 1: FEED (Live Dares → "Dare Videos" header → longs → shorts) ══
+           headers render inside the grid (JS) so each sits directly above its content -->
       <div class="home-section" id="homeSection1">
-        <div class="home-sec-hdr">
-          <div class="home-sec-dot"></div>
-          <span class="home-sec-title">Dare Videos</span>
-          <span class="home-sec-sub">Completed dares</span>
-        </div>
         <div id="homeVideoGrid"></div>
       </div>
 
@@ -1031,7 +1027,7 @@
 <div class="toast" id="toast"></div>
 
 <!-- App Logic -->
-<script src="/js/app.js?v=20260706b"></script>
+<script src="/js/app.js?v=20260706c"></script>
 
 <!-- ══ v0.19 NEW MODALS ══ -->
 

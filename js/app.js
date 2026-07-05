@@ -6140,7 +6140,13 @@ function _renderInterleavedFeed(longVids, shorts) {
   _daresRowShown = false;
   const container = document.getElementById('homeVideoGrid');
   if (!container) return;
-  // Home order (fixed): Live/Active Dares FIRST → long videos → Shorts shelf LAST
+  // Home order (fixed): Live/Active Dares FIRST → "Dare Videos" header directly
+  // above the long videos → Shorts shelf LAST (no header text above shorts)
+  const _videosHdr = `<div class="home-sec-hdr" style="margin-top:4px;">
+      <div class="home-sec-dot"></div>
+      <span class="home-sec-title">Dare Videos</span>
+      <span class="home-sec-sub">Completed dares</span>
+    </div>`;
   if (!_feedLong.length && !_feedShorts.length) {
     container.innerHTML = _homeDaresHtml();                        // live dares on top
     container.insertAdjacentHTML('beforeend', `<div class="empty"><span class="mi">play_circle</span>
@@ -6149,11 +6155,11 @@ function _renderInterleavedFeed(longVids, shorts) {
       <button class="btn-empty" onclick="goPage('dares')"><span class="mi">bolt</span>Browse Dares</button></div>`);
     return;
   }
-  container.innerHTML = _homeDaresHtml();                          // live dares on top
+  container.innerHTML = _homeDaresHtml() + _videosHdr;             // live dares → videos header
   _daresRowShown = true;
   if (!_feedLong.length && _feedShorts.length) {
-    // only shorts exist: show one shorts section
-    container.insertAdjacentHTML('beforeend', _shortsRowHtml(_feedShorts));
+    // only shorts exist: show one shorts section (header-less on home)
+    container.insertAdjacentHTML('beforeend', _shortsRowHtml(_feedShorts, true));
     return;
   }
   _appendFeedChunk(); _appendFeedChunk(); // initial chunks
@@ -6189,7 +6195,7 @@ function _appendFeedChunk() {
     // Longs exhausted: still show the Shorts shelf once if it hasn't appeared yet
     if (_feedShorts.length && !_shortsRowShown) {
       _shortsRowShown = true;
-      container.insertAdjacentHTML('beforeend', _shortsRowHtml(_shuffle(_feedShorts).slice(0, Math.min(12, _feedShorts.length))));
+      container.insertAdjacentHTML('beforeend', _shortsRowHtml(_shuffle(_feedShorts).slice(0, Math.min(12, _feedShorts.length)), true));
     }
     return;
   }
@@ -6223,9 +6229,9 @@ function _longCardHtml(p) {
     </div>`;
 }
 
-function _shortsRowHtml(shorts) {
+function _shortsRowHtml(shorts, noHdr) {
   return `<div class="home-section shorts-home-sec">
-    <div class="home-sec-hdr"><span class="mi" style="color:#FF0033;font-size:22px;">play_circle</span><span class="home-sec-title">Shorts</span></div>
+    ${noHdr ? '' : `<div class="home-sec-hdr"><span class="mi" style="color:#FF0033;font-size:22px;">play_circle</span><span class="home-sec-title">Shorts</span></div>`}
     <div class="shorts-row">${shorts.map(p=>{
       const t = vidThumb(p, 360);
       const _w = (p.dareTitle||'Short').trim().split(/\s+/);
