@@ -13,13 +13,15 @@ self.addEventListener('activate', e => {
 });
 
 self.addEventListener('fetch', e => {
+  self._evt = (self._evt || 0) + 1;                      // debug: handler invocation count
   const req = e.request;
   if (req.method !== 'GET') return;
   const url = new URL(req.url);
 
   // Never intercept: Firebase/auth traffic, Cloudinary video streams/manifests
-  if (url.hostname.includes('firestore') || url.hostname.includes('googleapis.com') && !url.hostname.startsWith('fonts.')) return;
+  if (url.hostname.includes('firestore') || (url.hostname.includes('googleapis.com') && !url.hostname.startsWith('fonts.'))) return;
   if (url.pathname.includes('/video/upload/')) return;
+  self._pass = (self._pass || 0) + 1;                    // debug: made it past the skips
 
   const sameOrigin = url.origin === self.location.origin;
   const isShell = sameOrigin && (
