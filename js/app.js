@@ -4299,6 +4299,10 @@ function _ovOpen(id, url){
   if(_ovStack.includes(id)) return;            // already tracked — don't double-push
   try{ _pauseAllMedia(true); }catch(e){}       // popup on top → pause everything behind it
   _ovStack.push(id);
+  // stack order = paint order: tracked overlays share z-index 9500, so one opened
+  // ON TOP of another painted UNDER it when it sat earlier in the DOM (bug: mobile
+  // section pages opened beneath Post/Settings — tap looked like nothing happened)
+  el.style.zIndex = String(9500 + _ovStack.length);
   _ovLock();
   try{ history.pushState({ _ov:id }, '', url || _MODAL_URL[id] || location.pathname); }catch(e){}
 }
