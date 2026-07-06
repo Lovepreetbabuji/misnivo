@@ -3879,3 +3879,16 @@ body.scrolling .yt-card, body.scrolling .active-dare-card, body.scrolling .short
     backdrop-filter:none !important; -webkit-backdrop-filter:none !important;
   }
 }
+
+/* ═══ Mobile: app topbar stays visible above full-page popups too (user ask —
+   same as desktop). The topbar always renders on mobile (profile mode only
+   swaps its buttons), so a plain offset is safe. Popups keep their own
+   back/X header below it. ═══ */
+@media(max-width:768px){
+  .overlay.as-page,
+  .profile-edit-overlay.as-page,
+  .video-modal-overlay.as-page{ top:56px; }
+}
+/* Hamburger drawer (and its dim) must slide ABOVE open popups on every device */
+.sidebar{ z-index:9550 !important; }
+.sb-overlay{ z-index:9540 !important; }

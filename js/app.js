@@ -2831,6 +2831,7 @@ function openProfileEdit() {
   document.getElementById('peHandleStatus').textContent = '';
   document.getElementById('peHandleStatus').className   = 'pe-status ok';
   document.getElementById('peSaveBtn').disabled = false;
+  document.getElementById('peSaveBtn').innerHTML = '<span class="mi">check</span> Save Changes';  // clear a stale "Saving..."
   const _pp = document.getElementById('pePrivate'); if(_pp) _pp.checked = (user.settings && user.settings.private === true);
 
   _ovOpen('profileEditOverlay');
@@ -2991,6 +2992,9 @@ async function saveProfile() {
 
     cancelProfileEdit();
     showToast('Profile updated successfully!');
+    // reset for the next save — success path left the button stuck on "Saving..."
+    saveBtn.disabled = false;
+    saveBtn.innerHTML = '<span class="mi">check</span> Save Changes';
 
   } catch(e) {
     console.error('saveProfile error:', e);
