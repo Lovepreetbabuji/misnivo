@@ -3892,3 +3892,10 @@ body.scrolling .yt-card, body.scrolling .active-dare-card, body.scrolling .short
 /* Hamburger drawer (and its dim) must slide ABOVE open popups on every device */
 .sidebar{ z-index:9550 !important; }
 .sb-overlay{ z-index:9540 !important; }
+
+/* ═══ YouTube-style auto-hide topbar (mobile) ═══ */
+@media(max-width:768px){
+  .topbar{ transition: transform .28s cubic-bezier(.4,0,.2,1); }
+  body.tb-hide .topbar{ transform: translateY(-100%); }
+  body.tb-hide.ov-open .topbar{ transform: none; }   /* popups sit below the bar */
+}

@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no,viewport-fit=cover"/>
-<title>Dare Market</title>
+<title>Mission Market</title>
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='22' fill='%23FF0033'/%3E%3Cpolygon points='62,8 38,52 55,52 38,92 70,44 52,44 72,8' fill='white'/%3E%3C/svg%3E"/>
 
 <!-- PWA: installs full-screen (standalone app) when added to home screen -->
@@ -12,7 +12,7 @@
 <meta name="mobile-web-app-capable" content="yes"/>
 <meta name="apple-mobile-web-app-capable" content="yes"/>
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
-<meta name="apple-mobile-web-app-title" content="Dare Market"/>
+<meta name="apple-mobile-web-app-title" content="Mission Market"/>
 <link rel="apple-touch-icon" href="/icon.svg"/>
 
 <!-- Fonts -->
@@ -20,7 +20,7 @@
 <link href="https://fonts.googleapis.com/icon?family=Material+Icons+Round" rel="stylesheet"/>
 
 <!-- App Styles -->
-<link rel="stylesheet" href="/css/styles.css?v=20260706i"/>
+<link rel="stylesheet" href="/css/styles.css?v=20260706j"/>
 
 <!-- Firebase CDN -->
 <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
@@ -64,7 +64,7 @@
   <div class="auth-box">
     <div class="auth-logo">
       <div class="auth-logo-icon"><span class="mi">bolt</span></div>
-      <span style="color:var(--t1)">Dare</span><span style="color:var(--blue2)">Market</span>
+      <span style="color:var(--t1)">Mission</span><span style="color:var(--blue2)">Market</span>
     </div>
     <p class="auth-tagline">Challenge yourself. Entertain others.<br>Get paid — directly.</p>
     <div class="auth-tabs">
@@ -119,7 +119,7 @@
       <span class="mi">home</span><span>Home</span>
     </button>
     <button class="bn-item" id="bn-dares"            onclick="goPage('dares')">
-      <span class="mi">bolt</span><span>Dares</span>
+      <span class="mi">bolt</span><span>Missions</span>
     </button>
     <button class="bn-post"                          onclick="openPost()">
       <span class="mi">add</span>
@@ -138,7 +138,7 @@
       <button class="icon-btn" id="menuBtn" onclick="toggleSidebar()" aria-label="Toggle menu"><span class="mi">menu</span></button>
       <div class="logo" onclick="goPage('home')">
         <div class="logo-icon"><span class="mi">bolt</span></div>
-        <span style="color:var(--t1)">Dare</span><span style="color:var(--blue2)">Market</span>
+        <span style="color:var(--t1)">Mission</span><span style="color:var(--blue2)">Market</span>
       </div>
     </div>
     <div class="search-wrap" style="position:relative;">
@@ -160,7 +160,7 @@
         <button class="btn-login-topbar" onclick="leaveGuestMode('login')">Login</button>
         <button class="btn-signup-topbar" onclick="leaveGuestMode('signup')">Sign Up</button>
       </div>
-      <button class="btn-post" id="btnPostTop" onclick="openPost()"><span class="mi">add_circle</span><span>Post Dare</span></button>
+      <button class="btn-post" id="btnPostTop" onclick="openPost()"><span class="mi">add_circle</span><span>Post Mission</span></button>
       <div class="notif-wrap">
         <button class="icon-btn notif-btn" onclick="toggleNotifPanel()"><span class="mi">notifications</span><div class="notif-badge" id="notifBadge" style="display:none;">0</div></button>
       </div>
@@ -176,7 +176,7 @@
           </div>
           <div class="dd-item" onclick="goPage('profile');closeDD()"><span class="mi">person</span>My Profile</div>
           <div class="dd-item" onclick="goPage('wallet');closeDD()"><span class="mi">account_balance_wallet</span>My Wallet</div>
-          <div class="dd-item" onclick="goProfileTab('tMyDares');closeDD()"><span class="mi">assignment</span>My Dares</div>
+          <div class="dd-item" onclick="goProfileTab('tMyDares');closeDD()"><span class="mi">assignment</span>My Missions</div>
           <div class="dd-item" onclick="closeDD();openSettings()"><span class="mi">settings</span>Settings</div>
           <div class="dd-item admin-link" onclick="openAdminReports();closeDD()" id="adminDDItem" style="display:none;"><span class="mi">admin_panel_settings</span>Admin Reports</div>
           <div class="dd-item danger" onclick="logout()"><span class="mi">logout</span>Sign Out</div>
@@ -199,7 +199,7 @@
       </div>
       <div class="nav-item" id="nav-explore" onclick="goPage('explore')"><span class="mi">explore</span><span class="nav-lbl">Explore</span></div>
       <div class="nav-item" id="nav-dares" onclick="goPage('dares')">
-        <span class="mi">bolt</span><span class="nav-lbl">Dares</span>
+        <span class="mi">bolt</span><span class="nav-lbl">Missions</span>
       </div>
       <div class="nav-item" id="nav-accepted" onclick="goPage('accepted')">
         <span class="mi">task_alt</span><span class="nav-lbl">Accepted</span>
@@ -243,7 +243,7 @@
       <div class="home-section" id="homeShortsSection" style="display:none;">
         <div class="home-sec-hdr">
           <span class="mi" style="color:#FF453A;font-size:20px;">play_circle</span>
-          <span class="home-sec-title">Dare Shorts</span>
+          <span class="home-sec-title">Mission Shorts</span>
           <span class="home-sec-sub">Under 1 minute</span>
           <span class="home-sec-viewall" onclick="goPage('dares')">View All →</span>
         </div>
@@ -271,9 +271,9 @@
     <!-- DARES — Active dares to accept -->
     <div class="page" id="pageDares">
       <div class="sec-hdr" style="margin-bottom:20px;">
-        <div class="sec-title"><div class="sec-dot"></div>Active Dares</div>
+        <div class="sec-title"><div class="sec-dot"></div>Active Missions</div>
         <button class="btn-post" onclick="openPost()" style="font-size:12px;padding:8px 14px;">
-          <span class="mi">add_circle</span><span>Post Dare</span>
+          <span class="mi">add_circle</span><span>Post Mission</span>
         </button>
       </div>
       <div id="daresPageFeed"></div>
@@ -282,7 +282,7 @@
     <!-- ACCEPTED — User's accepted dares -->
     <div class="page" id="pageAccepted">
       <div class="sec-hdr" style="margin-bottom:20px;">
-        <div class="sec-title"><div class="sec-dot"></div>My Accepted Dares</div>
+        <div class="sec-title"><div class="sec-dot"></div>My Accepted Missions</div>
       </div>
       <div id="acceptedPageFeed"></div>
     </div>
@@ -331,7 +331,7 @@
       <!-- Tabs -->
       <div class="tabs">
         <button class="tab active" onclick="switchPTab(this,'tVideos')">Completed</button>
-        <button class="tab"        onclick="switchPTab(this,'tMyDares')">My Dares</button>
+        <button class="tab"        onclick="switchPTab(this,'tMyDares')">My Missions</button>
         <button class="tab"        onclick="switchPTab(this,'tAccepted')">Accepted</button>
       </div>
       <div id="tVideos"></div>
@@ -349,7 +349,7 @@
         <div class="wallet-breakdown">
           <div class="wbk-item">
             <span class="wbk-ic wbk-locked"><span class="mi">lock</span></span>
-            <div><div class="wbk-val" id="walletLocked">Rs. 0</div><div class="wbk-lbl">Locked in dares</div></div>
+            <div><div class="wbk-val" id="walletLocked">Rs. 0</div><div class="wbk-lbl">Locked in missions</div></div>
           </div>
           <div class="wbk-item">
             <span class="wbk-ic wbk-pending"><span class="mi">schedule</span></span>
@@ -491,7 +491,7 @@
     <div class="profile-stats" id="ppStats"></div>
     <div class="tabs">
       <button class="tab active" onclick="_ppTab(this,'ppVideos')">Videos</button>
-      <button class="tab"        onclick="_ppTab(this,'ppDares')">Dares</button>
+      <button class="tab"        onclick="_ppTab(this,'ppDares')">Missions</button>
     </div>
     <div id="ppVideos"></div>
     <div id="ppDares" style="display:none;"></div>
@@ -518,11 +518,11 @@
     </div>
     <div class="fl-search">
       <span class="mi">search</span>
-      <input id="mSearchInput" placeholder="Search dares, videos, creators" autocomplete="off"
+      <input id="mSearchInput" placeholder="Search missions, videos, creators" autocomplete="off"
              onkeydown="if(event.key==='Enter'){event.preventDefault();_mSearchGo();}"/>
       <button class="msearch-go" onclick="_mSearchGo()" aria-label="Search"><span class="mi">arrow_forward</span></button>
     </div>
-    <div class="msearch-hint">Dare titles, video titles ya @username search karo</div>
+    <div class="msearch-hint">Mission titles, video titles ya @username search karo</div>
   </div>
 </div>
 
@@ -546,7 +546,7 @@
             <span class="switch"><input type="checkbox" id="setNotifLikes" onchange="_saveSettings()"><span class="sl"></span></span></label>
           <label class="set-row"><div class="set-t">New followers</div>
             <span class="switch"><input type="checkbox" id="setNotifFollow" onchange="_saveSettings()"><span class="sl"></span></span></label>
-          <label class="set-row"><div class="set-t">Dare updates</div>
+          <label class="set-row"><div class="set-t">Mission updates</div>
             <span class="switch"><input type="checkbox" id="setNotifDares" onchange="_saveSettings()"><span class="sl"></span></span></label>
         </div>
         <div class="set-sec" id="secMore" style="display:none;">
@@ -559,7 +559,7 @@
         </div>
         <div class="set-sec" id="secPrivacy" style="display:none;">
           <div class="set-sec-label">Privacy</div>
-          <label class="set-row"><div><div class="set-t">Private profile</div><div class="set-s">Hide your videos &amp; dares from others</div></div>
+          <label class="set-row"><div><div class="set-t">Private profile</div><div class="set-s">Hide your videos &amp; missions from others</div></div>
             <span class="switch"><input type="checkbox" id="setPrivate" onchange="_saveSettings()"><span class="sl"></span></span></label>
         </div>
         <div class="set-sec" id="secAccount" style="display:none;">
@@ -650,7 +650,7 @@
         </div>
 
         <div class="set-sec" id="epVis" style="display:none;">
-          <label class="set-row"><div><div class="set-t">Private profile</div><div class="set-s">Hide your videos &amp; dares from others</div></div>
+          <label class="set-row"><div><div class="set-t">Private profile</div><div class="set-s">Hide your videos &amp; missions from others</div></div>
             <span class="switch"><input type="checkbox" id="pePrivate" onchange="_pePrivacyChange(this)"><span class="sl"></span></span></label>
         </div>
 
@@ -681,9 +681,9 @@
 <div class="overlay as-page" id="postOverlay">
   <div class="modal post-dare-modal set-modal">
     <div class="modal-hdr">
-      <div class="modal-title">Post a New Dare</div>
+      <div class="modal-title">Post a New Mission</div>
       <div class="tp-hdr-right">
-        <button class="btn-fill tp-action" onclick="submitDare()" id="submitDareBtn"><span class="mi">bolt</span> Post Dare</button>
+        <button class="btn-fill tp-action" onclick="submitDare()" id="submitDareBtn"><span class="mi">bolt</span> Post Mission</button>
         <button class="modal-close" onclick="closePost()"><span class="mi">close</span></button>
       </div>
     </div>
@@ -713,7 +713,7 @@
 
         <div class="set-sec" id="pdMedia" style="display:none;">
           <div class="f-group">
-            <label class="f-label">Dare Thumbnail <span class="f-opt-tag">Optional</span></label>
+            <label class="f-label">Mission Thumbnail <span class="f-opt-tag">Optional</span></label>
             <div id="mediaTabImg">
               <input type="file" id="thumbInput" accept="image/*" style="display:none;" onchange="onThumbSelected(event)"/>
               <div class="dare-media-dz" id="thumbDZ" onclick="document.getElementById('thumbInput').click()">
@@ -767,13 +767,13 @@
             </div>
             <div id="scheduleBox" style="display:none;margin-top:10px;">
               <input class="f-input" id="scheduleDate" type="datetime-local" style="margin:0;"/>
-              <div class="f-hint">Your dare will be published automatically at this time.</div>
+              <div class="f-hint">Your mission will be published automatically at this time.</div>
             </div>
           </div>
           <div class="f-group">
-            <label class="f-label">Dare Expiry <span class="f-opt-tag">Optional</span></label>
+            <label class="f-label">Mission Expiry <span class="f-opt-tag">Optional</span></label>
             <input class="f-input" id="pExpiry" type="datetime-local" style="margin:0;"/>
-            <div class="f-hint">Dare auto-closes after this time and disappears from the feed.</div>
+            <div class="f-hint">Mission auto-closes after this time and disappears from the feed.</div>
           </div>
         </div>
 
@@ -988,9 +988,9 @@
 
       <!-- ── MODE 1: TESTNET MOCK CREATIVE ────────────── -->
       <div id="adMockCreative" class="ad-placeholder-wrap">
-        <div class="ad-brand">DareMarket</div>
+        <div class="ad-brand">Mission Market</div>
         <div class="ad-headline" id="adHeadline">Challenge yourself. Get paid.</div>
-        <div class="ad-desc"    id="adDesc">Post dares, earn real bounty money.</div>
+        <div class="ad-desc"    id="adDesc">Post missions, earn real bounty money.</div>
         <div class="ad-testnet-badge">🧪 TESTNET AD</div>
         <button class="ad-cta-btn" id="adCta" onclick="AdManager.skipAd()">Try Now →</button>
       </div>
@@ -1027,7 +1027,7 @@
 <div class="toast" id="toast"></div>
 
 <!-- App Logic -->
-<script src="/js/app.js?v=20260706i"></script>
+<script src="/js/app.js?v=20260706j"></script>
 
 <!-- ══ v0.19 NEW MODALS ══ -->
 
@@ -1038,14 +1038,14 @@
       <div class="modal-title" id="reportModalTitle">Report</div>
       <button class="modal-close" onclick="closeReportModal2()"><span class="mi">close</span></button>
     </div>
-    <p style="font-size:13px;color:var(--t2);margin-bottom:18px;line-height:1.6;">Help us keep Dare Market safe. Reports are reviewed within 24 hours.</p>
+    <p style="font-size:13px;color:var(--t2);margin-bottom:18px;line-height:1.6;">Help us keep Mission Market safe. Reports are reviewed within 24 hours.</p>
     <div class="f-group">
       <label class="f-label">Report Type</label>
       <select class="f-input" id="reportType" style="cursor:pointer;">
         <option value="inappropriate">Inappropriate Content</option>
         <option value="spam">Spam</option>
         <option value="fake_proof">Fake / Edited Proof</option>
-        <option value="dangerous">Dangerous Dare</option>
+        <option value="dangerous">Dangerous Mission</option>
         <option value="harassment">Harassment</option>
         <option value="other">Other</option>
       </select>
@@ -1186,7 +1186,7 @@
 
       <!-- ═══ COLUMN 3: related dares (16:9) ═══ -->
       <div class="dd-bar dd-col3">
-        <div class="vd-sec-title"><span class="mi">bolt</span> More Dares</div>
+        <div class="vd-sec-title"><span class="mi">bolt</span> More Missions</div>
         <div id="ddMoreDares" class="dd-related-grid"></div>
       </div>
     </div>
@@ -1285,7 +1285,7 @@
   <div class="modal guest-modal">
     <div class="guest-modal-icon" id="guestPromptIcon"></div>
     <div class="guest-modal-title" id="guestPromptTitle">Create a free account</div>
-    <div class="guest-modal-msg"   id="guestPromptMsg">Join DareMarket to post dares, accept challenges, and earn real money.</div>
+    <div class="guest-modal-msg"   id="guestPromptMsg">Join Mission Market to post missions, accept challenges, and earn real money.</div>
     <button class="btn-fill" onclick="leaveGuestMode('signup')" style="margin-bottom:8px;">Sign Up — it's free</button>
     <button class="btn-ghost-sm" onclick="leaveGuestMode('login')">Already have an account? Sign In</button>
     <button class="btn-ghost-sm btn-tiny" id="guestPromptDismiss" onclick="closeGuestPrompt()" style="margin-top:4px;">Continue browsing</button>
@@ -1366,7 +1366,7 @@
       <div class="collab-row-av" id="cmCreatorAv">C</div>
       <div class="collab-row-info">
         <div class="collab-row-name" id="cmCreatorName">@creator</div>
-        <div class="collab-row-label">Dare Creator</div>
+        <div class="collab-row-label">Mission Creator</div>
       </div>
       <button class="collab-follow-btn" id="cmCreatorFollow" onclick="toggleFollow(document.getElementById('collabModal').dataset.creatorId,'creator')">Follow</button>
     </div>
@@ -1374,7 +1374,7 @@
       <div class="collab-row-av vd-collab-av2" id="cmTakerAv">T</div>
       <div class="collab-row-info">
         <div class="collab-row-name" id="cmTakerName">@taker</div>
-        <div class="collab-row-label">Dare Taker (Bounty Winner)</div>
+        <div class="collab-row-label">Mission Taker (Bounty Winner)</div>
       </div>
       <button class="collab-follow-btn" id="cmTakerFollow" onclick="toggleFollow(document.getElementById('collabModal').dataset.takerId,'taker')">Follow</button>
     </div>

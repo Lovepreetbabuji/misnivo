@@ -151,10 +151,10 @@ const AdManager = {
   // ─── AD CREATIVES POOL ────────────────────────────────
   // Rotate different messages so it feels fresh
   creatives: [
-    { headline: 'Challenge yourself. Get paid.',    desc: 'Post a dare and set your own bounty.', cta: 'Post a Dare →'    },
-    { headline: 'Earn money doing dares!',           desc: 'Accept dares and win real bounty.',    cta: 'Start Earning →'  },
-    { headline: 'Your dare, your rules.',            desc: 'Set the bounty. Watch others try.',    cta: 'Try Dare Market →' },
-    { headline: 'Real money. Real challenges.',      desc: '100% escrow — bounty guaranteed.',    cta: 'See Dares →'      }
+    { headline: 'Challenge yourself. Get paid.',    desc: 'Post a mission and set your own bounty.', cta: 'Post a Mission →'    },
+    { headline: 'Earn money doing missions!',           desc: 'Accept missions and win real bounty.',    cta: 'Start Earning →'  },
+    { headline: 'Your mission, your rules.',            desc: 'Set the bounty. Watch others try.',    cta: 'Try Mission Market →' },
+    { headline: 'Real money. Real challenges.',      desc: '100% escrow — bounty guaranteed.',    cta: 'See Missions →'      }
   ],
 
   // ─── INIT SCROLL ADS ──────────────────────────────────
@@ -304,7 +304,7 @@ const AdManager = {
           <div class="scroll-ad-title">${creative.headline}</div>
           <div class="scroll-ad-sub">${creative.desc}</div>
         </div>
-        <button class="scroll-ad-cta" onclick="goPage('dares')">See Dares</button>
+        <button class="scroll-ad-cta" onclick="goPage('dares')">See Missions</button>
         <button class="scroll-ad-close"
           onclick="document.getElementById('scrollAdBanner').remove()" title="Close">
           <span class="mi" style="font-size:16px;">close</span>
@@ -478,7 +478,7 @@ function startDaresListener() {
       if (typeof _maybeInitialRoute === 'function') _maybeInitialRoute();   // deep-link /dare/:id
       _daresRerenderDebounced();    // batch bursts of doc changes into one rebuild
     }, (err) => {
-      console.error('Dares listener error:', err);
+      console.error('Missions listener error:', err);
       showToast('Connection issue — please refresh');
     });
 }
@@ -582,6 +582,7 @@ function goPage(pg, _fromPop) {
   const _ovWasOpen = (!_fromPop && !_navBack && _ovStack.length) ? _ovCloseAllSilent() : false;
   try{ _pvStop(); }catch(e){}
   try{ _pauseAllMedia(false); }catch(e){}   // leaving a page stops everything it was playing
+  document.body.classList.remove('tb-hide'); // fresh page → topbar visible
   if (typeof _closeDetailOverlays === 'function') _closeDetailOverlays();
   document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
   const el = document.getElementById('page' + pg.charAt(0).toUpperCase() + pg.slice(1));
@@ -653,10 +654,10 @@ function _isShortVideo(p) {
   return false;                                                   // default → Long
 }
 
-// ─── Unified ACTIVE-DARE card (home / dares page / explore "more dares" / search) ───
+// ─── Unified ACTIVE-DARE card (home / dares page / explore "more missions" / search) ───
 function _activeDareCard(d){
   const cat = d.tags?.[0]||d.cat||'fitness';
-  const title = d.caption||d.title||'Untitled Dare';
+  const title = d.caption||d.title||'Untitled Mission';
   const reward = d.rewardAmount ?? d.bounty ?? 0;
   const thumb = d.thumbnailURL||'';
   const color = CAT_C[cat]||'#FF2D4A', icon = CAT_I[cat]||'bolt';
@@ -782,9 +783,9 @@ function _renderVideoGrid(proofs) {
     container.innerHTML = `<div class="empty">
       <span class="mi">play_circle</span>
       <div class="empty-title">No Videos Yet</div>
-      <p class="empty-desc">Complete a dare and submit video proof — it will appear here!</p>
+      <p class="empty-desc">Complete a mission and submit video proof — it will appear here!</p>
       <button class="btn-empty" onclick="goPage('dares')">
-        <span class="mi">bolt</span>Browse Dares
+        <span class="mi">bolt</span>Browse Missions
       </button></div>`;
     return;
   }
@@ -814,7 +815,7 @@ function _renderVideoGrid(proofs) {
       <div class="yt-info">
         <div class="yt-av">${_avHtml(p.takerPhotoURL, p.takerName)}</div>
         <div class="yt-meta">
-          <div class="yt-title">${p.dareTitle||'Dare Completed'}</div>
+          <div class="yt-title">${p.dareTitle||'Mission Completed'}</div>
           <div class="yt-sub">
             <span>@${p.takerUsername||p.takerName||'creator'}</span>
             <span class="yt-dot"></span>
@@ -859,7 +860,7 @@ function _renderShortsSection(shorts) {
         ${dur ? `<div class="short-dur-tag">${dur}</div>` : ''}
       </div>
       <div class="short-info">
-        <div class="short-title">${p.dareTitle||'Dare Short'}</div>
+        <div class="short-title">${p.dareTitle||'Mission Short'}</div>
         <div class="short-meta">${p.takerName||'—'}</div>
       </div>
     </div>`;
@@ -877,10 +878,10 @@ function _renderHomeActiveDares() {
   if (!active.length) {
     container.innerHTML = `<div class="empty" style="padding:24px 16px;">
       <span class="mi">bolt</span>
-      <div class="empty-title">No Active Dares</div>
-      <p class="empty-desc">No dares yet. Be the first to post!</p>
+      <div class="empty-title">No Active Missions</div>
+      <p class="empty-desc">No missions yet. Be the first to post!</p>
       <button class="btn-empty" onclick="openPost()">
-        <span class="mi">add_circle</span>Post a Dare</button>
+        <span class="mi">add_circle</span>Post a Mission</button>
     </div>`;
     return;
   }
@@ -893,7 +894,7 @@ function _renderHomeActiveDares() {
     <div class="active-dare-grid">${cards}</div>
     ${hasMore ? `<div style="text-align:center;margin-top:16px;">
       <button class="btn-empty" style="display:inline-flex;" onclick="goPage('dares')">
-        <span class="mi">bolt</span>View All ${total} Dares
+        <span class="mi">bolt</span>View All ${total} Missions
       </button></div>` : ''}`;
 }
 
@@ -966,7 +967,7 @@ function openVideoPlay(proofId) {
   }
 
   AdManager.showPreRollAds(p.videoDuration || 0, () => {
-    document.getElementById('vpTitle').textContent  = p.dareTitle || 'Dare Video';
+    document.getElementById('vpTitle').textContent  = p.dareTitle || 'Mission Video';
     document.getElementById('vpDare').textContent   = p.dareTitle || '—';
     document.getElementById('vpSub').textContent    = `By ${p.takerName} • Rs.${(p.dareBounty||0).toLocaleString('en-IN')} bounty won`;
     document.getElementById('vpAv').textContent     = (p.takerName||'?')[0].toUpperCase();
@@ -1004,9 +1005,9 @@ function renderDaresPage() {
     feed.innerHTML = `
       <div class="empty">
         <span class="mi">bolt</span>
-        <div class="empty-title">No Active Dares</div>
-        <p class="empty-desc">No active dares yet. Post the first dare!</p>
-        <button class="btn-empty" onclick="openPost()"><span class="mi">add_circle</span>Post a Dare</button>
+        <div class="empty-title">No Active Missions</div>
+        <p class="empty-desc">No active missions yet. Post the first mission!</p>
+        <button class="btn-empty" onclick="openPost()"><span class="mi">add_circle</span>Post a Mission</button>
       </div>`;
     return;
   }
@@ -1039,9 +1040,9 @@ function renderAcceptedPage() {
     feed.innerHTML = `
       <div class="empty">
         <span class="mi">task_alt</span>
-        <div class="empty-title">No Accepted Dares</div>
-        <p class="empty-desc">You haven't accepted any dares yet. Browse the Dares page to get started!</p>
-        <button class="btn-empty" onclick="goPage('dares')"><span class="mi">bolt</span>Browse Dares</button>
+        <div class="empty-title">No Accepted Missions</div>
+        <p class="empty-desc">You haven't accepted any missions yet. Browse the Missions page to get started!</p>
+        <button class="btn-empty" onclick="goPage('dares')"><span class="mi">bolt</span>Browse Missions</button>
       </div>`;
     return;
   }
@@ -1121,10 +1122,10 @@ function openPost() {
 
   // Modal title
   const titleEl = document.querySelector('#postOverlay .modal-title');
-  if (titleEl) titleEl.textContent = 'Post a New Dare';
+  if (titleEl) titleEl.textContent = 'Post a New Mission';
 
   const btn = document.getElementById('submitDareBtn');
-  if (btn) { btn.disabled = false; btn.innerHTML = '<span class="mi">bolt</span> Post Dare'; }
+  if (btn) { btn.disabled = false; btn.innerHTML = '<span class="mi">bolt</span> Post Mission'; }
 
   _ovOpen('postOverlay');
   _tpInit('postOverlay');   // desktop: show the first section (Caption) in the right pane
@@ -1474,7 +1475,7 @@ async function submitDare() {
         await db.collection('users').doc(user.uid).update({ wallet });
       }
       closePost();
-      showToast('Dare updated successfully!');
+      showToast('Mission updated successfully!');
       editingDareId = null;
     } else {
       // ── CREATE MODE: new dare ─────────────────────────────────────────────
@@ -1498,7 +1499,7 @@ async function submitDare() {
         wallet.transactions.unshift({
           id:'w'+Date.now()+Math.floor(Math.random()*1000), ts:Date.now(), status:'completed',
           type:'debit', category:'dare_posted',
-          title:'Dare Posted: ' + caption.substring(0,30),
+          title:'Mission Posted: ' + caption.substring(0,30),
           amount: reward, ref:'REF'+Date.now().toString(36).toUpperCase(), date: todayStr()
         });
         await db.collection('users').doc(user.uid).update({ wallet });
@@ -1507,10 +1508,10 @@ async function submitDare() {
       closePost();
       const schedMsg = currentVis === 'scheduled'
         ? ` (Scheduled)` : '';
-      showToast('Dare posted!' + (reward>0 ? ` Rs.${reward.toLocaleString('en-IN')} reward set.`:'')+schedMsg);
+      showToast('Mission posted!' + (reward>0 ? ` Rs.${reward.toLocaleString('en-IN')} reward set.`:'')+schedMsg);
 
       AdManager.showPostDareAds(() => {
-        showToast('Your dare is now live!');
+        showToast('Your mission is now live!');
       });
     }
 
@@ -1520,7 +1521,7 @@ async function submitDare() {
     btn.disabled = false;
     btn.innerHTML = editingDareId
       ? '<span class="mi">save</span> Save Changes'
-      : '<span class="mi">bolt</span> Post Dare';
+      : '<span class="mi">bolt</span> Post Mission';
   }
 }
 
@@ -1532,7 +1533,7 @@ async function acceptDare(id) {
   const d = dares.find(x => x.id === id);
   if (!d) return;
   if (acceptedDares.find(a => a.dareId === id)) {
-    showToast('You already applied or accepted this dare!'); return;
+    showToast('You already applied or accepted this mission!'); return;
   }
 
   const isCreatorPicks = d.takerSelectionMode === 'creator_picks';
@@ -1579,7 +1580,7 @@ async function acceptDare(id) {
     if (isCreatorPicks) {
       showToast('Applied! Creator will review and select takers.');
     } else {
-      showToast('Dare accepted!' + (reward > 0 ? ` Submit proof to claim Rs.${reward.toLocaleString('en-IN')}!` : 'Submit your proof!'));
+      showToast('Mission accepted!' + (reward > 0 ? ` Submit proof to claim Rs.${reward.toLocaleString('en-IN')}!` : 'Submit your proof!'));
     }
   } catch(e) {
     showToast('Error: ' + e.message);
@@ -1597,7 +1598,7 @@ async function acceptDare(id) {
 
 // Fixed checklist items every taker must confirm before submitting
 const PROOF_CHECKLIST_ITEMS = [
-  'My video clearly shows me completing the dare',
+  'My video clearly shows me completing the mission',
   'My face is visible throughout the video',
   'The recording is unedited and continuous',
   'Video is at least 30 seconds long'
@@ -1606,7 +1607,7 @@ const PROOF_CHECKLIST_ITEMS = [
 // ── Open proof modal ─────────────────────────────────────────────────────────
 function openProof(dareId) {
   const d = dares.find(x => x.id === dareId);
-  if (!d) { showToast('Dare not found'); return; }
+  if (!d) { showToast('Mission not found'); return; }
 
   // v0.19: creator_picks mode — check if user is approved
   if (d.takerSelectionMode === 'creator_picks') {
@@ -1639,7 +1640,7 @@ function openProof(dareId) {
   } else {
     heading.textContent = 'Proof Requirements';
     rulesList.innerHTML = [
-      'Video must clearly show you completing the dare',
+      'Video must clearly show you completing the mission',
       'Your face must be visible throughout',
       'No cuts or edits — single continuous recording',
       'Minimum 30 seconds, maximum 10 minutes'
@@ -1764,7 +1765,7 @@ function onVideoSelected(e) {
       warn.className   = 'dur-warn dur-warn--ok';
       warn.innerHTML   = `<span class="mi">check_circle</span> Duration looks good (${selectedVideoDuration}s)`;
       if (selectedVideoDuration < 60) {
-        showToast(`Short video detected (${selectedVideoDuration}s) — will appear in Dare Shorts!`);
+        showToast(`Short video detected (${selectedVideoDuration}s) — will appear in Mission Shorts!`);
       }
     }
   };
@@ -2204,7 +2205,7 @@ async function loadLeaderboard() {
     if (!sorted.length) {
       el.innerHTML = `<div class="empty"><span class="mi">emoji_events</span>
         <div class="empty-title">Leaderboard Empty</div>
-        <p class="empty-desc">Complete a dare to appear on the leaderboard!</p></div>`;
+        <p class="empty-desc">Complete a mission to appear on the leaderboard!</p></div>`;
       return;
     }
     const medals = ['🥇','🥈','🥉'];
@@ -2217,7 +2218,7 @@ async function loadLeaderboard() {
             ${p.name[0].toUpperCase()}</div>
           <div>
             <div style="font-size:14px;font-weight:600;">${p.name}</div>
-            <div style="font-size:12px;color:var(--t3);">${p.count} dare${p.count>1?'s':''} completed</div>
+            <div style="font-size:12px;color:var(--t3);">${p.count} mission${p.count>1?'s':''} completed</div>
           </div>
         </div>
         <div style="font-size:20px;font-weight:700;color:var(--green);">Rs.${p.earned.toLocaleString('en-IN')}</div>
@@ -2233,7 +2234,7 @@ async function loadLeaderboard() {
 function shareDare(dareId, title) {
   const url = window.location.href.split('?')[0] + '?dare=' + dareId;
   if (navigator.share) {
-    navigator.share({ title:'Dare Market', text:`"${title}" — bounty up for grabs!`, url });
+    navigator.share({ title:'Mission Market', text:`"${title}" — bounty up for grabs!`, url });
   } else {
     navigator.clipboard.writeText(url).then(() => showToast('Link copied to clipboard!'));
   }
@@ -2332,7 +2333,7 @@ async function _ensureProofsLoaded(){
 // ── Profile dare card (your posted dares) — thumbnail + 3-dot actions (top-left) ──
 function _profileDareCard(d){
   const cat=d.tags?.[0]||d.cat||'fitness';
-  const title=d.caption||d.title||'Untitled Dare';
+  const title=d.caption||d.title||'Untitled Mission';
   const reward=d.rewardAmount ?? d.bounty ?? 0;
   const thumb=d.thumbnailURL||'';
   const color=CAT_C[cat]||'#FF2D4A', icon=CAT_I[cat]||'bolt';
@@ -2362,7 +2363,7 @@ function _profileDareCard(d){
 // ── Profile accepted card — thumbnail + status + submit-proof ──
 function _profileAcceptedCard(a){
   const d=(dares||[]).find(x=>x.id===a.dareId)||{};
-  const title=a.dareTitle||d.caption||'Dare';
+  const title=a.dareTitle||d.caption||'Mission';
   const reward=a.bounty ?? d.rewardAmount ?? d.bounty ?? 0;
   const thumb=d.thumbnailURL||a.thumbnailURL||'';
   const cat=d.tags?.[0]||d.cat||a.cat||'fitness'; const color=CAT_C[cat]||'#FF2D4A', icon=CAT_I[cat]||'bolt';
@@ -2398,7 +2399,7 @@ function _renderMyDares(){
   const head=`<div class="pfilter-row">${chips}</div>`;
   el.innerHTML = head + (list.length
     ? `<div class="active-dare-grid">${list.map(_profileDareCard).join('')}</div>`
-    : `<div class="empty" style="padding:32px;"><span class="mi">assignment</span><div class="empty-title" style="font-size:18px;">No dares here</div><p class="empty-desc" style="margin-bottom:16px;">Post your first dare!</p><button class="btn-empty" onclick="openPost()"><span class="mi">add_circle</span>Post a Dare</button></div>`);
+    : `<div class="empty" style="padding:32px;"><span class="mi">assignment</span><div class="empty-title" style="font-size:18px;">No missions here</div><p class="empty-desc" style="margin-bottom:16px;">Post your first mission!</p><button class="btn-empty" onclick="openPost()"><span class="mi">add_circle</span>Post a Mission</button></div>`);
 }
 function _renderAcceptedDares(){
   const el=document.getElementById('tAccepted'); if(!el) return;
@@ -2411,7 +2412,7 @@ function _renderAcceptedDares(){
   const head=`<div class="pfilter-row">${chips}</div>`;
   el.innerHTML = head + (list.length
     ? `<div class="active-dare-grid">${list.map(_profileAcceptedCard).join('')}</div>`
-    : `<div class="empty" style="padding:32px;"><span class="mi">sports_score</span><div class="empty-title" style="font-size:18px;">Nothing here</div><p class="empty-desc" style="margin-bottom:16px;">Accept a dare from the feed!</p><button class="btn-empty" onclick="goPage('dares')"><span class="mi">arrow_back</span>Browse Dares</button></div>`);
+    : `<div class="empty" style="padding:32px;"><span class="mi">sports_score</span><div class="empty-title" style="font-size:18px;">Nothing here</div><p class="empty-desc" style="margin-bottom:16px;">Accept a mission from the feed!</p><button class="btn-empty" onclick="goPage('dares')"><span class="mi">arrow_back</span>Browse Missions</button></div>`);
 }
 
 // ── Profile: stats row (own profile) ──
@@ -2428,7 +2429,7 @@ function _renderProfileStats(myPosted){
   el.innerHTML = `
     ${verified ? `<div class="pstat-verified"><span class="mi">verified</span> Verified</div>` : ''}
     <div class="pstat-grid">
-      ${stat(posted, 'Dares')}
+      ${stat(posted, 'Missions')}
       ${stat(completed, 'Completed')}
       ${stat('Rs.'+earned.toLocaleString('en-IN'), 'Earned')}
       ${stat('Rs.'+paid.toLocaleString('en-IN'), 'Paid out')}
@@ -2460,8 +2461,8 @@ function _renderProfileVideos(){
   if (!mine.length){
     el.innerHTML = `<div class="empty" style="padding:32px;"><span class="mi">video_library</span>
       <div class="empty-title" style="font-size:18px;">No Videos Yet</div>
-      <p class="empty-desc" style="margin-bottom:16px;">Complete a dare and submit video proof — it shows up here.</p>
-      <button class="btn-empty" onclick="goPage('dares')"><span class="mi">bolt</span>Browse Dares</button></div>`;
+      <p class="empty-desc" style="margin-bottom:16px;">Complete a mission and submit video proof — it shows up here.</p>
+      <button class="btn-empty" onclick="goPage('dares')"><span class="mi">bolt</span>Browse Missions</button></div>`;
     return;
   }
   const longs  = mine.filter(p => !_isShortVideo(p));
@@ -2531,7 +2532,7 @@ async function _ppRenderStats(uid){
   const videos=(pool||[]).filter(p=>p.takerId===uid).length;
   const stat=(v,l,cb)=>`<div class="pstat"${cb?` onclick="${cb}" style="cursor:pointer"`:''}><div class="pstat-v">${v}</div><div class="pstat-l">${l}</div></div>`;
   el.innerHTML=`<div class="pstat-grid">
-    ${stat(videos,'Videos')}${stat(posted,'Dares')}${stat(completed,'Completed')}
+    ${stat(videos,'Videos')}${stat(posted,'Missions')}${stat(completed,'Completed')}
     ${stat('<span id="ppFollowers">…</span>','Followers',`_ppFollowList('followers')`)}
     ${stat('<span id="ppFollowing">…</span>','Following',`_ppFollowList('following')`)}</div>`;
   _profileFollowCounts(uid).then(({followers,following})=>{
@@ -2551,7 +2552,7 @@ function _ppRenderContent(uid){
   const del=document.getElementById('ppDares');
   if(del){ const active=(dares||[]).filter(d=>d.creatorUid===uid&&!d.completed);
     del.innerHTML = active.length?`<div class="active-dare-grid">${active.map(_activeDareCard).join('')}</div>`
-      :`<div class="empty" style="padding:32px;"><span class="mi">bolt</span><div class="empty-title" style="font-size:18px;">No active dares</div></div>`;
+      :`<div class="empty" style="padding:32px;"><span class="mi">bolt</span><div class="empty-title" style="font-size:18px;">No active missions</div></div>`;
   }
 }
 function _ppTab(el,id){
@@ -2561,7 +2562,7 @@ function _ppTab(el,id){
 function _pubShare(){
   const url=location.origin+'/u/'+(_ppUid||'');
   const name=_ppData?.name||'this creator';
-  if(navigator.share){ navigator.share({title:'DareMarket — '+name, url}).catch(()=>{}); }
+  if(navigator.share){ navigator.share({title:'Mission Market — '+name, url}).catch(()=>{}); }
   else if(navigator.clipboard){ navigator.clipboard.writeText(url).then(()=>showToast('Profile link copied')).catch(()=>showToast(url)); }
   else showToast(url);
 }
@@ -2714,7 +2715,7 @@ function _renderProfileBadges(myPosted){
   const verified=(wallet.kyc&&wallet.kyc.status==='verified');
   const badges=[
     verified           && {i:'verified',      t:'Verified',      c:'#0A84FF'},
-    myPosted.length>=1 && {i:'rocket_launch', t:'First Dare',    c:'#FF9F0A'},
+    myPosted.length>=1 && {i:'rocket_launch', t:'First Mission',    c:'#FF9F0A'},
     completed>=5       && {i:'military_tech',  t:'Dedicated',     c:'#BF5AF2'},
     videos>=1          && {i:'movie',          t:'Creator',       c:'#FF2D55'},
     earned>0           && {i:'paid',           t:'Bounty Hunter', c:'#32D74B'},
@@ -3016,12 +3017,12 @@ function switchTakerMode(mode) {
   const hint = document.getElementById('takerModeHint');
   if (hint) hint.textContent = mode==='open'
     ? 'Anyone who accepts can submit proof immediately.'
-    : 'Users apply → you review applicants → you select who gets to do the dare.';
+    : 'Users apply → you review applicants → you select who gets to do the mission.';
 }
 
 // ── EDIT DARE ────────────────────────────────────────────────────────
 async function openEditDare(id) {
-  const _d = dares.find(x=>x.id===id); if(_d && _d.completed){ showToast('Completed dares cannot be edited'); return; }
+  const _d = dares.find(x=>x.id===id); if(_d && _d.completed){ showToast('Completed missions cannot be edited'); return; }
   const d = dares.find(x => x.id === id);
   if (!d) return;
 
@@ -3070,7 +3071,7 @@ async function openEditDare(id) {
   switchTakerMode(currentTakerMode);
 
   const titleEl = document.querySelector('#postOverlay .modal-title');
-  if (titleEl) titleEl.textContent = 'Edit Dare';
+  if (titleEl) titleEl.textContent = 'Edit Mission';
 
   const btn = document.getElementById('submitDareBtn');
   if (btn) { btn.disabled=false; btn.innerHTML='<span class="mi">save</span> Save Changes'; }
@@ -3080,10 +3081,10 @@ async function openEditDare(id) {
 
 // ── DELETE DARE ──────────────────────────────────────────────────────
 async function deleteDare(id) {
-  const _dd = dares.find(x=>x.id===id); if(_dd && _dd.completed){ showToast('Completed dares cannot be deleted'); return; }
+  const _dd = dares.find(x=>x.id===id); if(_dd && _dd.completed){ showToast('Completed missions cannot be deleted'); return; }
   const d = dares.find(x => x.id === id);
   if (!d) return;
-  const title = d.caption || d.title || 'this dare';
+  const title = d.caption || d.title || 'this mission';
   if (!confirm(`Delete "${title}"?\n\nIf you set a reward, it will be refunded to your wallet.`)) return;
   try {
     await db.collection('dares').doc(id).delete();
@@ -3092,11 +3093,11 @@ async function deleteDare(id) {
     if (reward > 0 && !d.completed) {
       wallet.balance += reward;
       wallet.transactions.unshift({ id:'w'+Date.now()+Math.floor(Math.random()*1000), ts:Date.now(), status:'completed',
-        type:'credit', category:'refund', title:'Dare Deleted (Refund): '+title.slice(0,25), amount:reward,
+        type:'credit', category:'refund', title:'Mission Deleted (Refund): '+title.slice(0,25), amount:reward,
         ref:'REF'+Date.now().toString(36).toUpperCase(), date:todayStr() });
       await db.collection('users').doc(user.uid).update({ wallet });
     }
-    showToast('Dare deleted' + (reward>0&&!d.completed ? ` · Rs.${reward.toLocaleString('en-IN')} refunded` : ''));
+    showToast('Mission deleted' + (reward>0&&!d.completed ? ` · Rs.${reward.toLocaleString('en-IN')} refunded` : ''));
     renderProfile();
   } catch(e) { showToast('Error: '+e.message); }
 }
@@ -3104,11 +3105,11 @@ async function deleteDare(id) {
 // ── PIN / UNPIN DARE (max 3) ─────────────────────────────────────────
 async function pinDare(id) {
   if (pinnedDares.includes(id)) { showToast('Already pinned!'); return; }
-  if (pinnedDares.length >= 3)  { showToast('Maximum 3 dares can be pinned. Unpin one first.'); return; }
+  if (pinnedDares.length >= 3)  { showToast('Maximum 3 missions can be pinned. Unpin one first.'); return; }
   pinnedDares.push(id);
   try {
     await db.collection('users').doc(user.uid).update({ pinnedDares });
-    showToast('Dare pinned!  It will appear at top of the feed.');
+    showToast('Mission pinned!  It will appear at top of the feed.');
     renderProfile();
   } catch(e) {
     pinnedDares.pop();
@@ -3120,7 +3121,7 @@ async function unpinDare(id) {
   pinnedDares = pinnedDares.filter(x => x !== id);
   try {
     await db.collection('users').doc(user.uid).update({ pinnedDares });
-    showToast('Dare unpinned.');
+    showToast('Mission unpinned.');
     renderProfile();
   } catch(e) {
     showToast('Error: '+e.message);
@@ -3196,7 +3197,7 @@ async function openAdminReports() {
       <div class="report-item">
         <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:10px;">
           <div>
-            <div style="font-size:13px;font-weight:600;color:var(--t1);">${r.targetType==='dare'?'📋 Dare':'👤 User'}: ${escHtml(r.targetName||r.targetId)}</div>
+            <div style="font-size:13px;font-weight:600;color:var(--t1);">${r.targetType==='dare'?'📋 Mission':'👤 User'}: ${escHtml(r.targetName||r.targetId)}</div>
             <div style="font-size:11px;color:var(--t3);margin-top:2px;font-family:'IBM Plex Mono',monospace;">${r.reportType} · by ${r.reporterName} · ${r.createdAt?.toDate?.()?.toLocaleDateString('en-IN')||''}</div>
             <div style="font-size:13px;color:var(--t2);margin-top:6px;line-height:1.5;">"${escHtml(r.reason)}"</div>
           </div>
@@ -3232,7 +3233,7 @@ async function openSelectTakersModal(dareId) {
   const d = dares.find(x => x.id === dareId);
   if (!d) return;
 
-  document.getElementById('selectTakersDareTitle').textContent = d.caption||d.title||'Dare';
+  document.getElementById('selectTakersDareTitle').textContent = d.caption||d.title||'Mission';
   _ovOpen('selectTakersOverlay');
   document.getElementById('applicantsList').innerHTML =
     '<div class="empty" style="padding:32px;"><span class="mi">hourglass_empty</span><div class="empty-title">Loading applicants...</div></div>';
@@ -3257,7 +3258,7 @@ function renderApplicantsList(applicants, approvedTakers) {
   document.getElementById('applicantCount').textContent = `${applicants.length} applicant${applicants.length!==1?'s':''} · ${approvedTakers.length} approved`;
 
   if (!applicants.length) {
-    el.innerHTML = '<div class="empty" style="padding:28px;"><span class="mi">people</span><div class="empty-title">No Applicants Yet</div><p class="empty-desc">Share your dare to get more applicants!</p></div>';
+    el.innerHTML = '<div class="empty" style="padding:28px;"><span class="mi">people</span><div class="empty-title">No Applicants Yet</div><p class="empty-desc">Share your mission to get more applicants!</p></div>';
     return;
   }
 
@@ -3269,7 +3270,7 @@ function renderApplicantsList(applicants, approvedTakers) {
       <div style="flex:1;min-width:0;">
         <div style="font-size:14px;font-weight:600;color:var(--t1);">${escHtml(a.name||'Unknown')}</div>
         <div style="font-size:11px;color:var(--t3);font-family:'IBM Plex Mono',monospace;">
-          ${a.completionRate||0} dares completed · Applied ${a.date||''}
+          ${a.completionRate||0} missions completed · Applied ${a.date||''}
         </div>
       </div>
       <div style="display:flex;gap:6px;align-items:center;">
@@ -3551,13 +3552,13 @@ let searchType      = 'dares';
 let searchDebounceTimer = null;
 let activeExpTab    = 'all';
 const GUEST_ACTION_MSGS = {
-  post:        { icon:'⚡', title:'Post Dares', msg:'Create a free account to set bounties and challenge others.' },
-  accept:      { icon:'', title:'Accept Dares', msg:'Sign up to accept dares and earn real money.' },
+  post:        { icon:'⚡', title:'Post Missions', msg:'Create a free account to set bounties and challenge others.' },
+  accept:      { icon:'', title:'Accept Missions', msg:'Sign up to accept missions and earn real money.' },
   proof:       { icon:'', title:'Submit Proof', msg:'Create an account to submit video proof and claim your reward.' },
   profile:     { icon:'👤', title:'Your Profile', msg:'Sign up to build your profile, track earnings, and manage your wallet.' },
-  accepted:    { icon:'✅', title:'Accepted Dares', msg:'Create an account to track and manage the dares you have accepted.' },
+  accepted:    { icon:'✅', title:'Accepted Missions', msg:'Create an account to track and manage the missions you have accepted.' },
   leaderboard: { icon:'', title:'Leaderboard', msg:'Join to see top earners and compete for the highest rewards.' },
-  default:     { icon:'🔐', title:'Create a free account', msg:'Sign up to unlock all features — post dares, accept challenges, and earn money.' },
+  default:     { icon:'🔐', title:'Create a free account', msg:'Sign up to unlock all features — post missions, accept challenges, and earn money.' },
 };
 const GUEST_BLOCKED_PAGES = ['profile', 'accepted'];
 const COMMENT_MILESTONES = [1,5,10,100,1000,10000,100000];
@@ -3615,7 +3616,7 @@ function _doSearch(q) {
     <button class="search-back-btn" onclick="_searchBack()"><span class="mi">arrow_back</span> Back</button>
     <div class="search-type-bar">
       <button class="search-type-btn ${searchType==='dares'?'active':''}" onclick="setSearchType('dares')">
-        <span class="mi">bolt</span> Dares
+        <span class="mi">bolt</span> Missions
       </button>
       <button class="search-type-btn ${searchType==='videos'?'active':''}" onclick="setSearchType('videos')">
         <span class="mi">play_circle</span> Videos
@@ -3627,7 +3628,7 @@ function _doSearch(q) {
     const active    = results.filter(d=>!d.completed);
     const completed = results.filter(d=>d.completed);
     if (!results.length) {
-      feed.innerHTML=typeBar+`<div class="empty"><span class="mi">search_off</span><div class="empty-title">No dares for "${escHtml(q)}"</div><p class="empty-desc">Try searching Videos tab</p></div>`;
+      feed.innerHTML=typeBar+`<div class="empty"><span class="mi">search_off</span><div class="empty-title">No missions for "${escHtml(q)}"</div><p class="empty-desc">Try searching Videos tab</p></div>`;
     } else {
       let html=typeBar+`<div style="font-size:12px;color:var(--t3);margin-bottom:14px;padding:0 4px;">${results.length} dare${results.length!==1?'s':''} for "<strong style="color:var(--t1);">${escHtml(q)}</strong>"</div>`;
       if (active.length)    html+=`<div class="search-section-label">Active (${active.length})</div><div class="active-dare-grid">${active.map(d=>_searchDareCard(d)).join('')}</div>`;
@@ -3638,7 +3639,7 @@ function _doSearch(q) {
     const pool    = allProofs.length?allProofs:homeProofs;
     const results = _scoredSearch(pool, q, ['dareTitle','takerName','note'], ['cat']);
     if (!results.length) {
-      feed.innerHTML=typeBar+`<div class="empty"><span class="mi">search_off</span><div class="empty-title">No videos for "${escHtml(q)}"</div><p class="empty-desc">Try Dares tab instead</p></div>`;
+      feed.innerHTML=typeBar+`<div class="empty"><span class="mi">search_off</span><div class="empty-title">No videos for "${escHtml(q)}"</div><p class="empty-desc">Try Missions tab instead</p></div>`;
     } else {
       feed.innerHTML=typeBar+`<div style="font-size:12px;color:var(--t3);margin-bottom:14px;padding:0 4px;">${results.length} video${results.length!==1?'s':''} for "<strong style="color:var(--t1);">${escHtml(q)}</strong>"</div>`+_mixedVideoFeedHtml(results,'No videos');
     }
@@ -3663,7 +3664,7 @@ function _explorerVideoCard(p) {
     <div class="yt-info">
       <div class="yt-av">${_avHtml(p.takerPhotoURL, p.takerName)}</div>
       <div class="yt-meta">
-        <div class="yt-title">${escHtml(p.dareTitle||'Dare Video')}</div>
+        <div class="yt-title">${escHtml(p.dareTitle||'Mission Video')}</div>
         <div class="yt-sub"><span>@${escHtml(p.takerUsername||p.takerName||'creator')}</span><span class="yt-dot"></span><span>${(p.viewCount||0).toLocaleString('en-IN')} views</span><span class="yt-dot"></span><span>${_relTime(p)}</span></div>
       </div>
     </div>
@@ -3699,7 +3700,7 @@ function _onGuestExpired() {
   showGuestPrompt({
     icon:  '⏰',
     title: 'Your guest session has ended',
-    msg:   'Your 15-minute preview is over. Create a free account to keep using Dare Market — it only takes 10 seconds!',
+    msg:   'Your 15-minute preview is over. Create a free account to keep using Mission Market — it only takes 10 seconds!',
   }, false); // false = NOT dismissible
 }
 
@@ -3796,7 +3797,7 @@ function _vdRelLongCard(p){
     ? `<div class="dd-rel-thumb"><img src="${t}" loading="lazy" decoding="async"/>${badge}</div>`
     : `<div class="dd-rel-thumb dd-rel-thumb-bg" style="background:linear-gradient(135deg,${color}22,${color}55);"><span class="mi" style="color:${color};">play_circle</span>${badge}</div>`;
   return `<div class="dd-rel-card" onclick="openVideo('${p.id}')">${thumb}
-    <div class="dd-rel-title">${escHtml(p.dareTitle||'Dare Video')}</div>
+    <div class="dd-rel-title">${escHtml(p.dareTitle||'Mission Video')}</div>
     <div class="dd-rel-meta">${escHtml(p.takerName||'—')}</div>
     <div class="dd-rel-meta">${_fmtCount(p.viewCount||0)} views · ${_relTime(p)}</div></div>`;
 }
@@ -3828,7 +3829,7 @@ async function _renderVideoDetail(p) {
       .then(()=>{const n=(p.viewCount||0)+1;p.viewCount=n;const m=document.getElementById('vdMeta');if(m)m.textContent=`${n.toLocaleString('en-IN')} views · ${_relTime(p)}`;_checkViewMilestone(p.id,n,p.takerId,p.dareTitle);}).catch(()=>{});
   }
   // video src is set by openVideoDetail (after ad) — not here
-  document.getElementById('vdTitle').textContent = p.dareTitle||'Dare Video';
+  document.getElementById('vdTitle').textContent = p.dareTitle||'Mission Video';
   document.getElementById('vdMeta').textContent  = `${(p.viewCount||0).toLocaleString('en-IN')} views · ${_relTime(p)}`;
   // Bounty badge on the video (top-right) — $ prefixed, no expiry
   const bb=document.getElementById('vdBountyBadge'); if(bb) bb.textContent='$'+(p.dareBounty||0).toLocaleString('en-IN');
@@ -4029,7 +4030,7 @@ function _videoCardSearch(p) {
     <div class="yt-info">
       <div class="yt-av">${_avHtml(p.takerPhotoURL, p.takerName)}</div>
       <div class="yt-meta">
-        <div class="yt-title">${escHtml(p.dareTitle||'Dare Video')}</div>
+        <div class="yt-title">${escHtml(p.dareTitle||'Mission Video')}</div>
         <div class="yt-sub"><span>@${escHtml(p.takerUsername||p.takerName||'creator')}</span><span class="yt-dot"></span><span>${(p.viewCount||0).toLocaleString('en-IN')} views</span><span class="yt-dot"></span><span>${_relTime(p)}</span></div>
       </div>
     </div>
@@ -4064,12 +4065,12 @@ let _ddCurrentId = null;
 function openDareDetail(dareId){
   try{ _pvStop(); }catch(e){}
   const d = dares.find(x=>x.id===dareId);
-  if (!d) { showToast('Dare not found'); return; }
+  if (!d) { showToast('Mission not found'); return; }
   if (typeof _enterView === 'function') _enterView('dare', dareId);   // give it a URL + pause/close current
   if (typeof _searchReturn !== 'undefined') _searchReturn = null;
   _ddCurrentId = dareId;
   const cat = d.tags?.[0] || d.cat || 'fitness';
-  const title = d.caption || d.title || 'Untitled Dare';
+  const title = d.caption || d.title || 'Untitled Mission';
   const reward = d.rewardAmount ?? d.bounty ?? 0;
   const thumb = d.thumbnailURL || '';
   const color = CAT_C[cat] || '#FF2D4A', icon = CAT_I[cat] || 'bolt';
@@ -4443,12 +4444,12 @@ function _searchBack(){
 }
 function _ddReport(){
   const d = dares.find(x=>x.id===_ddCurrentId); if (!d) return;
-  openReportModal('dare', _ddCurrentId, d.caption || d.title || 'this dare');
+  openReportModal('dare', _ddCurrentId, d.caption || d.title || 'this mission');
 }
 function _ddCtaHtml(d){
   const isMine = d.creatorUid === user?.uid;
   const myEntry = (acceptedDares||[]).find(a=>a.dareId===d.id);
-  if (isMine) return `<button class="btn-yours" style="padding:11px 22px;border-radius:50px;width:auto;">Your Dare</button>`;
+  if (isMine) return `<button class="btn-yours" style="padding:11px 22px;border-radius:50px;width:auto;">Your Mission</button>`;
   if (myEntry){
     if (myEntry.proofStatus==='submitted' || myEntry.proofStatus==='approved')
       return `<button class="btn-proof-done" style="padding:11px 18px;border-radius:50px;"><span class="mi">check_circle</span>Submitted</button>`;
@@ -4722,7 +4723,7 @@ function renderDareMore(excludeId){
     if (d.expiresAt){ const exp = d.expiresAt.toDate?d.expiresAt.toDate():new Date(d.expiresAt); if (exp<now) return false; }
     return true;
   }).slice(0, 12);
-  if (!active.length){ el.innerHTML = '<div class="exp-empty">No other active dares.</div>'; return; }
+  if (!active.length){ el.innerHTML = '<div class="exp-empty">No other active missions.</div>'; return; }
   el.innerHTML = `<div class="active-dare-grid">${active.map(_activeDareCard).join('')}</div>`;
 }
 
@@ -4835,7 +4836,7 @@ function _showInlineAd(player, p) {
     <div class="vd-ad-badge">Ad</div>
     <div class="vd-ad-body">
       <span class="mi" style="font-size:48px;color:var(--blue);">bolt</span>
-      <div class="vd-ad-title">DareMarket</div>
+      <div class="vd-ad-title">Mission Market</div>
       <div class="vd-ad-sub">Your video starts in <b id="vdAdCount">${secs}</b>s</div>
     </div>
     <button class="vd-ad-skip" id="vdAdSkip" disabled>Skip in ${secs}s</button>`;
@@ -4875,8 +4876,8 @@ async function renderExplorer() {
     try{const ss=await db.collection('searches').orderBy('count','desc').limit(10).get();topSearches=ss.docs.map(d=>d.data());}catch(_){}
     const showAll=activeExpTab==='all';
     container.innerHTML=`
-      ${showAll||activeExpTab==='viewed'?`<div class="exp-section"><div class="exp-sec-hdr"><span class="exp-fire"></span><div><div class="exp-sec-title">Most Viewed Today</div><div class="exp-sec-sub">Top taker videos</div></div></div>${_mixedVideoFeedHtml(mostViewed,'Complete dares to see videos here!')}</div>`:''}
-      ${showAll||activeExpTab==='accepted'?`<div class="exp-section"><div class="exp-sec-hdr"><span class="exp-fire"></span><div><div class="exp-sec-title">Most Accepted Dares</div><div class="exp-sec-sub">Dares everyone wants to try</div></div></div>${mostAccepted.length?`<div class="active-dare-grid">${mostAccepted.map(d=>_explorerDareCard(d)).join('')}</div>`:`<div class="exp-empty">No active dares!</div>`}</div>`:''}
+      ${showAll||activeExpTab==='viewed'?`<div class="exp-section"><div class="exp-sec-hdr"><span class="exp-fire"></span><div><div class="exp-sec-title">Most Viewed Today</div><div class="exp-sec-sub">Top taker videos</div></div></div>${_mixedVideoFeedHtml(mostViewed,'Complete missions to see videos here!')}</div>`:''}
+      ${showAll||activeExpTab==='accepted'?`<div class="exp-section"><div class="exp-sec-hdr"><span class="exp-fire"></span><div><div class="exp-sec-title">Most Accepted Missions</div><div class="exp-sec-sub">Missions everyone wants to try</div></div></div>${mostAccepted.length?`<div class="active-dare-grid">${mostAccepted.map(d=>_explorerDareCard(d)).join('')}</div>`:`<div class="exp-empty">No active missions!</div>`}</div>`:''}
       ${showAll||activeExpTab==='liked'?`<div class="exp-section"><div class="exp-sec-hdr"><span class="exp-fire"></span><div><div class="exp-sec-title">Most Liked Videos</div><div class="exp-sec-sub">Community favorites</div></div></div>${_mixedVideoFeedHtml(mostLiked.filter(p=>(p.likeCount||0)>0),'Like videos to see them here!')}</div>`:''}
       ${showAll||activeExpTab==='searched'?`<div class="exp-section"><div class="exp-sec-hdr"><span class="exp-fire"></span><div><div class="exp-sec-title">Trending Searches</div><div class="exp-sec-sub">What people are looking for</div></div></div>${topSearches.length?`<div class="trending-searches-list">${topSearches.map((s,i)=>`<div class="trending-search-row" onclick="doTrendingSearch('${escHtml(s.term||'')}')"><span class="trending-rank">${i<3?['🥇','🥈','🥉'][i]:'#'+(i+1)}</span><span class="trending-term">${escHtml(s.term||'')}</span><span class="trending-count">${(s.count||0).toLocaleString('en-IN')} searches</span><span class="mi" style="color:var(--t4);margin-left:auto;font-size:14px;">arrow_forward_ios</span></div>`).join('')}</div>`:`<div class="exp-empty">Search for something to start tracking!</div>`}</div>`:''}`;
   }catch(e){container.innerHTML=`<div class="empty"><span class="mi">error_outline</span><div class="empty-title">Error loading trending</div><p class="empty-desc">${e.message}</p></div>`;}
@@ -5022,7 +5023,7 @@ function shortsNav(dir) {
 // Build ONE self-contained slide (video + its own overlay: controls, info, action rail)
 function _shortsSlideHtml(p, i) {
   const d = (typeof dares !== 'undefined' ? dares.find(x => x.id === p.dareId) : null) || {};
-  const caption = escHtml(d.caption || d.title || p.dareTitle || 'Dare Video');
+  const caption = escHtml(d.caption || d.title || p.dareTitle || 'Mission Video');
   const creatorName = escHtml(d.creator || p.posterName || 'Creator');
   const creatorId = d.creatorUid || p.posterId || '';
   const takerName = escHtml(p.takerName || 'Taker');
@@ -5151,7 +5152,7 @@ function _shortsFillCol1(p, d){
   const col1 = document.getElementById('shortsCol1'); if (!col1) return;
   const creatorName = escHtml(d.creator || p.posterName || 'Creator');
   const takerName   = escHtml(p.takerName || 'Taker');
-  const caption = escHtml(d.caption || d.title || p.dareTitle || 'Dare Video');
+  const caption = escHtml(d.caption || d.title || p.dareTitle || 'Mission Video');
   const cAv = _avHtml(d.creatorPhotoURL||p.posterPhotoURL, creatorName);
   const tAv = _avHtml(p.takerPhotoURL, takerName);
   col1.classList.remove('expanded');
@@ -5221,7 +5222,7 @@ function _shortsFillFixed(p, d){
     const creatorName = escHtml(d.creator || p.posterName || 'Creator');
     const takerName = escHtml(p.takerName || 'Taker');
     const creatorId = d.creatorUid || p.posterId || '';
-    const caption = escHtml(d.caption || d.title || p.dareTitle || 'Dare Video');
+    const caption = escHtml(d.caption || d.title || p.dareTitle || 'Mission Video');
     const words = caption.split(' ');
     const capPreview = words.length>5 ? words.slice(0,5).join(' ')+'...' : caption;
     const capToggle = words.length>5 ? ` <span class="shorts-cap-toggle" onclick="shortsCapToggleSlide(this)">more</span>` : '';
@@ -5312,7 +5313,7 @@ function shortsOpenComments(proofId){
 }
 function _shortsBuildMenu(p){
   const d = (typeof dares !== 'undefined' ? dares.find(x => x.id === p.dareId) : null) || {};
-  const caption = escHtml(d.caption || d.title || p.dareTitle || 'Dare Video');
+  const caption = escHtml(d.caption || d.title || p.dareTitle || 'Mission Video');
   const desc = escHtml(d.desc || d.description || '');
   const bounty = (d.bounty || p.dareBounty || 0);
   const rulesHtml = (d.rules && d.rules.length)
@@ -5670,7 +5671,7 @@ const _WTXN_CATS = {
   withdraw:    { icon:'account_balance',label:'Withdrawal',   type:'debit'  },
   bounty_won:  { icon:'emoji_events',   label:'Bounty Won',   type:'credit' },
   bounty_paid: { icon:'paid',           label:'Bounty Paid',  type:'debit'  },
-  dare_posted: { icon:'lock',           label:'Dare Posted',  type:'debit'  },
+  dare_posted: { icon:'lock',           label:'Mission Posted',  type:'debit'  },
   refund:      { icon:'undo',           label:'Refund',       type:'credit' },
   claim:       { icon:'savings',        label:'Claimed',      type:'credit' },
   other:       { icon:'swap_horiz',     label:'Transaction',  type:'credit' }
@@ -5685,7 +5686,7 @@ function _wtxnCat(t){
   if (s.startsWith('withdraw')) return 'withdraw';
   if (s.includes('bounty won')) return 'bounty_won';
   if (s.includes('refund') || s.includes('deleted')) return 'refund';
-  if (s.startsWith('dare posted')) return 'dare_posted';
+  if (s.startsWith('mission posted')) return 'dare_posted';
   return t.type === 'credit' ? 'other' : 'dare_posted';
 }
 function _wtxnTs(t){ return t.ts || (t.date ? new Date(t.date).getTime() : 0) || 0; }
@@ -5728,7 +5729,7 @@ async function _walletReconcileExpired(){
     wallet.balance = (wallet.balance||0) + reward;
     wallet.transactions = wallet.transactions || [];
     wallet.transactions.unshift({ id:'w'+Date.now()+Math.floor(Math.random()*1000), ts:Date.now(), status:'completed',
-      type:'credit', category:'refund', title:'Dare Expired (Refund): '+((d.caption||d.title||'').slice(0,25)), amount:reward,
+      type:'credit', category:'refund', title:'Mission Expired (Refund): '+((d.caption||d.title||'').slice(0,25)), amount:reward,
       ref:'REF'+Date.now().toString(36).toUpperCase(), date:todayStr() });
     db.collection('dares').doc(d.id).update({ refunded:true, completed:true }).catch(()=>{});
     changed = true;
@@ -6132,7 +6133,7 @@ function _homeDaresHtml(){
   return `<div class="home-section" id="homeDaresRow">
     <div class="home-sec-hdr">
       <span class="mi" style="color:var(--blue2);font-size:20px;">bolt</span>
-      <span class="home-sec-title">Live Dares</span>
+      <span class="home-sec-title">Live Missions</span>
       <span class="home-sec-sub">Accept &amp; earn</span>
       <span class="home-sec-viewall" onclick="goPage('dares')">View All →</span>
     </div>
@@ -6148,19 +6149,19 @@ function _renderInterleavedFeed(longVids, shorts) {
   _daresRowShown = false;
   const container = document.getElementById('homeVideoGrid');
   if (!container) return;
-  // Home order (fixed): Live/Active Dares FIRST → "Dare Videos" header directly
+  // Home order (fixed): Live/Active Dares FIRST → "Mission Videos" header directly
   // above the long videos → Shorts shelf LAST (no header text above shorts)
   const _videosHdr = `<div class="home-sec-hdr" style="margin-top:4px;">
       <div class="home-sec-dot"></div>
-      <span class="home-sec-title">Dare Videos</span>
-      <span class="home-sec-sub">Completed dares</span>
+      <span class="home-sec-title">Mission Videos</span>
+      <span class="home-sec-sub">Completed missions</span>
     </div>`;
   if (!_feedLong.length && !_feedShorts.length) {
     container.innerHTML = _homeDaresHtml();                        // live dares on top
     container.insertAdjacentHTML('beforeend', `<div class="empty"><span class="mi">play_circle</span>
       <div class="empty-title">No Videos Yet</div>
-      <p class="empty-desc">Complete a dare and submit video proof — it will appear here!</p>
-      <button class="btn-empty" onclick="goPage('dares')"><span class="mi">bolt</span>Browse Dares</button></div>`);
+      <p class="empty-desc">Complete a mission and submit video proof — it will appear here!</p>
+      <button class="btn-empty" onclick="goPage('dares')"><span class="mi">bolt</span>Browse Missions</button></div>`);
     return;
   }
   container.innerHTML = _homeDaresHtml() + _videosHdr;             // live dares → videos header
@@ -6230,7 +6231,7 @@ function _longCardHtml(p) {
       <div class="yt-info">
         <div class="yt-av">${_avHtml(p.takerPhotoURL, p.takerName)}</div>
         <div class="yt-meta">
-          <div class="yt-title">${escHtml(p.dareTitle||'Dare Completed')}</div>
+          <div class="yt-title">${escHtml(p.dareTitle||'Mission Completed')}</div>
           <div class="yt-sub"><span>@${p.takerUsername||p.takerName||'creator'}</span><span class="yt-dot"></span><span>${(p.viewCount||0).toLocaleString('en-IN')} views</span><span class="yt-dot"></span><span>${_relTime(p)}</span></div>
         </div>
       </div>
@@ -6894,7 +6895,7 @@ function openQualityMenu(v){
       + '<span>'+lbl+(sub?' <span class="vq-sub">'+sub+'</span>':'')+'</span></button>';
   };
   m.innerHTML = '<div class="vq-title">Video quality</div>'
-    + item('auto', 'Auto (Adaptive)', 'network ke hisaab se')
+    + item('auto', 'Auto (Adaptive)', 'adjusts to your network')
     + opts.map(o=>item(o, o+'p')).join('');
   w.classList.add('open');
 }
@@ -6989,3 +6990,21 @@ function _resumeBgMedia(){
     if(visible) v.play().catch(()=>{});
   });
 }
+
+// ── YouTube-style auto-hiding topbar (mobile): scrolling DOWN slides the bar
+//    away (fullscreen-app feel); a slight scroll UP brings it back. Near the
+//    top it is always shown; open popups force it visible via CSS (ov-open). ──
+(function(){
+  const mq = window.matchMedia ? window.matchMedia('(max-width:768px)') : null;
+  let lastY = 0, acc = 0;
+  window.addEventListener('scroll', ()=>{
+    if (!mq || !mq.matches) return;
+    const y = window.scrollY || 0;
+    const dy = y - lastY; lastY = y;
+    if (document.body.classList.contains('ov-open')) return;
+    if (y < 80){ document.body.classList.remove('tb-hide'); acc = 0; return; }
+    acc = (dy > 0) === (acc > 0) ? acc + dy : dy;   // reset on direction change
+    if (acc > 24) document.body.classList.add('tb-hide');
+    else if (acc < -10) document.body.classList.remove('tb-hide');
+  }, { passive:true });
+})();
