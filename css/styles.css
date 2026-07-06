@@ -3852,14 +3852,14 @@ body.scrolling .yt-card, body.scrolling .active-dare-card, body.scrolling .short
    Modals now open BELOW the topbar and RIGHT of the sidebar. Mobile keeps
    true full-screen modals (they have their own back-arrow header). */
 @media(min-width:769px){
+  /* the desktop sidebar is the PERMANENT 72px icon rail (YouTube-minimalism
+     block sets width:72px !important) — NOT var(--sw)=240px. Using --sw left a
+     168px strip of the page peeking between the rail and the modal. */
   .overlay.as-page,
   .profile-edit-overlay.as-page,
-  .video-modal-overlay.as-page{ top:56px; left:var(--sw); }
-}
-@media(min-width:769px) and (max-width:900px){
-  .overlay.as-page,
-  .profile-edit-overlay.as-page,
-  .video-modal-overlay.as-page{ left:72px; }   /* collapsed sidebar width */
+  .video-modal-overlay.as-page{ top:56px; left:72px; }
+  /* expanded drawer (hamburger) must slide ABOVE an open modal, not under it */
+  .sidebar{ z-index:9550 !important; }
 }
 /* Topbar popovers (notifications) must open ABOVE an open as-page modal */
 .notif-panel{ z-index:9650 !important; }
