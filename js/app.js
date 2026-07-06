@@ -6321,7 +6321,7 @@ function vidThumb(p, w) {
   const u = p.videoURL || '';
   if (u.includes('res.cloudinary.com') && u.includes('/video/upload/')) {
     return u.replace('/video/upload/', `/video/upload/so_2,w_${w},c_fill,q_auto,f_jpg/`)
-            .replace(/\.(mp4|webm|mov|mkv|avi)(\?.*)?$/i, '.jpg');
+            .replace(/\.(mp4|webm|mov|mkv|avi|3gp|3g2|m4v|wmv|flv|mpg|mpeg|ogv)(\?.*)?$/i, '.jpg');
   }
   return ''; // non-cloudinary: no thumb
 }
@@ -6777,7 +6777,7 @@ function _vidHlsUrl(url){
   if(!url || !url.includes('res.cloudinary.com') || !url.includes('/video/upload/')) return null;
   if(/\/video\/upload\/[^/]*sp_/.test(url)) return url;
   let u = url.replace('/video/upload/', '/video/upload/sp_auto/');
-  if(/\.(mp4|webm|mov|mkv|avi)(\?.*)?$/i.test(u)) u = u.replace(/\.(mp4|webm|mov|mkv|avi)(\?.*)?$/i, '.m3u8');
+  if(/\.(mp4|webm|mov|mkv|avi|3gp|3g2|m4v|wmv|flv|mpg|mpeg|ogv)(\?.*)?$/i.test(u)) u = u.replace(/\.(mp4|webm|mov|mkv|avi|3gp|3g2|m4v|wmv|flv|mpg|mpeg|ogv)(\?.*)?$/i, '.m3u8');
   else if(u.includes('?')) u = u.replace('?', '.m3u8?');
   else u += '.m3u8';                    // extension-less Cloudinary URL → force HLS format
   return u;
