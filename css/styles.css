@@ -3648,7 +3648,8 @@ html{scroll-behavior:smooth;}
   background:transparent !important;
   backdrop-filter:none !important;-webkit-backdrop-filter:none !important;
   border:none;border-radius:0;box-shadow:none;
-  width:100%;max-width:600px;max-height:none;overflow:visible;margin:0 auto;padding-bottom:70px;
+  width:100%;max-width:600px;max-height:none;overflow:visible;margin:0 auto;
+  padding:22px 18px 70px;   /* top gap so the header doesn't touch the app topbar (matches Settings) */
   position:static;bottom:auto;left:auto;right:auto;
 }
 
@@ -3919,4 +3920,22 @@ body.scrolling .yt-card, body.scrolling .active-dare-card, body.scrolling .short
   #dareDetailOverlay .vd-back-btn{ background:rgba(0,0,0,.45) !important; backdrop-filter:blur(4px); -webkit-backdrop-filter:blur(4px); }
   /* description page opens from the very top too when immersive */
   body.mission-detail #dareDetailOverlay .dd-col2{ top:0 !important; }
+}
+
+/* ═══ Desktop: mission-detail back button floats over the thumbnail (no bar) ═══
+   The full-width glassy back-BAR is gone; only a glassy circular back button
+   sits over the top-left of the video thumbnail (like mobile). Title + the
+   redundant top 3-dots (Share/Report also live in the actions row) are hidden. */
+@media(min-width:769px){
+  #dareDetailOverlay .dd-wrap{ position:relative; }
+  #dareDetailOverlay .dd-topbar{
+    position:absolute; top:0; left:0; z-index:11; width:auto;
+    background:transparent !important; box-shadow:none !important; border:none !important; padding:14px;
+  }
+  #dareDetailOverlay .dd-topbar .vd-topbar-title,
+  #dareDetailOverlay .dd-topbar .dd-top-more{ display:none !important; }
+  #dareDetailOverlay .dd-topbar .vd-back-btn{
+    background:rgba(0,0,0,.45) !important; border:1px solid rgba(255,255,255,.16) !important;
+    backdrop-filter:blur(6px); -webkit-backdrop-filter:blur(6px); color:#fff !important;
+  }
 }
