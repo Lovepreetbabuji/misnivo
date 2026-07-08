@@ -3919,7 +3919,7 @@ function closeVideoDesc(){
   ov.querySelector('.dd-col2')?.classList.remove('open'); ov.classList.remove('vd-show-desc');
 }
 // Scroll-to-top for the video page
-function _vdScroller(){ return document.getElementById('videoDetailOverlay')||null; }  /* whole overlay scrolls now (video+desc stack in the left column) */
+function _vdScroller(){ const ov=document.getElementById('videoDetailOverlay'); if(!ov) return null; if(window.innerWidth>=769){ const c=ov.querySelector('.dd-col1'); if(c) return c; } return ov; }
 function _vdScrollTop(){ const sc=_vdScroller(); if(sc) sc.scrollTo({top:0,behavior:'smooth'}); }
 function _vdBindScroll(){ const sc=_vdScroller(); const btn=document.getElementById('vdScrollTop'); if(!sc) return; const on=()=>{ if(btn) btn.classList.toggle('show', sc.scrollTop>500); }; if(sc._vdSH) sc.removeEventListener('scroll',sc._vdSH); sc._vdSH=on; sc.addEventListener('scroll',on); if(btn) btn.classList.remove('show'); }
 
@@ -4048,7 +4048,7 @@ function closeNotifPanel() { document.getElementById('notifPanel')?.classList.re
 function closeVideoDetail() {
   document.getElementById('videoDetailOverlay').classList.remove('open');
   document.body.style.overflow='';
-  document.body.classList.remove('detail-open');document.body.classList.remove('mission-detail');
+  document.body.classList.remove('detail-open');
   closeDareComments(); closeVideoDesc();
   _stopVdAd();   // kill any running pre-roll so it can't start the video in the background
   const player=document.getElementById('vdPlayer');
@@ -4137,14 +4137,13 @@ function openDareDetail(dareId){
   const col1 = ov.querySelector('.dd-col1'); if (col1) col1.scrollTop = 0;
   document.body.style.overflow = 'hidden';
   document.body.classList.add('detail-open'); // makes the topbar opaque
-  document.body.classList.add('mission-detail'); // mobile: immersive (hide app topbar, single back-bar)
   closeDareDetails();
   _ddBindScrollTop(); _ddBindSwipe();
 }
 function closeDareDetail(){
   document.getElementById('dareDetailOverlay').classList.remove('open');
   document.body.style.overflow = '';
-  document.body.classList.remove('detail-open');document.body.classList.remove('mission-detail');
+  document.body.classList.remove('detail-open');
   closeDareComments(); closeDareDetails();
   _ddCurrentId = null;
 }
@@ -4168,7 +4167,8 @@ function _ddBindSwipe(){
 // Which element actually scrolls? desktop = column 1; mobile = the overlay itself.
 function _ddScroller(){
   const ov = document.getElementById('dareDetailOverlay'); if (!ov) return null;
-  return ov;   /* whole overlay scrolls now (video+desc stack in the left column) */
+  if (window.innerWidth >= 769){ const c = ov.querySelector('.dd-col1'); if (c) return c; }
+  return ov;
 }
 function _ddBindScrollTop(){
   const sc = _ddScroller(); const btn = document.getElementById('ddScrollTop');
@@ -4200,7 +4200,7 @@ function _closeDetailOverlays(){
   if (sh && sh.classList.contains('open')){ if (typeof closeShorts==='function') closeShorts(); closed = true; }
   if (closed){
     document.body.style.overflow = '';
-    document.body.classList.remove('detail-open');document.body.classList.remove('mission-detail');
+    document.body.classList.remove('detail-open');
     if (typeof closeDareComments === 'function') closeDareComments();
     if (typeof _stopVdAd === 'function') _stopVdAd();   // kill any running pre-roll ad
     // Stop the long-video player (pause AND abort loading)

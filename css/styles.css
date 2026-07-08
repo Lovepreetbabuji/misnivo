@@ -2534,25 +2534,21 @@ body.detail-open .topbar{ background:rgba(10,10,10,.98) !important; backdrop-fil
 
 /* Desktop: 3 columns, each scrolls independently; page opens beside the rail */
 @media(min-width:769px){
-  /* the whole page scrolls now (video+description stack in the left column) */
-  #dareDetailOverlay, #videoDetailOverlay{ left:72px; overflow-y:auto; transition:left .28s cubic-bezier(.4,0,.2,1); }
+  #dareDetailOverlay, #videoDetailOverlay{ left:72px; overflow:hidden; transition:left .28s cubic-bezier(.4,0,.2,1); }
   body.sidebar-expanded #dareDetailOverlay, body.sidebar-expanded #videoDetailOverlay{ left:240px; }
-  #dareDetailOverlay .dd-wrap, #videoDetailOverlay .dd-wrap{ min-height:100%; max-width:1320px; display:block; padding:0 16px; }
-  /* Desktop layout = YouTube-style: video (main) TOP-LEFT, Description & rules
-     directly UNDER it in the same LEFT column, Related on the right. (User: the
-     description box must be the first/left column, not a middle column.) */
-  #dareDetailOverlay .dd-layout, #videoDetailOverlay .dd-layout{
-    display:grid; grid-template-columns:minmax(0,1fr) 320px;
-    grid-template-areas:"main related" "desc related";
-    align-content:start; gap:6px 22px; padding-bottom:40px;
-  }
-  #dareDetailOverlay .dd-layout > .dd-bar, #videoDetailOverlay .dd-layout > .dd-bar{ margin-bottom:0; overflow:visible; }
-  .dd-col1{ grid-area:main; min-width:0; }
-  .dd-col2{ grid-area:desc; min-width:0; }
-  .dd-col3{ grid-area:related; width:auto; align-self:start; }
-  /* Long-video page: description hidden until "Description & rules" is toggled */
+  #dareDetailOverlay .dd-wrap, #videoDetailOverlay .dd-wrap{ height:100%; max-width:1320px; display:flex; flex-direction:column; padding:0 16px; }
+  #dareDetailOverlay .dd-layout, #videoDetailOverlay .dd-layout{ display:flex; gap:18px; align-items:stretch; flex:1; min-height:0; padding-bottom:16px; }
+  #dareDetailOverlay .dd-layout > .dd-bar, #videoDetailOverlay .dd-layout > .dd-bar{ margin-bottom:0; overflow-y:auto; }
+  .dd-col1{ flex:1.5; min-width:0; }
+  .dd-col2{ flex:1; min-width:0; }
+  .dd-col3{ width:300px; flex-shrink:0; }
+  /* Long-video page: description column hidden by default → toggled to 3 cols */
   #videoDetailOverlay .dd-col2{ display:none; }
   #videoDetailOverlay.vd-show-desc .dd-col2{ display:block; }
+  /* 2-column (no description) → make the Related column noticeably wider (~1.5x,
+     proportional so it scales and never squeezes the video). col1:col3 = 2:1 ≈ 33% */
+  #videoDetailOverlay:not(.vd-show-desc) .dd-col1{ flex:2; }
+  #videoDetailOverlay:not(.vd-show-desc) .dd-col3{ flex:1; width:auto; min-width:300px; }
   /* slim scrollbars inside the columns */
   #dareDetailOverlay .dd-bar::-webkit-scrollbar, #videoDetailOverlay .dd-bar::-webkit-scrollbar{ width:8px; }
   #dareDetailOverlay .dd-bar::-webkit-scrollbar-thumb, #videoDetailOverlay .dd-bar::-webkit-scrollbar-thumb{ background:#333; border-radius:8px; }
@@ -3905,43 +3901,3 @@ body.scrolling .yt-card, body.scrolling .active-dare-card, body.scrolling .short
   body.tb-hide.ov-open .topbar{ transform: none; }   /* popups sit below the bar */
 }
 
-/* ═══ Mobile: mission/completed/accepted detail = immersive (single back-bar) ═══
-   The app topbar + the detail's own floating back button used to stack = a
-   doubled, glitchy-looking bar. On these pages the detail has its OWN back
-   button, so hide the app topbar (like shorts) and let the page fill the screen
-   from the top. Video detail keeps the topbar (it has no own back button). A
-   soft top scrim keeps the floating back button readable over light thumbnails. */
-@media(max-width:768px){
-  body.mission-detail .topbar{ display:none !important; }
-  body.mission-detail #dareDetailOverlay{ top:0 !important; }
-  /* NO box/scrim around the back button — just the bare arrow with a shadow */
-  #dareDetailOverlay .dd-topbar::before{ display:none !important; }
-  #dareDetailOverlay .vd-back-btn{
-    background:transparent !important; border:none !important; box-shadow:none !important;
-    backdrop-filter:none !important; -webkit-backdrop-filter:none !important;
-  }
-  #dareDetailOverlay .vd-back-btn .mi{ text-shadow:0 2px 10px rgba(0,0,0,1), 0 0 4px rgba(0,0,0,.9); }
-  /* description page opens from the very top too when immersive */
-  body.mission-detail #dareDetailOverlay .dd-col2{ top:0 !important; }
-}
-
-/* ═══ Desktop: mission-detail back button floats over the thumbnail (no bar) ═══
-   The full-width glassy back-BAR is gone; only a glassy circular back button
-   sits over the top-left of the video thumbnail (like mobile). Title + the
-   redundant top 3-dots (Share/Report also live in the actions row) are hidden. */
-@media(min-width:769px){
-  #dareDetailOverlay .dd-wrap{ position:relative; }
-  #dareDetailOverlay .dd-topbar{
-    position:absolute; top:0; left:0; z-index:11; width:auto;
-    background:transparent !important; box-shadow:none !important; border:none !important;
-    padding:14px 14px 14px 45px;   /* sit the button clearly over the thumbnail, not the gutter */
-  }
-  #dareDetailOverlay .dd-topbar .vd-topbar-title,
-  #dareDetailOverlay .dd-topbar .dd-top-more{ display:none !important; }
-  /* just the arrow — no glassy box/circle; a shadow keeps it readable on any thumb */
-  #dareDetailOverlay .dd-topbar .vd-back-btn{
-    background:transparent !important; border:none !important; box-shadow:none !important;
-    backdrop-filter:none !important; -webkit-backdrop-filter:none !important; color:#fff !important;
-  }
-  #dareDetailOverlay .dd-topbar .vd-back-btn .mi{ text-shadow:0 1px 8px rgba(0,0,0,.9); font-size:26px; }
-}
