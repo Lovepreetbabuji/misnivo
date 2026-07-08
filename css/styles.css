@@ -3910,11 +3910,16 @@ body.scrolling .yt-card, body.scrolling .active-dare-card, body.scrolling .short
 @media(max-width:768px){
   body.mission-detail .topbar{ display:none !important; }
   body.mission-detail #dareDetailOverlay{ top:0 !important; }
+  /* soft top fade so the bare arrow stays readable — no box around the button */
   #dareDetailOverlay .dd-topbar::before{
-    content:""; position:absolute; inset:0; z-index:-1; pointer-events:none;
-    background:linear-gradient(180deg, rgba(0,0,0,.55), rgba(0,0,0,0));
+    content:""; position:absolute; inset:0 0 auto 0; height:88px; z-index:-1; pointer-events:none;
+    background:linear-gradient(180deg, rgba(0,0,0,.5), rgba(0,0,0,0));
   }
-  #dareDetailOverlay .vd-back-btn{ background:rgba(0,0,0,.45) !important; backdrop-filter:blur(4px); -webkit-backdrop-filter:blur(4px); }
+  #dareDetailOverlay .vd-back-btn{
+    background:transparent !important; border:none !important; box-shadow:none !important;
+    backdrop-filter:none !important; -webkit-backdrop-filter:none !important;
+  }
+  #dareDetailOverlay .vd-back-btn .mi{ text-shadow:0 1px 8px rgba(0,0,0,.9); }
   /* description page opens from the very top too when immersive */
   body.mission-detail #dareDetailOverlay .dd-col2{ top:0 !important; }
 }
@@ -3932,8 +3937,10 @@ body.scrolling .yt-card, body.scrolling .active-dare-card, body.scrolling .short
   }
   #dareDetailOverlay .dd-topbar .vd-topbar-title,
   #dareDetailOverlay .dd-topbar .dd-top-more{ display:none !important; }
+  /* just the arrow — no glassy box/circle; a shadow keeps it readable on any thumb */
   #dareDetailOverlay .dd-topbar .vd-back-btn{
-    background:rgba(0,0,0,.45) !important; border:1px solid rgba(255,255,255,.16) !important;
-    backdrop-filter:blur(6px); -webkit-backdrop-filter:blur(6px); color:#fff !important;
+    background:transparent !important; border:none !important; box-shadow:none !important;
+    backdrop-filter:none !important; -webkit-backdrop-filter:none !important; color:#fff !important;
   }
+  #dareDetailOverlay .dd-topbar .vd-back-btn .mi{ text-shadow:0 1px 8px rgba(0,0,0,.9); font-size:26px; }
 }
