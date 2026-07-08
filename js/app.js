@@ -4048,7 +4048,7 @@ function closeNotifPanel() { document.getElementById('notifPanel')?.classList.re
 function closeVideoDetail() {
   document.getElementById('videoDetailOverlay').classList.remove('open');
   document.body.style.overflow='';
-  document.body.classList.remove('detail-open');
+  document.body.classList.remove('detail-open');document.body.classList.remove('mission-detail');
   closeDareComments(); closeVideoDesc();
   _stopVdAd();   // kill any running pre-roll so it can't start the video in the background
   const player=document.getElementById('vdPlayer');
@@ -4137,13 +4137,14 @@ function openDareDetail(dareId){
   const col1 = ov.querySelector('.dd-col1'); if (col1) col1.scrollTop = 0;
   document.body.style.overflow = 'hidden';
   document.body.classList.add('detail-open'); // makes the topbar opaque
+  document.body.classList.add('mission-detail'); // mobile: immersive (hide app topbar, single back-bar)
   closeDareDetails();
   _ddBindScrollTop(); _ddBindSwipe();
 }
 function closeDareDetail(){
   document.getElementById('dareDetailOverlay').classList.remove('open');
   document.body.style.overflow = '';
-  document.body.classList.remove('detail-open');
+  document.body.classList.remove('detail-open');document.body.classList.remove('mission-detail');
   closeDareComments(); closeDareDetails();
   _ddCurrentId = null;
 }
@@ -4200,7 +4201,7 @@ function _closeDetailOverlays(){
   if (sh && sh.classList.contains('open')){ if (typeof closeShorts==='function') closeShorts(); closed = true; }
   if (closed){
     document.body.style.overflow = '';
-    document.body.classList.remove('detail-open');
+    document.body.classList.remove('detail-open');document.body.classList.remove('mission-detail');
     if (typeof closeDareComments === 'function') closeDareComments();
     if (typeof _stopVdAd === 'function') _stopVdAd();   // kill any running pre-roll ad
     // Stop the long-video player (pause AND abort loading)

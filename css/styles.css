@@ -2558,10 +2558,12 @@ body.detail-open .topbar{ background:rgba(10,10,10,.98) !important; backdrop-fil
   .dd-related-grid{ display:flex; flex-direction:column; gap:16px; }
   .dd-creator{ flex-wrap:wrap; }
   .dd-creator-meta{ width:100%; margin-left:0 !important; margin-top:4px; }
-  /* Description/rules become a swipe-left drawer */
-  .dd-col2{ position:fixed; top:56px; right:0; bottom:0; width:86%; max-width:380px;
-    transform:translateX(102%); transition:transform .28s cubic-bezier(.4,0,.2,1);
-    z-index:168; overflow-y:auto; border-radius:16px 0 0 16px; box-shadow:-8px 0 28px rgba(0,0,0,.6); }
+  /* Description/rules = FULL-PAGE overlay from the left (was a right 380px drawer
+     that left a strip of the page peeking on the left → looked like a floating
+     centre box). Now it covers the whole area like the video's own page. */
+  .dd-col2{ position:fixed; top:56px; left:0; right:0; bottom:0; width:100%; max-width:none;
+    transform:translateX(-102%); transition:transform .28s cubic-bezier(.4,0,.2,1);
+    z-index:168; overflow-y:auto; border-radius:0; box-shadow:none; padding:16px; }
   .dd-col2.open{ transform:translateX(0); }
 }
 /* "Description & rules" button — base style (dare: mobile-only; video: always) */
@@ -2575,8 +2577,9 @@ body.detail-open .topbar{ background:rgba(10,10,10,.98) !important; backdrop-fil
 .dd-col2-close{ display:none; }
 @media(max-width:768px){
   .dd-col2-close{ display:inline-flex; align-items:center; justify-content:center; float:right; width:34px; height:34px; border-radius:50%; background:var(--bg3); border:1px solid var(--border); color:var(--t1); cursor:pointer; margin:-4px -4px 6px 6px; }
-  /* details drawer — notification-panel glass (site glass standard) */
-  #dareDetailOverlay .dd-col2, #videoDetailOverlay .dd-col2{ background:rgba(18,18,18,.78) !important; backdrop-filter:var(--blur) !important; -webkit-backdrop-filter:var(--blur) !important; border-left:1px solid var(--border) !important; }
+  /* details page — solid app background (full-page, no drawer border) */
+  #dareDetailOverlay .dd-col2, #videoDetailOverlay .dd-col2{ background:var(--bg) !important; border:none !important; }
+  .dd-col2-close{ float:none; position:absolute; top:14px; right:14px; margin:0; z-index:2; }
 }
 
 /* ─── Comments box (scrollable, with close — desktop + mobile) ─── */
@@ -3898,4 +3901,22 @@ body.scrolling .yt-card, body.scrolling .active-dare-card, body.scrolling .short
   .topbar{ transition: transform .28s cubic-bezier(.4,0,.2,1); }
   body.tb-hide .topbar{ transform: translateY(-100%); }
   body.tb-hide.ov-open .topbar{ transform: none; }   /* popups sit below the bar */
+}
+
+/* ═══ Mobile: mission/completed/accepted detail = immersive (single back-bar) ═══
+   The app topbar + the detail's own floating back button used to stack = a
+   doubled, glitchy-looking bar. On these pages the detail has its OWN back
+   button, so hide the app topbar (like shorts) and let the page fill the screen
+   from the top. Video detail keeps the topbar (it has no own back button). A
+   soft top scrim keeps the floating back button readable over light thumbnails. */
+@media(max-width:768px){
+  body.mission-detail .topbar{ display:none !important; }
+  body.mission-detail #dareDetailOverlay{ top:0 !important; }
+  #dareDetailOverlay .dd-topbar::before{
+    content:""; position:absolute; inset:0; z-index:-1; pointer-events:none;
+    background:linear-gradient(180deg, rgba(0,0,0,.55), rgba(0,0,0,0));
+  }
+  #dareDetailOverlay .vd-back-btn{ background:rgba(0,0,0,.45) !important; backdrop-filter:blur(4px); -webkit-backdrop-filter:blur(4px); }
+  /* description page opens from the very top too when immersive */
+  body.mission-detail #dareDetailOverlay .dd-col2{ top:0 !important; }
 }
