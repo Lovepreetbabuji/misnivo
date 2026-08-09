@@ -20,7 +20,7 @@
 <link href="https://fonts.googleapis.com/icon?family=Material+Icons+Round" rel="stylesheet"/>
 
 <!-- App Styles -->
-<link rel="stylesheet" href="/css/styles.css?v=20260706p"/>
+<link rel="stylesheet" href="/css/styles.css?v=20260809a"/>
 
 <!-- Firebase CDN -->
 <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
@@ -111,7 +111,7 @@
 <div id="appScreen">
 
   <!-- MOBILE: tap-outside overlay closes sidebar -->
-  <div class="sb-overlay" id="sbOverlay" onclick="closeSidebar()"></div>
+  <div class="sb-overlay" id="sbOverlay" onclick="_sbDismiss()"></div>
 
   <!-- BOTTOM NAV (mobile only, YouTube-style) -->
   <nav class="bottom-nav" id="bottomNav">
@@ -191,27 +191,39 @@
     </div>
   </header>
 
-  <!-- SIDEBAR -->
+  <!-- SIDEBAR (hamburger drawer on mobile · icon rail on desktop) -->
   <aside class="sidebar" id="sidebar">
+    <!-- Drawer header — mobile only (hidden on the desktop rail) -->
+    <div class="sb-head">
+      <div class="sb-head-av" id="sbHeadAv"></div>
+      <div class="sb-head-meta">
+        <div class="sb-head-name">MissionMarket</div>
+        <div class="sb-bal-chip"><span class="mi">bolt</span><span id="sbHeadBal">Rs. 0</span></div>
+      </div>
+      <button class="sb-head-close" onclick="_sbDismiss()" aria-label="Close menu"><span class="mi">close</span></button>
+    </div>
+
     <div class="sb-top">
+      <div class="sb-group-label">MAIN</div>
       <div class="nav-item active" id="nav-home" onclick="goPage('home')">
         <span class="mi">home</span><span class="nav-lbl">Home</span>
       </div>
       <div class="nav-item" id="nav-explore" onclick="goPage('explore')"><span class="mi">explore</span><span class="nav-lbl">Explore</span></div>
-      <div class="nav-item" id="nav-dares" onclick="goPage('dares')">
-        <span class="mi">bolt</span><span class="nav-lbl">Missions</span>
-      </div>
-      <div class="nav-item" id="nav-accepted" onclick="goPage('accepted')">
-        <span class="mi">task_alt</span><span class="nav-lbl">Accepted</span>
-      </div>
       <div class="nav-item" id="nav-wallet" onclick="goPage('wallet')">
         <span class="mi">account_balance_wallet</span><span class="nav-lbl">Wallet</span>
       </div>
+      <div class="sb-div"></div>
+      <div class="sb-group-label">MORE</div>
+      <div class="nav-item" id="nav-settings" onclick="closeSidebar();openSettings()">
+        <span class="mi">settings</span><span class="nav-lbl">Settings</span>
+      </div>
     </div>
     <div class="sb-bottom">
-      <div class="nav-item" id="nav-profile" onclick="goPage('profile')">
+      <div class="sb-div sb-div-prof"></div>
+      <div class="nav-item sb-prof-item" id="nav-profile" onclick="goPage('profile')">
         <div class="sb-prof-av" id="sbProfAv"></div>
-        <span class="nav-lbl">Profile</span>
+        <span class="nav-lbl">Profile<small class="sb-prof-sub">View your profile</small></span>
+        <span class="mi sb-prof-chev">chevron_right</span>
       </div>
     </div>
   </aside>
@@ -1027,7 +1039,7 @@
 <div class="toast" id="toast"></div>
 
 <!-- App Logic -->
-<script src="/js/app.js?v=20260706p"></script>
+<script src="/js/app.js?v=20260809a"></script>
 
 <!-- ══ v0.19 NEW MODALS ══ -->
 

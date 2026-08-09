@@ -447,6 +447,7 @@ async function initUser(fbUser) {
     if (user.picture) sbAv.innerHTML = `<img src="${user.picture}" alt="av"/>`;
     else sbAv.textContent = user.name[0].toUpperCase();
   }
+  if (typeof _sbSyncHeader === 'function') _sbSyncHeader();
 }
 
 // ════════════════════════════
@@ -2990,6 +2991,7 @@ async function saveProfile() {
       if (user.picture) sbAv.innerHTML = `<img src="${user.picture}" alt="av"/>`;
       else              sbAv.textContent = user.name[0].toUpperCase();
     }
+    if (typeof _sbSyncHeader === 'function') _sbSyncHeader();
 
     cancelProfileEdit();
     showToast('Profile updated successfully!');
@@ -3458,32 +3460,150 @@ let _sidebarOpen = false;
 //   Tablet/Desktop   → collapse/expand (icons ↔ full)
 function toggleSidebar() {
   // ≤768 = mobile/tablet slide-in overlay; ≥769 = desktop narrow rail ↔ expanded drawer
-  const isMobile = window.innerWidth <= 768;
-  const sb       = document.getElementById('sidebar');
-  const overlay  = document.getElementById('sbOverlay');
-  if (!sb) return;
-
-  if (isMobile) {
-    _sidebarOpen = !_sidebarOpen;
-    sb.classList.toggle('open', _sidebarOpen);
-    if (overlay) overlay.classList.toggle('show', _sidebarOpen);
-    document.body.style.overflow = _sidebarOpen ? 'hidden' : '';
-    if (_sidebarOpen) _dmPush();
+  if (window.innerWidth <= 768) {
+    if (_sidebarOpen) closeSidebar(); else openSidebar();
   } else {
     // Desktop: default is YouTube-style narrow rail; toggle to expanded drawer
     document.body.classList.toggle('sidebar-expanded');
   }
 }
 
-// PURPOSE: Close sidebar (overlay tap / ESC / nav item click)
+// PURPOSE: Open the mobile drawer (hamburger tap OR edge-swipe). One history
+//          entry per open, so the phone back button just closes it.
+let _sbPushed = false;      // did opening the drawer add a history entry?
+
+function openSidebar() {
+  const sb      = document.getElementById('sidebar');
+  const overlay = document.getElementById('sbOverlay');
+  if (!sb) return;
+  const was = _sidebarOpen;
+  _sidebarOpen = true;
+  _sbClearDragStyles();
+  sb.classList.add('open');
+  if (overlay) overlay.classList.add('show');
+  document.body.style.overflow = 'hidden';
+  _sbSyncHeader();
+  if (!was) _sbPushed = _dmPush();   // only claim a rewind if the entry really landed
+}
+
+// PURPOSE: Close sidebar (overlay tap / ESC / nav item click / swipe back)
 function closeSidebar() {
   const sb      = document.getElementById('sidebar');
   const overlay = document.getElementById('sbOverlay');
   _sidebarOpen  = false;
+  _sbPushed     = false;
+  _sbClearDragStyles();
   if (sb)      sb.classList.remove('open');
   if (overlay) overlay.classList.remove('show');
   document.body.style.overflow = '';
 }
+
+// PURPOSE: User dismissed the drawer (✕ / tap-outside / swipe shut) without
+//   navigating. Rewind the entry opening it pushed, so the phone back button
+//   never needs a dead press — popstate closes it (see the handler below).
+function _sbDismiss() {
+  if (_sidebarOpen && _sbPushed) { _sbPushed = false; try { history.back(); return; } catch (e) {} }
+  closeSidebar();
+}
+
+// PURPOSE: Drawer header (avatar · brand · balance) reflects the live account
+function _sbSyncHeader() {
+  const av = document.getElementById('sbHeadAv');
+  if (av) {
+    if (user && user.picture)   av.innerHTML   = `<img src="${user.picture}" alt="av"/>`;
+    else if (user && user.name) av.textContent = user.name[0].toUpperCase();
+    else                        av.innerHTML   = '<span class="mi">person</span>';
+  }
+  const bal = document.getElementById('sbHeadBal');
+  if (bal) bal.textContent = 'Rs. ' + (((typeof wallet !== 'undefined' && wallet) ? wallet.balance : 0) || 0).toLocaleString('en-IN');
+}
+
+// ════════════════════════════════════════════════════════════════════
+//  HOME-ONLY EDGE SWIPE — drawer follows the finger (mobile)
+//    left→right from the screen edge  = drag it open
+//    right→left while it is open      = drag it shut
+//  Deliberately limited to the home page so the detail/shorts/profile
+//  pages keep their own horizontal gestures.
+// ════════════════════════════════════════════════════════════════════
+const _SB_EDGE = 30;    // px from the left edge that may start an open-drag
+const _SB_SLOP = 10;    // px of movement before the axis is locked
+const _SB_TAKE = 0.35;  // past this fraction of the width it settles open
+let _sbDrag = null;
+
+function _sbSwipeOK() {
+  if (window.innerWidth > 768) return false;
+  const home = document.getElementById('pageHome');
+  if (!home || !home.classList.contains('active')) return false;      // home page only
+  if (document.body.classList.contains('ov-open')) return false;      // not under a popup
+  if (typeof _ovStack !== 'undefined' && _ovStack.length) return false;
+  return !['dareDetailOverlay', 'videoDetailOverlay', 'shortsOverlay']
+    .some(id => { const el = document.getElementById(id); return el && el.classList.contains('open'); });
+}
+
+function _sbClearDragStyles() {
+  const sb = document.getElementById('sidebar'), ov = document.getElementById('sbOverlay');
+  document.body.classList.remove('sb-dragging');
+  if (sb) { sb.style.transform = ''; }
+  if (ov) { ov.style.opacity = ''; }
+}
+
+function _sbDragStart(e) {
+  if (_sbDrag) return;                                   // already dragging — ignore extra fingers
+  if (!_sbSwipeOK() || e.touches.length !== 1) return;
+  const t = e.touches[0];
+  // closed → only the left edge arms the gesture; open → anywhere on the screen
+  if (!_sidebarOpen && t.clientX > _SB_EDGE) return;
+  // leave the horizontal shelves (chips, shorts row) and text fields alone
+  if (e.target.closest && e.target.closest('.chips-bar,.shorts-row,.pfilter-row,.exp-tabs,input,textarea,select'))
+    return;
+  const sb = document.getElementById('sidebar');
+  _sbDrag = {
+    x: t.clientX, y: t.clientY, lastX: t.clientX, t: Date.now(),
+    axis: null, wasOpen: _sidebarOpen, p: _sidebarOpen ? 1 : 0,
+    w: (sb && sb.getBoundingClientRect().width) || Math.min(300, innerWidth * 0.84)
+  };
+}
+
+function _sbDragMove(e) {
+  if (!_sbDrag) return;
+  const t = e.touches[0];
+  if (!t) return;
+  const dx = t.clientX - _sbDrag.x, dy = t.clientY - _sbDrag.y;
+  _sbDrag.lastX = t.clientX;
+
+  if (!_sbDrag.axis) {
+    if (Math.abs(dx) < _SB_SLOP && Math.abs(dy) < _SB_SLOP) return;
+    // vertical scroll, or a pull in the direction that can't do anything → give up
+    if (Math.abs(dy) >= Math.abs(dx) || (_sbDrag.wasOpen ? dx > 0 : dx < 0)) { _sbDrag = null; return; }
+    _sbDrag.axis = 'x';
+    document.body.classList.add('sb-dragging');
+    const ov = document.getElementById('sbOverlay');
+    if (ov) ov.classList.add('show');        // the dim fades in with the drag
+  }
+
+  const p = Math.max(0, Math.min(1, (_sbDrag.wasOpen ? 1 : 0) + dx / _sbDrag.w));
+  _sbDrag.p = p;
+  const sb = document.getElementById('sidebar'), ov = document.getElementById('sbOverlay');
+  if (sb) sb.style.transform = `translateX(${(p - 1) * 100}%)`;
+  if (ov) ov.style.opacity   = String(p);
+  e.preventDefault();                        // we own this gesture now
+}
+
+function _sbDragEnd() {
+  const d = _sbDrag; _sbDrag = null;
+  if (!d || d.axis !== 'x') return;
+  // a quick flick wins over the distance threshold
+  const vx    = (d.lastX - d.x) / Math.max(1, Date.now() - d.t);   // px/ms
+  const fling = Math.abs(vx) > 0.4;
+  // settling shut leaves the inline transform in place for a frame — the
+  // popstate close then animates it away from exactly where the finger left it
+  if (fling ? vx > 0 : d.p > _SB_TAKE) openSidebar(); else _sbDismiss();
+}
+
+document.addEventListener('touchstart',  _sbDragStart, { passive: true  });
+document.addEventListener('touchmove',   _sbDragMove,  { passive: false });
+document.addEventListener('touchend',    _sbDragEnd,   { passive: true  });
+document.addEventListener('touchcancel', _sbDragEnd,   { passive: true  });
 
 // PURPOSE: Sync bottom nav highlight when page changes
 function syncBottomNav(pg) {
@@ -3531,7 +3651,7 @@ window.addEventListener('resize', () => {
 
 // ESC closes sidebar
 document.addEventListener('keydown', e => {
-  if (e.key === 'Escape') closeSidebar();
+  if (e.key === 'Escape') _sbDismiss();
 });
 
 
@@ -4219,7 +4339,7 @@ let _navBack = false;            // true while opening in response to a route (d
 let _routedInitial = false;      // deep-link handled?
 let _deepLinkPath  = null;       // /watch|/shorts|/dare|/u path saved at boot — goPage('home') rewrites the URL to '/' before the data arrives
 let _vdResumePos = {};           // proofId → seconds (resume long videos where you left)
-function _dmPush(){ try{ history.pushState({dm:Date.now()},''); }catch(e){} }   // for sub-layers (comment box etc.)
+function _dmPush(){ try{ history.pushState({dm:Date.now()},''); return true; }catch(e){ return false; } }   // for sub-layers (comment box etc.)
 function _pauseBackgroundMedia(){
   try{ const vp=document.getElementById('vdPlayer'); if(vp) vp.pause(); }catch(e){}
   document.querySelectorAll('#shortsSnapContainer video').forEach(v=>{ try{ v.pause(); }catch(e){} });
