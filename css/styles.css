@@ -3859,23 +3859,25 @@ body.scrolling .yt-card, body.scrolling .active-dare-card, body.scrolling .short
    · rounded right corners; YouTube-style ease-out slide (.24s)
    ═══════════════════════════════════════════════════════════════════════ */
 
-/* ── Desktop icon rail — always visible, blends into the page ── */
+/* ── Desktop icon rail — pure black, no panel, no tint ── */
 .sb-rail{
   display:none;
   position:fixed; top:56px; left:0; bottom:0; width:72px; z-index:9100;
-  background:#050505; border:none;
+  background:#000; border:none;
   flex-direction:column; gap:2px; padding:8px 0;
   overflow-y:auto; overscroll-behavior:contain;
 }
 .rail-item{
   display:flex; flex-direction:column; align-items:center; justify-content:center; gap:6px;
-  padding:16px 0; margin:0 4px; border-radius:10px; cursor:pointer; color:#fff;
-  transition:background .15s ease; -webkit-tap-highlight-color:transparent;
+  padding:16px 0; margin:0 4px; border-radius:10px; cursor:pointer;
+  color:rgba(255,255,255,.82);
+  transition:background .15s ease, color .15s ease; -webkit-tap-highlight-color:transparent;
 }
-.rail-item .mi{ font-size:24px; color:#fff; }
-.rail-lbl{ font-size:10px; font-weight:400; line-height:1; text-align:center; color:#fff; }
-.rail-item:hover{ background:rgba(255,255,255,.08); }
-.rail-item.active{ background:rgba(255,255,255,.10); }
+.rail-item .mi{ font-size:24px; color:inherit; }
+.rail-lbl{ font-size:10px; font-weight:400; line-height:1; text-align:center; color:inherit; }
+.rail-item:hover{ background:rgba(255,255,255,.06); color:#fff; }
+/* Selected = the icon fills in solid white (no pill) */
+.rail-item.active{ background:transparent; color:#fff; }
 .rail-item.active .rail-lbl{ font-weight:600; }
 @media(min-width:769px){ .sb-rail{ display:flex; } }
 
@@ -3886,10 +3888,10 @@ body.scrolling .yt-card, body.scrolling .active-dare-card, body.scrolling .short
   width:min(300px,84vw) !important;
   padding:0 0 28px !important;
   justify-content:flex-start !important;
-  background:#050505 !important;
+  background:#000 !important;
   border:none !important;
   border-radius:0 18px 18px 0 !important;
-  box-shadow:inset -1px 0 0 rgba(255,255,255,.07) !important;
+  box-shadow:none !important;
   overflow-y:auto; overscroll-behavior:contain;
   backdrop-filter:none !important; -webkit-backdrop-filter:none !important;
   transform:translateX(-100%);
@@ -3898,9 +3900,7 @@ body.scrolling .yt-card, body.scrolling .active-dare-card, body.scrolling .short
 }
 .sidebar.open{ transform:translateX(0) !important; }
 /* Drop shadow only while it is off the wall, so it can't smudge the closed edge */
-.sidebar.open, body.sb-dragging .sidebar{
-  box-shadow:inset -1px 0 0 rgba(255,255,255,.07), 8px 0 34px rgba(0,0,0,.7) !important;
-}
+.sidebar.open, body.sb-dragging .sidebar{ box-shadow:8px 0 34px rgba(0,0,0,.75) !important; }
 /* While a finger is dragging, the drawer must track it 1:1 */
 body.sb-dragging .sidebar,
 body.sb-dragging .sb-overlay{ transition:none !important; }
@@ -3911,16 +3911,24 @@ body.sb-dragging .sb-overlay{ transition:none !important; }
   transition:opacity .24s cubic-bezier(.05,0,0,1);
 }
 
-/* Rows: white only — active state is a neutral pill, never a coloured icon */
-.sidebar .nav-item{ color:#fff !important; }
-.sidebar .nav-item .mi{ color:#fff !important; }
-.sidebar .nav-item:hover{ background:rgba(255,255,255,.07) !important; }
+/* Rows: white only, no pill. Selected = the icon fills in solid white. */
+.sidebar .nav-item{ color:rgba(255,255,255,.82) !important; }
+.sidebar .nav-item .mi{ color:inherit !important; }
+.sidebar .nav-item:hover{ background:rgba(255,255,255,.06) !important; color:#fff !important; }
 .sidebar .nav-item.active{
-  background:rgba(255,255,255,.10) !important;
+  background:transparent !important;
+  color:#fff !important;
   font-weight:600;
   box-shadow:none !important;
 }
 .sidebar .nav-item.active .mi{ color:#fff !important; }
+
+/* Hollow icon by default, solid white once selected — the whole "selected"
+   signal, since there is no pill behind it any more. */
+.sidebar .nav-item .mi,
+.rail-item .mi{ font-family:'Material Icons Outlined','Material Icons Round'; }  /* fallback keeps ligatures working if the outlined set fails to load */
+.sidebar .nav-item.active .mi,
+.rail-item.active .mi{ font-family:'Material Icons Round'; }
 
 /* Section labels + hairline dividers */
 .sb-group-label{
