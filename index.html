@@ -20,7 +20,7 @@
 <link href="https://fonts.googleapis.com/icon?family=Material+Icons+Round" rel="stylesheet"/>
 
 <!-- App Styles -->
-<link rel="stylesheet" href="/css/styles.css?v=20260809a"/>
+<link rel="stylesheet" href="/css/styles.css?v=20260809b"/>
 
 <!-- Firebase CDN -->
 <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
@@ -191,16 +191,25 @@
     </div>
   </header>
 
-  <!-- SIDEBAR (hamburger drawer on mobile · icon rail on desktop) -->
+  <!-- DESKTOP ICON RAIL — always visible, page background, never moves the content -->
+  <nav class="sb-rail" id="sbRail">
+    <div class="rail-item active" data-pg="home"    onclick="goPage('home')"><span class="mi">home</span><span class="rail-lbl">Home</span></div>
+    <div class="rail-item"        data-pg="explore" onclick="goPage('explore')"><span class="mi">explore</span><span class="rail-lbl">Explore</span></div>
+    <div class="rail-item"        data-pg="wallet"  onclick="goPage('wallet')"><span class="mi">account_balance_wallet</span><span class="rail-lbl">Wallet</span></div>
+    <div class="rail-item"        onclick="openSettings()"><span class="mi">settings</span><span class="rail-lbl">Settings</span></div>
+    <div class="rail-item"        data-pg="profile" onclick="goPage('profile')"><div class="sb-prof-av" id="sbProfAv"></div><span class="rail-lbl">Profile</span></div>
+  </nav>
+
+  <!-- HAMBURGER DRAWER — slides in over the page on mobile AND desktop -->
   <aside class="sidebar" id="sidebar">
-    <!-- Drawer header — mobile only (hidden on the desktop rail) -->
-    <div class="sb-head">
+    <!-- Header doubles as the profile link (tap the avatar / name) -->
+    <div class="sb-head" onclick="goPage('profile')" role="button" tabindex="0">
       <div class="sb-head-av" id="sbHeadAv"></div>
       <div class="sb-head-meta">
-        <div class="sb-head-name">MissionMarket</div>
-        <div class="sb-bal-chip"><span class="mi">bolt</span><span id="sbHeadBal">Rs. 0</span></div>
+        <div class="sb-head-name"   id="sbHeadName">Guest</div>
+        <div class="sb-head-handle" id="sbHeadHandle">View your profile</div>
       </div>
-      <button class="sb-head-close" onclick="_sbDismiss()" aria-label="Close menu"><span class="mi">close</span></button>
+      <button class="sb-head-close" onclick="event.stopPropagation();_sbDismiss()" aria-label="Close menu"><span class="mi">close</span></button>
     </div>
 
     <div class="sb-top">
@@ -216,14 +225,6 @@
       <div class="sb-group-label">MORE</div>
       <div class="nav-item" id="nav-settings" onclick="closeSidebar();openSettings()">
         <span class="mi">settings</span><span class="nav-lbl">Settings</span>
-      </div>
-    </div>
-    <div class="sb-bottom">
-      <div class="sb-div sb-div-prof"></div>
-      <div class="nav-item sb-prof-item" id="nav-profile" onclick="goPage('profile')">
-        <div class="sb-prof-av" id="sbProfAv"></div>
-        <span class="nav-lbl">Profile<small class="sb-prof-sub">View your profile</small></span>
-        <span class="mi sb-prof-chev">chevron_right</span>
       </div>
     </div>
   </aside>
@@ -1039,7 +1040,7 @@
 <div class="toast" id="toast"></div>
 
 <!-- App Logic -->
-<script src="/js/app.js?v=20260809a"></script>
+<script src="/js/app.js?v=20260809b"></script>
 
 <!-- ══ v0.19 NEW MODALS ══ -->
 

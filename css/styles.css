@@ -2534,8 +2534,7 @@ body.detail-open .topbar{ background:rgba(10,10,10,.98) !important; backdrop-fil
 
 /* Desktop: 3 columns, each scrolls independently; page opens beside the rail */
 @media(min-width:769px){
-  #dareDetailOverlay, #videoDetailOverlay{ left:72px; overflow:hidden; transition:left .28s cubic-bezier(.4,0,.2,1); }
-  body.sidebar-expanded #dareDetailOverlay, body.sidebar-expanded #videoDetailOverlay{ left:240px; }
+  #dareDetailOverlay, #videoDetailOverlay{ left:72px; overflow:hidden; }   /* the rail never widens now */
   #dareDetailOverlay .dd-wrap, #videoDetailOverlay .dd-wrap{ height:100%; max-width:1320px; display:flex; flex-direction:column; padding:0 16px; }
   #dareDetailOverlay .dd-layout, #videoDetailOverlay .dd-layout{ display:flex; gap:18px; align-items:stretch; flex:1; min-height:0; padding-bottom:16px; }
   #dareDetailOverlay .dd-layout > .dd-bar, #videoDetailOverlay .dd-layout > .dd-bar{ margin-bottom:0; overflow-y:auto; }
@@ -3141,8 +3140,7 @@ html{scroll-behavior:smooth;}
   /* Vertical FEED of 3-column rows: each short = [info | 9:16 video + actions |
      comments]. The whole row scroll-snaps (scroll over video → next short);
      info (col 1) and comments (col 3) have their own scrollbars. */
-  #shortsOverlay{ top:56px; left:72px; overflow:hidden; transition:left .28s cubic-bezier(.4,0,.2,1); }
-  body.sidebar-expanded #shortsOverlay{ left:240px; }
+  #shortsOverlay{ top:56px; left:72px; overflow:hidden; }   /* the rail never widens now */
   .shorts-overlay .shorts-3col{ display:block; height:calc(100vh - 56px); max-width:1280px; margin:0 auto; padding:0; }
   .shorts-col1{ display:none; }
   .shorts-overlay .shorts-comments{ display:none; }                    /* comments are per-row on desktop */
@@ -3329,71 +3327,21 @@ html{scroll-behavior:smooth;}
 /* GPU off for non-animating elements */
 .yt-card, .dare-list-card, .home-section { will-change: auto !important; }
 
-/* ═══ #2: DESKTOP UI (≥769px) — YouTube-style permanent sidebar ═══ */
+/* ═══ #2: DESKTOP UI (≥769px) — permanent icon rail + floating drawer ═══
+   The drawer overlays the page on desktop too, so opening it never re-flows
+   (shrinks) the content. The 72px gutter belongs to .sb-rail, which never moves. */
 @media(min-width:769px){
   #menuToggle, .menu-btn-mobile, .hamburger { display: none !important; }
-  /* ── YouTube-style NARROW icon rail (desktop default) ── */
-  .sidebar {
-    transform: none !important;
-    position: fixed !important;
-    top: 56px !important;
-    left: 0 !important;
-    bottom: 0 !important;
-    width: 72px !important;
-    padding: 8px 0 !important;
-    z-index: 9100 !important;   /* above every page overlay (shorts z400) so the rail/expanded menu is usable on any page */
-  }
-  .sidebar .nav-item {
-    flex-direction: column !important;
-    align-items: center !important;
-    justify-content: center !important;
-    gap: 6px !important;
-    padding: 16px 0 !important;
-    margin: 0 !important;
-    border-radius: 10px;
-  }
-  .sidebar .nav-item .mi { font-size: 24px; }
-  .sidebar .nav-lbl {
-    display: block !important;
-    font-size: 10px; font-weight: 400; line-height: 1; text-align: center;
-  }
-  .sb-overlay { display: none !important; }
   .main-content, main, .page-container { margin-left: 72px !important; }
   .bottom-nav { display: none !important; }
   .topbar { padding: 0 24px !important; }
   .search-wrap { max-width: 640px !important; }
-
-  /* ── Expanded drawer (hamburger toggles body.sidebar-expanded) ── */
-  body.sidebar-expanded .sidebar { width: 240px !important; padding: 8px 0 !important; }
-  body.sidebar-expanded .sidebar .nav-item {
-    flex-direction: row !important;
-    align-items: center !important;
-    justify-content: flex-start !important;
-    gap: 16px !important;
-    padding: 10px 12px !important;
-    margin: 0 4px !important;
-  }
-  body.sidebar-expanded .sidebar .nav-lbl { font-size: 14px; text-align: left; }
-  body.sidebar-expanded .main-content,
-  body.sidebar-expanded main,
-  body.sidebar-expanded .page-container { margin-left: 240px !important; }
 }
 
-/* ═══ MOBILE UI (≤768px) — bottom nav, hamburger sidebar ═══ */
+/* ═══ MOBILE UI (≤768px) — bottom nav, hamburger drawer ═══ */
 @media(max-width:768px){
-  /* Sidebar overlay slide-in */
-  .sidebar {
-    transform: translateX(-110%);
-    transition: transform .25s cubic-bezier(.4,0,.2,1);
-    width: min(280px, 80vw);
-    z-index: 200;
-  }
-  .sidebar.open { transform: translateX(0); }
-  /* Main content full width */
   .main-content, main, .page-container { margin-left: 0 !important; }
-  /* Bottom nav visible */
   .bottom-nav { display: flex !important; }
-  /* Hamburger visible */
   #menuToggle, .menu-btn-mobile, .hamburger { display: flex !important; }
 }
 
@@ -3902,21 +3850,65 @@ body.scrolling .yt-card, body.scrolling .active-dare-card, body.scrolling .short
 }
 
 /* ═══════════════════════════════════════════════════════════════════════
-   HAMBURGER DRAWER — flat black & white (user ask)
-   · no backdrop blur anywhere on the drawer or its dim
-   · no red accent (--blue is #FF0033 in this theme) — icons/labels are white
-   · mobile: full-height slide-in with its own header (avatar · brand · balance · ✕)
-   · desktop: same palette on the 72px rail and the expanded 240px drawer
+   HAMBURGER DRAWER + DESKTOP RAIL — flat black & white (user ask)
+   · background is the page background (#050505) — no panel tint, no red
+     (--blue is #FF0033 in this theme, which is where the red icons came from)
+   · no backdrop blur on the drawer or its dim
+   · the drawer floats OVER the page on desktop too, so opening it never
+     shrinks/re-flows the content — the 72px gutter belongs to .sb-rail
+   · rounded right corners; YouTube-style ease-out slide (.24s)
    ═══════════════════════════════════════════════════════════════════════ */
-.sidebar{
-  background:#0a0a0a !important;
-  backdrop-filter:none !important; -webkit-backdrop-filter:none !important;
-  border-right:1px solid rgba(255,255,255,.08) !important;
-  box-shadow:none !important;
+
+/* ── Desktop icon rail — always visible, blends into the page ── */
+.sb-rail{
+  display:none;
+  position:fixed; top:56px; left:0; bottom:0; width:72px; z-index:9100;
+  background:#050505; border:none;
+  flex-direction:column; gap:2px; padding:8px 0;
+  overflow-y:auto; overscroll-behavior:contain;
 }
+.rail-item{
+  display:flex; flex-direction:column; align-items:center; justify-content:center; gap:6px;
+  padding:16px 0; margin:0 4px; border-radius:10px; cursor:pointer; color:#fff;
+  transition:background .15s ease; -webkit-tap-highlight-color:transparent;
+}
+.rail-item .mi{ font-size:24px; color:#fff; }
+.rail-lbl{ font-size:10px; font-weight:400; line-height:1; text-align:center; color:#fff; }
+.rail-item:hover{ background:rgba(255,255,255,.08); }
+.rail-item.active{ background:rgba(255,255,255,.10); }
+.rail-item.active .rail-lbl{ font-weight:600; }
+@media(min-width:769px){ .sb-rail{ display:flex; } }
+
+/* ── The drawer itself (mobile AND desktop) ── */
+.sidebar{
+  display:flex !important; flex-direction:column !important;
+  position:fixed !important; top:0 !important; left:0 !important; bottom:0 !important;
+  width:min(300px,84vw) !important;
+  padding:0 0 28px !important;
+  justify-content:flex-start !important;
+  background:#050505 !important;
+  border:none !important;
+  border-radius:0 18px 18px 0 !important;
+  box-shadow:inset -1px 0 0 rgba(255,255,255,.07) !important;
+  overflow-y:auto; overscroll-behavior:contain;
+  backdrop-filter:none !important; -webkit-backdrop-filter:none !important;
+  transform:translateX(-100%);
+  transition:transform .24s cubic-bezier(.05,0,0,1);   /* YouTube-ish ease-out */
+  z-index:9550 !important;
+}
+.sidebar.open{ transform:translateX(0) !important; }
+/* Drop shadow only while it is off the wall, so it can't smudge the closed edge */
+.sidebar.open, body.sb-dragging .sidebar{
+  box-shadow:inset -1px 0 0 rgba(255,255,255,.07), 8px 0 34px rgba(0,0,0,.7) !important;
+}
+/* While a finger is dragging, the drawer must track it 1:1 */
+body.sb-dragging .sidebar,
+body.sb-dragging .sb-overlay{ transition:none !important; }
+
 .sb-overlay{
   background:rgba(0,0,0,.62) !important;
   backdrop-filter:none !important; -webkit-backdrop-filter:none !important;
+  transition:opacity .24s cubic-bezier(.05,0,0,1);
 }
 
 /* Rows: white only — active state is a neutral pill, never a coloured icon */
@@ -3937,8 +3929,12 @@ body.scrolling .yt-card, body.scrolling .active-dare-card, body.scrolling .short
 }
 .sb-div{ height:1px; background:rgba(255,255,255,.10); margin:12px; }
 
-/* Drawer header — mobile only (see the ≤768 block) */
-.sb-head{ display:none; }
+/* Drawer header — doubles as the profile link (replaces the old bottom row) */
+.sb-head{
+  display:flex; align-items:center; gap:14px; padding:20px 16px 10px;
+  cursor:pointer; -webkit-tap-highlight-color:transparent;
+}
+.sb-head:hover{ background:rgba(255,255,255,.04); }
 .sb-head-av{
   width:48px;height:48px;border-radius:50%;overflow:hidden;flex-shrink:0;
   background:#1c1c1c;border:1px solid rgba(255,255,255,.10);
@@ -3947,14 +3943,14 @@ body.scrolling .yt-card, body.scrolling .active-dare-card, body.scrolling .short
 }
 .sb-head-av img{width:100%;height:100%;object-fit:cover;}
 .sb-head-meta{flex:1;min-width:0;}
-.sb-head-name{font-size:19px;font-weight:700;color:#fff;line-height:1.2;}
-.sb-bal-chip{
-  display:inline-flex;align-items:center;gap:6px;margin-top:9px;
-  padding:5px 13px;border-radius:999px;
-  background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.16);
-  font-size:13px;font-weight:600;color:#fff;
+.sb-head-name{
+  font-size:18px;font-weight:700;color:#fff;line-height:1.25;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
 }
-.sb-bal-chip .mi{font-size:15px;color:#fff;}
+.sb-head-handle{
+  font-size:13px;font-weight:400;color:rgba(255,255,255,.5);margin-top:2px;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+}
 .sb-head-close{
   width:38px;height:38px;border-radius:50%;flex-shrink:0;
   background:transparent;border:none;color:#fff;cursor:pointer;
@@ -3964,55 +3960,24 @@ body.scrolling .yt-card, body.scrolling .active-dare-card, body.scrolling .short
 .sb-head-close:active{background:rgba(255,255,255,.10);}
 .sb-head-close .mi{font-size:26px;}
 
-/* Profile row (bottom of the list) */
-.sb-prof-av{ background:#1c1c1c !important; box-shadow:none !important; border:1px solid rgba(255,255,255,.10); }
-.sb-prof-sub{ display:none; font-size:12px; font-weight:400; color:rgba(255,255,255,.5); }
-.sb-prof-chev{ display:none; }
-
-/* ── MOBILE (≤768): full-height drawer, own header, big touch rows ── */
-@media(max-width:768px){
-  .sidebar{
-    display:flex !important; flex-direction:column !important;
-    position:fixed !important; top:0 !important; left:0 !important; bottom:0 !important;
-    width:min(300px,84vw) !important;
-    padding:0 0 28px !important;
-    justify-content:flex-start !important;
-    overflow-y:auto; overscroll-behavior:contain;
-    border-right:none !important;
-    transform:translateX(-100%);
-    transition:transform .28s cubic-bezier(.4,0,.2,1);
-  }
-  .sidebar.open{ transform:translateX(0); }
-
-  .sb-head{ display:flex; align-items:flex-start; gap:14px; padding:22px 16px 6px; }
-  .sb-top{ padding:0 8px !important; }
-  .sb-bottom{ padding:0 8px 8px !important; margin-top:0 !important; }
-
-  .sidebar .nav-item{
-    justify-content:flex-start !important; align-items:center;
-    gap:20px !important; padding:14px 16px !important; margin:0 !important;
-    border-radius:12px;
-  }
-  .sidebar .nav-item .mi{ font-size:24px !important; }
-  .sidebar .nav-lbl{
-    display:flex !important; flex-direction:column; gap:2px;
-    font-size:16px; font-weight:500; text-align:left;
-  }
-  .sb-prof-av{ width:30px;height:30px; }
-  .sb-prof-sub{ display:block; }
-  .sb-prof-chev{ display:block; margin-left:auto; font-size:22px; color:rgba(255,255,255,.45) !important; }
-
-  /* While a finger is dragging the drawer, it must track the finger 1:1 */
-  body.sb-dragging .sidebar,
-  body.sb-dragging .sb-overlay{ transition:none !important; }
+/* Rail avatar (the drawer's own avatar lives in .sb-head) */
+.sb-prof-av{
+  width:24px;height:24px;
+  background:#1c1c1c !important; box-shadow:none !important;
+  border:1px solid rgba(255,255,255,.10);
 }
 
-/* ── DESKTOP (≥769): rail keeps icons only; labels/dividers on expand ── */
-@media(min-width:769px){
-  .sb-head{ display:none !important; }
-  .sb-group-label, .sb-div{ display:none; }
-  body.sidebar-expanded .sb-group-label{ display:block; }
-  body.sidebar-expanded .sb-div{ display:block; }
-  .sb-prof-sub, .sb-prof-chev{ display:none !important; }
+/* Drawer rows — same on every width now that the drawer is always an overlay.
+   The .sidebar prefix is what beats the ≤900px tablet rules further up. */
+.sidebar .sb-top{ padding:0 8px !important; }
+.sidebar .nav-item{
+  display:flex !important; flex-direction:row !important;
+  justify-content:flex-start !important; align-items:center !important;
+  gap:20px !important; padding:14px 16px !important; margin:0 !important;
+  border-radius:12px;
+}
+.sidebar .nav-item .mi{ font-size:24px !important; }
+.sidebar .nav-lbl{
+  display:block !important; font-size:16px; font-weight:500; text-align:left;
 }
 

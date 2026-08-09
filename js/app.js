@@ -598,6 +598,8 @@ function goPage(pg, _fromPop) {
   document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
   const nav = document.getElementById('nav-' + pg);
   if (nav) nav.classList.add('active');
+  // desktop icon rail carries its own copy of the nav
+  document.querySelectorAll('.sb-rail [data-pg]').forEach(n => n.classList.toggle('active', n.dataset.pg === pg));
   document.body.classList.toggle('profile-open', pg === 'profile');   // swaps topbar avatar→gear (desktop) / hides topbar (mobile)
   if (pg === 'home')        renderHome();
   if (pg === 'explore')     renderExplorer();
@@ -3455,17 +3457,11 @@ window.toggleDD = function() {
 
 let _sidebarOpen = false;
 
-// PURPOSE: Hamburger tap → open/close sidebar
-//   Mobile  (<600px) → slides in as overlay
-//   Tablet/Desktop   → collapse/expand (icons ↔ full)
+// PURPOSE: Hamburger tap → slide the drawer in/out. Same on every width:
+//   on desktop it floats over the page (the .sb-rail gutter stays put), so
+//   opening it never resizes the feed the way the old expanding rail did.
 function toggleSidebar() {
-  // ≤768 = mobile/tablet slide-in overlay; ≥769 = desktop narrow rail ↔ expanded drawer
-  if (window.innerWidth <= 768) {
-    if (_sidebarOpen) closeSidebar(); else openSidebar();
-  } else {
-    // Desktop: default is YouTube-style narrow rail; toggle to expanded drawer
-    document.body.classList.toggle('sidebar-expanded');
-  }
+  if (_sidebarOpen) closeSidebar(); else openSidebar();
 }
 
 // PURPOSE: Open the mobile drawer (hamburger tap OR edge-swipe). One history
@@ -3506,7 +3502,8 @@ function _sbDismiss() {
   closeSidebar();
 }
 
-// PURPOSE: Drawer header (avatar · brand · balance) reflects the live account
+// PURPOSE: Drawer header = the profile link — avatar, display name, @handle.
+//   (It replaced the old bottom "Profile" row; tapping it opens the profile.)
 function _sbSyncHeader() {
   const av = document.getElementById('sbHeadAv');
   if (av) {
@@ -3514,29 +3511,35 @@ function _sbSyncHeader() {
     else if (user && user.name) av.textContent = user.name[0].toUpperCase();
     else                        av.innerHTML   = '<span class="mi">person</span>';
   }
-  const bal = document.getElementById('sbHeadBal');
-  if (bal) bal.textContent = 'Rs. ' + (((typeof wallet !== 'undefined' && wallet) ? wallet.balance : 0) || 0).toLocaleString('en-IN');
+  const nm = document.getElementById('sbHeadName');
+  if (nm) nm.textContent = (user && user.name) || 'Guest';
+  const hd = document.getElementById('sbHeadHandle');
+  if (hd) hd.textContent = (user && user.username) ? '@' + user.username : 'View your profile';
 }
 
 // ════════════════════════════════════════════════════════════════════
-//  HOME-ONLY EDGE SWIPE — drawer follows the finger (mobile)
-//    left→right from the screen edge  = drag it open
-//    right→left while it is open      = drag it shut
-//  Deliberately limited to the home page so the detail/shorts/profile
-//  pages keep their own horizontal gestures.
+//  MOBILE SWIPE GESTURES
+//    left→right, left HALF of the screen, home page  = drag the drawer open
+//                                                      (it follows the finger)
+//    right→left while the drawer is open             = drag it shut
+//    right→left anywhere else in the app             = go back
+//  The open-pull deliberately starts INSIDE the screen, not at the very edge:
+//  Android's own gesture-back owns that strip, so an edge swipe never reached
+//  the page.
 // ════════════════════════════════════════════════════════════════════
-const _SB_EDGE = 30;    // px from the left edge that may start an open-drag
-const _SB_SLOP = 10;    // px of movement before the axis is locked
-const _SB_TAKE = 0.35;  // past this fraction of the width it settles open
+const _SB_DEAD     = 44;    // px of left edge left to the system back gesture
+const _SB_SLOP     = 10;    // px of movement before the direction is locked
+const _SB_TAKE     = 0.35;  // past this fraction of the width it settles open
+const _SB_BACK_MIN = 70;    // px of right→left travel that counts as "go back"
 let _sbDrag = null;
 
-function _sbSwipeOK() {
-  if (window.innerWidth > 768) return false;
-  const home = document.getElementById('pageHome');
-  if (!home || !home.classList.contains('active')) return false;      // home page only
-  if (document.body.classList.contains('ov-open')) return false;      // not under a popup
-  if (typeof _ovStack !== 'undefined' && _ovStack.length) return false;
-  return !['dareDetailOverlay', 'videoDetailOverlay', 'shortsOverlay']
+// Elements that own horizontal dragging themselves — never steal from them
+const _SB_SKIP = '.chips-bar,.shorts-row,.pfilter-row,.exp-tabs,.wallet-filters,' +
+                 '.dd-rel-shortsrow,input,textarea,select,[contenteditable]';
+
+// Full-screen views with their own left/right swipes (details drawer, shorts nav)
+function _sbOverlayOwnsSwipe() {
+  return ['dareDetailOverlay', 'videoDetailOverlay', 'shortsOverlay']
     .some(id => { const el = document.getElementById(id); return el && el.classList.contains('open'); });
 }
 
@@ -3549,18 +3552,23 @@ function _sbClearDragStyles() {
 
 function _sbDragStart(e) {
   if (_sbDrag) return;                                   // already dragging — ignore extra fingers
-  if (!_sbSwipeOK() || e.touches.length !== 1) return;
-  const t = e.touches[0];
-  // closed → only the left edge arms the gesture; open → anywhere on the screen
-  if (!_sidebarOpen && t.clientX > _SB_EDGE) return;
-  // leave the horizontal shelves (chips, shorts row) and text fields alone
-  if (e.target.closest && e.target.closest('.chips-bar,.shorts-row,.pfilter-row,.exp-tabs,input,textarea,select'))
-    return;
+  if (window.innerWidth > 768 || e.touches.length !== 1) return;
+  if (_sbOverlayOwnsSwipe()) return;
+  if (e.target.closest && e.target.closest(_SB_SKIP)) return;
+
+  const t  = e.touches[0];
   const sb = document.getElementById('sidebar');
+  const home = document.getElementById('pageHome');
+  const canOpen = !_sidebarOpen
+    && !!(home && home.classList.contains('active'))                  // home page only
+    && !document.body.classList.contains('ov-open')                   // not under a popup
+    && !(typeof _ovStack !== 'undefined' && _ovStack.length)
+    && t.clientX > _SB_DEAD && t.clientX < window.innerWidth * 0.5;   // left half, inside the edge
+
   _sbDrag = {
     x: t.clientX, y: t.clientY, lastX: t.clientX, t: Date.now(),
-    axis: null, wasOpen: _sidebarOpen, p: _sidebarOpen ? 1 : 0,
-    w: (sb && sb.getBoundingClientRect().width) || Math.min(300, innerWidth * 0.84)
+    mode: null, canOpen, wasOpen: _sidebarOpen, p: _sidebarOpen ? 1 : 0,
+    w: (sb && sb.getBoundingClientRect().width) || Math.min(300, window.innerWidth * 0.84)
   };
 }
 
@@ -3571,16 +3579,23 @@ function _sbDragMove(e) {
   const dx = t.clientX - _sbDrag.x, dy = t.clientY - _sbDrag.y;
   _sbDrag.lastX = t.clientX;
 
-  if (!_sbDrag.axis) {
+  if (!_sbDrag.mode) {
     if (Math.abs(dx) < _SB_SLOP && Math.abs(dy) < _SB_SLOP) return;
-    // vertical scroll, or a pull in the direction that can't do anything → give up
-    if (Math.abs(dy) >= Math.abs(dx) || (_sbDrag.wasOpen ? dx > 0 : dx < 0)) { _sbDrag = null; return; }
-    _sbDrag.axis = 'x';
-    document.body.classList.add('sb-dragging');
-    const ov = document.getElementById('sbOverlay');
-    if (ov) ov.classList.add('show');        // the dim fades in with the drag
+    if (Math.abs(dy) >= Math.abs(dx)) { _sbDrag = null; return; }     // vertical scroll wins
+    if (dx > 0) {
+      if (!_sbDrag.canOpen) { _sbDrag = null; return; }
+      _sbDrag.mode = 'drawer';
+    } else {
+      _sbDrag.mode = _sbDrag.wasOpen ? 'drawer' : 'back';
+    }
+    if (_sbDrag.mode === 'drawer') {
+      document.body.classList.add('sb-dragging');
+      const ov = document.getElementById('sbOverlay');
+      if (ov) ov.classList.add('show');      // the dim fades in with the drag
+    }
   }
 
+  if (_sbDrag.mode !== 'drawer') return;     // a back-swipe needs no live feedback
   const p = Math.max(0, Math.min(1, (_sbDrag.wasOpen ? 1 : 0) + dx / _sbDrag.w));
   _sbDrag.p = p;
   const sb = document.getElementById('sidebar'), ov = document.getElementById('sbOverlay');
@@ -3591,9 +3606,15 @@ function _sbDragMove(e) {
 
 function _sbDragEnd() {
   const d = _sbDrag; _sbDrag = null;
-  if (!d || d.axis !== 'x') return;
+  if (!d || !d.mode) return;
+  const dx = d.lastX - d.x;
+
+  if (d.mode === 'back') {
+    if (dx <= -_SB_BACK_MIN) { try { history.back(); } catch (e) {} }
+    return;
+  }
   // a quick flick wins over the distance threshold
-  const vx    = (d.lastX - d.x) / Math.max(1, Date.now() - d.t);   // px/ms
+  const vx    = dx / Math.max(1, Date.now() - d.t);      // px/ms
   const fling = Math.abs(vx) > 0.4;
   // settling shut leaves the inline transform in place for a frame — the
   // popstate close then animates it away from exactly where the finger left it
@@ -3612,7 +3633,7 @@ function syncBottomNav(pg) {
                 profile:'bn-profile', leaderboard:'bn-leaderboard' };
   const el = map[pg] ? document.getElementById(map[pg]) : null;
   if (el) el.classList.add('active');
-  if (window.innerWidth <= 768) closeSidebar();
+  closeSidebar();   // the drawer is an overlay on desktop too now
 }
 
 // PURPOSE: Mobile search icon tap → go to dares page + focus search
@@ -3644,10 +3665,9 @@ function _mSearchGo(){
   }
 })();
 
-// Close mobile slide-in overlay when resizing up to desktop
-window.addEventListener('resize', () => {
-  if (window.innerWidth >= 769) closeSidebar();
-});
+// The drawer is the same overlay on every width, so a resize just closes it
+// rather than leaving it half-styled between the two layouts.
+window.addEventListener('resize', () => { if (_sidebarOpen) closeSidebar(); });
 
 // ESC closes sidebar
 document.addEventListener('keydown', e => {
