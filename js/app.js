@@ -573,7 +573,7 @@ const _MODAL_URL = { postOverlay:'/post', proofOverlay:'/submit-proof', settings
   txnDetailOverlay:'/wallet/transaction', followListOverlay:'/followers', photoViewer:'/profile/photo',
   reviewOverlay:'/review-proofs', rejectOverlay:'/reject-proof', reportOverlay:'/report',
   adminReportsOverlay:'/admin-reports', selectTakersOverlay:'/select-takers', videoPlayOverlay:'/play',
-  searchOverlay:'/search' };
+  searchOverlay:'/search', sFilterSheet:'/search/filters' };
 const _URL_PAGE  = Object.fromEntries(Object.entries(_PAGE_URL ).map(([k,v])=>[v,k]));
 const _URL_MODAL = Object.fromEntries(Object.entries(_MODAL_URL).map(([k,v])=>[v,k]));
 
@@ -1072,8 +1072,8 @@ function handleSearch() {
   if (searchDebounceTimer) clearTimeout(searchDebounceTimer);
   searchDebounceTimer = setTimeout(()=>{
     const q = (document.getElementById('searchInput').value||'').toLowerCase().trim();
-    if (q.length >= 2) _showSuggestions(q); else _hideSuggestions();
-  }, 200);
+    if (q.length >= _S_MIN) _showSuggestions(q); else _hideSuggestions();
+  }, _S_DEBOUNCE);
 }
 function handleSearchImmediate() {
   // Immediate search (for Enter key, button click, suggestion tap)
@@ -1083,8 +1083,9 @@ function handleSearchImmediate() {
 function _handleSearchNow() {
   const q = document.getElementById('searchInput').value.toLowerCase().trim();
   if (!q) { document.getElementById('searchInput').focus(); _hideSuggestions(); return; }
-  if (q.length < 2) { _hideSuggestions(); return; }
+  if (q.length < _S_MIN) { _hideSuggestions(); return; }
 
+  saveSearchHistory(document.getElementById('searchInput').value.trim());
   _hideSuggestions();
   closeMobileSearch();
   // Delegate to the v32 search engine: Dares/Videos toggle + scored relevance
@@ -3641,6 +3642,8 @@ function openMobileSearch() {
   _ovOpen('searchOverlay', '/search');
   const inp = document.getElementById('mSearchInput');
   if (inp){ inp.value = document.getElementById('searchInput')?.value || ''; setTimeout(()=>inp.focus(), 80); }
+  _sSyncFilterBadge();
+  _sRenderPanel();   // history when idle, suggestions once 2+ chars are typed
 }
 function closeMobileSearch() {
   const ov = document.getElementById('searchOverlay');
@@ -3648,37 +3651,357 @@ function closeMobileSearch() {
   const sw = document.querySelector('.search-wrap');
   if (sw) sw.classList.remove('mobile-open');   // legacy inline-expand cleanup
 }
-// Mic button on the search bar. Real voice search where the browser has it
-// (Chrome/Android does); everywhere else it just runs what is typed, so the
-// button is never dead.
-function _mSearchVoice(){
-  const SR  = window.SpeechRecognition || window.webkitSpeechRecognition;
-  const inp = document.getElementById('mSearchInput');
-  const btn = document.querySelector('.msearch-mic');
-  if (!SR){ _mSearchGo(); return; }
-  try{
-    const r = new SR();
-    r.lang = navigator.language || 'en-IN';
-    r.interimResults = false; r.maxAlternatives = 1;
-    const done = () => { if (btn) btn.classList.remove('listening'); };
-    r.onresult = e => {
-      const t = ((e.results[0] && e.results[0][0] && e.results[0][0].transcript) || '').trim();
-      if (t && inp){ inp.value = t; _mSearchGo(); }
-    };
-    r.onerror = () => { done(); showToast('Mic not available'); };
-    r.onend   = done;
-    if (btn) btn.classList.add('listening');
-    r.start();
-  }catch(e){ _mSearchGo(); }
-}
-
 // Search page → run the normal search pipeline through the main input
 function _mSearchGo(){
   const v = (document.getElementById('mSearchInput')?.value || '').trim();
-  if (!v) return;
+  if (v.length < _S_MIN) return;
+  saveSearchHistory(v);
   const main = document.getElementById('searchInput'); if (main) main.value = v;
   closeWalletModal('searchOverlay');
   handleSearchImmediate();
+}
+
+// ════════════════════════════════════════════════════════════════════
+//  SEARCH ENGINE v2 — YouTube-style: live suggestions · history · filters
+//
+//  Everything runs against the `dares` / `allProofs` arrays the app already
+//  keeps in memory, so it is instant and works offline. The UI only ever talks
+//  to the exported surface below — searchMissions / searchVideos /
+//  searchCreators / getSuggestions / applyFilters / *SearchHistory. Moving to a
+//  hosted index later (Meilisearch, Algolia) means reimplementing those few
+//  functions; nothing that renders needs to change. Hashtag / trending / AI
+//  search are deliberately NOT built yet — they slot in as extra sources
+//  inside getSuggestions() and as extra `type` values in the filters.
+// ════════════════════════════════════════════════════════════════════
+const _S_MIN      = 2;      // start searching at 2 characters
+const _S_DEBOUNCE = 300;    // ms after the last keystroke
+const _S_HIST_KEY = 'mm_search_history';
+const _S_HIST_MAX = 15;
+let   _sTypeTimer = null;
+
+/* ── text normalisation: everything is compared case-insensitively with
+      punctuation flattened, so "Push-up Challenge" ⇒ "push up challenge" and
+      a search for "push" hits it. ── */
+function _sNorm(s){ return String(s == null ? '' : s).toLowerCase().replace(/[^a-z0-9]+/g,' ').replace(/\s+/g,' ').trim(); }
+function _sWords(s){ const n = _sNorm(s); return n ? n.split(' ') : []; }
+function _sTitleCase(s){ return String(s||'').replace(/\b[a-z]/g, c => c.toUpperCase()); }
+// Safe JS string literal for an inline on* attribute
+function _sQ(s){
+  return "'" + String(s).replace(/\\/g,'\\\\').replace(/'/g,"\\'").replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/&(?!quot;|lt;)/g,'&amp;') + "'";
+}
+
+// One query word against one field. Prefix beats substring, so "dan" ranks
+// "Dance" above "Sundance", and word-level prefixes catch "push" → "pushups".
+function _sFieldScore(text, qWords, weight){
+  const t = _sNorm(text); if (!t) return 0;
+  const words = t.split(' ');
+  let s = 0;
+  for (const q of qWords){
+    if      (t === q)                                                   s += weight * 4;
+    else if (t.startsWith(q))                                           s += weight * 2.5;
+    else if (words.some(w => w.startsWith(q)))                          s += weight * 2;
+    else if (words.some(w => w.length >= 3 && q.startsWith(w)))         s += weight * 1.2;  // typed "pushups", stored "push"
+    else if (t.includes(q))                                             s += weight;
+  }
+  return s;
+}
+
+const _S_MISSION_FIELDS = [['caption',10],['title',10],['description',4],['rules',2],['creator',6],['creatorUsername',7],['cat',5]];
+const _S_VIDEO_FIELDS   = [['dareTitle',10],['note',4],['takerName',6],['takerUsername',7],['cat',5]];
+
+function _sScoreMission(d, qw){
+  let s = 0;
+  for (const [f,w] of _S_MISSION_FIELDS) s += _sFieldScore(d[f], qw, w);
+  (d.tags||[]).forEach(t => { s += _sFieldScore(t, qw, 8); });
+  return s;
+}
+function _sScoreVideo(p, qw){
+  let s = 0;
+  for (const [f,w] of _S_VIDEO_FIELDS) s += _sFieldScore(p[f], qw, w);
+  return s;
+}
+function _sVideoPool(){ return (allProofs && allProofs.length) ? allProofs : (homeProofs || []); }
+
+function searchMissions(q, filters){
+  const qw = _sWords(q); if (!qw.length) return [];
+  const hits = (dares||[]).map(d => Object.assign({}, d, { _score:_sScoreMission(d, qw) })).filter(d => d._score > 0);
+  return applyFilters(hits, 'mission', filters);
+}
+function searchVideos(q, filters){
+  const qw = _sWords(q); if (!qw.length) return [];
+  const hits = _sVideoPool().map(p => Object.assign({}, p, { _score:_sScoreVideo(p, qw) })).filter(p => p._score > 0);
+  return applyFilters(hits, 'video', filters);
+}
+
+// People index — creators come from missions, takers from proofs. Someone can
+// be both, so they are merged on uid and carry a role set.
+function _sPeopleIndex(){
+  const map = new Map();
+  const add = (uid, name, username, photo, role) => {
+    if (!name && !username) return;
+    const key = uid || ('@' + String(username || name).toLowerCase());
+    const e = map.get(key) || { uid:uid||'', name:name||username, username:username||'', photo:photo||'', roles:{}, missions:0, videos:0 };
+    if (name)     e.name     = name;
+    if (username) e.username = username;
+    if (photo)    e.photo    = photo;
+    e.roles[role] = true;
+    if (role === 'creators') e.missions++; else e.videos++;
+    map.set(key, e);
+  };
+  (dares||[]).forEach(d => add(d.creatorUid, d.creator, d.creatorUsername, d.creatorPhotoURL, 'creators'));
+  _sVideoPool().forEach(p => add(p.takerUid, p.takerName, p.takerUsername, p.takerPhotoURL, 'takers'));
+  return Array.from(map.values());
+}
+function searchCreators(q, role){
+  const qw = _sWords(q); if (!qw.length) return [];
+  return _sPeopleIndex()
+    .filter(p => !role || p.roles[role])
+    .map(p => Object.assign({}, p, { _score: _sFieldScore(p.name, qw, 10) + _sFieldScore(p.username, qw, 12) }))
+    .filter(p => p._score > 0)
+    .sort((a,b) => b._score - a._score);
+}
+
+/* ── suggestion vocabulary: real words from the content plus a seed list, so
+      suggestions still work on a fresh/empty account ── */
+const _S_SEED_WORDS = ['fitness','funny','gaming','dance','dancing','food','public','outdoor','extreme','challenge',
+                       'pushups','workout','prank','reaction','trending','mission','missions','video','videos',
+                       'creator','stunt','comedy','talent','adventure','tips'];
+const _S_SUFFIX = ['challenge','missions','videos','creator','tips'];
+let _sVocabCache = null, _sVocabStamp = -1;
+function _sVocab(){
+  const stamp = (dares ? dares.length : 0) * 100000 + _sVideoPool().length;
+  if (_sVocabCache && _sVocabStamp === stamp) return _sVocabCache;
+  const set = new Set(_S_SEED_WORDS);
+  (dares||[]).forEach(d => {
+    _sWords(d.caption || d.title).forEach(w => { if (w.length >= 3) set.add(w); });
+    (d.tags||[]).forEach(t => _sWords(t).forEach(w => { if (w.length >= 3) set.add(w); }));
+    if (d.cat) _sWords(d.cat).forEach(w => { if (w.length >= 3) set.add(w); });
+  });
+  _sVideoPool().forEach(p => _sWords(p.dareTitle).forEach(w => { if (w.length >= 3) set.add(w); }));
+  _sVocabCache = Array.from(set).filter(Boolean);
+  _sVocabStamp = stamp;
+  return _sVocabCache;
+}
+
+// "fit" → Fitness · Fitness Challenge · Fitness Missions …  Prefix matches on
+// the LAST word typed, so "funny d" still suggests "Funny Dance".
+function getSuggestions(q, limit){
+  limit = limit || 10;
+  const qn = _sNorm(q); if (qn.length < _S_MIN) return [];
+  const qw   = qn.split(' ');
+  const last = qw[qw.length - 1];
+  const stem = qw.slice(0, -1).join(' ');
+  const out = [], seen = new Set();
+  const push = (text, type, icon) => {
+    const k = _sNorm(text);
+    if (!k || seen.has(k)) return;
+    seen.add(k); out.push({ text, type, icon: icon || 'search' });
+  };
+
+  // 1) vocabulary words the last token is a prefix of — shortest first
+  const vocab = _sVocab();
+  const bases = vocab.filter(w => w.startsWith(last)).sort((a,b) => a.length - b.length).slice(0, 4);
+  bases.forEach(w => push(_sTitleCase((stem ? stem + ' ' : '') + w), 'term'));
+
+  // 2) things that actually exist — mission titles, then people
+  searchMissions(q, {}).slice(0, 4).forEach(d => push(d.caption || d.title || '', 'mission'));
+  searchCreators(q).slice(0, 2).forEach(p => push('@' + (p.username || p.name), 'creator', 'person'));
+
+  // 3) templated expansions off the best base word
+  if (bases[0]) _S_SUFFIX.forEach(sfx => push(_sTitleCase((stem ? stem + ' ' : '') + bases[0] + ' ' + sfx), 'term'));
+
+  return out.slice(0, limit);
+}
+
+// Nearest vocabulary words — powers the "did you mean" chips on an empty result
+function _sLev(a,b){
+  const m = a.length, n = b.length;
+  if (!m) return n; if (!n) return m;
+  let prev = Array.from({length:n+1}, (_,i) => i), cur = new Array(n+1);
+  for (let i=1;i<=m;i++){
+    cur[0] = i;
+    for (let j=1;j<=n;j++){
+      cur[j] = Math.min(prev[j]+1, cur[j-1]+1, prev[j-1] + (a[i-1]===b[j-1]?0:1));
+    }
+    const t = prev; prev = cur; cur = t;
+  }
+  return prev[n];
+}
+function _sNearby(q, limit){
+  const qn = (_sNorm(q).split(' ').pop() || '');
+  if (qn.length < 2) return [];
+  return _sVocab()
+    .filter(w => w !== qn)
+    .map(w => ({ w, d:_sLev(w, qn) }))
+    .filter(x => x.d <= 2 || x.w.startsWith(qn.slice(0,2)))
+    .sort((a,b) => a.d - b.d)
+    .slice(0, limit || 4)
+    .map(x => _sTitleCase(x.w));
+}
+
+/* ── search history (last 15, newest first, stored locally) ── */
+function getSearchHistory(){
+  try { const a = JSON.parse(localStorage.getItem(_S_HIST_KEY) || '[]'); return Array.isArray(a) ? a : []; }
+  catch(e){ return []; }
+}
+function _sHistWrite(a){ try { localStorage.setItem(_S_HIST_KEY, JSON.stringify(a.slice(0, _S_HIST_MAX))); } catch(e){} }
+function saveSearchHistory(q){
+  const t = String(q||'').trim(); if (t.length < _S_MIN) return;
+  const a = getSearchHistory().filter(x => _sNorm(x) !== _sNorm(t));
+  a.unshift(t); _sHistWrite(a);
+}
+function deleteSearchHistory(q){
+  _sHistWrite(getSearchHistory().filter(x => _sNorm(x) !== _sNorm(q)));
+  _sRenderPanel();
+}
+function clearSearchHistory(){ _sHistWrite([]); _sRenderPanel(); }
+
+/* ── filters ── */
+const _S_FILTER_DEFAULT = { type:'all', sort:'relevance', cat:'', reward:'any', duration:'any' };
+let _sFilters = Object.assign({}, _S_FILTER_DEFAULT);
+
+// The app's own categories are fitness/food/adventure/comedy/talent/socialgood
+// while tags are free text, so each chip matches a small synonym set instead of
+// one exact value — that way "Funny" also finds anything tagged comedy/prank.
+const _S_CAT_SYN = {
+  fitness:['fitness','workout','gym','pushup','pushups'],
+  funny:  ['funny','comedy','prank','humour','humor'],
+  gaming: ['gaming','game','gamer','esports'],
+  dance:  ['dance','dancing','dancer'],
+  food:   ['food','eating','foodie','cooking'],
+  public: ['public','reaction','publicreaction','street'],
+  outdoor:['outdoor','adventure','travel','nature'],
+  extreme:['extreme','stunt','danger','daring','risky']
+};
+const _S_FILTER_GROUPS = [
+  { key:'type',     label:'Content type', opts:[['all','All'],['missions','Missions'],['videos','Videos'],['creators','Creators'],['takers','Takers']] },
+  { key:'sort',     label:'Sort by',      opts:[['relevance','Relevance'],['latest','Latest'],['popular','Most popular'],['reward','Highest reward']] },
+  { key:'cat',      label:'Category',     opts:[['','Any'],['fitness','Fitness'],['funny','Funny'],['gaming','Gaming'],['dance','Dance'],['food','Food'],['public','Public'],['outdoor','Outdoor'],['extreme','Extreme']] },
+  { key:'reward',   label:'Reward',       opts:[['any','Any'],['0-500','Rs. 0–500'],['500-1000','Rs. 500–1000'],['1000+','Rs. 1000+']] },
+  { key:'duration', label:'Duration',     opts:[['any','Any'],['30','Under 30 sec'],['60','Under 1 min'],['60+','Over 1 min']] }
+];
+
+function _sReward(it){ return Number(it.rewardAmount != null ? it.rewardAmount : (it.bounty != null ? it.bounty : (it.dareBounty || 0))) || 0; }
+function _sStamp(it){ return (it.createdAt && it.createdAt.seconds) ? it.createdAt.seconds * 1000 : (it.ts || 0); }
+
+function applyFilters(items, kind, filters){
+  const f = filters || _sFilters;
+  let out = items || [];
+
+  if (f.cat){
+    const syn = _S_CAT_SYN[f.cat] || [f.cat];
+    out = out.filter(it => {
+      const hay = _sNorm([it.cat, it.caption, it.title, it.dareTitle, (it.tags||[]).join(' ')].join(' '));
+      return syn.some(s => hay.indexOf(s) >= 0);
+    });
+  }
+  if (f.reward && f.reward !== 'any'){
+    out = out.filter(it => {
+      const v = _sReward(it);
+      if (f.reward === '0-500')    return v <= 500;
+      if (f.reward === '500-1000') return v > 500 && v <= 1000;
+      return v > 1000;
+    });
+  }
+  if (kind === 'video' && f.duration && f.duration !== 'any'){
+    out = out.filter(it => {
+      const d = Number(it.videoDuration || 0); if (!d) return false;
+      if (f.duration === '30') return d < 30;
+      if (f.duration === '60') return d < 60;
+      return d >= 60;
+    });
+  }
+
+  if      (f.sort === 'latest')  out = out.slice().sort((a,b) => _sStamp(b) - _sStamp(a));
+  else if (f.sort === 'popular') out = out.slice().sort((a,b) => (b.viewCount||b.takers||0) - (a.viewCount||a.takers||0));
+  else if (f.sort === 'reward')  out = out.slice().sort((a,b) => _sReward(b) - _sReward(a));
+  else                           out = out.slice().sort((a,b) => (b._score||0) - (a._score||0));
+  return out;
+}
+
+function _sActiveFilterCount(){
+  return Object.keys(_S_FILTER_DEFAULT).filter(k => _sFilters[k] !== _S_FILTER_DEFAULT[k]).length;
+}
+function _sSyncFilterBadge(){
+  const n = _sActiveFilterCount();
+  document.querySelectorAll('.msearch-filter, .sres-filter-btn').forEach(b => {
+    b.classList.toggle('has-filters', n > 0);
+    b.setAttribute('data-count', n ? String(n) : '');
+  });
+}
+
+function openSearchFilters(){ _sRenderFilters(); _ovOpen('sFilterSheet', '/search/filters'); }
+function closeSearchFilters(){ closeWalletModal('sFilterSheet'); }
+function resetSearchFilters(){ _sFilters = Object.assign({}, _S_FILTER_DEFAULT); _sRenderFilters(); _sFiltersChanged(); }
+function setSearchFilter(key, val){ _sFilters[key] = val; _sRenderFilters(); _sFiltersChanged(); }
+
+function _sRenderFilters(){
+  const box = document.getElementById('sFilterBody'); if (!box) return;
+  box.innerHTML = _S_FILTER_GROUPS.map(g => `
+    <div class="sfilter-group">
+      <div class="sfilter-label">${g.label}</div>
+      <div class="sfilter-chips">
+        ${g.opts.map(([v,l]) => `<button class="sfilter-chip ${_sFilters[g.key] === v ? 'active' : ''}"
+            onclick="setSearchFilter('${g.key}',${_sQ(v)})">${escHtml(l)}</button>`).join('')}
+      </div>
+    </div>`).join('');
+}
+// "Apply instantly" — if a result list is already on screen, re-run it now.
+function _sFiltersChanged(){
+  _sSyncFilterBadge();
+  const q = (document.getElementById('searchInput')?.value || '').trim();
+  const onResults = document.getElementById('pageDares')?.classList.contains('active');
+  if (q.length >= _S_MIN && onResults) _doSearch(q.toLowerCase());
+}
+
+/* ── the search page panel: history when idle, suggestions while typing ── */
+function _sPanelType(){ clearTimeout(_sTypeTimer); _sTypeTimer = setTimeout(_sRenderPanel, _S_DEBOUNCE); }
+function _sQuery(){ return (document.getElementById('mSearchInput')?.value || '').trim(); }
+
+function _sRun(text){
+  const inp = document.getElementById('mSearchInput'); if (inp) inp.value = text;
+  _mSearchGo();
+}
+function _sFill(text){
+  const inp = document.getElementById('mSearchInput');
+  if (inp){ inp.value = text; inp.focus(); }
+  _sRenderPanel();
+}
+
+function _sRowHtml(text, icon, withDelete){
+  return `<div class="srow" onclick="_sRun(${_sQ(text)})">
+    <span class="mi srow-ic">${icon}</span>
+    <span class="srow-txt">${escHtml(text)}</span>
+    ${withDelete ? `<button class="srow-del" onclick="event.stopPropagation();deleteSearchHistory(${_sQ(text)})" aria-label="Remove"><span class="mi">close</span></button>` : ''}
+    <button class="srow-fill" onclick="event.stopPropagation();_sFill(${_sQ(text)})" aria-label="Put in search box"><span class="mi">north_west</span></button>
+  </div>`;
+}
+
+function _sRenderPanel(){
+  const box = document.getElementById('mSearchPanel'); if (!box) return;
+  const q = _sQuery();
+
+  if (q.length < _S_MIN){
+    const h = getSearchHistory();
+    box.innerHTML = h.length
+      ? `<div class="srow-hdr"><span>Recent searches</span><button class="srow-clear" onclick="clearSearchHistory()">Clear all</button></div>`
+        + h.map(t => _sRowHtml(t, 'history', true)).join('')
+      : `<div class="msearch-hint">Search mission titles, video titles, categories ya @username</div>`;
+    return;
+  }
+
+  const sug = getSuggestions(q);
+  if (!sug.length){
+    const near = _sNearby(q);
+    box.innerHTML = `<div class="snores">
+      <span class="mi">search_off</span>
+      <div class="snores-t">No results found</div>
+      <div class="snores-d">Nothing matches “${escHtml(q)}”</div>
+      ${near.length ? `<div class="snores-sug">${near.map(t => `<button class="snores-chip" onclick="_sRun(${_sQ(t)})">${escHtml(t)}</button>`).join('')}</div>` : ''}
+    </div>`;
+    return;
+  }
+  box.innerHTML = sug.map(s => _sRowHtml(s.text, s.icon, false)).join('');
 }
 
 // Patch goPage to also call syncBottomNav
@@ -3776,39 +4099,81 @@ function _doSearch(q) {
   if (typeof syncBottomNav === 'function') syncBottomNav('dares');
   const feed=document.getElementById('daresPageFeed');
 
+  // Content type comes from the filter sheet; 'all' keeps the Missions/Videos tabs
+  const type = _sFilters.type === 'all' ? (searchType === 'videos' ? 'videos' : 'missions') : _sFilters.type;
+  const nFilters = _sActiveFilterCount();
+
   const typeBar=`
     <button class="search-back-btn" onclick="_searchBack()"><span class="mi">arrow_back</span> Back</button>
     <div class="search-type-bar">
+      ${_sFilters.type === 'all' ? `
       <button class="search-type-btn ${searchType==='dares'?'active':''}" onclick="setSearchType('dares')">
         <span class="mi">bolt</span> Missions
       </button>
       <button class="search-type-btn ${searchType==='videos'?'active':''}" onclick="setSearchType('videos')">
         <span class="mi">play_circle</span> Videos
+      </button>` : ''}
+      <button class="search-type-btn sres-filter-btn ${nFilters?'has-filters':''}" onclick="openSearchFilters()">
+        <span class="mi">tune</span> Filters${nFilters?` (${nFilters})`:''}
       </button>
     </div>`;
 
-  if (searchType==='dares') {
-    const results   = _scoredSearch(dares, q, ['caption','title','description','desc'], ['tags','cat']);
+  const countLine = (n, noun) =>
+    `<div style="font-size:12px;color:var(--t3);margin-bottom:14px;padding:0 4px;">${n} ${noun}${n!==1?'s':''} for "<strong style="color:var(--t1);">${escHtml(q)}</strong>"</div>`;
+  const emptyBlock = (what) => {
+    const near = _sNearby(q);
+    return `<div class="empty"><span class="mi">search_off</span>
+      <div class="empty-title">No results found</div>
+      <p class="empty-desc">Nothing in ${what} matches "${escHtml(q)}"</p>
+      ${near.length ? `<div class="snores-sug">${near.map(t=>`<button class="snores-chip" onclick="_sResearch(${_sQ(t)})">${escHtml(t)}</button>`).join('')}</div>` : ''}
+    </div>`;
+  };
+
+  if (type === 'creators' || type === 'takers') {
+    const people = searchCreators(q, type);
+    feed.innerHTML = typeBar + (people.length
+      ? countLine(people.length, type === 'creators' ? 'creator' : 'taker') +
+        `<div class="sppl-list">${people.map(_sPersonCard).join('')}</div>`
+      : emptyBlock(type));
+  } else if (type === 'videos') {
+    const results = searchVideos(q);
+    feed.innerHTML = typeBar + (results.length
+      ? countLine(results.length, 'video') + _mixedVideoFeedHtml(results, 'No videos')
+      : emptyBlock('videos'));
+  } else {
+    const results   = searchMissions(q);
     const active    = results.filter(d=>!d.completed);
     const completed = results.filter(d=>d.completed);
     if (!results.length) {
-      feed.innerHTML=typeBar+`<div class="empty"><span class="mi">search_off</span><div class="empty-title">No missions for "${escHtml(q)}"</div><p class="empty-desc">Try searching Videos tab</p></div>`;
+      feed.innerHTML = typeBar + emptyBlock('missions');
     } else {
-      let html=typeBar+`<div style="font-size:12px;color:var(--t3);margin-bottom:14px;padding:0 4px;">${results.length} dare${results.length!==1?'s':''} for "<strong style="color:var(--t1);">${escHtml(q)}</strong>"</div>`;
+      let html = typeBar + countLine(results.length, 'mission');
       if (active.length)    html+=`<div class="search-section-label">Active (${active.length})</div><div class="active-dare-grid">${active.map(d=>_searchDareCard(d)).join('')}</div>`;
       if (completed.length) html+=`<div class="search-section-label" style="color:var(--t3);">Completed (${completed.length})</div><div class="active-dare-grid">${completed.map(d=>_searchDareCard(d)).join('')}</div>`;
-      feed.innerHTML=html;
-    }
-  } else {
-    const pool    = allProofs.length?allProofs:homeProofs;
-    const results = _scoredSearch(pool, q, ['dareTitle','takerName','note'], ['cat']);
-    if (!results.length) {
-      feed.innerHTML=typeBar+`<div class="empty"><span class="mi">search_off</span><div class="empty-title">No videos for "${escHtml(q)}"</div><p class="empty-desc">Try Missions tab instead</p></div>`;
-    } else {
-      feed.innerHTML=typeBar+`<div style="font-size:12px;color:var(--t3);margin-bottom:14px;padding:0 4px;">${results.length} video${results.length!==1?'s':''} for "<strong style="color:var(--t1);">${escHtml(q)}</strong>"</div>`+_mixedVideoFeedHtml(results,'No videos');
+      feed.innerHTML = html;
     }
   }
   _trackSearch(q);
+}
+
+// Re-run the current results page with a different term (the "did you mean" chips)
+function _sResearch(text){
+  const main = document.getElementById('searchInput'); if (main) main.value = text;
+  saveSearchHistory(text);
+  _doSearch(String(text).toLowerCase().trim());
+}
+
+function _sPersonCard(p){
+  const uid = p.uid || '';
+  const sub = [p.missions ? p.missions + ' mission' + (p.missions!==1?'s':'') : '',
+               p.videos   ? p.videos   + ' video'   + (p.videos!==1?'s':'')   : ''].filter(Boolean).join(' · ');
+  return `<div class="sppl-row"${uid?` onclick="openPublicProfile('${escHtml(uid)}')"`:''}>
+    <div class="sppl-av">${_avHtml(p.photo, p.name)}</div>
+    <div class="sppl-meta">
+      <div class="sppl-name">${escHtml(p.name||'Creator')}</div>
+      <div class="sppl-sub">@${escHtml(p.username||'user')}${sub?' · '+sub:''}</div>
+    </div>
+  </div>`;
 }
 
 function _explorerDareCard(d) {
@@ -4126,15 +4491,27 @@ function _setTopbarMode(mode) {
   }
 }
 
+// Desktop topbar dropdown — same engine as the mobile search page, so both
+// surfaces stay in sync. Empty box shows recent searches, like YouTube.
 function _showSuggestions(q) {
-  const suggestions=[]; const seen=new Set();
-  dares.forEach(d=>{ const t=(d.caption||d.title||'').toLowerCase(); if(t.includes(q)&&!seen.has(t.slice(0,50))){suggestions.push({text:d.caption||d.title,type:'dare',icon:'bolt'});seen.add(t.slice(0,50));} });
-  dares.forEach(d=>{ (d.tags||[]).forEach(tag=>{ if(tag.toLowerCase().includes(q)&&!seen.has('#'+tag)){suggestions.push({text:'#'+tag,type:'tag',icon:'tag'});seen.add('#'+tag);} }); });
-  allProofs.forEach(p=>{ const t=(p.dareTitle||'').toLowerCase(); if(t.includes(q)&&!seen.has(t.slice(0,50))){suggestions.push({text:p.dareTitle,type:'video',icon:'play_circle'});seen.add(t.slice(0,50));} });
-  if (!suggestions.length) { _hideSuggestions(); return; }
-  const sugEl=document.getElementById('searchSuggestions'); if(!sugEl) return;
-  sugEl.innerHTML=suggestions.slice(0,6).map(s=>`<div class="sug-item" onmousedown="applySuggestion('${escHtml(s.text.replace(/^#/,''))}')"><span class="mi" style="font-size:14px;color:var(--t4);">${s.icon}</span><span>${escHtml(s.text)}</span><span class="sug-type">${s.type}</span></div>`).join('');
-  sugEl.style.display='block';
+  const sugEl = document.getElementById('searchSuggestions'); if (!sugEl) return;
+  const rows = [];
+
+  if (String(q||'').trim().length < _S_MIN) {
+    getSearchHistory().slice(0, 8).forEach(t => rows.push({ text:t, type:'recent', icon:'history', hist:true }));
+  } else {
+    getSuggestions(q, 8).forEach(s => rows.push(s));
+  }
+  if (!rows.length) { _hideSuggestions(); return; }
+
+  sugEl.innerHTML = rows.map(s => `
+    <div class="sug-item" onmousedown="applySuggestion(${_sQ(String(s.text).replace(/^#/,''))})">
+      <span class="mi" style="font-size:14px;color:var(--t4);">${s.icon||'search'}</span>
+      <span>${escHtml(s.text)}</span>
+      ${s.hist ? `<button class="sug-del" onmousedown="event.stopPropagation();event.preventDefault();deleteSearchHistory(${_sQ(s.text)});_showSuggestions('')" aria-label="Remove"><span class="mi">close</span></button>`
+               : `<span class="sug-type">${s.type}</span>`}
+    </div>`).join('');
+  sugEl.style.display = 'block';
 }
 
 function _startGuestCountdown() {
@@ -4509,6 +4886,7 @@ const _OV_CLOSERS = {
   pinOverlay:           () => closeWalletModal('pinOverlay'),
   txnDetailOverlay:     () => closeWalletModal('txnDetailOverlay'),
   searchOverlay:        () => closeWalletModal('searchOverlay'),
+  sFilterSheet:         () => closeWalletModal('sFilterSheet'),
   setSecOverlay:        () => closeSetSec(),
 };
 function _ovCloseById(id){
@@ -4560,6 +4938,7 @@ function _openModalById(id){
     case 'followListOverlay':    _ppFollowList('followers'); break;
     case 'photoViewer':          _viewProfilePhoto(); break;
     case 'searchOverlay':        openMobileSearch(); break;
+    case 'sFilterSheet':         openSearchFilters(); break;
     // contextual — URL dikhta hai par refresh restore nahi (need a dare/proof/txn id):
     // proofOverlay, reviewOverlay, rejectOverlay, reportOverlay, selectTakersOverlay,
     // videoPlayOverlay, pinOverlay, txnDetailOverlay

@@ -23,7 +23,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,100..400,0..1,0&icon_names=account_balance_wallet,bookmark,explore,home,person,settings&display=block" rel="stylesheet"/>
 
 <!-- App Styles -->
-<link rel="stylesheet" href="/css/styles.css?v=20260810d"/>
+<link rel="stylesheet" href="/css/styles.css?v=20260810e"/>
 
 <!-- Firebase CDN -->
 <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
@@ -146,7 +146,7 @@
     </div>
     <div class="search-wrap" style="position:relative;">
       <input type="text" id="searchInput" placeholder="Search"
-             oninput="handleSearch()" onfocus="if(this.value.trim().length>=2)_showSuggestions(this.value.toLowerCase().trim())"
+             oninput="handleSearch()" onfocus="_showSuggestions(this.value.toLowerCase().trim())"
              onkeydown="if(event.key==='Enter'){event.preventDefault();handleSearchImmediate();}"
              onblur="setTimeout(_hideSuggestions,200)"/>
       <button class="search-go" onclick="handleSearchImmediate()" aria-label="Search"><span class="mi">search</span></button>
@@ -531,15 +531,27 @@
     <div class="msearch-bar">
       <button class="msearch-back" onclick="closeWalletModal('searchOverlay')" aria-label="Back"><span class="mi">arrow_back</span></button>
       <div class="msearch-field">
-        <input id="mSearchInput" placeholder="Search MissionMarket" autocomplete="off"
-               enterkeyhint="search" inputmode="search"
+        <input id="mSearchInput" placeholder="Search missions, creators, categories..." autocomplete="off"
+               enterkeyhint="search" inputmode="search" oninput="_sPanelType()"
                onkeydown="if(event.key==='Enter'){event.preventDefault();_mSearchGo();}"/>
+        <button class="msearch-go" onclick="_mSearchGo()" aria-label="Search"><span class="mi">search</span></button>
       </div>
-      <button class="msearch-mic" onclick="_mSearchVoice()" aria-label="Voice search"><span class="mi">mic</span></button>
+      <button class="msearch-filter" id="mSearchFilterBtn" onclick="openSearchFilters()" aria-label="Filters"><span class="mi">tune</span></button>
     </div>
-    <div class="msearch-body">
-      <div class="msearch-hint">Mission titles, video titles ya @username search karo</div>
+    <div class="msearch-panel" id="mSearchPanel"></div>
+  </div>
+</div>
+
+<!-- ══ SEARCH FILTERS — bottom sheet; every change applies immediately ══ -->
+<div class="sfilter-wrap" id="sFilterSheet" onclick="if(event.target===this)closeSearchFilters()">
+  <div class="sfilter-sheet">
+    <div class="sfilter-grip"></div>
+    <div class="sfilter-hdr">
+      <div class="sfilter-title">Filters</div>
+      <button class="sfilter-reset" onclick="resetSearchFilters()">Reset</button>
     </div>
+    <div class="sfilter-body" id="sFilterBody"></div>
+    <button class="sfilter-done" onclick="closeSearchFilters()">Done</button>
   </div>
 </div>
 
@@ -1044,7 +1056,7 @@
 <div class="toast" id="toast"></div>
 
 <!-- App Logic -->
-<script src="/js/app.js?v=20260810d"></script>
+<script src="/js/app.js?v=20260810e"></script>
 
 <!-- ══ v0.19 NEW MODALS ══ -->
 
