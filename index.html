@@ -23,7 +23,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,100..400,0..1,0&icon_names=account_balance_wallet,bookmark,explore,home,person,settings&display=block" rel="stylesheet"/>
 
 <!-- App Styles -->
-<link rel="stylesheet" href="/css/styles.css?v=20260810c"/>
+<link rel="stylesheet" href="/css/styles.css?v=20260810d"/>
 
 <!-- Firebase CDN -->
 <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
@@ -152,11 +152,12 @@
       <button class="search-go" onclick="handleSearchImmediate()" aria-label="Search"><span class="mi">search</span></button>
       <div class="search-suggestions" id="searchSuggestions" style="display:none;"></div>
     </div>
-    <!-- Search icon (mobile — search bar hidden on mobile) -->
-    <button class="search-icon-btn" onclick="openMobileSearch()" aria-label="Search">
-      <span class="mi">search</span>
-    </button>
     <div class="topbar-right">
+      <!-- Search icon (mobile — the desktop search bar is hidden there).
+           Lives in topbar-right so it sits next to the bell, not by the logo. -->
+      <button class="search-icon-btn" onclick="openMobileSearch()" aria-label="Search">
+        <span class="mi">search</span>
+      </button>
       <!-- Guest topbar -->
       <div id="guestTopbarEl" style="display:none;align-items:center;gap:8px;">
         <div class="guest-timer-badge" id="guestTimerBadge"><span class="mi" style="font-size:13px;">schedule</span><span id="guestTimerText">15:00</span></div>
@@ -524,20 +525,21 @@
   </div>
 </div>
 
-<!-- ══ SEARCH (mobile page — real search box + button) ══ -->
-<div class="overlay as-page" id="searchOverlay">
-  <div class="modal wallet-modal">
-    <div class="modal-hdr">
-      <button class="modal-close" onclick="closeWalletModal('searchOverlay')" aria-label="Back"><span class="mi">arrow_back</span></button>
-      <div class="modal-title" style="flex:1;margin-left:6px;">Search</div>
+<!-- ══ SEARCH — full page, slides in from the right; its own YouTube-style bar ══ -->
+<div class="overlay as-page msearch-page" id="searchOverlay">
+  <div class="modal">
+    <div class="msearch-bar">
+      <button class="msearch-back" onclick="closeWalletModal('searchOverlay')" aria-label="Back"><span class="mi">arrow_back</span></button>
+      <div class="msearch-field">
+        <input id="mSearchInput" placeholder="Search MissionMarket" autocomplete="off"
+               enterkeyhint="search" inputmode="search"
+               onkeydown="if(event.key==='Enter'){event.preventDefault();_mSearchGo();}"/>
+      </div>
+      <button class="msearch-mic" onclick="_mSearchVoice()" aria-label="Voice search"><span class="mi">mic</span></button>
     </div>
-    <div class="fl-search">
-      <span class="mi">search</span>
-      <input id="mSearchInput" placeholder="Search missions, videos, creators" autocomplete="off"
-             onkeydown="if(event.key==='Enter'){event.preventDefault();_mSearchGo();}"/>
-      <button class="msearch-go" onclick="_mSearchGo()" aria-label="Search"><span class="mi">arrow_forward</span></button>
+    <div class="msearch-body">
+      <div class="msearch-hint">Mission titles, video titles ya @username search karo</div>
     </div>
-    <div class="msearch-hint">Mission titles, video titles ya @username search karo</div>
   </div>
 </div>
 
@@ -1042,7 +1044,7 @@
 <div class="toast" id="toast"></div>
 
 <!-- App Logic -->
-<script src="/js/app.js?v=20260810c"></script>
+<script src="/js/app.js?v=20260810d"></script>
 
 <!-- ══ v0.19 NEW MODALS ══ -->
 

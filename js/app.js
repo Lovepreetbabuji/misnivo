@@ -3648,6 +3648,30 @@ function closeMobileSearch() {
   const sw = document.querySelector('.search-wrap');
   if (sw) sw.classList.remove('mobile-open');   // legacy inline-expand cleanup
 }
+// Mic button on the search bar. Real voice search where the browser has it
+// (Chrome/Android does); everywhere else it just runs what is typed, so the
+// button is never dead.
+function _mSearchVoice(){
+  const SR  = window.SpeechRecognition || window.webkitSpeechRecognition;
+  const inp = document.getElementById('mSearchInput');
+  const btn = document.querySelector('.msearch-mic');
+  if (!SR){ _mSearchGo(); return; }
+  try{
+    const r = new SR();
+    r.lang = navigator.language || 'en-IN';
+    r.interimResults = false; r.maxAlternatives = 1;
+    const done = () => { if (btn) btn.classList.remove('listening'); };
+    r.onresult = e => {
+      const t = ((e.results[0] && e.results[0][0] && e.results[0][0].transcript) || '').trim();
+      if (t && inp){ inp.value = t; _mSearchGo(); }
+    };
+    r.onerror = () => { done(); showToast('Mic not available'); };
+    r.onend   = done;
+    if (btn) btn.classList.add('listening');
+    r.start();
+  }catch(e){ _mSearchGo(); }
+}
+
 // Search page → run the normal search pipeline through the main input
 function _mSearchGo(){
   const v = (document.getElementById('mSearchInput')?.value || '').trim();
