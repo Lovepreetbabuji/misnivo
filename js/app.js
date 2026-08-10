@@ -7264,7 +7264,10 @@ function _shortsPlayCurrent() {
   items.forEach((it, i) => {
     const v = it.querySelector('video'); if (!v) return;
     if (Math.abs(i - shortsIndex) <= 1) {
-      if (!v._vqLoaded && v.dataset.src){ v._vqLoaded = true; _playSmart(v, v.dataset.src, { autoplay:false, maxW:720 }); }
+      // The CURRENT short autoplays through _playSmart, which only starts once
+      // the source is really attached (for HLS, after the manifest loads).
+      // Neighbours just preload.
+      if (!v._vqLoaded && v.dataset.src){ v._vqLoaded = true; _playSmart(v, v.dataset.src, { autoplay: i === shortsIndex, maxW:720 }); }
     } else if (v._vqLoaded || v.getAttribute('src')) {
       v._vqLoaded = false;
       _vqDestroy(v);
@@ -7275,10 +7278,20 @@ function _shortsPlayCurrent() {
   if (cur) {
     const v = cur.querySelector('video');
     if (v) {
-      v.muted = false; v.currentTime = 0; v.playbackRate = _SHORTS_SPEEDS[_shortsSpeedIdx] || 1;
+      v.muted = false;
+      try { if (v.readyState >= 1) v.currentTime = 0; } catch(e){}  // seeking before metadata throws
+      v.playbackRate = _SHORTS_SPEEDS[_shortsSpeedIdx] || 1;
       v.loop = !_shortsAutoScroll;                                  // auto-scroll → don't loop
       v.onended = () => { if (_shortsAutoScroll) shortsNav(1); };   // …advance to next short
-      v.play().catch(()=>{}); _shortsSlideSyncIcons(v);
+
+      // A bare play() here fired BEFORE the source finished attaching, so it
+      // rejected and the short sat paused until you tapped it — which is why
+      // only the first short of a session ever started on its own (its file was
+      // already warm from the feed preview). Retry once the element is ready.
+      const kick = () => { const q = v.play(); if (q && q.catch) q.catch(()=>{}); _shortsSlideSyncIcons(v); };
+      kick();
+      v.addEventListener('loadeddata', kick, { once:true });
+      v.addEventListener('canplay',    kick, { once:true });
     }
   }
 }

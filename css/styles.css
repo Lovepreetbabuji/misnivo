@@ -4771,3 +4771,25 @@ body.no-anim .video-detail-overlay.hero-in .dd-col1 > *,
 body.no-anim .video-detail-overlay.hero-in .dd-col3{ animation:none !important; }
 
 body.no-anim .hero-fly{ display:none !important; }
+
+/* ══ Mission & Video detail are full-screen on mobile ══
+   They used to start at top:56px with the app topbar showing through. When the
+   feed had scrolled and the topbar was hidden (body.tb-hide), that 56px strip
+   showed the PREVIOUS page instead — the "cut background" at the top. Rather
+   than restoring the bar, these pages simply do not have one: the player starts
+   at y=0 and the content owns the full height. Home keeps its auto-hide bar,
+   and desktop is untouched. */
+@media(max-width:768px){
+  body.detail-open .topbar{ display:none !important; }
+
+  #dareDetailOverlay, #videoDetailOverlay{ top:0 !important; }
+  #videoDetailOverlay .vd2-player-wrap{ top:0 !important; }
+  /* the description drawer was pinned under the old bar; without one it would
+     leave a 56px strip of the page showing above it */
+  #dareDetailOverlay .dd-col2, #videoDetailOverlay .dd-col2{ top:0 !important; }
+
+  /* the notch/status bar still needs clearing when installed as a PWA */
+  @supports (padding-top: env(safe-area-inset-top)){
+    #dareDetailOverlay .dd-col1{ padding-top:env(safe-area-inset-top); }
+  }
+}
