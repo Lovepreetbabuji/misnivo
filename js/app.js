@@ -4758,6 +4758,92 @@ function closeVideoDetail() {
 // ════════════════════════════════════════════════════════════════════
 let _ddCurrentId = null;
 
+// ════════════════════════════════════════════════════════════════════
+//  SHARED ELEMENT TRANSITION (hero)
+//
+//  The thumbnail you tapped flies into the player slot instead of the page
+//  cutting to a new screen. FLIP: measure the thumb, clone it as one fixed
+//  layer, animate transform + border-radius to the destination box. Only
+//  transform and radius animate, so the whole thing stays on the compositor —
+//  no layout, no paint, 60fps. The real destination is hidden for the flight so
+//  there is never a duplicate on screen, and it is restored on a timer as well
+//  as on transitionend so a dropped event can't strand a blank player.
+// ════════════════════════════════════════════════════════════════════
+const _HERO_MS   = 420;
+const _HERO_EASE = 'cubic-bezier(.25,.8,.25,1)';
+let _heroSrc = null;
+
+// Capture phase — runs before the card's own onclick navigates, which is the
+// last moment the thumbnail is still on screen to measure.
+document.addEventListener('click', (e) => {
+  _heroSrc = null;
+  const t = e.target;
+  if (!t || !t.closest) return;
+  if (t.closest('button, .adc-menu-wrap, .adc-dots, .dd-action-menu')) return;  // menus aren't navigation
+  const card = t.closest('.active-dare-card, .yt-card, .exp-card, .dare-list-card');
+  if (!card) return;
+  const thumb = card.querySelector('.adc-thumb, .yt-thumb, .dare-list-thumb');
+  if (!thumb) return;
+  const img = thumb.querySelector('img');
+  const url = img && (img.currentSrc || img.src);
+  if (!url) return;                                   // placeholder tile — nothing to fly
+  const r = thumb.getBoundingClientRect();
+  if (!r.width || !r.height) return;
+  _heroSrc = { r, url, radius:getComputedStyle(thumb).borderRadius, t:Date.now() };
+}, true);
+
+function _heroFly(destEl){
+  const s = _heroSrc; _heroSrc = null;
+  if (!s || !destEl) return false;
+  if (Date.now() - s.t > 1200) return false;          // stale: the click didn't lead here
+  try { if (matchMedia('(prefers-reduced-motion: reduce)').matches) return false; } catch(e){}
+
+  const d = destEl.getBoundingClientRect();
+  if (!d.width || !d.height) return false;
+  // very different shapes would stretch the image on the way — better to cut
+  const ratio = (s.r.width / s.r.height) / (d.width / d.height);
+  if (ratio < 0.75 || ratio > 1.34) return false;
+
+  const fly = document.createElement('div');
+  fly.className = 'hero-fly';
+  fly.style.top    = s.r.top + 'px';
+  fly.style.left   = s.r.left + 'px';
+  fly.style.width  = s.r.width + 'px';
+  fly.style.height = s.r.height + 'px';
+  fly.style.borderRadius = s.radius;
+  fly.style.backgroundImage = 'url("' + String(s.url).replace(/"/g, '%22') + '")';
+  document.body.appendChild(fly);
+
+  const prevVis = destEl.style.visibility;
+  destEl.style.visibility = 'hidden';                 // no duplicate during the flight
+
+  const sx = d.width / s.r.width, sy = d.height / s.r.height;
+  const destRadius = getComputedStyle(destEl).borderRadius;
+  requestAnimationFrame(() => {
+    fly.style.transition   = `transform ${_HERO_MS}ms ${_HERO_EASE}, border-radius ${_HERO_MS}ms ${_HERO_EASE}`;
+    fly.style.transform    = `translate(${d.left - s.r.left}px, ${d.top - s.r.top}px) scale(${sx}, ${sy})`;
+    fly.style.borderRadius = destRadius;
+  });
+
+  let settled = false;
+  const finish = () => {
+    if (settled) return; settled = true;
+    destEl.style.visibility = prevVis;
+    fly.remove();
+  };
+  fly.addEventListener('transitionend', finish, { once:true });
+  setTimeout(finish, _HERO_MS + 280);                 // belt and braces
+  return true;
+}
+
+// Flight + the rest of the page rising underneath it, as one movement.
+function _heroOpen(overlayEl, destEl){
+  if (!_heroFly(destEl)) return;
+  if (!overlayEl) return;
+  overlayEl.classList.add('hero-in');
+  setTimeout(() => overlayEl.classList.remove('hero-in'), _HERO_MS + 140);
+}
+
 function openDareDetail(dareId){
   try{ _pvStop(); }catch(e){}
   const d = dares.find(x=>x.id===dareId);
@@ -4833,6 +4919,7 @@ function openDareDetail(dareId){
   const col1 = ov.querySelector('.dd-col1'); if (col1) col1.scrollTop = 0;
   document.body.style.overflow = 'hidden';
   document.body.classList.add('detail-open'); // makes the topbar opaque
+  _heroOpen(ov, document.getElementById('ddHero'));   // thumbnail flies into the hero slot
   closeDareDetails();
   _ddBindScrollTop(); _ddBindSwipe();
 }
@@ -5500,6 +5587,8 @@ async function openVideoDetail(proofId) {
   vov.scrollTop=0; const vc1=vov.querySelector('.dd-col1'); if(vc1) vc1.scrollTop=0;
   document.body.style.overflow='hidden';
   document.body.classList.add('detail-open');
+  // thumbnail flies into the player box; the video loads underneath it below
+  _heroOpen(vov, vov.querySelector('.vd2-player-wrap'));
   _vdBindScroll();
   // Then show ad IN the video area, then play. Ad shows once per video per
   // session — coming BACK to a video plays it directly (no repeat ad).

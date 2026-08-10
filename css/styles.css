@@ -4688,3 +4688,33 @@ input[type=range]{ accent-color:#fff !important; }
   .active-dare-grid{ grid-template-columns:1fr !important; gap:28px !important; }
   .feed-longs, #homeVideoGrid .yt-grid, .yt-grid{ gap:28px !important; }
 }
+
+/* ══ Shared element transition ══
+   One fixed layer that carries the tapped thumbnail into the player slot.
+   Everything animated here is transform/border-radius only, so it runs on the
+   compositor — no reflow, no repaint of the page underneath. */
+.hero-fly{
+  position:fixed; z-index:99999; pointer-events:none;
+  background-size:cover; background-position:center; background-repeat:no-repeat;
+  background-color:#111;
+  transform-origin:top left;
+  will-change:transform;
+  overflow:hidden;
+  box-shadow:0 18px 50px rgba(0,0,0,.55);
+}
+
+/* The rest of the detail page rises as the thumbnail lands, so it reads as one
+   movement rather than a page swap. col2 is excluded — on mobile it is the
+   swipe-in drawer and already owns its own transform. */
+.video-detail-overlay.hero-in .dd-col1 > *:not(.dd-hero):not(.vd2-player-wrap),
+.video-detail-overlay.hero-in .dd-col3{
+  animation:heroRise 420ms cubic-bezier(.25,.8,.25,1) both;
+}
+@keyframes heroRise{
+  from{ opacity:0; transform:translateY(22px); }
+  to  { opacity:1; transform:none; }
+}
+@media(prefers-reduced-motion:reduce){
+  .video-detail-overlay.hero-in .dd-col1 > *,
+  .video-detail-overlay.hero-in .dd-col3{ animation:none !important; }
+}
