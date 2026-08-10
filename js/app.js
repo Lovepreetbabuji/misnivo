@@ -550,6 +550,11 @@ async function emailSignup() {
 // ════════════════════════════
 async function logout() {
   if (daresUnsub) { daresUnsub(); daresUnsub = null; }
+  // the notifications listener was never torn down — it kept running against
+  // the signed-out uid and left the last user's rows in memory
+  if (notifUnsub) { notifUnsub(); notifUnsub = null; }
+  notifications = []; notifUnread = 0; notifLoaded = false;
+  if (typeof _updateNotifBadge === 'function') _updateNotifBadge();
   await auth.signOut();
   user = null; dares = []; wallet = { balance:100000, pending:0, transactions:[] }; acceptedDares = [];
   closeDD();
@@ -585,6 +590,7 @@ function goPage(pg, _fromPop) {
   try{ _pauseAllMedia(false); }catch(e){}   // leaving a page stops everything it was playing
   document.body.classList.remove('tb-hide');        // fresh page → topbar visible
   document.body.classList.remove('search-open');    // leaving the results → normal topbar back
+  if (typeof _notifCloseNow === 'function') _notifCloseNow();
   if (typeof _closeDetailOverlays === 'function') _closeDetailOverlays();
   document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
   const el = document.getElementById('page' + pg.charAt(0).toUpperCase() + pg.slice(1));
@@ -4033,6 +4039,8 @@ let guestEndTime  = 0;
 let notifications   = [];
 let notifUnread     = 0;
 let notifUnsub      = null;
+let notifLoaded     = false;   // first snapshot in? drives the skeleton state
+let _notifPushed    = false;   // did opening the panel add a history entry?
 let activeProof     = null;
 let commentsProofId = null;
 let commentsCache   = {};
@@ -4318,8 +4326,19 @@ function cancelReply() {
   const bar = document.getElementById('vdReplyBar'); if (bar) bar.style.display = 'none';
 }
 
+// Placeholder rows while the first Firestore snapshot is still in flight, so the
+// panel never opens on a blank sheet.
+function _notifSkeletonHtml(n){
+  return Array.from({length:n||7}, () => `
+    <div class="notif-item nskel">
+      <div class="nskel-ic"></div>
+      <div class="nskel-lines"><div class="nskel-bar nskel-b1"></div><div class="nskel-bar nskel-b2"></div></div>
+    </div>`).join('');
+}
+
 function _renderNotifications() {
   const el=document.getElementById('notifList'); if(!el) return;
+  if (!notifLoaded && user){ el.innerHTML=_notifSkeletonHtml(); return; }
   if (!notifications.length){el.innerHTML=`<div class="notif-empty"><span class="mi">notifications_none</span><div>No notifications yet</div></div>`;return;}
   el.innerHTML=notifications.map(n=>`
     <div class="notif-item ${n.read?'':'unread'}">
@@ -4598,7 +4617,19 @@ function closeGuestPrompt() {
   document.getElementById('guestPrompt').style.display = 'none';
 }
 
-function closeNotifPanel() { document.getElementById('notifPanel')?.classList.remove('open'); }
+// UI-driven close (back arrow / ✕ / outside tap) rewinds the entry the open
+// pushed, so the phone back button never needs a dead press.
+function closeNotifPanel() {
+  const panel = document.getElementById('notifPanel');
+  const wasOpen = panel?.classList.contains('open');
+  if (wasOpen && _notifPushed) { _notifPushed = false; try { history.back(); return; } catch(e){} }
+  _notifCloseNow();
+}
+function _notifCloseNow() {
+  _notifPushed = false;
+  document.getElementById('notifPanel')?.classList.remove('open');
+  document.body.classList.remove('notif-open');
+}
 
 function closeVideoDetail() {
   document.getElementById('videoDetailOverlay').classList.remove('open');
@@ -4974,6 +5005,7 @@ window.addEventListener('popstate', function(e){
   if (isOpen('ddCommentsBox')){ closeDareComments(); _dmPush(); return; }
   if (isOpen('shortsDetailsDrawer')){ shortsCloseDetails(); _dmPush(); return; }
   if (isOpen('collabModal')){ closeCollabModal(); _dmPush(); return; }
+  if (isOpen('notifPanel')){ _notifCloseNow(); return; }
   if (typeof _sidebarOpen!=='undefined' && _sidebarOpen){ closeSidebar(); return; }
   if (e && e.state && e.state._page){ goPage(e.state._page, true); return; }   // back between main pages
   _dmRouteFromUrl();   // the URL is the source of truth — open/close to match it
@@ -5483,14 +5515,16 @@ function showGuestPrompt(info, dismissible) {
 function startNotificationsListener() {
   if (!user) return;
   if (notifUnsub) notifUnsub();
+  notifLoaded = false;
   notifUnsub = db.collection('notifications')
     .where('toUserId','==',user.uid).orderBy('createdAt','desc').limit(50)
     .onSnapshot(snap=>{
       notifications = snap.docs.map(doc=>({id:doc.id,...doc.data()}));
       notifUnread   = notifications.filter(n=>!n.read).length;
+      notifLoaded   = true;
       _updateNotifBadge();
       if (document.getElementById('notifPanel')?.classList.contains('open')) _renderNotifications();
-    },()=>{});
+    },()=>{ notifLoaded = true; _renderNotifications(); });   // error → drop the skeleton, don't spin forever
 }
 
 async function submitComment() {
@@ -5547,12 +5581,26 @@ async function toggleLike(proofId) {
 
 function toggleNotifPanel() {
   const panel=document.getElementById('notifPanel'); if(!panel) return;
-  const isOpen=panel.classList.toggle('open');
-  if (isOpen) {
-    _renderNotifications();
-    notifications.filter(n=>!n.read).forEach(n=>db.collection('notifications').doc(n.id).update({read:true}).catch(()=>{}));
-    notifUnread=0; _updateNotifBadge();
+  if (panel.classList.contains('open')) { closeNotifPanel(); return; }
+
+  panel.classList.add('open');
+  document.body.classList.add('notif-open');
+  _renderNotifications();
+  // one history entry per open → on mobile (full page) the phone back closes it
+  if (!_notifPushed) _notifPushed = _dmPush();
+
+  // Mark-as-read in ONE batched write instead of N separate updates
+  const unread = notifications.filter(n=>!n.read);
+  if (unread.length){
+    try{
+      const batch = db.batch();
+      unread.forEach(n => batch.update(db.collection('notifications').doc(n.id), { read:true }));
+      batch.commit().catch(()=>{});
+    }catch(e){
+      unread.forEach(n=>db.collection('notifications').doc(n.id).update({read:true}).catch(()=>{}));
+    }
   }
+  notifUnread=0; _updateNotifBadge();
 }
 
 // ═══════════════════════════════════════════════════════════════════

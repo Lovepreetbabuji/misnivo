@@ -23,7 +23,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,100..400,0..1,0&icon_names=account_balance_wallet,bookmark,explore,home,person,settings&display=block" rel="stylesheet"/>
 
 <!-- App Styles -->
-<link rel="stylesheet" href="/css/styles.css?v=20260810g"/>
+<link rel="stylesheet" href="/css/styles.css?v=20260810h"/>
 
 <!-- Firebase CDN -->
 <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
@@ -1074,7 +1074,7 @@
 <div class="toast" id="toast"></div>
 
 <!-- App Logic -->
-<script src="/js/app.js?v=20260810g"></script>
+<script src="/js/app.js?v=20260810h"></script>
 
 <!-- ══ v0.19 NEW MODALS ══ -->
 
@@ -1341,8 +1341,14 @@
 
 <!-- Notifications panel (top-level so position:fixed is viewport-relative, not clipped by the topbar's backdrop-filter) -->
 <div class="notif-panel" id="notifPanel">
-  <div class="notif-panel-hdr"><div class="notif-panel-title">Notifications</div><button class="notif-panel-close" onclick="closeNotifPanel()"><span class="mi">close</span></button></div>
-  <div class="notif-list" id="notifList"><div class="notif-empty"><span class="mi">notifications_none</span><div>No notifications yet</div></div></div>
+  <div class="notif-panel-hdr">
+    <!-- mobile: back arrow on the left · desktop: ✕ on the right (it stays a popup there) -->
+    <button class="notif-back" onclick="closeNotifPanel()" aria-label="Back"><span class="mi">arrow_back</span></button>
+    <div class="notif-panel-title">Notifications</div>
+    <button class="notif-panel-close" onclick="closeNotifPanel()" aria-label="Close"><span class="mi">close</span></button>
+    <span class="notif-hdr-spacer" aria-hidden="true"></span>
+  </div>
+  <div class="notif-list" id="notifList"></div>
 </div>
 
 <!-- ═══ YOUTUBE SHORTS PLAYER OVERLAY ═══ -->
