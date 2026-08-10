@@ -2156,7 +2156,7 @@ textarea.f-input{resize:vertical;min-height:84px;}
 
 .btn-signup-topbar {
   padding: 6px 14px;
-  background: var(--blue2, #FF2D4A);
+  background: var(--blue2, #FFFFFF);
   border: none;
   border-radius: 20px;
   color: #fff;
@@ -4467,3 +4467,157 @@ body.sb-dragging .sb-overlay{ transition:none !important; }
   body.notif-open{ overflow:hidden; }
 }
 
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   MISNIVO DESIGN SYSTEM
+   One type stack, one scale, one spacing rhythm, one palette. This block is
+   last on purpose — it restates the few dozen places the old theme hard-coded
+   Roboto, 11–13px text and the red accent, without unpicking each of them.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+:root{
+  /* SF Pro on Apple hardware, Inter everywhere else (see the <link> in head) */
+  --font-ui: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'SF Pro Text',
+             'Inter', 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+
+  /* Palette — brand red is gone. --blue/--blue2 keep their names because ~50
+     rules and the JS-built markup reference them; they are just white now. */
+  --bg:      #000000;
+  --surface: #111111;
+  --line:    #222222;
+  --t1:      #FFFFFF;
+  --t2:      #9E9E9E;
+  --t3:      #8A8A8A;
+  --blue:    #FFFFFF;
+  --blue2:   #FFFFFF;
+  --border:  #222222;
+  --border2: #333333;
+
+  /* Spacing rhythm */
+  --gap-section: 32px;   /* between home/explore sections */
+  --gap-head:    20px;   /* heading → its cards */
+  --pad-card:    16px;
+}
+
+body{ background:var(--bg); }
+
+/* ── Type ── */
+body, button, input, textarea, select, optgroup,
+h1,h2,h3,h4,h5,h6, p, div, span, a, label, small, strong, b, li, td, th {
+  font-family: var(--font-ui);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+/* icon fonts must win the rule above back */
+.mi{ font-family:'Material Icons Round' !important; }
+.sidebar .nav-item .mi, .rail-item .mi,
+.topbar .icon-btn .mi, .topbar .search-icon-btn .mi,
+.bn-item .mi, .bn-post .mi{
+  font-family:'Material Symbols Outlined','Material Icons Round' !important;
+}
+
+/* ── Scale ──
+   Headings were 18px against 11–13px body text, which is why the hierarchy
+   read as flat. The jump is now 32 → 19 → 14. */
+.home-sec-title, .sec-title{
+  font-size:32px !important; font-weight:700 !important;
+  letter-spacing:-.8px; color:var(--t1) !important; line-height:1.15;
+}
+.home-sec-sub, .sec-sub{
+  font-size:16px !important; font-weight:400 !important;
+  color:rgba(255,255,255,.58) !important;
+}
+.home-sec-viewall{ font-size:15px !important; font-weight:600 !important; color:var(--t1) !important; }
+
+.chip{
+  font-size:15px !important; font-weight:600 !important;
+  padding:9px 18px !important; border-radius:999px !important;
+  background:var(--surface) !important; border:1px solid var(--line) !important;
+  color:var(--t2) !important; box-shadow:none !important;
+  backdrop-filter:none !important; -webkit-backdrop-filter:none !important;
+}
+.chip.active{ background:#fff !important; border-color:#fff !important; color:#000 !important; }
+
+/* Card titles clamp at two lines — three-line titles were what made the feed
+   feel crowded more than the size did. */
+.yt-title, .active-dare-card .yt-title, .feed-longs .yt-title{
+  font-size:19px !important; font-weight:600 !important;
+  color:var(--t1) !important; line-height:1.32 !important; letter-spacing:-.2px;
+  display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical;
+  overflow:hidden;
+}
+.yt-sub, .active-dare-card .yt-sub, .feed-longs .yt-sub{
+  font-size:14px !important; font-weight:400 !important; color:var(--t3) !important;
+  margin-top:6px !important;
+}
+
+/* ── Spacing ── */
+.home-section, .exp-section{ margin-bottom:var(--gap-section) !important; }
+.home-sec-hdr, .sec-hdr{ margin-bottom:var(--gap-head) !important; }
+.shorts-home-sec{ margin:var(--gap-section) 0 !important; }
+
+/* ── Cards ──
+   Horizontal mission cards get a real container; the long-video feed stays
+   borderless like YouTube's, with only the thumbnail rounded. */
+.active-dare-card, .exp-card, .dare-list-card{
+  background:var(--surface) !important;
+  border:1px solid var(--line) !important;
+  border-radius:22px !important;
+  box-shadow:none !important;
+  padding:var(--pad-card) !important;
+  overflow:hidden;
+}
+.active-dare-card .adc-thumb{ border-radius:16px !important; }
+.active-dare-card .yt-info{ padding:12px 0 0 !important; }
+
+.feed-longs .yt-card, #homeVideoGrid .yt-card{
+  background:transparent !important; border:none !important;
+  padding:0 !important; box-shadow:none !important;
+}
+.feed-longs .yt-thumb, #homeVideoGrid .yt-thumb, .short-card .short-thumb{
+  border-radius:20px !important;
+}
+
+/* ── Bottom nav to spec ── */
+.bn-item{ color:#777 !important; }
+.bn-item .mi{ font-size:24px !important; }
+.bn-item.active{ color:#fff !important; }
+
+/* ── Accent controls: filled white, black label (they were red with white
+      text — flipping --blue to white alone would have made them invisible) ── */
+.btn-fill, .btn-empty, .btn-accept, .btn-approve, .ad-cta-btn, .scroll-ad-cta,
+.pdc-submit, .pe-btn-save, .btn-signup-topbar{
+  background:#fff !important; color:#000 !important;
+  border:none !important; box-shadow:none !important; font-weight:600;
+}
+.btn-fill .mi, .btn-empty .mi, .btn-accept .mi, .btn-approve .mi,
+.ad-cta-btn .mi, .pdc-submit .mi, .pe-btn-save .mi{ color:#000 !important; }
+.btn-fill:hover, .btn-empty:hover, .btn-accept:hover, .btn-approve:hover,
+.ad-cta-btn:hover, .scroll-ad-cta:hover, .pdc-submit:hover, .pe-btn-save:hover{
+  background:rgba(255,255,255,.86) !important; filter:none !important; transform:none !important;
+}
+/* the old red hairline that swept across a card on hover */
+.yt-card::after, .dare-list-card::after{ display:none !important; }
+/* section dots were red discs with a red glow */
+.sec-dot, .home-sec-dot{ background:var(--t3) !important; box-shadow:none !important; }
+/* toggle: white track needs a dark knob to stay visible */
+.switch input:checked + .sl{ background:#fff !important; border-color:#fff !important; }
+.switch input:checked + .sl::before{ background:#000 !important; }   /* knob is ::before, and white-on-white would vanish */
+
+/* The brand red also sat hard-coded in the shorts player, the video scrubber
+   and a couple of badges — the token swap above could not reach those. */
+input[type=range]{ accent-color:#fff !important; }
+.shorts-act.liked, .shorts-act.liked .mi,
+.shorts-pin-badge, .shorts-comment-pin{ color:#fff !important; }
+.ta-save{ background:#fff !important; color:#000 !important; }
+/* avatars fell back to a red gradient when the user had no photo */
+.shorts-creator-av, .shorts-comment-av{ background:#1c1c1c !important; color:#fff !important; }
+/* send button in the shorts comment box */
+.shorts-comment-input-row button{ background:#fff !important; color:#000 !important; }
+.shorts-comment-input-row button .mi{ color:#000 !important; }
+/* report is destructive, so it keeps a warning tint — but a neutral one */
+.shorts-menu-report{
+  background:rgba(255,255,255,.06) !important;
+  border:1px solid rgba(255,255,255,.18) !important;
+  color:#fff !important;
+}

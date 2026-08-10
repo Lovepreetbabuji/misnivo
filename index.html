@@ -16,7 +16,11 @@
 <link rel="apple-touch-icon" href="/icon.svg"/>
 
 <!-- Fonts -->
-<link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700;900&display=swap" rel="stylesheet"/>
+<!-- Inter is the web fallback for SF Pro Display. SF Pro is Apple's font and
+     cannot be served to Android/Windows, so -apple-system picks it up on Apple
+     devices and Inter — which was drawn as an SF-alike — covers everyone else. -->
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet"/>
 <link href="https://fonts.googleapis.com/icon?family=Material+Icons+Round" rel="stylesheet"/>
 <!-- Thin outlined icon face for the nav + topbar (6KB subset). Variable axes —
      FILL 0→1 and a light wght — are what let a selected icon fill in solid.
@@ -26,7 +30,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,100..400,0..1,0&icon_names=account_balance_wallet,add,arrow_back,bolt,bookmark,chat_bubble,close,explore,home,menu,more_vert,notifications,person,search,settings,tune&display=block" rel="stylesheet"/>
 
 <!-- App Styles -->
-<link rel="stylesheet" href="/css/styles.css?v=20260810n"/>
+<link rel="stylesheet" href="/css/styles.css?v=20260810p"/>
 
 <!-- Firebase CDN -->
 <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
@@ -1092,7 +1096,7 @@
 <div class="toast" id="toast"></div>
 
 <!-- App Logic -->
-<script src="/js/app.js?v=20260810n"></script>
+<script src="/js/app.js?v=20260810p"></script>
 
 <!-- ══ v0.19 NEW MODALS ══ -->
 

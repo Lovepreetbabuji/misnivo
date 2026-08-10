@@ -101,10 +101,10 @@ const ADMIN_UID        = '';     // ← Set your Firebase UID here for admin acc
 
 const CAT_ICONS  = {fitness:'fitness_center',food:'restaurant',adventure:'terrain',comedy:'sentiment_very_satisfied',talent:'mic',socialgood:'eco'};
 const CAT_LABELS = {fitness:'Fitness',food:'Food',adventure:'Adventure',comedy:'Comedy',talent:'Talent',socialgood:'Social Good'};
-const CAT_COLORS = {fitness:'#FF2D4A',food:'#e53935',adventure:'#43a047',comedy:'#fb8c00',talent:'#8e24aa',socialgood:'#00acc1'};
+const CAT_COLORS = {fitness:'#FFFFFF',food:'#e53935',adventure:'#43a047',comedy:'#fb8c00',talent:'#8e24aa',socialgood:'#00acc1'};
 
 // Shared maps used by renderHome sections
-const CAT_C = {fitness:'#FF2D4A',food:'#e53935',adventure:'#43a047',comedy:'#fb8c00',talent:'#8e24aa',socialgood:'#00acc1'};
+const CAT_C = {fitness:'#FFFFFF',food:'#e53935',adventure:'#43a047',comedy:'#fb8c00',talent:'#8e24aa',socialgood:'#00acc1'};
 const CAT_I = {fitness:'fitness_center',food:'restaurant',adventure:'terrain',comedy:'sentiment_very_satisfied',talent:'mic',socialgood:'eco'};
 const CAT_L = {fitness:'Fitness',food:'Food',adventure:'Adventure',comedy:'Comedy',talent:'Talent',socialgood:'Social Good'};
 
@@ -683,7 +683,7 @@ function _activeDareCard(d, showKind){
   const title = d.caption||d.title||'Untitled Mission';
   const reward = d.rewardAmount ?? d.bounty ?? 0;
   const thumb = d.thumbnailURL||'';
-  const color = CAT_C[cat]||'#FF2D4A', icon = CAT_I[cat]||'bolt';
+  const color = CAT_C[cat]||'#FFFFFF', icon = CAT_I[cat]||'bolt';
   const isMine = d.creatorUid===user?.uid;
   const accepted = (typeof d.takers==='number') ? d.takers : (d.approvedTakers?.length||0);
   let expiry='';
@@ -868,7 +868,7 @@ function _renderShortsSection(shorts) {
 
   row.innerHTML = shorts.map(p => {
     const cat   = p.cat || 'fitness';
-    const color = CAT_C[cat] || '#FF2D4A';
+    const color = CAT_C[cat] || '#FFFFFF';
     const icon  = CAT_I[cat] || 'bolt';
     const dur   = p.videoDuration ? p.videoDuration + 's' : '';
     return `
@@ -2360,7 +2360,7 @@ function _profileDareCard(d){
   const title=d.caption||d.title||'Untitled Mission';
   const reward=d.rewardAmount ?? d.bounty ?? 0;
   const thumb=d.thumbnailURL||'';
-  const color=CAT_C[cat]||'#FF2D4A', icon=CAT_I[cat]||'bolt';
+  const color=CAT_C[cat]||'#FFFFFF', icon=CAT_I[cat]||'bolt';
   const inner=thumb?`<img src="${thumb}" loading="lazy" decoding="async"/>`:`<div class="adc-thumb-bg" style="background:linear-gradient(135deg,${color}22,${color}55);"><span class="mi" style="color:${color};">${icon}</span></div>`;
   const isPinned=(typeof pinnedDares!=='undefined'&&pinnedDares.includes(d.id));
   const proofs=d.proofCount||0;
@@ -2390,7 +2390,7 @@ function _profileAcceptedCard(a){
   const title=a.dareTitle||d.caption||'Mission';
   const reward=a.bounty ?? d.rewardAmount ?? d.bounty ?? 0;
   const thumb=d.thumbnailURL||a.thumbnailURL||'';
-  const cat=d.tags?.[0]||d.cat||a.cat||'fitness'; const color=CAT_C[cat]||'#FF2D4A', icon=CAT_I[cat]||'bolt';
+  const cat=d.tags?.[0]||d.cat||a.cat||'fitness'; const color=CAT_C[cat]||'#FFFFFF', icon=CAT_I[cat]||'bolt';
   const inner=thumb?`<img src="${thumb}" loading="lazy" decoding="async"/>`:`<div class="adc-thumb-bg" style="background:linear-gradient(135deg,${color}22,${color}55);"><span class="mi" style="color:${color};">${icon}</span></div>`;
   let badge, action='';
   if(a.applicantStatus==='pending'){ badge='<span class="pdc-status applied">Applied</span>'; }
@@ -4690,7 +4690,7 @@ function openDareDetail(dareId){
   const title = d.caption || d.title || 'Untitled Mission';
   const reward = d.rewardAmount ?? d.bounty ?? 0;
   const thumb = d.thumbnailURL || '';
-  const color = CAT_C[cat] || '#FF2D4A', icon = CAT_I[cat] || 'bolt';
+  const color = CAT_C[cat] || '#FFFFFF', icon = CAT_I[cat] || 'bolt';
 
   document.getElementById('ddTopTitle').textContent = title;
   const ddTitleEl = document.getElementById('ddDareTitle'); if (ddTitleEl) ddTitleEl.textContent = title;
@@ -6968,7 +6968,7 @@ function _longCardHtml(p) {
 
 function _shortsRowHtml(shorts, noHdr) {
   return `<div class="home-section shorts-home-sec">
-    ${noHdr ? '' : `<div class="home-sec-hdr"><span class="mi" style="color:#FF0033;font-size:22px;">play_circle</span><span class="home-sec-title">Shorts</span></div>`}
+    ${noHdr ? '' : `<div class="home-sec-hdr"><span class="mi" style="color:#fff;font-size:22px;">play_circle</span><span class="home-sec-title">Shorts</span></div>`}
     <div class="shorts-row">${shorts.map(p=>{
       const t = vidThumb(p, 360);
       const _w = (p.dareTitle||'Short').trim().split(/\s+/);
