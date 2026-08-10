@@ -909,7 +909,7 @@ function _renderHomeActiveDares() {
     return;
   }
 
-  const cards = active.map(_activeDareCard).join('');
+  const cards = active.map(d => _activeDareCard(d, true)).join('');
 
   const total   = (dares||[]).filter(d => !d.completed).length;
   const hasMore = total > 6;
@@ -1043,7 +1043,7 @@ function renderDaresPage() {
     return 0; // already sorted by createdAt desc from listener
   });
 
-  feed.innerHTML = `<div class="active-dare-grid">${active.map(_activeDareCard).join('')}</div>`;
+  feed.innerHTML = `<div class="active-dare-grid">${active.map(d => _activeDareCard(d, false)).join('')}</div>`;
 }
 
 // ════════════════════════════
@@ -1079,7 +1079,7 @@ function renderAcceptedPage() {
       creatorPhotoURL: a.creatorPhotoURL || a.posterPhotoURL || '',
       date: a.acceptedDate || a.date
     };
-    return _activeDareCard(d);
+    return _activeDareCard(d, true);
   }).join('')}</div>`;
 }
 
@@ -2575,7 +2575,7 @@ function _ppRenderContent(uid){
   }
   const del=document.getElementById('ppDares');
   if(del){ const active=(dares||[]).filter(d=>d.creatorUid===uid&&!d.completed);
-    del.innerHTML = active.length?`<div class="active-dare-grid">${active.map(_activeDareCard).join('')}</div>`
+    del.innerHTML = active.length?`<div class="active-dare-grid">${active.map(d => _activeDareCard(d, false)).join('')}</div>`
       :`<div class="empty" style="padding:32px;"><span class="mi">bolt</span><div class="empty-title" style="font-size:18px;">No active missions</div></div>`;
   }
 }
@@ -4229,7 +4229,7 @@ function _sPersonCard(p){
 }
 
 function _explorerDareCard(d) {
-  return _activeDareCard(d);
+  return _activeDareCard(d, true);
 }
 
 function _explorerVideoCard(p) {
@@ -5346,7 +5346,7 @@ function renderDareMore(excludeId){
     return true;
   }).slice(0, 12);
   if (!active.length){ el.innerHTML = '<div class="exp-empty">No other active missions.</div>'; return; }
-  el.innerHTML = `<div class="active-dare-grid">${active.map(_activeDareCard).join('')}</div>`;
+  el.innerHTML = `<div class="active-dare-grid">${active.map(d => _activeDareCard(d, true)).join('')}</div>`;
 }
 
 function doTrendingSearch(term){document.getElementById('searchInput').value=term;searchType='dares';handleSearchImmediate();}
@@ -6860,12 +6860,10 @@ function _homeDaresHtml(){
   if (!active.length) return '';
   return `<div class="home-section" id="homeDaresRow">
     <div class="home-sec-hdr">
-      <span class="mi" style="color:var(--blue2);font-size:20px;">bolt</span>
-      <span class="home-sec-title">Live Missions</span>
-      <span class="home-sec-sub">Accept &amp; earn</span>
+      <span class="home-sec-title">Missions</span>
       <span class="home-sec-viewall" onclick="goPage('dares')">View All →</span>
     </div>
-    <div class="active-dare-grid">${active.map(_activeDareCard).join('')}</div>
+    <div class="active-dare-grid">${active.map(d => _activeDareCard(d, true)).join('')}</div>
   </div>`;
 }
 function _renderInterleavedFeed(longVids, shorts) {
@@ -6880,9 +6878,7 @@ function _renderInterleavedFeed(longVids, shorts) {
   // Home order (fixed): Live/Active Dares FIRST → "Mission Videos" header directly
   // above the long videos → Shorts shelf LAST (no header text above shorts)
   const _videosHdr = `<div class="home-sec-hdr" style="margin-top:4px;">
-      <div class="home-sec-dot"></div>
-      <span class="home-sec-title">Mission Videos</span>
-      <span class="home-sec-sub">Completed missions</span>
+      <span class="home-sec-title">Videos</span>
     </div>`;
   if (!_feedLong.length && !_feedShorts.length) {
     container.innerHTML = _homeDaresHtml();                        // live dares on top

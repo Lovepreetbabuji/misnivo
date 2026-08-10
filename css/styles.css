@@ -4583,32 +4583,33 @@ h1,h2,h3,h4,h5,h6, p, div, span, a, label, small, strong, b, li, td, th {
 /* ── Cards ──
    Horizontal mission cards get a real container; the long-video feed stays
    borderless like YouTube's, with only the thumbnail rounded. */
-/* 22px + a solid #222 border made the cards read as heavy boxes at phone size.
-   Tighter radius, a hairline instead of a solid line, and less padding — the
-   thumbnail should be the loudest thing on the card, not its frame. */
+/* No card frame at all — mission cards now present exactly like the video feed
+   does: a rounded thumbnail with the meta row underneath. The box was competing
+   with the thumbnail instead of holding it. */
 .active-dare-card, .exp-card, .dare-list-card{
-  background:var(--surface) !important;
-  border:1px solid rgba(255,255,255,.08) !important;
-  border-radius:16px !important;
+  background:transparent !important;
+  border:none !important;
+  border-radius:0 !important;
   box-shadow:none !important;
-  padding:8px !important;
-  overflow:hidden;
+  padding:0 !important;
+  overflow:visible;
 }
-.active-dare-card .adc-thumb{ border-radius:11px !important; }
-.active-dare-card .yt-info{ padding:10px 4px 2px !important; gap:10px !important; }
+.active-dare-card .adc-thumb{ border-radius:14px !important; }
+.active-dare-card .yt-info{ padding:10px 2px 0 !important; gap:10px !important; }
 .active-dare-card .yt-av{ width:32px !important; height:32px !important; }
 
 .feed-longs .yt-card, #homeVideoGrid .yt-card{
   background:transparent !important; border:none !important;
   padding:0 !important; box-shadow:none !important;
 }
-.feed-longs .yt-thumb, #homeVideoGrid .yt-thumb, .short-card .short-thumb{
-  border-radius:14px !important;
+.feed-longs .yt-thumb, #homeVideoGrid .yt-thumb, .short-card .short-thumb,
+.exp-card .yt-thumb, .dare-list-thumb{
+  border-radius:14px !important; overflow:hidden;
 }
 @media(min-width:769px){
-  .active-dare-card, .exp-card, .dare-list-card{ border-radius:18px !important; padding:10px !important; }
-  .active-dare-card .adc-thumb{ border-radius:12px !important; }
-  .feed-longs .yt-thumb, #homeVideoGrid .yt-thumb, .short-card .short-thumb{ border-radius:16px !important; }
+  .active-dare-card .adc-thumb,
+  .feed-longs .yt-thumb, #homeVideoGrid .yt-thumb, .short-card .short-thumb,
+  .exp-card .yt-thumb, .dare-list-thumb{ border-radius:16px !important; }
 }
 
 /* ── Bottom nav to spec ── */
@@ -4653,4 +4654,25 @@ input[type=range]{ accent-color:#fff !important; }
   background:rgba(255,255,255,.06) !important;
   border:1px solid rgba(255,255,255,.18) !important;
   color:#fff !important;
+}
+
+/* ── Weight pass: everything was sitting a step too heavy ──
+   Roughly 20% lighter across the board — 800→600, 700→600, 600→500. Icon
+   fonts and the Symbols variable axes are untouched. */
+.home-sec-title, .sec-title, .exp-sec-title{ font-weight:600 !important; }
+.yt-title, .active-dare-card .yt-title, .feed-longs .yt-title,
+.short-title, .vd-title, .dd-title, .dd-title2{ font-weight:500 !important; }
+.home-sec-viewall, .chip, .sfilter-chip, .bn-item, .nav-item, .rail-lbl,
+.srow-txt, .sppl-name, .set-menu-row, .smr-t{ font-weight:500 !important; }
+.logo-word{ font-weight:700 !important; }
+.sb-head-name{ font-weight:600 !important; }
+.msearch-panel .srow-hdr{ font-weight:600 !important; }
+.notif-panel-title, .modal-title, .empty-title{ font-weight:600 !important; }
+.btn-post, .btn-fill, .btn-empty, .btn-accept, .btn-approve,
+.sfilter-done, .msearch-go{ font-weight:600 !important; }
+
+/* ── Chip row: smaller and closer to the top on desktop ── */
+@media(min-width:769px){
+  .chips-bar{ padding:0 0 14px !important; margin-bottom:2px !important; }
+  .chip{ font-size:13px !important; padding:7px 14px !important; }
 }
