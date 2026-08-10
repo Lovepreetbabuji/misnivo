@@ -30,7 +30,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,100..400,0..1,0&icon_names=account_balance_wallet,add,arrow_back,bolt,bookmark,chat_bubble,close,explore,home,menu,more_vert,notifications,person,search,settings,tune&display=block" rel="stylesheet"/>
 
 <!-- App Styles -->
-<link rel="stylesheet" href="/css/styles.css?v=20260810y"/>
+<link rel="stylesheet" href="/css/styles.css?v=20260810z"/>
 
 <!-- The splash logo must be in flight before anything else competes for the pipe -->
 <link rel="preload" as="image" href="/misnivo.png?v=1" fetchpriority="high"/>
@@ -1127,7 +1127,7 @@
 <!-- App Logic -->
 <!-- defer, so it runs after the Firebase bundles above and after the DOM is
      parsed — same order as before, but nothing blocks the first paint -->
-<script defer src="/js/app.js?v=20260810y"></script>
+<script defer src="/js/app.js?v=20260810z"></script>
 
 <!-- ══ v0.19 NEW MODALS ══ -->
 
@@ -1295,11 +1295,11 @@
 </div>
 
 <!-- ═══ COMMENTS BOX (scrollable, with close — desktop + mobile) ═══ -->
-<div class="dd-cbox-overlay" id="ddCommentsBox" onclick="if(event.target===this)closeDareComments()">
+<div class="dd-cbox-overlay" id="ddCommentsBox" onclick="if(event.target===this)dismissDareComments()">
   <div class="dd-cbox">
     <div class="dd-cbox-head">
       <span class="dd-cbox-title"><span class="mi">chat_bubble</span> Comments <span id="ddBoxCount">0</span></span>
-      <button class="dd-cbox-close" onclick="closeDareComments()" aria-label="Close comments"><span class="mi">close</span></button>
+      <button class="dd-cbox-close" onclick="dismissDareComments()" aria-label="Close comments"><span class="mi">close</span></button>
     </div>
     <div class="dd-cbox-list" id="ddBoxList"></div>
     <div class="dd-cbox-foot">
@@ -1455,18 +1455,18 @@
 
   <!-- Description & rules drawer (mobile: slides from right, glassy; swipe-left to open) -->
   <div class="shorts-details-drawer" id="shortsDetailsDrawer">
-    <button class="shorts-details-drawer-close" onclick="shortsCloseDetails()"><span class="mi">close</span></button>
+    <button class="shorts-details-drawer-close" onclick="dismissShortsDetails()"><span class="mi">close</span></button>
     <div class="shorts-details-drawer-body" id="shortsDetailsDrawerBody"></div>
   </div>
 </div>
 
 
 <!-- Collaborators modal (#5) -->
-<div class="overlay" id="collabModal" style="display:none;" onclick="if(event.target===this)closeCollabModal()">
+<div class="overlay" id="collabModal" style="display:none;" onclick="if(event.target===this)dismissCollabModal()">
   <div class="collab-sheet">
     <div class="collab-sheet-hdr">
       <span>Collaborators</span>
-      <button onclick="closeCollabModal()"><span class="mi">close</span></button>
+      <button onclick="dismissCollabModal()"><span class="mi">close</span></button>
     </div>
     <div class="collab-row">
       <div class="collab-row-av" id="cmCreatorAv">C</div>

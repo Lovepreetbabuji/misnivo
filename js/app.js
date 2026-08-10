@@ -5031,6 +5031,33 @@ let _routedInitial = false;      // deep-link handled?
 let _deepLinkPath  = null;       // /watch|/shorts|/dare|/u path saved at boot — goPage('home') rewrites the URL to '/' before the data arrives
 let _vdResumePos = {};           // proofId → seconds (resume long videos where you left)
 function _dmPush(){ try{ history.pushState({dm:Date.now()},''); return true; }catch(e){ return false; } }   // for sub-layers (comment box etc.)
+
+// ════════════════════════════════════════════════════════════════════
+//  SUB-LAYER HISTORY — comment sheet, shorts details, collab sheet
+//
+//  These are UI state, not pages, so they must not leave entries behind. The
+//  old code pushed on open and never rewound on close, so every open/close pair
+//  stranded one entry: after N cycles it took N+1 back presses to leave the
+//  page, and each of those presses re-routed from the URL, which is what
+//  reloaded the comments and restarted the video. Two of the three layers were
+//  worse — they never pushed at all, yet popstate pushed a fresh entry while
+//  closing them, so backing out of them ADDED to the stack.
+//
+//  The contract now: an open pushes exactly one entry and remembers it. A
+//  user-driven close rewinds that same entry (history.back()), and the popstate
+//  it triggers performs the visual close. A back press closes the layer the
+//  same way. Either route leaves the stack exactly where it started, so any
+//  number of open/close cycles costs zero extra back presses.
+// ════════════════════════════════════════════════════════════════════
+const _subLive = {};                                  // id → its pushed entry is still live
+
+function _subOpen(id){ if (!_subLive[id]) _subLive[id] = _dmPush(); }
+function _subDrop(id){ _subLive[id] = false; }        // called by the plain close fns
+// User tapped ✕ / the scrim / swiped: give the entry back instead of stranding it
+function _subDismiss(id, closeFn){
+  if (_subLive[id]){ _subLive[id] = false; try { history.back(); return; } catch(e){} }
+  closeFn();
+}
 function _pauseBackgroundMedia(){
   try{ const vp=document.getElementById('vdPlayer'); if(vp) vp.pause(); }catch(e){}
   document.querySelectorAll('#shortsSnapContainer video').forEach(v=>{ try{ v.pause(); }catch(e){} });
@@ -5227,9 +5254,11 @@ window.addEventListener('popstate', function(e){
   }
   const isOpen = id => { const el=document.getElementById(id); return el && el.classList.contains('open'); };
   // close any open sub-layer first (keep a guard state)
-  if (isOpen('ddCommentsBox')){ closeDareComments(); _dmPush(); return; }
-  if (isOpen('shortsDetailsDrawer')){ shortsCloseDetails(); _dmPush(); return; }
-  if (isOpen('collabModal')){ closeCollabModal(); _dmPush(); return; }
+  // no _dmPush() here any more — re-pushing while closing is what made backing
+  // out of these layers grow the stack instead of shrink it
+  if (isOpen('ddCommentsBox')){ closeDareComments(); return; }
+  if (isOpen('shortsDetailsDrawer')){ shortsCloseDetails(); return; }
+  if (isOpen('collabModal')){ closeCollabModal(); return; }
   if (isOpen('notifPanel')){ _notifCloseNow(); return; }
   if (typeof _sidebarOpen!=='undefined' && _sidebarOpen){ closeSidebar(); return; }
   if (e && e.state && e.state._page){ goPage(e.state._page, true); return; }   // back between main pages
@@ -5465,13 +5494,16 @@ function openDareComments(){
   box.classList.add('open');
   // Mobile + video page: the sheet sits just below the fixed video (doesn't cover it)
   box.classList.toggle('cbox-under-video', _ddHostOverlayId==='videoDetailOverlay');
-  _dmPush();
+  _subOpen('ddCommentsBox');
   _dockToCol1(box.querySelector('.dd-cbox'), _ddHostOverlayId, true);
 }
-function closeDareComments(){
+function closeDareComments(){                    // plain visual close (page teardown, popstate)
+  _subDrop('ddCommentsBox');
   const box = document.getElementById('ddCommentsBox'); if (box) box.classList.remove('open');
   cancelDareReply();
 }
+// ✕ / tap-outside — hands the pushed entry back so it never piles up
+function dismissDareComments(){ _subDismiss('ddCommentsBox', closeDareComments); }
 function _ddToggleCmtMenu(btn){
   const menu = btn.nextElementSibling; if (!menu) return;
   const open = menu.classList.contains('open');
@@ -6111,8 +6143,10 @@ function shortsOpenDetails(){
   const body = document.getElementById('shortsDetailsDrawerBody');
   if (body) body.innerHTML = _shortsDetailsHtml(d) || '<p class="dd-desc-text" style="color:var(--t3)">No details.</p>';
   document.getElementById('shortsDetailsDrawer')?.classList.add('open');
+  _subOpen('shortsDetailsDrawer');
 }
-function shortsCloseDetails(){ document.getElementById('shortsDetailsDrawer')?.classList.remove('open'); }
+function shortsCloseDetails(){ _subDrop('shortsDetailsDrawer'); document.getElementById('shortsDetailsDrawer')?.classList.remove('open'); }
+function dismissShortsDetails(){ _subDismiss('shortsDetailsDrawer', shortsCloseDetails); }
 let _shTouchX=0,_shTouchY=0,_shTouchOn=false;
 function _shortsBindSwipe(){
   const ov = document.getElementById('shortsOverlay'); if (!ov || ov._shSwipe) return; ov._shSwipe=true;
@@ -6123,7 +6157,7 @@ function _shortsBindSwipe(){
     if(Math.abs(dx)<60 || Math.abs(dy)>Math.abs(dx)) return;
     const open = document.getElementById('shortsDetailsDrawer')?.classList.contains('open');
     if(dx<0 && !open) shortsOpenDetails();
-    else if(dx>0 && open) shortsCloseDetails();
+    else if(dx>0 && open) dismissShortsDetails();
   }, {passive:true});
 }
 // Glassy collaborators box for shorts (reuses the shared collab modal, centered)
@@ -7029,6 +7063,7 @@ function openCollabModal() {
   document.getElementById('cmTakerAv').innerHTML   = _avHtml(ov.dataset.takerPhoto||'', ov.dataset.takerName||'T');
   cm.style.display = 'flex';
   cm.classList.add('open');   // .overlay needs .open or it stays invisible (opacity:0)
+  _subOpen('collabModal');
   // Desktop: center a small sheet inside column 1. Mobile: CSS bottom sheet.
   const sheet = cm.querySelector('.collab-sheet');
   if (sheet){
@@ -7041,10 +7076,12 @@ function openCollabModal() {
     } else { sheet.style.cssText = ''; }
   }
 }
-function closeCollabModal() {
+function closeCollabModal() {                     // plain visual close (popstate)
+  _subDrop('collabModal');
   const cm = document.getElementById('collabModal');
   if (cm) { cm.classList.remove('open'); cm.style.display = 'none'; const s=cm.querySelector('.collab-sheet'); if(s) s.style.cssText=''; }
 }
+function dismissCollabModal(){ _subDismiss('collabModal', closeCollabModal); }
 
 // #7: Interleaved infinite feed — mixes long videos & shorts rows in random chunks
 let _feedLong = [], _feedShorts = [], _feedLongIdx = 0, _feedScrollBound = false, _shortsRowShown = false;
