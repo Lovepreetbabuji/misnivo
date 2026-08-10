@@ -30,7 +30,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,100..400,0..1,0&icon_names=account_balance_wallet,add,arrow_back,bolt,bookmark,chat_bubble,close,explore,home,menu,more_vert,notifications,person,search,settings,tune&display=block" rel="stylesheet"/>
 
 <!-- App Styles -->
-<link rel="stylesheet" href="/css/styles.css?v=20260811a"/>
+<link rel="stylesheet" href="/css/styles.css?v=20260811b"/>
 
 <!-- The splash logo must be in flight before anything else competes for the pipe -->
 <link rel="preload" as="image" href="/misnivo.png?v=1" fetchpriority="high"/>
@@ -1127,7 +1127,7 @@
 <!-- App Logic -->
 <!-- defer, so it runs after the Firebase bundles above and after the DOM is
      parsed — same order as before, but nothing blocks the first paint -->
-<script defer src="/js/app.js?v=20260811a"></script>
+<script defer src="/js/app.js?v=20260811b"></script>
 
 <!-- ══ v0.19 NEW MODALS ══ -->
 
@@ -1324,8 +1324,10 @@
     <div class="dd-layout">
       <!-- ═══ COLUMN 1: video · title · creator+taker · actions · comments ═══ -->
       <div class="dd-bar dd-col1">
-        <div class="vd2-player-wrap">
-          <video class="vd-player" id="vdPlayer" controls playsinline></video>
+        <div class="vd2-player-wrap" id="vdPlayerWrap">
+          <video class="vd-player" id="vdPlayer" controls playsinline
+                 onpause="_vdSyncPaused()" onplay="_vdSyncPaused()" onended="_vdSyncPaused()"></video>
+          <button class="vd-center-play" onclick="_vdTogglePlay()" aria-label="Play"><span class="mi">play_arrow</span></button>
           <span class="dd-bounty-badge" id="vdBountyBadge">$0</span>
         </div>
         <div class="dd-title2" id="vdTitle">—</div>

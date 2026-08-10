@@ -4793,3 +4793,57 @@ body.no-anim .hero-fly{ display:none !important; }
     #dareDetailOverlay .dd-col1{ padding-top:env(safe-area-inset-top); }
   }
 }
+
+/* ══ Shorts: a play badge you can actually see when paused ══
+   The only play control was a small icon in the top strip, which is easy to
+   miss — a paused short looked like a frozen page. */
+.shorts-center-play{
+  position:absolute; top:50%; left:50%; transform:translate(-50%,-50%) scale(.85);
+  width:72px; height:72px; border-radius:50%;
+  background:rgba(0,0,0,.55); border:none; color:#fff;
+  display:flex; align-items:center; justify-content:center;
+  opacity:0; pointer-events:none; z-index:5;
+  transition:opacity .18s ease, transform .18s ease;
+  -webkit-tap-highlight-color:transparent;
+}
+.shorts-center-play .mi{ font-size:44px; }
+.shorts-snap-item.is-paused .shorts-center-play{
+  opacity:1; pointer-events:auto; transform:translate(-50%,-50%) scale(1);
+}
+
+/* double-tap to like — a quick bolt over the middle of the video */
+.shorts-dbl-heart{
+  position:absolute; top:50%; left:50%; transform:translate(-50%,-50%) scale(.4);
+  color:#fff; opacity:0; pointer-events:none; z-index:6;
+}
+.shorts-dbl-heart .mi{ font-size:96px; filter:drop-shadow(0 4px 18px rgba(0,0,0,.6)); }
+.shorts-dbl-heart.pop{ animation:shDblPop .62s cubic-bezier(.25,.8,.25,1) both; }
+@keyframes shDblPop{
+  0%  { opacity:0; transform:translate(-50%,-50%) scale(.4); }
+  35% { opacity:1; transform:translate(-50%,-50%) scale(1.1); }
+  70% { opacity:1; transform:translate(-50%,-50%) scale(1); }
+  100%{ opacity:0; transform:translate(-50%,-50%) scale(1.15); }
+}
+
+/* the dislike button lights up like the like button does */
+.shorts-dislike-btn.liked .mi{ color:#fff; }
+.shorts-dislike-btn.liked{ background:rgba(255,255,255,.18); }
+
+/* Long video: same idea — a badge over the player while it is paused */
+.vd-center-play{
+  position:absolute; top:50%; left:50%; transform:translate(-50%,-50%) scale(.85);
+  width:66px; height:66px; border-radius:50%;
+  background:rgba(0,0,0,.55); border:none; color:#fff;
+  display:flex; align-items:center; justify-content:center;
+  opacity:0; pointer-events:none; z-index:5;
+  transition:opacity .18s ease, transform .18s ease;
+}
+.vd-center-play .mi{ font-size:40px; }
+.vd2-player-wrap.is-paused .vd-center-play{
+  opacity:1; pointer-events:auto; transform:translate(-50%,-50%) scale(1);
+}
+
+@media(prefers-reduced-motion:reduce){
+  .shorts-center-play, .vd-center-play{ transition:none; }
+  .shorts-dbl-heart.pop{ animation-duration:.01s; }
+}

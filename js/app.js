@@ -4595,6 +4595,19 @@ function _vdReport(){
   document.querySelectorAll('#videoDetailOverlay .dd-action-menu.open').forEach(m=>m.classList.remove('open'));
   openReportModal('video', activeProof.id, activeProof.dareTitle||'this video');
 }
+// Long video: the native controls fade out, so a paused video showed nothing at
+// all to press. This badge stays put for as long as it is paused.
+function _vdSyncPaused(){
+  const v = document.getElementById('vdPlayer'), w = document.getElementById('vdPlayerWrap');
+  if (!v || !w) return;
+  w.classList.toggle('is-paused', v.paused || v.ended);
+}
+function _vdTogglePlay(){
+  const v = document.getElementById('vdPlayer'); if (!v) return;
+  if (v.paused || v.ended) { const q = v.play(); if (q && q.catch) q.catch(()=>{}); } else v.pause();
+  _vdSyncPaused();
+}
+
 // Description/rules toggle — desktop reveals the middle column (3 cols); mobile = drawer
 function toggleVideoDesc(){
   const ov=document.getElementById('videoDetailOverlay'); if(!ov) return;
@@ -4962,17 +4975,20 @@ function closeDareDetail(){
 function openDareDetails(){ document.querySelector('#dareDetailOverlay .dd-col2')?.classList.add('open'); }
 function closeDareDetails(){ document.querySelector('#dareDetailOverlay .dd-col2')?.classList.remove('open'); }
 let _ddTouchX=0, _ddTouchY=0, _ddTouchActive=false;
-function _ddBindSwipe(){
-  const ov = document.getElementById('dareDetailOverlay'); if (!ov || ov._ddSwipeBound) return;
+// Swipe-left opens Description & rules. Takes an overlay id now, so the
+// long-video page gets the gesture the mission page and shorts already had.
+function _ddBindSwipe(overlayId){
+  const ov = document.getElementById(overlayId || 'dareDetailOverlay'); if (!ov || ov._ddSwipeBound) return;
   ov._ddSwipeBound = true;
   ov.addEventListener('touchstart', e=>{ if (window.innerWidth>768) return; const t=e.touches[0]; _ddTouchX=t.clientX; _ddTouchY=t.clientY; _ddTouchActive=true; }, {passive:true});
   ov.addEventListener('touchend', e=>{
     if (!_ddTouchActive || window.innerWidth>768) return; _ddTouchActive=false;
     const t=e.changedTouches[0]; const dx=t.clientX-_ddTouchX, dy=t.clientY-_ddTouchY;
     if (Math.abs(dx)<60 || Math.abs(dy)>Math.abs(dx)) return; // not a horizontal swipe
-    const col2open = document.querySelector('#dareDetailOverlay .dd-col2.open');
-    if (dx<0 && !col2open) openDareDetails();       // swipe left → open details
-    else if (dx>0 && col2open) closeDareDetails();  // swipe right → close
+    const col2 = ov.querySelector('.dd-col2');
+    const open = col2 && col2.classList.contains('open');
+    if (dx<0 && col2 && !open) col2.classList.add('open');    // swipe left → open
+    else if (dx>0 && open)     col2.classList.remove('open'); // swipe right → close
   }, {passive:true});
 }
 // Which element actually scrolls? desktop = column 1; mobile = the overlay itself.
@@ -5422,8 +5438,7 @@ function _ddCommentHtml(c, replies){
   // Replies are HIDDEN by default behind a "Show N replies" toggle
   let repToggle = '', repHtml = '';
   if (replies && replies.length){
-    repToggle = `<button class="cmt-reptoggle" onclick="event.stopPropagation();_ddToggleReplies('${c.id}',this)"><span class="mi">expand_more</span> Show ${replies.length} repl${replies.length>1?'ies':'y'}</button>`;
-    repHtml = `<div class="vd-replies" id="reps-${c.id}" style="display:none;">${replies.map(r=>_ddCommentHtml(r,null)).join('')}</div>`;
+    [repToggle, repHtml] = _repMarkup(c.id, replies, replies.map(r=>_ddCommentHtml(r,null)).join(''), 'vd-replies');
   }
   return `<div class="vd-comment${replies===null?' vd-reply':''}${c.pinned&&replies!==null?' cmt-is-pinned':''}">
     <div class="vd-comment-av">${_avHtml(c.userPhotoURL, c.userName)}</div>
@@ -5434,14 +5449,37 @@ function _ddCommentHtml(c, replies){
       ${acts}${repToggle}${repHtml}
     </div></div>`;
 }
+// Which threads the user has expanded. Held OUTSIDE the markup because every
+// render rebuilds the HTML from scratch — posting a reply re-rendered the list
+// and collapsed the thread you were replying in, so you had to hit "Show
+// replies" again every single time.
+const _repOpen = new Set();
+
 function _ddToggleReplies(id, btn){
-  const box = document.getElementById('reps-'+id); if (!box) return;
+  // The replies div is the button's own next sibling. It used to be looked up
+  // with getElementById('reps-'+id), but the dare comment box and the shorts
+  // list can both hold the same comment id at once — getElementById returns
+  // whichever is first in the DOM, which is why the shorts toggle did nothing.
+  const box = btn.nextElementSibling; if (!box) return;
   const show = box.style.display === 'none';
   box.style.display = show ? '' : 'none';
+  if (show) _repOpen.add(id); else _repOpen.delete(id);
   const n = box.children.length;
   btn.innerHTML = show
     ? '<span class="mi">expand_less</span> Hide replies'
     : `<span class="mi">expand_more</span> Show ${n} repl${n>1?'ies':'y'}`;
+}
+
+// Shared toggle + container markup, so both comment lists respect _repOpen
+function _repMarkup(id, replies, inner, cls){
+  if (!replies || !replies.length) return ['',''];
+  const open = _repOpen.has(id), n = replies.length;
+  const label = open ? '<span class="mi">expand_less</span> Hide replies'
+                     : `<span class="mi">expand_more</span> Show ${n} repl${n>1?'ies':'y'}`;
+  return [
+    `<button class="cmt-reptoggle" onclick="event.stopPropagation();_ddToggleReplies('${id}',this)">${label}</button>`,
+    `<div class="${cls}" id="reps-${id}"${open?'':' style="display:none;"'}>${inner}</div>`
+  ];
 }
 // Re-render both the col-1 preview AND (if open) the comments box
 function _renderDareComments(){
@@ -5557,6 +5595,7 @@ async function submitDareComment(){
       proofId: _ddCurrentId, userId: user.uid, userName: user.name, userPhotoURL: user.picture||'',
       text, likeCount: 0, likedBy: [], parentId, createdAt: firebase.firestore.Timestamp.now()
     });
+    if (parentId) _repOpen.add(parentId);   // keep the thread you just replied in open
     inp.value = ''; _ddReplyTo = null; _ddReplyToName = ''; _ddCancelReplyBar();
     const snap = await db.collection('comments').where('proofId','==',_ddCurrentId).limit(120).get();
     _ddComments = snap.docs.map(doc=>({id:doc.id,...doc.data()}));
@@ -5650,6 +5689,7 @@ async function openVideoDetail(proofId) {
   // thumbnail flies into the player box; the video loads underneath it below
   _heroOpen(vov, vov.querySelector('.vd2-player-wrap'));
   _vdBindScroll();
+  _ddBindSwipe('videoDetailOverlay');   // swipe-left opens Description & rules here too
   // Then show ad IN the video area, then play. Ad shows once per video per
   // session — coming BACK to a video plays it directly (no repeat ad).
   const player = document.getElementById('vdPlayer');
@@ -6016,7 +6056,10 @@ function _shortsSlideHtml(p, i) {
 
     <div class="shorts-slide-box">
       <video class="shorts-snap-video" data-src="${p.videoURL||''}" poster="${vidThumb(p,480)}" loop playsinline preload="metadata"
-        onclick="shortsSlideTogglePlay(this)" ontimeupdate="shortsSlideOnTime(this)"></video>
+        onclick="_shortsTap(this)" ontimeupdate="shortsSlideOnTime(this)"
+        onpause="_shortsSlideSyncIcons(this)" onplay="_shortsSlideSyncIcons(this)"></video>
+      <button class="shorts-center-play" onclick="shortsSlideTogglePlay(this)" aria-label="Play"><span class="mi">play_arrow</span></button>
+      <span class="shorts-dbl-heart"><span class="mi">bolt</span></span>
 
       <div class="shorts-top-ctrl">
         <button class="shorts-play-btn" onclick="shortsSlideTogglePlay(this)" title="Play/Pause"><span class="mi">pause</span></button>
@@ -6031,8 +6074,8 @@ function _shortsSlideHtml(p, i) {
       <div class="shorts-actions">
         <button class="shorts-act shorts-like-btn ${liked?'liked':''}" onclick="shortsLikeSlide('${p.id}', this)"><span class="mi">thumb_up</span></button>
         <span class="shorts-act-lbl shorts-like-count">${_fmtCount(p.likeCount || 0)}</span>
-        <button class="shorts-act" onclick="showToast('Disliked')"><span class="mi">thumb_down</span></button>
-        <span class="shorts-act-lbl">Dislike</span>
+        <button class="shorts-act shorts-dislike-btn ${(user && (p.dislikedBy||[]).includes(user.uid))?'liked':''}" onclick="shortsDislikeSlide('${p.id}', this)"><span class="mi">thumb_down</span></button>
+        <span class="shorts-act-lbl shorts-dislike-count">${_fmtCount(p.dislikeCount || 0)}</span>
         <button class="shorts-act shorts-cmt-rail" onclick="shortsOpenComments('${p.id}')"><span class="mi">comment</span></button>
         <span class="shorts-act-lbl shorts-comment-count shorts-cmt-rail">${_fmtCount(p.commentCount || 0)}</span>
         <button class="shorts-act" onclick="showToast('Share link copied!')"><span class="mi">share</span></button>
@@ -6226,6 +6269,26 @@ function _shortsSlideSyncIcons(v){
   const it = v.closest('.shorts-snap-item'); if (!it) return;
   const pb = it.querySelector('.shorts-play-btn .mi'); if (pb) pb.textContent = v.paused ? 'play_arrow' : 'pause';
   const mb = it.querySelector('.shorts-mute-btn .mi'); if (mb) mb.textContent = v.muted ? 'volume_off' : 'volume_up';
+  it.classList.toggle('is-paused', !!v.paused);   // drives the big centre play badge
+}
+
+// Single tap = play/pause, double tap = like. 260ms is the usual gap between
+// the two taps of a double, so a single tap waits that long before acting.
+let _shTapTO = null, _shTapAt = 0;
+function _shortsTap(v){
+  const now = Date.now();
+  if (now - _shTapAt < 260){                     // second tap -> it was a double
+    clearTimeout(_shTapTO); _shTapAt = 0;
+    const it = v.closest('.shorts-snap-item'); if (!it) return;
+    const btn = it.querySelector('.shorts-like-btn');
+    const pid = it.dataset.proofId;   // the slide carries data-proof-id
+    if (pid && btn && !(typeof userLikes !== 'undefined' && userLikes.includes(pid))) shortsLikeSlide(pid, btn);
+    const h = it.querySelector('.shorts-dbl-heart');
+    if (h){ h.classList.remove('pop'); void h.offsetWidth; h.classList.add('pop'); }
+    return;
+  }
+  _shTapAt = now;
+  _shTapTO = setTimeout(function(){ _shTapAt = 0; shortsSlideTogglePlay(v); }, 260);
 }
 function shortsSlideToggleMute(el){ const v = _shortsSlideVid(el); if (!v) return; v.muted = !v.muted; _shortsSlideSyncIcons(v); }
 function shortsSlideSeek(input){ const v = _shortsSlideVid(input); if (v && v.duration) v.currentTime = (input.value/1000)*v.duration; }
@@ -6255,6 +6318,42 @@ async function shortsLikeSlide(proofId, btn){
   const it = btn.closest('.shorts-snap-item');
   const lc = it ? it.querySelector('.shorts-like-count') : null;
   if (lc && p) lc.textContent = _fmtCount(p.likeCount || 0);
+  _shortsSyncVote(it, p);
+}
+
+// The rail's dislike was a stub -- onclick="showToast('Disliked')" -- so it never
+// wrote anything anywhere. Real toggle now, and the two are mutually exclusive in
+// BOTH directions (toggleLike already dropped a dislike; nothing dropped a like).
+async function shortsDislikeSlide(proofId, btn){
+  if (typeof guestCheck === 'function' && guestCheck()) return;
+  if (!user){ showToast('Sign in to dislike'); return; }
+  const p = (allProofs.find(x=>x.id===proofId)) || (homeProofs.find(x=>x.id===proofId));
+  if (!p) return;
+  p.dislikedBy = p.dislikedBy || [];
+  const had = p.dislikedBy.includes(user.uid);
+  if (had){ p.dislikedBy = p.dislikedBy.filter(u=>u!==user.uid); p.dislikeCount = Math.max(0,(p.dislikeCount||0)-1); }
+  else    { p.dislikedBy.push(user.uid);                         p.dislikeCount = (p.dislikeCount||0)+1; }
+  db.collection('proofs').doc(proofId).update({
+    dislikedBy: had ? firebase.firestore.FieldValue.arrayRemove(user.uid) : firebase.firestore.FieldValue.arrayUnion(user.uid),
+    dislikeCount: firebase.firestore.FieldValue.increment(had ? -1 : 1)
+  }).catch(()=>{});
+  if (!had && typeof userLikes !== 'undefined' && userLikes.includes(proofId)){
+    userLikes = userLikes.filter(id => id !== proofId);
+    p.likeCount = Math.max(0,(p.likeCount||0)-1);
+    db.collection('proofs').doc(proofId).update({ likeCount: firebase.firestore.FieldValue.increment(-1) }).catch(()=>{});
+    db.collection('users').doc(user.uid).update({ likedProofs:userLikes }).catch(()=>{});
+  }
+  _shortsSyncVote(btn.closest('.shorts-snap-item'), p);
+}
+
+function _shortsSyncVote(it, p){
+  if (!it || !p) return;
+  const liked    = typeof userLikes !== 'undefined' && userLikes.includes(p.id);
+  const disliked = !!(user && (p.dislikedBy||[]).includes(user.uid));
+  const lb = it.querySelector('.shorts-like-btn');      if (lb) lb.classList.toggle('liked', liked);
+  const dbn = it.querySelector('.shorts-dislike-btn');  if (dbn) dbn.classList.toggle('liked', disliked);
+  const lc = it.querySelector('.shorts-like-count');    if (lc) lc.textContent = _fmtCount(p.likeCount || 0);
+  const dc = it.querySelector('.shorts-dislike-count'); if (dc) dc.textContent = _fmtCount(p.dislikeCount || 0);
 }
 function shortsOpenMenu(proofId){
   const menu = document.getElementById('shortsMenu');
@@ -6453,8 +6552,7 @@ function _shortsCommentHtml(c, replies, canPin) {
   }
   let repToggle = '', repHtml = '';
   if (replies && replies.length){
-    repToggle = `<button class="cmt-reptoggle" onclick="event.stopPropagation();_ddToggleReplies('${c.id}',this)"><span class="mi">expand_more</span> Show ${replies.length} repl${replies.length>1?'ies':'y'}</button>`;
-    repHtml = `<div class="shorts-replies" id="reps-${c.id}" style="display:none;">${replies.map(r=>_shortsReplyHtml(r)).join('')}</div>`;
+    [repToggle, repHtml] = _repMarkup(c.id, replies, replies.map(r=>_shortsReplyHtml(r)).join(''), 'shorts-replies');
   }
   return `<div class="shorts-comment ${c.pinned?'pinned':''}">
     <div class="shorts-comment-av">${_avHtml(c.userPhotoURL, c.userName)}</div>
@@ -6525,6 +6623,7 @@ async function submitShortsComment() {
     if (t && t.parentId) parentId = t.parentId;
     if (_shortsReplyToName && !text.startsWith('@')) text = '@'+_shortsReplyToName+' '+text;
   }
+  if (parentId) _repOpen.add(parentId);     // keep the thread you just replied in open
   inp.value = '';
   try {
     await db.collection('comments').add({
