@@ -4319,6 +4319,53 @@ body.sb-dragging .sb-overlay{ transition:none !important; }
 }
 .auth-logo .logo-word{ font-size:30px; }
 
+/* ═══════════════════════════════════════════════════════════════════════
+   BOTTOM NAV — floating black capsule, outlined icons, ringed + in the
+   middle. Same surface as the hamburger drawer, so nothing on screen is a
+   different shade of black any more.
+   ═══════════════════════════════════════════════════════════════════════ */
+.bottom-nav{
+  left:10px !important; right:10px !important;
+  bottom:calc(env(safe-area-inset-bottom, 0px) + 10px) !important;
+  height:64px !important;
+  background:#000 !important;
+  border:1px solid rgba(255,255,255,.12) !important;
+  border-top:1px solid rgba(255,255,255,.12) !important;
+  border-radius:32px !important;
+  padding:0 6px !important;
+  box-shadow:0 8px 26px rgba(0,0,0,.7) !important;
+  backdrop-filter:none !important; -webkit-backdrop-filter:none !important;
+}
+.bn-item{ gap:4px !important; color:rgba(255,255,255,.55) !important; }
+.bn-item .mi{
+  font-size:24px !important;
+  font-family:'Material Symbols Outlined','Material Icons Round';
+  font-variation-settings:'FILL' 0,'wght' 200,'GRAD' 0,'opsz' 24;
+}
+.bn-item span:last-child{ font-size:11px !important; font-weight:500; }
+/* selected = the icon fills in solid white, same signal as the drawer */
+.bn-item.active{ color:#fff !important; }
+.bn-item.active .mi{ font-variation-settings:'FILL' 1,'wght' 200,'GRAD' 0,'opsz' 24; }
+
+.bn-post{
+  width:52px !important; height:52px !important;
+  background:transparent !important;
+  border:2px solid #fff !important;
+  color:#fff !important;
+  box-shadow:none !important;
+}
+.bn-post .mi{
+  font-size:26px !important; color:#fff !important;
+  font-family:'Material Symbols Outlined','Material Icons Round';
+  font-variation-settings:'FILL' 0,'wght' 300,'GRAD' 0,'opsz' 24;
+}
+.bn-post:active{ background:rgba(255,255,255,.14) !important; }
+
+/* the floating bar sits above the page, so the feed needs clearance under it */
+@media(max-width:768px){
+  .main{ padding-bottom:calc(env(safe-area-inset-bottom, 0px) + 92px) !important; }
+}
+
 /* Post Mission — the last red control on the bar. White pill, black label:
    the primary action still reads first without bringing colour back. */
 .btn-post{

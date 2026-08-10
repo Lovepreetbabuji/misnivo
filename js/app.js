@@ -571,7 +571,12 @@ let _curPage = null;        // last page shown (avoid duplicate history pushes)
 let _pageNavInit = false;   // first goPage uses replaceState, rest pushState
 
 // Real URLs (slash-style, YouTube-like) for tracked pages + modals
-const _PAGE_URL  = { home:'/', explore:'/explore', dares:'/dares', accepted:'/accepted', wallet:'/wallet', profile:'/profile', leaderboard:'/leaderboard' };
+const _PAGE_URL  = { home:'/', explore:'/explore', dares:'/dares', accepted:'/accepted', wallet:'/wallet', profile:'/profile', leaderboard:'/leaderboard', chat:'/chat' };
+// Bottom-nav order, left to right. Drives BOTH the swipe direction and which
+// way a page slides in: moving right in this list slides in from the right,
+// moving left slides in from the left. Anything not listed keeps the old
+// forward/back behaviour.
+const _TABS = ['home','dares','chat','profile'];
 const _MODAL_URL = { postOverlay:'/post', proofOverlay:'/submit-proof', settingsOverlay:'/settings',
   notifSettingsOverlay:'/settings/notifications', moreSettingsOverlay:'/settings/more',
   profileEditOverlay:'/settings/edit', depositOverlay:'/wallet/deposit', withdrawOverlay:'/wallet/withdraw',
@@ -598,10 +603,15 @@ function goPage(pg, _fromPop) {
   if (el) {
     el.classList.remove('nav-fwd','nav-back');
     el.classList.add('active');
-    // mobile slide direction: back (popstate) = L→R, forward = R→L. Skip boot + when the
-    // user turned page animations off in Accessibility settings.
-    if (_pageNavInit && !(user && user.settings && user.settings.pageAnim === false))
-      el.classList.add(_fromPop ? 'nav-back' : 'nav-fwd');
+    // Slide direction. Between bottom-nav tabs it follows their left-to-right
+    // order, so tapping a button to the LEFT of the current one slides in from
+    // the left — it used to always come from the right, which read as "forward"
+    // even when you were going back. Off the tab strip: back (popstate) = L→R.
+    if (_pageNavInit && !(user && user.settings && user.settings.pageAnim === false)) {
+      const from = _TABS.indexOf(_curPage), to = _TABS.indexOf(pg);
+      const back = (from >= 0 && to >= 0) ? (to < from) : !!_fromPop;
+      el.classList.add(back ? 'nav-back' : 'nav-fwd');
+    }
   }
   document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
   const nav = document.getElementById('nav-' + pg);
@@ -3594,8 +3604,11 @@ function _sbDragMove(e) {
     if (Math.abs(dx) < _SB_SLOP && Math.abs(dy) < _SB_SLOP) return;
     if (Math.abs(dy) >= Math.abs(dx)) { _sbDrag = null; return; }     // vertical scroll wins
     if (dx > 0) {
-      if (!_sbDrag.canOpen) { _sbDrag = null; return; }
-      _sbDrag.mode = 'drawer';
+      // Home keeps the drawer pull; on any later tab a right swipe walks BACK
+      // one tab (Profile → Chat → Missions → Home).
+      if (_sbDrag.canOpen)            _sbDrag.mode = 'drawer';
+      else if (_sbCurrentTab() > 0)   _sbDrag.mode = 'tabprev';
+      else { _sbDrag = null; return; }
     } else {
       _sbDrag.mode = _sbDrag.wasOpen ? 'drawer' : 'back';
     }
@@ -3615,13 +3628,37 @@ function _sbDragMove(e) {
   e.preventDefault();                        // we own this gesture now
 }
 
+// Which bottom-nav tab is showing, or -1 when we're off the tab strip
+function _sbCurrentTab(){
+  for (let i = 0; i < _TABS.length; i++){
+    const id = 'page' + _TABS[i].charAt(0).toUpperCase() + _TABS[i].slice(1);
+    const el = document.getElementById(id);
+    if (el && el.classList.contains('active')) return i;
+  }
+  return -1;
+}
+
 function _sbDragEnd() {
   const d = _sbDrag; _sbDrag = null;
   if (!d || !d.mode) return;
   const dx = d.lastX - d.x;
 
   if (d.mode === 'back') {
-    if (dx <= -_SB_BACK_MIN) { try { history.back(); } catch (e) {} }
+    if (dx > -_SB_BACK_MIN) return;
+    // On a bottom-nav tab a left swipe walks to the NEXT tab instead of going
+    // back — Home → Missions → Chat → Profile. goPage picks the slide direction
+    // from the same list, so it comes in from the right.
+    const t = _sbCurrentTab();
+    if (t >= 0 && t < _TABS.length - 1) { goPage(_TABS[t + 1]); return; }
+    if (t === _TABS.length - 1) return;                       // last tab: nothing to the right
+    try { history.back(); } catch (e) {}
+    return;
+  }
+  if (d.mode === 'tabprev') {
+    if (dx >= _SB_BACK_MIN) {
+      const t = _sbCurrentTab();
+      if (t > 0) goPage(_TABS[t - 1]);
+    }
     return;
   }
   // a quick flick wins over the distance threshold
@@ -3640,7 +3677,7 @@ document.addEventListener('touchcancel', _sbDragEnd,   { passive: true  });
 // PURPOSE: Sync bottom nav highlight when page changes
 function syncBottomNav(pg) {
   document.querySelectorAll('.bn-item').forEach(b => b.classList.remove('active'));
-  const map = { home:'bn-home', dares:'bn-dares', accepted:'bn-accepted',
+  const map = { home:'bn-home', dares:'bn-dares', chat:'bn-chat',
                 profile:'bn-profile', leaderboard:'bn-leaderboard' };
   const el = map[pg] ? document.getElementById(map[pg]) : null;
   if (el) el.classList.add('active');
