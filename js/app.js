@@ -343,27 +343,21 @@ const AdManager = {
 
 // ════════════════════════════
 // ════════════════════════════════════════════════════════════════════
-//  SPLASH — X-style: black, the logo, nothing else.
-//  Cold start only. sessionStorage survives a refresh inside the same tab,
-//  so F5 goes straight to the app; a new tab or a PWA launch shows it again.
-//  It never blocks: it hides the moment auth resolves, with a short floor so
-//  it can't strobe, and a hard cap so a slow network can't strand anyone.
+//  SPLASH — X-style: black, the logo, nothing else. Shown on every load,
+//  including refresh.
+//
+//  The important part is that it does NOT wait for Firebase auth. Auth can
+//  take a second or two to restore a session, and holding the splash for it
+//  was most of the wait. Instead, if this browser was signed in last time, the
+//  app shell is revealed straight away with skeletons standing in, and the real
+//  data drops into it when auth and the listeners land.
 // ════════════════════════════════════════════════════════════════════
-const _SPLASH_KEY  = 'mm_splash_seen';
-const _SPLASH_MIN  = 550;    // ms — below this it reads as a flash, not a splash
-const _SPLASH_MAX  = 2000;   // ms — never hold the app longer than this
+const _SPLASH_MIN  = 450;    // ms — below this it reads as a flash, not a splash
+const _SPLASH_MAX  = 2500;   // ms — never hold the app longer than this
+const _AUTH_HINT   = 'mm_was_signed_in';
 const _splashStart = Date.now();
 let   _splashHidden = false;
-
-(function _splashInit(){
-  const el = document.getElementById('loadScreen'); if (!el) return;
-  // already launched in this tab → skip it entirely, no flash on refresh
-  let seen = false;
-  try { seen = sessionStorage.getItem(_SPLASH_KEY) === '1'; } catch(e){}
-  if (seen){ el.style.display = 'none'; _splashHidden = true; return; }
-  try { sessionStorage.setItem(_SPLASH_KEY, '1'); } catch(e){}
-  setTimeout(_splashDone, _SPLASH_MAX);      // safety net
-})();
+let   _shellShown   = false;
 
 function _splashDone(){
   if (_splashHidden) return;
@@ -377,10 +371,30 @@ function _splashDone(){
   }, wait);
 }
 
+// Reveal the app frame before auth answers, but only for a browser that was
+// signed in last time — otherwise a signed-out visitor would see the app flash
+// past on its way to the sign-in screen.
+function _bootShell(){
+  if (_shellShown) return;
+  let wasIn = false;
+  try { wasIn = localStorage.getItem(_AUTH_HINT) === '1'; } catch(e){}
+  if (!wasIn) return;
+  _shellShown = true;
+  const app = document.getElementById('appScreen');
+  if (app) app.style.display = 'block';
+  const grid = document.getElementById('homeVideoGrid');
+  if (grid && !grid.children.length) grid.innerHTML = _skelCards(4);
+  _splashDone();
+}
+_bootShell();
+setTimeout(_splashDone, _SPLASH_MAX);               // safety net either way
+
 //  AUTH STATE LISTENER
 //  This is the single entry point
 // ════════════════════════════
 auth.onAuthStateChanged(async (fbUser) => {
+  // remembered so the NEXT load can show the app shell without waiting on auth
+  try { fbUser ? localStorage.setItem(_AUTH_HINT,'1') : localStorage.removeItem(_AUTH_HINT); } catch(e){}
   if (fbUser) {
     await initUser(fbUser);
     _splashDone();

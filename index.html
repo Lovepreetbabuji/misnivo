@@ -30,14 +30,24 @@
 <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,100..400,0..1,0&icon_names=account_balance_wallet,add,arrow_back,bolt,bookmark,chat_bubble,close,explore,home,menu,more_vert,notifications,person,search,settings,tune&display=block" rel="stylesheet"/>
 
 <!-- App Styles -->
-<link rel="stylesheet" href="/css/styles.css?v=20260810t"/>
+<link rel="stylesheet" href="/css/styles.css?v=20260810u"/>
 
-<!-- Firebase CDN -->
-<script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-auth-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore-compat.js"></script>
+<!-- The splash logo must be in flight before anything else competes for the pipe -->
+<link rel="preload" as="image" href="/misnivo.png?v=1" fetchpriority="high"/>
+<link rel="preconnect" href="https://www.gstatic.com" crossorigin/>
+
+<!-- Firebase CDN — DEFERRED ON PURPOSE.
+     These are ~600KB of blocking <script> in <head>. Blocking means the browser
+     will not render a single pixel of <body> until all four have downloaded and
+     parsed, which is exactly the 3–4 seconds of black screen before the splash
+     appeared. defer lets the page paint immediately; deferred scripts still run
+     in document order, so firebase-app is ready before app.js (also deferred)
+     touches it. -->
+<script defer src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
+<script defer src="https://www.gstatic.com/firebasejs/9.22.2/firebase-auth-compat.js"></script>
+<script defer src="https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore-compat.js"></script>
 <!-- Web push. Needs FCM_VAPID_KEY set in app.js before it does anything. -->
-<script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-messaging-compat.js"></script>
+<script defer src="https://www.gstatic.com/firebasejs/9.22.2/firebase-messaging-compat.js"></script>
 
 <!--
   ══════════════════════════════════════════════════════════
@@ -1115,7 +1125,9 @@
 <div class="toast" id="toast"></div>
 
 <!-- App Logic -->
-<script src="/js/app.js?v=20260810t"></script>
+<!-- defer, so it runs after the Firebase bundles above and after the DOM is
+     parsed — same order as before, but nothing blocks the first paint -->
+<script defer src="/js/app.js?v=20260810u"></script>
 
 <!-- ══ v0.19 NEW MODALS ══ -->
 
