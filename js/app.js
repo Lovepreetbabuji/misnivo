@@ -470,6 +470,7 @@ async function initUser(fbUser) {
       user.website  = d.website  || '';
       user.socials  = d.socials  || {};   // persist Instagram/X/YouTube links across reloads
       user.settings = d.settings || {};   // persist notif/privacy/autoplay settings across reloads
+      if (typeof _applyMotionPref === 'function') _applyMotionPref();   // motion pref before the first render
       if (d.photoURL) user.picture = d.photoURL;  // saved photo always wins
     }
   } catch(e) {
@@ -664,7 +665,7 @@ function goPage(pg, _fromPop) {
     // order, so tapping a button to the LEFT of the current one slides in from
     // the left — it used to always come from the right, which read as "forward"
     // even when you were going back. Off the tab strip: back (popstate) = L→R.
-    if (_pageNavInit && !(user && user.settings && user.settings.pageAnim === false)) {
+    if (_pageNavInit && !_motionOff()) {
       const from = _TABS.indexOf(_curPage), to = _TABS.indexOf(pg);
       const back = (from >= 0 && to >= 0) ? (to < from) : !!_fromPop;
       el.classList.add(back ? 'nav-back' : 'nav-fwd');
@@ -2793,8 +2794,22 @@ function _saveSettings(){
     autoplay:    _ap ? _ap.checked : (user.settings?.autoplay !== false),
     pageAnim:    _pa ? _pa.checked : (user.settings?.pageAnim !== false)
   };
+  _applyMotionPref();
   db.collection('users').doc(user.uid).update({ settings:user.settings }).catch(()=>{});
 }
+
+// One switch, one body class. The Accessibility toggle used to govern only the
+// page slide; body.no-anim now also silences the drawer, the search page, the
+// notification panel, the filter sheet and the thumbnail hero flight, so
+// turning it off actually stops everything moving. Also honours the OS-level
+// reduce-motion setting, which the toggle can't override.
+function _applyMotionPref(){
+  let off = !!(user && user.settings && user.settings.pageAnim === false);
+  try { if (matchMedia('(prefers-reduced-motion: reduce)').matches) off = true; } catch(e){}
+  document.body.classList.toggle('no-anim', off);
+}
+function _motionOff(){ return document.body.classList.contains('no-anim'); }
+
 async function deleteAccount(){
   if(!user) return;
   if(!confirm('Delete your account permanently?\n\nThis removes your profile and cannot be undone.')) return;
@@ -4796,7 +4811,7 @@ function _heroFly(destEl){
   const s = _heroSrc; _heroSrc = null;
   if (!s || !destEl) return false;
   if (Date.now() - s.t > 1200) return false;          // stale: the click didn't lead here
-  try { if (matchMedia('(prefers-reduced-motion: reduce)').matches) return false; } catch(e){}
+  if (_motionOff()) return false;                     // Settings → Page animations, or OS reduce-motion
 
   const d = destEl.getBoundingClientRect();
   if (!d.width || !d.height) return false;

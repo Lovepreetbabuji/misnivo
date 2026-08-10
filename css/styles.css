@@ -4741,3 +4741,33 @@ input[type=range]{ accent-color:#fff !important; }
   .video-detail-overlay.hero-in .dd-col1 > *,
   .video-detail-overlay.hero-in .dd-col3{ animation:none !important; }
 }
+
+/* ══ Settings → Accessibility → Page animations = OFF ══
+   The toggle used to stop only the page slide. body.no-anim now silences every
+   moving surface: the drawer, search page, notification panel, filter sheet,
+   page transitions and the thumbnail hero flight. Panels still OPEN — they just
+   arrive instantly instead of sliding. Opacity is left alone on the overlay
+   scrims so nothing pops in over the feed with a hard edge. */
+body.no-anim .sidebar,
+body.no-anim .sb-overlay,
+body.no-anim .msearch-page.as-page,
+body.no-anim .sfilter-wrap,
+body.no-anim .sfilter-sheet,
+body.no-anim .notif-panel,
+body.no-anim .overlay,
+body.no-anim .modal,
+body.no-anim .dd-col2,
+body.no-anim .shorts-details-drawer,
+body.no-anim .video-detail-overlay,
+body.no-anim .pubprof-overlay,
+body.no-anim .topbar{ transition:none !important; }
+
+body.no-anim .page.active,
+body.no-anim .page.active.nav-fwd,
+body.no-anim .page.active.nav-back,
+body.no-anim .notif-panel.open,
+body.no-anim .home-section,
+body.no-anim .video-detail-overlay.hero-in .dd-col1 > *,
+body.no-anim .video-detail-overlay.hero-in .dd-col3{ animation:none !important; }
+
+body.no-anim .hero-fly{ display:none !important; }
