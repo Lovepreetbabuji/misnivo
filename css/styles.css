@@ -2507,11 +2507,12 @@ textarea.f-input{resize:vertical;min-height:84px;}
   #vdRelated .feed-longs .yt-thumb{ border-radius:0 !important; }
   #vdRelated .shorts-home-sec{ margin-left:-16px; margin-right:-16px; }
   #vdRelated .shorts-home-sec .home-sec-hdr, #vdRelated .shorts-row{ padding-left:16px; }
-  /* Dare / Accepted detail: float the back (+ menu) bar ON TOP of the thumbnail */
-  #dareDetailOverlay .dd-wrap{ position:relative; }
-  #dareDetailOverlay .dd-topbar{ position:absolute; top:0; left:0; right:0; z-index:6;
-    background:transparent !important; box-shadow:none !important; border:none !important; padding:12px 14px; }
-  #dareDetailOverlay .dd-topbar .vd-topbar-title{ display:none; }
+  /* Mission detail is immersive on mobile: no floating back bar over the
+     thumbnail at all. It was absolutely positioned, so removing it costs no
+     layout — the content already started at the top. Back is the device
+     gesture / button, and Share + Report still live in the ••• on the actions
+     row. Desktop keeps its sticky bar. */
+  #dareDetailOverlay .dd-topbar{ display:none !important; }
   #dareDetailOverlay .dd-col1{ padding-top:0; }
 }
 /* Hamburger drawer must also work on 600–768px widths (matches JS isMobile≤768) */
