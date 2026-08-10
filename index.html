@@ -18,12 +18,15 @@
 <!-- Fonts -->
 <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700;900&display=swap" rel="stylesheet"/>
 <link href="https://fonts.googleapis.com/icon?family=Material+Icons+Round" rel="stylesheet"/>
-<!-- Nav icons only (4.7KB subset): thin hollow outline that fills in solid when selected.
-     Variable axes — FILL 0→1 and a light wght — are what make that switch possible. -->
-<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,100..400,0..1,0&icon_names=account_balance_wallet,bookmark,explore,home,person,settings&display=block" rel="stylesheet"/>
+<!-- Thin outlined icon face for the nav + topbar (6KB subset). Variable axes —
+     FILL 0→1 and a light wght — are what let a selected icon fill in solid.
+     ⚠ icon_names is a SUBSET: any icon shown in this face MUST be listed here,
+     or the browser finds no glyph and renders the ligature as literal text
+     ("menu", "search"). Adding a topbar icon? Add its name below too. -->
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,100..400,0..1,0&icon_names=account_balance_wallet,arrow_back,bookmark,close,explore,home,menu,more_vert,notifications,person,search,settings,tune&display=block" rel="stylesheet"/>
 
 <!-- App Styles -->
-<link rel="stylesheet" href="/css/styles.css?v=20260810k"/>
+<link rel="stylesheet" href="/css/styles.css?v=20260810l"/>
 
 <!-- Firebase CDN -->
 <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
@@ -68,7 +71,9 @@
 <div id="authScreen">
   <div class="auth-box">
     <div class="auth-logo">
-      <span class="logo-word">Misnivo</span>
+      <img class="logo-img" src="/misnivo.png?v=1" alt="Misnivo"
+           onerror="this.remove();this.parentElement.querySelector('.logo-word').style.display='block'"/>
+      <span class="logo-word" style="display:none">Misnivo</span>
     </div>
     <p class="auth-tagline">Challenge yourself. Entertain others.<br>Get paid — directly.</p>
     <div class="auth-tabs">
@@ -141,7 +146,9 @@
     <div class="topbar-left">
       <button class="icon-btn" id="menuBtn" onclick="toggleSidebar()" aria-label="Toggle menu"><span class="mi">menu</span></button>
       <div class="logo" onclick="goPage('home')">
-        <span class="logo-word">Misnivo</span>
+        <img class="logo-img" src="/misnivo.png?v=1" alt="Misnivo"
+             onerror="this.remove();this.parentElement.querySelector('.logo-word').style.display='block'"/>
+        <span class="logo-word" style="display:none">Misnivo</span>
       </div>
     </div>
     <div class="search-wrap" style="position:relative;">
@@ -1074,7 +1081,7 @@
 <div class="toast" id="toast"></div>
 
 <!-- App Logic -->
-<script src="/js/app.js?v=20260810k"></script>
+<script src="/js/app.js?v=20260810l"></script>
 
 <!-- ══ v0.19 NEW MODALS ══ -->
 

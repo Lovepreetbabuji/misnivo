@@ -4299,14 +4299,37 @@ body.sb-dragging .sb-overlay{ transition:none !important; }
 .topbar .icon-btn:active,
 .topbar .search-icon-btn:active{ background:rgba(255,255,255,.14) !important; transform:none !important; box-shadow:none !important; }
 
-/* Wordmark replaces the old red bolt tile */
+/* Wordmark replaces the old red bolt tile.
+   misnivo.png is 1080×540 with the mark sitting in the middle ~31% of the
+   height, so the box is short and the image is oversized inside it — the
+   padding baked into the file gets cropped instead of shrinking the mark. */
 .logo-icon, .auth-logo-icon{ display:none !important; }
+.logo{ height:40px; overflow:hidden; }
+.logo-img{ height:78px; width:auto; display:block; flex-shrink:0; }
+.auth-logo{ height:64px; overflow:hidden; display:flex; align-items:center; justify-content:center; }
+.auth-logo .logo-img{ height:124px; }
+@media(max-width:768px){
+  .logo{ height:32px; }
+  .logo-img{ height:62px; }
+}
 .logo-word{
   font-family:'Roboto',sans-serif;
   font-size:23px; font-weight:800; letter-spacing:-.6px;
   color:#fff; line-height:1;
 }
 .auth-logo .logo-word{ font-size:30px; }
+
+/* Post Mission — the last red control on the bar. White pill, black label:
+   the primary action still reads first without bringing colour back. */
+.btn-post{
+  background:#fff !important;
+  color:#000 !important;
+  border:none !important;
+  box-shadow:none !important;
+  font-weight:700;
+}
+.btn-post .mi{ color:#000 !important; }
+.btn-post:hover{ background:rgba(255,255,255,.86) !important; filter:none !important; transform:none !important; }
 
 /* The desktop search field loses its inset glass too, so the whole bar is flat */
 @media(min-width:769px){
