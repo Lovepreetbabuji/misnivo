@@ -360,7 +360,10 @@ body{
 ═══════════════════════════════════════════════════════ */
 .main{margin-left:var(--sw);margin-top:56px;padding:20px 24px;position:relative;z-index:2;}
 .page{display:none;}
-.page.active{display:block;animation:fadeUp .3s cubic-bezier(.4,0,.2,1) both;}
+/* Desktop page enter: rises from below. Its own keyframe (not the shared fadeUp,
+   which 13 other elements use) so page timing can be tuned on its own. */
+@keyframes pgInUp{from{opacity:0;transform:translateY(22px);}to{opacity:1;transform:translateY(0);}}
+.page.active{display:block;animation:pgInUp .42s cubic-bezier(.25,.8,.25,1) both;}
 
 /* Mobile page transitions: forward = slide in from right · back = slide in from left (L→R) */
 @keyframes pgInRight{from{transform:translateX(100%);opacity:.45;}to{transform:translateX(0);opacity:1;}}
@@ -368,8 +371,12 @@ body{
 @media(max-width:768px){
   .main{overflow-x:clip;}
   .page.active{animation:none;}
-  .page.active.nav-fwd{animation:pgInRight .36s cubic-bezier(.16,1,.3,1) both;}
-  .page.active.nav-back{animation:pgInLeft .36s cubic-bezier(.16,1,.3,1) both;}
+  /* .46s on a gentler curve. The old .36s cubic-bezier(.16,1,.3,1) was an
+     expo-style ease-out that covered ~90% of the distance in its first third,
+     so it read as a snap rather than a slide however long the duration was —
+     softening the curve matters more here than the extra time. */
+  .page.active.nav-fwd{animation:pgInRight .46s cubic-bezier(.25,.8,.25,1) both;}
+  .page.active.nav-back{animation:pgInLeft  .46s cubic-bezier(.25,.8,.25,1) both;}
 }
 
 /* ═══════════════════════════════════════════════════════
@@ -4250,6 +4257,12 @@ body.sb-dragging .sb-overlay{ transition:none !important; }
 .notif-hdr-spacer{ display:none; }
 .notif-list{ background:#000; }
 .notif-item{ border-bottom:none !important; }
+
+/* Mobile: no avatar in the topbar — the bottom bar already has Profile, and the
+   drawer header opens it too. Leaves search + bell up there. */
+@media(max-width:768px){
+  .topbar .user-menu{ display:none !important; }
+}
 
 /* Pager for older notifications (the live listener only holds the newest 30) */
 .notif-more{
