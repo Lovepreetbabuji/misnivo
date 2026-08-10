@@ -659,7 +659,9 @@ function _isShortVideo(p) {
 }
 
 // ─── Unified ACTIVE-DARE card (home / dares page / explore "more missions" / search) ───
-function _activeDareCard(d){
+// showKind → stamps "Mission" on the thumbnail. Search results use it because
+// they dropped the "MISSIONS (n)" section label, so the card has to say what it is.
+function _activeDareCard(d, showKind){
   const cat = d.tags?.[0]||d.cat||'fitness';
   const title = d.caption||d.title||'Untitled Mission';
   const reward = d.rewardAmount ?? d.bounty ?? 0;
@@ -681,7 +683,7 @@ function _activeDareCard(d){
     ? `<button onclick="event.stopPropagation();_closeAdcMenus();openEditDare('${d.id}')"><span class="mi">edit</span>Edit</button>`
     : `<button onclick="event.stopPropagation();_closeAdcMenus();openReportModal('dare','${d.id}','${safe}')"><span class="mi">flag</span>Report</button>`;
   return `<div class="active-dare-card" onclick="openDareDetail('${d.id}')">
-    <div class="adc-thumb">${inner}${pinned}${expiry}<span class="adc-bounty">$${reward.toLocaleString('en-IN')}</span></div>
+    <div class="adc-thumb">${inner}${showKind?'<span class="adc-kind">Mission</span>':''}${pinned}${expiry}<span class="adc-bounty">$${reward.toLocaleString('en-IN')}</span></div>
     <div class="yt-info">
       <div class="yt-av">${cAv}</div>
       <div class="yt-meta">
@@ -4130,8 +4132,6 @@ function _doSearch(q) {
       </button>
     </div>`;
 
-  const countLine = (n, noun) =>
-    `<div style="font-size:12px;color:var(--t3);margin-bottom:14px;padding:0 4px;">${n} ${noun}${n!==1?'s':''} for "<strong style="color:var(--t1);">${escHtml(q)}</strong>"</div>`;
   const emptyBlock = (what) => {
     const near = _sNearby(q);
     return `<div class="empty"><span class="mi">search_off</span>
@@ -4141,40 +4141,31 @@ function _doSearch(q) {
     </div>`;
   };
 
+  // No result counts and no section labels — the mission cards carry their own
+  // "Mission" tag on the thumbnail, so the feed reads clean like YouTube's.
   if (type === 'creators' || type === 'takers') {
     const people = searchCreators(q, type);
     feed.innerHTML = typeBar + (people.length
-      ? countLine(people.length, type === 'creators' ? 'creator' : 'taker') +
-        `<div class="sppl-list">${people.map(_sPersonCard).join('')}</div>`
+      ? `<div class="sppl-list">${people.map(_sPersonCard).join('')}</div>`
       : emptyBlock(type));
   } else if (type === 'videos') {
     const results = searchVideos(q);
     feed.innerHTML = typeBar + (results.length
-      ? countLine(results.length, 'video') + _mixedVideoFeedHtml(results, 'No videos')
+      ? _mixedVideoFeedHtml(results, 'No videos')
       : emptyBlock('videos'));
   } else if (type === 'all') {
     // Everything in one feed, the way the home page mixes them
     const ms = searchMissions(q), vs = searchVideos(q);
-    if (!ms.length && !vs.length) {
-      feed.innerHTML = typeBar + emptyBlock('missions or videos');
-    } else {
-      let html = typeBar + countLine(ms.length + vs.length, 'result');
-      if (vs.length) html += `<div class="search-section-label">Videos (${vs.length})</div>` + _mixedVideoFeedHtml(vs, 'No videos');
-      if (ms.length) html += `<div class="search-section-label">Missions (${ms.length})</div><div class="active-dare-grid">${ms.map(d=>_searchDareCard(d)).join('')}</div>`;
-      feed.innerHTML = html;
-    }
+    feed.innerHTML = (!ms.length && !vs.length)
+      ? typeBar + emptyBlock('missions or videos')
+      : typeBar
+        + (vs.length ? _mixedVideoFeedHtml(vs, 'No videos') : '')
+        + (ms.length ? `<div class="active-dare-grid">${ms.map(d=>_searchDareCard(d)).join('')}</div>` : '');
   } else {
-    const results   = searchMissions(q);
-    const active    = results.filter(d=>!d.completed);
-    const completed = results.filter(d=>d.completed);
-    if (!results.length) {
-      feed.innerHTML = typeBar + emptyBlock('missions');
-    } else {
-      let html = typeBar + countLine(results.length, 'mission');
-      if (active.length)    html+=`<div class="search-section-label">Active (${active.length})</div><div class="active-dare-grid">${active.map(d=>_searchDareCard(d)).join('')}</div>`;
-      if (completed.length) html+=`<div class="search-section-label" style="color:var(--t3);">Completed (${completed.length})</div><div class="active-dare-grid">${completed.map(d=>_searchDareCard(d)).join('')}</div>`;
-      feed.innerHTML = html;
-    }
+    const results = searchMissions(q);
+    feed.innerHTML = results.length
+      ? typeBar + `<div class="active-dare-grid">${results.map(d=>_searchDareCard(d)).join('')}</div>`
+      : typeBar + emptyBlock('missions');
   }
   _trackSearch(q);
 }
@@ -4491,7 +4482,7 @@ function _scoredSearch(items,q,textFields,tagFields) {
 }
 
 function _searchDareCard(d) {
-  return _activeDareCard(d);
+  return _activeDareCard(d, true);   // tag it "Mission" — results have no section labels
 }
 
 async function _sendNotification(toUserId,type,title,message,refId=''){

@@ -3816,15 +3816,27 @@ html{scroll-behavior:smooth;}
 .tsr-mi.active{ color:#fff; font-weight:600; background:rgba(255,255,255,.10); }
 .tsr-mi-sep{ margin-top:6px; border-top:1px solid rgba(255,255,255,.10); padding-top:12px; border-radius:0 0 8px 8px; }
 
+/* Results are chrome-free on EVERY width: no "Active Missions" header (which
+   also carried a second Post Mission button — the topbar already has one) and
+   no in-feed Back button. */
+body.search-open #pageDares > .sec-hdr,
+body.search-open .search-back-btn{ display:none !important; }
+
 @media(max-width:768px){
   body.search-open:not(.detail-open):not(.shorts-open):not(.profile-open) .topbar-left,
   body.search-open:not(.detail-open):not(.shorts-open):not(.profile-open) .search-wrap,
   body.search-open:not(.detail-open):not(.shorts-open):not(.profile-open) .topbar-right{ display:none !important; }
   body.search-open:not(.detail-open):not(.shorts-open):not(.profile-open) .topbar-search{ display:flex; }
-  /* the results feed carries no chrome of its own on mobile */
-  body.search-open #pageDares > .sec-hdr,
-  body.search-open .search-back-btn,
+  /* mobile moves All/Missions/Videos/Filters into the topbar ⋮ menu instead */
   body.search-open .search-type-bar{ display:none !important; }
+}
+
+/* "Mission" stamp — top-left of a mission thumbnail in search results */
+.adc-kind{
+  position:absolute; top:8px; left:8px; z-index:2;
+  color:#fff; font-size:12px; font-weight:700; letter-spacing:.4px;
+  padding:4px 10px; border-radius:8px;
+  background:rgba(0,0,0,.72); border:1px solid rgba(255,255,255,.12);
 }
 
 /* Results-page filter button */
