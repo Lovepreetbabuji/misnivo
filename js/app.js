@@ -342,13 +342,48 @@ const AdManager = {
 };
 
 // ════════════════════════════
+// ════════════════════════════════════════════════════════════════════
+//  SPLASH — X-style: black, the logo, nothing else.
+//  Cold start only. sessionStorage survives a refresh inside the same tab,
+//  so F5 goes straight to the app; a new tab or a PWA launch shows it again.
+//  It never blocks: it hides the moment auth resolves, with a short floor so
+//  it can't strobe, and a hard cap so a slow network can't strand anyone.
+// ════════════════════════════════════════════════════════════════════
+const _SPLASH_KEY  = 'mm_splash_seen';
+const _SPLASH_MIN  = 550;    // ms — below this it reads as a flash, not a splash
+const _SPLASH_MAX  = 2000;   // ms — never hold the app longer than this
+const _splashStart = Date.now();
+let   _splashHidden = false;
+
+(function _splashInit(){
+  const el = document.getElementById('loadScreen'); if (!el) return;
+  // already launched in this tab → skip it entirely, no flash on refresh
+  let seen = false;
+  try { seen = sessionStorage.getItem(_SPLASH_KEY) === '1'; } catch(e){}
+  if (seen){ el.style.display = 'none'; _splashHidden = true; return; }
+  try { sessionStorage.setItem(_SPLASH_KEY, '1'); } catch(e){}
+  setTimeout(_splashDone, _SPLASH_MAX);      // safety net
+})();
+
+function _splashDone(){
+  if (_splashHidden) return;
+  const el = document.getElementById('loadScreen'); if (!el) return;
+  const wait = Math.max(0, _SPLASH_MIN - (Date.now() - _splashStart));
+  setTimeout(() => {
+    if (_splashHidden) return;
+    _splashHidden = true;
+    el.classList.add('gone');                       // fade, don't cut
+    setTimeout(() => { el.style.display = 'none'; }, 340);
+  }, wait);
+}
+
 //  AUTH STATE LISTENER
 //  This is the single entry point
 // ════════════════════════════
 auth.onAuthStateChanged(async (fbUser) => {
   if (fbUser) {
     await initUser(fbUser);
-    document.getElementById('loadScreen').style.display = 'none';
+    _splashDone();
     document.getElementById('authScreen').style.display = 'none';
     document.getElementById('appScreen').style.display  = 'block';
     isGuestMode = false; _clearGuestSession(); _setTopbarMode('user');
@@ -357,7 +392,7 @@ auth.onAuthStateChanged(async (fbUser) => {
     AdManager.initScrollAds();   // start scroll ad tracker
     _bootRoute();                // open the page/modal the URL points to (deep-link / refresh)
   } else {
-    document.getElementById('loadScreen').style.display = 'none';
+    _splashDone();
     document.getElementById('authScreen').style.display = 'flex';
     document.getElementById('appScreen').style.display  = 'none';
   }
@@ -456,6 +491,7 @@ async function initUser(fbUser) {
 let _daresLoaded = false;   // first snapshot arrived? (gates the skeleton loaders)
 // Re-render only the active page, debounced so a burst of dare doc-changes rebuilds once
 let _daresRerenderTO = null;
+let _daresRowSig = '';      // last painted missions-row contents (see below)
 function _daresRerenderDebounced(){
   if (_daresRerenderTO) clearTimeout(_daresRerenderTO);
   _daresRerenderTO = setTimeout(() => {
@@ -464,7 +500,14 @@ function _daresRerenderDebounced(){
     if (activePage.id === 'pageDares')    renderDaresPage();
     if (activePage.id === 'pageAccepted') renderAcceptedPage();
     if (activePage.id === 'pageProfile' && user){ _renderMyDares(); _renderAcceptedDares(); }
-    if (activePage.id === 'pageHome'){ const r=document.getElementById('homeDaresRow'); if(r) r.outerHTML=_homeDaresHtml(); }
+    // Same story as the feed: only rebuild the missions row when its contents
+    // actually changed, otherwise every dare-doc write reloads those thumbnails.
+    if (activePage.id === 'pageHome'){
+      const r = document.getElementById('homeDaresRow');
+      const sig = (dares||[]).filter(d=>!d.completed).map(d=>d.id).join(',');
+      if (r && sig !== _daresRowSig){ _daresRowSig = sig; r.outerHTML = _homeDaresHtml(); }
+      else if (!r && sig !== _daresRowSig){ _daresRowSig = sig; _homeRenderFeed(true); }
+    }
   }, 180);
 }
 function startDaresListener() {
@@ -530,7 +573,7 @@ async function emailSignup() {
     await cred.user.updateProfile({ displayName: name });
     await auth.currentUser.reload();
     await initUser(auth.currentUser);
-    document.getElementById('loadScreen').style.display = 'none';
+    _splashDone();
     document.getElementById('authScreen').style.display = 'none';
     document.getElementById('appScreen').style.display  = 'block';
     isGuestMode = false; _clearGuestSession(); _setTopbarMode('user');
@@ -780,7 +823,29 @@ async function renderHome(cat) {
       <p class="empty-desc">${e.message}</p></div>`;
   }
 }
-function _homeRenderFeed() {
+// ── Why the thumbnails used to blink ──
+// renderHome() paints up to three times on one visit: once from memory, once
+// from the Firestore IndexedDB cache, once from the server snapshot. Each paint
+// did container.innerHTML = …, which throws every <img> away and builds a new
+// one — the browser then re-decodes the image, and that gap is the blink. The
+// three paints almost always carry identical data, so the fix is to skip a
+// repaint whose result would be byte-for-byte what is already on screen.
+let _feedSig = '';
+function _homeFeedSig(){
+  return homeFilterCat
+    + '§' + (homeProofs||[]).map(p => p.id).join(',')
+    + '§' + (dares||[]).filter(d => !d.completed).map(d => d.id).join(',');
+}
+
+function _homeRenderFeed(force) {
+  const sig  = _homeFeedSig();
+  const grid = document.getElementById('homeVideoGrid');
+  // :not(.skel-yt) matters — the skeleton also uses .yt-card, and counting it as
+  // "painted" would strand the loader on screen when the feed comes back empty
+  const painted = grid && grid.querySelector('.yt-card:not(.skel-yt), .active-dare-card, .short-card');
+  if (!force && painted && sig === _feedSig) return;   // nothing changed — leave the DOM alone
+  _feedSig = sig;
+
   const filtered = homeFilterCat === 'all'
     ? homeProofs
     : homeProofs.filter(p => {
