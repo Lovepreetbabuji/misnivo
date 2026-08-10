@@ -26,7 +26,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,100..400,0..1,0&icon_names=account_balance_wallet,add,arrow_back,bolt,bookmark,chat_bubble,close,explore,home,menu,more_vert,notifications,person,search,settings,tune&display=block" rel="stylesheet"/>
 
 <!-- App Styles -->
-<link rel="stylesheet" href="/css/styles.css?v=20260810m"/>
+<link rel="stylesheet" href="/css/styles.css?v=20260810n"/>
 
 <!-- Firebase CDN -->
 <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
@@ -124,19 +124,21 @@
 
   <!-- BOTTOM NAV (mobile only, YouTube-style) -->
   <nav class="bottom-nav" id="bottomNav">
-    <button class="bn-item active" id="bn-home"     onclick="goPage('home')">
+    <!-- Labels are hidden (see .bn-item span:last-child) but stay in the DOM, and
+         aria-label keeps each button named for screen readers either way. -->
+    <button class="bn-item active" id="bn-home"  onclick="goPage('home')"    aria-label="Home">
       <span class="mi">home</span><span>Home</span>
     </button>
-    <button class="bn-item" id="bn-dares"            onclick="goPage('dares')">
+    <button class="bn-item" id="bn-dares"        onclick="goPage('dares')"   aria-label="Missions">
       <span class="mi">bolt</span><span>Missions</span>
     </button>
-    <button class="bn-post"                          onclick="openPost()">
+    <button class="bn-post"                      onclick="openPost()"        aria-label="Post a mission">
       <span class="mi">add</span>
     </button>
-    <button class="bn-item" id="bn-chat"             onclick="goPage('chat')">
+    <button class="bn-item" id="bn-chat"         onclick="goPage('chat')"    aria-label="Chat">
       <span class="mi">chat_bubble</span><span>Chat</span>
     </button>
-    <button class="bn-item" id="bn-profile"          onclick="goPage('profile')">
+    <button class="bn-item" id="bn-profile"      onclick="goPage('profile')" aria-label="Profile">
       <span class="mi">person</span><span>Profile</span>
     </button>
   </nav>
@@ -1090,7 +1092,7 @@
 <div class="toast" id="toast"></div>
 
 <!-- App Logic -->
-<script src="/js/app.js?v=20260810m"></script>
+<script src="/js/app.js?v=20260810n"></script>
 
 <!-- ══ v0.19 NEW MODALS ══ -->
 

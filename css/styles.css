@@ -4336,13 +4336,17 @@ body.sb-dragging .sb-overlay{ transition:none !important; }
   box-shadow:0 8px 26px rgba(0,0,0,.7) !important;
   backdrop-filter:none !important; -webkit-backdrop-filter:none !important;
 }
-.bn-item{ gap:4px !important; color:rgba(255,255,255,.55) !important; }
+.bn-item{ gap:0 !important; color:rgba(255,255,255,.55) !important; }
 .bn-item .mi{
-  font-size:24px !important;
+  font-size:27px !important;
   font-family:'Material Symbols Outlined','Material Icons Round';
   font-variation-settings:'FILL' 0,'wght' 200,'GRAD' 0,'opsz' 24;
 }
-.bn-item span:last-child{ font-size:11px !important; font-weight:500; }
+/* Icons only — the caption stays in the DOM for screen readers, just unseen */
+.bn-item span:last-child{
+  position:absolute; width:1px; height:1px; overflow:hidden;
+  clip-path:inset(50%); white-space:nowrap;
+}
 /* selected = the icon fills in solid white, same signal as the drawer */
 .bn-item.active{ color:#fff !important; }
 .bn-item.active .mi{ font-variation-settings:'FILL' 1,'wght' 200,'GRAD' 0,'opsz' 24; }
