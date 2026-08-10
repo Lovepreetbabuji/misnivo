@@ -4780,9 +4780,9 @@ document.addEventListener('click', (e) => {
   const t = e.target;
   if (!t || !t.closest) return;
   if (t.closest('button, .adc-menu-wrap, .adc-dots, .dd-action-menu')) return;  // menus aren't navigation
-  const card = t.closest('.active-dare-card, .yt-card, .exp-card, .dare-list-card');
+  const card = t.closest('.active-dare-card, .yt-card, .exp-card, .dare-list-card, .short-card');
   if (!card) return;
-  const thumb = card.querySelector('.adc-thumb, .yt-thumb, .dare-list-thumb');
+  const thumb = card.querySelector('.adc-thumb, .yt-thumb, .dare-list-thumb, .short-thumb');
   if (!thumb) return;
   const img = thumb.querySelector('img');
   const url = img && (img.currentSrc || img.src);
@@ -4800,10 +4800,18 @@ function _heroFly(destEl){
 
   const d = destEl.getBoundingClientRect();
   if (!d.width || !d.height) return false;
-  // very different shapes would stretch the image on the way — better to cut
+  // Shapes far enough apart that even cropping looks wrong → cut instead
   const ratio = (s.r.width / s.r.height) / (d.width / d.height);
-  if (ratio < 0.75 || ratio > 1.34) return false;
+  if (ratio < 0.4 || ratio > 2.5) return false;
 
+  const sx = d.width / s.r.width, sy = d.height / s.r.height;
+
+  // Two layers. The frame carries position and size; the picture inside is
+  // counter-scaled so the IMAGE always grows uniformly and gets cropped by the
+  // frame — exactly what object-fit:cover does. A single layer scaled (sx,sy)
+  // would stretch the photo whenever the two shapes differ, which is very
+  // visible going from a 9:16 short into a full-height player.
+  const u  = Math.max(sx, sy);
   const fly = document.createElement('div');
   fly.className = 'hero-fly';
   fly.style.top    = s.r.top + 'px';
@@ -4811,18 +4819,23 @@ function _heroFly(destEl){
   fly.style.width  = s.r.width + 'px';
   fly.style.height = s.r.height + 'px';
   fly.style.borderRadius = s.radius;
-  fly.style.backgroundImage = 'url("' + String(s.url).replace(/"/g, '%22') + '")';
+
+  const pic = document.createElement('div');
+  pic.className = 'hero-fly-pic';
+  pic.style.backgroundImage = 'url("' + String(s.url).replace(/"/g, '%22') + '")';
+  fly.appendChild(pic);
   document.body.appendChild(fly);
 
   const prevVis = destEl.style.visibility;
   destEl.style.visibility = 'hidden';                 // no duplicate during the flight
 
-  const sx = d.width / s.r.width, sy = d.height / s.r.height;
   const destRadius = getComputedStyle(destEl).borderRadius;
   requestAnimationFrame(() => {
     fly.style.transition   = `transform ${_HERO_MS}ms ${_HERO_EASE}, border-radius ${_HERO_MS}ms ${_HERO_EASE}`;
     fly.style.transform    = `translate(${d.left - s.r.left}px, ${d.top - s.r.top}px) scale(${sx}, ${sy})`;
     fly.style.borderRadius = destRadius;
+    pic.style.transition   = `transform ${_HERO_MS}ms ${_HERO_EASE}`;
+    pic.style.transform    = `scale(${u / sx}, ${u / sy})`;
   });
 
   let settled = false;
@@ -5893,6 +5906,10 @@ function openShorts(proofId) {
   _shortsBindSwipe();
   _renderShortsSnapStack();   // build the native scroll-snap video stack
   renderShort();              // fill the fixed overlay for the current short
+  // the tapped thumbnail expands into the full-height player
+  const _sStage = document.querySelectorAll('#shortsSnapContainer .shorts-snap-item')[shortsIndex];
+  _heroOpen(document.getElementById('shortsOverlay'),
+            (_sStage && _sStage.querySelector('.shorts-snap-video')) || document.getElementById('shortsSnapContainer'));
 }
 
 function closeShorts() {

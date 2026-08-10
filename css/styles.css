@@ -4695,25 +4695,48 @@ input[type=range]{ accent-color:#fff !important; }
    compositor — no reflow, no repaint of the page underneath. */
 .hero-fly{
   position:fixed; z-index:99999; pointer-events:none;
-  background-size:cover; background-position:center; background-repeat:no-repeat;
-  background-color:#111;
   transform-origin:top left;
   will-change:transform;
-  overflow:hidden;
+  overflow:hidden;                     /* crops the picture layer, like object-fit:cover */
+  background:#111;
   box-shadow:0 18px 50px rgba(0,0,0,.55);
 }
+/* Counter-scaled inside the frame so the photo never stretches — see _heroFly */
+.hero-fly-pic{
+  position:absolute; inset:0;
+  background-size:cover; background-position:center; background-repeat:no-repeat;
+  transform-origin:center;
+  will-change:transform;
+}
 
-/* The rest of the detail page rises as the thumbnail lands, so it reads as one
-   movement rather than a page swap. col2 is excluded — on mobile it is the
-   swipe-in drawer and already owns its own transform. */
+/* The rest of the detail page rises INTO the landing thumbnail. It starts a
+   beat after the flight so the thumbnail leads and the page joins it, rather
+   than both arriving at once — which read as a snap. col2 is excluded: on
+   mobile it is the swipe-in drawer and already owns its transform. */
 .video-detail-overlay.hero-in .dd-col1 > *:not(.dd-hero):not(.vd2-player-wrap),
 .video-detail-overlay.hero-in .dd-col3{
-  animation:heroRise 420ms cubic-bezier(.25,.8,.25,1) both;
+  animation:heroRise var(--rise-ms,420ms) cubic-bezier(.25,.8,.25,1) both;
+  animation-delay:var(--rise-lag,90ms);
 }
 @keyframes heroRise{
-  from{ opacity:0; transform:translateY(22px); }
+  from{ opacity:0; transform:translateY(var(--rise-y,22px)); }
   to  { opacity:1; transform:none; }
 }
+
+/* Mobile is where it read as too fast: longer, later, and each block a touch
+   behind the one above it so the page assembles instead of appearing. */
+@media(max-width:768px){
+  .video-detail-overlay.hero-in .dd-col1 > *:not(.dd-hero):not(.vd2-player-wrap),
+  .video-detail-overlay.hero-in .dd-col3{
+    --rise-ms:560ms; --rise-lag:150ms; --rise-y:38px;
+  }
+  .video-detail-overlay.hero-in .dd-col1 > *:nth-child(3){ animation-delay:200ms; }
+  .video-detail-overlay.hero-in .dd-col1 > *:nth-child(4){ animation-delay:245ms; }
+  .video-detail-overlay.hero-in .dd-col1 > *:nth-child(5){ animation-delay:285ms; }
+  .video-detail-overlay.hero-in .dd-col1 > *:nth-child(n+6){ animation-delay:320ms; }
+  .video-detail-overlay.hero-in .dd-col3{ animation-delay:340ms; }
+}
+
 @media(prefers-reduced-motion:reduce){
   .video-detail-overlay.hero-in .dd-col1 > *,
   .video-detail-overlay.hero-in .dd-col3{ animation:none !important; }
