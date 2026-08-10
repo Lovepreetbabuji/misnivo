@@ -1,0 +1,32 @@
+{
+  "indexes": [
+    {
+      "_comment": "notifications listener: where(toUserId) + orderBy(createdAt desc) + limit",
+      "collectionGroup": "notifications",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "toUserId",  "order": "ASCENDING" },
+        { "fieldPath": "createdAt", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "_comment": "pruneNotifications: where(read) + where(createdAt <)",
+      "collectionGroup": "notifications",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "read",      "order": "ASCENDING" },
+        { "fieldPath": "createdAt", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "_comment": "applicant completion rate: where(takerId) + where(status)",
+      "collectionGroup": "proofs",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "takerId", "order": "ASCENDING" },
+        { "fieldPath": "status",  "order": "ASCENDING" }
+      ]
+    }
+  ],
+  "fieldOverrides": []
+}

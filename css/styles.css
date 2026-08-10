@@ -4251,6 +4251,16 @@ body.sb-dragging .sb-overlay{ transition:none !important; }
 .notif-list{ background:#000; }
 .notif-item{ border-bottom:none !important; }
 
+/* Pager for older notifications (the live listener only holds the newest 30) */
+.notif-more{
+  display:block; width:calc(100% - 24px); margin:10px 12px 20px; padding:12px;
+  background:transparent; border:1px solid rgba(255,255,255,.16); border-radius:999px;
+  color:#fff; font-size:14px; font-family:inherit; cursor:pointer;
+  -webkit-tap-highlight-color:transparent;
+}
+.notif-more:active{ background:rgba(255,255,255,.08); }
+.notif-more:disabled{ opacity:.5; cursor:default; }
+
 /* Skeleton rows — shown until the first snapshot lands */
 .notif-item.nskel{ pointer-events:none; background:transparent !important; }
 .nskel-ic{ width:38px; height:38px; border-radius:50%; flex-shrink:0; }

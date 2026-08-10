@@ -1,0 +1,17 @@
+{
+  "firestore": {
+    "rules": "firestore.rules",
+    "indexes": "firestore.indexes.json"
+  },
+  "_comment": "functions live under firebase/ because Cloudflare Pages reserves a root-level functions/ directory for its own Pages Functions — putting them there breaks the site build",
+  "functions": {
+    "source": "firebase/functions",
+    "runtime": "nodejs20",
+    "predeploy": []
+  },
+  "emulators": {
+    "firestore": { "port": 8080 },
+    "functions": { "port": 5001 },
+    "ui":        { "enabled": true }
+  }
+}

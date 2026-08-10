@@ -553,6 +553,7 @@ async function logout() {
   // the notifications listener was never torn down — it kept running against
   // the signed-out uid and left the last user's rows in memory
   if (notifUnsub) { notifUnsub(); notifUnsub = null; }
+  if (_notifCountUnsub) { _notifCountUnsub(); _notifCountUnsub = null; }
   notifications = []; notifUnread = 0; notifLoaded = false;
   if (typeof _updateNotifBadge === 'function') _updateNotifBadge();
   await auth.signOut();
@@ -4069,23 +4070,15 @@ function _findProof(proofId){
       || (typeof homeProofs!=='undefined' && homeProofs.find(x=>x.id===proofId)) || null;
 }
 // Send a "Congratulations" milestone notification at most ONCE per milestone.
-// Tracks sent milestones in proof.milestonesSent (e.g. { like_5:true, view_1000:true }).
-async function _checkMilestone(proofId, kind, newCount, milestones){
-  const p = _findProof(proofId);
-  if (!p || !p.takerId || p.takerId === user?.uid) return;
-  const sent = p.milestonesSent || (p.milestonesSent = {});
-  const newly = milestones.filter(m => newCount >= m && !sent[kind+'_'+m]);
-  if (!newly.length) return;
-  const m = Math.max(...newly);                 // notify for the highest newly-reached milestone
-  sent[kind+'_'+m] = true;
-  db.collection('proofs').doc(proofId).update({ ['milestonesSent.'+kind+'_'+m]: true }).catch(()=>{});
-  const noun = kind==='like' ? 'likes' : kind==='comment' ? 'comments' : 'views';
-  await _sendNotification(p.takerId, kind+'_milestone', '🎉 Congratulations!',
-    `Your video "${(p.dareTitle||'').slice(0,30)}" reached ${m.toLocaleString('en-IN')} ${noun}!`, proofId);
-}
-async function _checkCommentMilestone(proofId,newCount){ await _checkMilestone(proofId,'comment',newCount,COMMENT_MILESTONES); }
-async function _checkLikeMilestone(proofId,newCount){    await _checkMilestone(proofId,'like',   newCount,LIKE_MILESTONES); }
-async function _checkViewMilestone(proofId,newCount){    await _checkMilestone(proofId,'view',   newCount,VIEW_MILESTONES); }
+// Milestones moved to the onProofUpdated Cloud Function. Deciding them in each
+// viewer's tab double-fired when two people liked at the same moment, and fired
+// not at all when nobody had the tab open — the server sees every write exactly
+// once and dedupes on (proof, metric, threshold).
+// Kept as no-ops so the existing call sites need no changes.
+async function _checkMilestone(){ return null; }
+async function _checkCommentMilestone(){ return null; }
+async function _checkLikeMilestone(){    return null; }
+async function _checkViewMilestone(){    return null; }
 
 function _clearGuestSession() {
   if (guestTimer)    { clearTimeout(guestTimer);    guestTimer    = null; }
@@ -4349,7 +4342,8 @@ function _renderNotifications() {
         <div class="notif-time">${n.createdAt?_timeAgo(n.createdAt.toDate()):''}</div>
       </div>
       ${!n.read?'<div class="notif-dot"></div>':''}
-    </div>`).join('');
+    </div>`).join('')
+    + (_notifMore ? `<button class="notif-more" id="notifMoreBtn" onclick="loadMoreNotifications()">Load older notifications</button>` : '');
 }
 
 function _vdRelLongCard(p){
@@ -4504,11 +4498,11 @@ function _searchDareCard(d) {
   return _activeDareCard(d, true);   // tag it "Mission" — results have no section labels
 }
 
-async function _sendNotification(toUserId,type,title,message,refId=''){
-  if(!toUserId) return;
-  try{await db.collection('notifications').add({toUserId,type,title,message,refId,read:false,createdAt:firebase.firestore.Timestamp.now()});}
-  catch(e){console.log('Notif error:',e);}
-}
+// Notifications are created by Cloud Functions ONLY — firestore.rules denies
+// `create` on /notifications to every client. Letting the browser write them
+// meant anyone could post any message to anyone's bell straight from devtools.
+// Kept as a no-op so the old call sites stay harmless.
+async function _sendNotification(){ return null; }
 
 function _setTopbarMode(mode) {
   const guestEl   = document.getElementById('guestTopbarEl');
@@ -5512,19 +5506,86 @@ function showGuestPrompt(info, dismissible) {
   document.getElementById('guestPrompt').style.display    = 'flex';
 }
 
+const NOTIF_PAGE = 30;
+let _notifLastDoc = null;      // cursor for "load older"
+let _notifMore    = false;     // is there another page?
+let _notifCountUnsub = null;
+
 function startNotificationsListener() {
   if (!user) return;
   if (notifUnsub) notifUnsub();
-  notifLoaded = false;
+  notifLoaded = false; _notifLastDoc = null; _notifMore = false;
+
   notifUnsub = db.collection('notifications')
-    .where('toUserId','==',user.uid).orderBy('createdAt','desc').limit(50)
+    .where('toUserId','==',user.uid).orderBy('createdAt','desc').limit(NOTIF_PAGE)
     .onSnapshot(snap=>{
       notifications = snap.docs.map(doc=>({id:doc.id,...doc.data()}));
+      _notifLastDoc = snap.docs.length ? snap.docs[snap.docs.length-1] : null;
+      _notifMore    = snap.docs.length === NOTIF_PAGE;
       notifUnread   = notifications.filter(n=>!n.read).length;
       notifLoaded   = true;
       _updateNotifBadge();
       if (document.getElementById('notifPanel')?.classList.contains('open')) _renderNotifications();
     },()=>{ notifLoaded = true; _renderNotifications(); });   // error → drop the skeleton, don't spin forever
+
+  // The badge used to be counted from the loaded page only, so it capped out and
+  // lied past 30 unread. Cloud Functions keep a real counter on the user doc.
+  if (_notifCountUnsub) _notifCountUnsub();
+  _notifCountUnsub = db.collection('users').doc(user.uid)
+    .onSnapshot(d=>{
+      const c = d.exists ? d.data().unreadCount : null;
+      if (typeof c === 'number'){ notifUnread = Math.max(0, c); _updateNotifBadge(); }
+    },()=>{});
+
+  _registerPushToken();
+}
+
+// Older notifications, one page at a time (the live listener only holds 30).
+async function loadMoreNotifications(){
+  if (!user || !_notifLastDoc) return;
+  const btn = document.getElementById('notifMoreBtn');
+  if (btn){ btn.disabled = true; btn.textContent = 'Loading…'; }
+  try{
+    const snap = await db.collection('notifications')
+      .where('toUserId','==',user.uid).orderBy('createdAt','desc')
+      .startAfter(_notifLastDoc).limit(NOTIF_PAGE).get();
+    notifications = notifications.concat(snap.docs.map(d=>({id:d.id,...d.data()})));
+    if (snap.docs.length) _notifLastDoc = snap.docs[snap.docs.length-1];
+    _notifMore = snap.docs.length === NOTIF_PAGE;
+  }catch(e){ _notifMore = false; }
+  _renderNotifications();
+}
+
+// ── Web push (FCM) ──────────────────────────────────────────────────────────
+// Tokens live in users/{uid}/tokens/{token}, which only the owner can write and
+// only Cloud Functions read — they are not on the world-readable user document.
+const FCM_VAPID_KEY = '';   // ← Firebase console → Cloud Messaging → Web Push certificates
+
+async function _registerPushToken(){
+  try{
+    if (!user || !FCM_VAPID_KEY) return;                       // not configured yet
+    if (!('serviceWorker' in navigator) || !('Notification' in window)) return;
+    if (!firebase.messaging || !firebase.messaging.isSupported) return;
+    if (!(await firebase.messaging.isSupported())) return;
+    if (Notification.permission === 'denied') return;
+    if (Notification.permission === 'default'){
+      if ((await Notification.requestPermission()) !== 'granted') return;
+    }
+    const reg = await navigator.serviceWorker.register('/firebase-messaging-sw.js');
+    const messaging = firebase.messaging();
+    const token = await messaging.getToken({ vapidKey: FCM_VAPID_KEY, serviceWorkerRegistration: reg });
+    if (!token) return;
+
+    await db.collection('users').doc(user.uid).collection('tokens').doc(token)
+      .set({ createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+             ua: (navigator.userAgent||'').slice(0,160) }, { merge:true });
+
+    // Foreground: the OS banner is suppressed, so surface it in-app instead
+    messaging.onMessage(p => {
+      const n = (p && p.notification) || {};
+      if (n.title) showToast(n.title);
+    });
+  }catch(e){ /* push is a bonus — never let it break sign-in */ }
 }
 
 async function submitComment() {
@@ -6677,10 +6738,10 @@ function exportWalletCSV(){
 }
 
 // ── Wallet event notification (self) ──
-function _walletNotify(title,msg,credit){
-  if(!user || typeof _sendNotification!=='function') return;
-  _sendNotification(user.uid, credit?'wallet_credit':'wallet_debit', title, msg, '');
-}
+// No-op since /notifications is server-write-only. Every wallet event is
+// already listed in the wallet's own transaction history, so nothing is lost;
+// re-opening writes to clients just to notify yourself is not worth the hole.
+function _walletNotify(){ return; }
 
 // Smart router: shorts (<60s) open Shorts player, long videos open YouTube watch page
 function openVideo(proofId) {

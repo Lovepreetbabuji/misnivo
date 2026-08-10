@@ -1,0 +1,242 @@
+rules_version = '2';
+
+// ═══════════════════════════════════════════════════════════════════════════
+//  MissionMarket — Firestore security rules
+//
+//  Guests browse the app WITHOUT signing in (enterGuestMode reads Firestore
+//  unauthenticated), so content collections must stay publicly readable.
+//  Everything that writes is locked to the one identity allowed to write it.
+//
+//  Two rules of thumb used throughout:
+//    · a client may only create a document that names ITSELF as the author
+//    · a client may only update the exact fields its feature needs, checked
+//      with diff().affectedKeys().hasOnly(...) — so "like a proof" can never
+//      smuggle in a status change
+//
+//  Admin is a CUSTOM CLAIM (request.auth.token.admin), never a document field,
+//  so it cannot be self-granted. Set it with the Admin SDK:
+//    admin.auth().setCustomUserClaims(uid, { admin: true })
+// ═══════════════════════════════════════════════════════════════════════════
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ─── helpers ──────────────────────────────────────────────────────────
+    function signedIn()   { return request.auth != null; }
+    function uid()        { return request.auth.uid; }
+    function isSelf(u)    { return signedIn() && uid() == u; }
+    function isAdmin()    { return signedIn() && request.auth.token.admin == true; }
+
+    // keys this update is trying to change
+    function touched()    { return request.resource.data.diff(resource.data).affectedKeys(); }
+    // the update touches nothing outside `allowed`
+    function onlyTouches(allowed) { return touched().hasOnly(allowed); }
+
+    // A counter that moved by at most one step, and never below zero — blocks
+    // "likeCount = 1000000". Map.get(key, default) keeps documents that predate
+    // the field working (a missing counter reads as 0).
+    function prev(field) { return resource.data.get(field, 0); }
+    function next(field) { return request.resource.data.get(field, 0); }
+    function stepped(field) {
+      return !touched().hasAny([field])
+          || (next(field) is number
+              && next(field) >= 0
+              && (next(field) - prev(field)) <=  1
+              && (next(field) - prev(field)) >= -1);
+    }
+    function steppedAll() {
+      return stepped('likeCount') && stepped('dislikeCount') && stepped('viewCount');
+    }
+
+    // ─── users ────────────────────────────────────────────────────────────
+    // Public read: guests and the feed need names/avatars/usernames.
+    // ⚠ Everything on this document is therefore world-readable — see
+    //   FIREBASE_SETUP.md, the wallet and email still need moving into
+    //   users/{uid}/private/ before this collection is genuinely safe.
+    match /users/{userId} {
+      allow read: if true;
+
+      // The uid is what matters. The email is only checked when the provider
+      // actually issued one — some sign-in methods don't, and a hard check
+      // would block those accounts from ever being created.
+      allow create: if isSelf(userId)
+                    && (!('email' in request.auth.token)
+                        || request.resource.data.get('email', '') == request.auth.token.email);
+
+      // Only the account owner, and only the fields the UI actually edits.
+      allow update: if isSelf(userId)
+                    && onlyTouches([
+                         'name','username','bio','website','socials','photoURL',
+                         'settings','wallet','acceptedDares','pinnedDares',
+                         'likedProofs','fcmUpdatedAt'
+                       ]);
+
+      allow delete: if isSelf(userId) || isAdmin();
+
+      // Owner-only drawer for anything that must never be public.
+      match /private/{docId} {
+        allow read, write: if isSelf(userId);
+      }
+      // Push tokens: the owner registers them, only Functions read them.
+      match /tokens/{token} {
+        allow read, write: if isSelf(userId);
+      }
+    }
+
+    // ─── usernames (handle reservations) ──────────────────────────────────
+    // Doc id IS the handle. Create only if free; you may only release your own.
+    match /usernames/{handle} {
+      allow read: if true;
+      allow create: if signedIn()
+                    && request.resource.data.uid == uid()
+                    && request.resource.data.keys().hasOnly(['uid']);
+      allow delete: if signedIn() && resource.data.uid == uid();
+      allow update: if false;   // release + reserve, never rewrite in place
+    }
+
+    // ─── dares (missions) ─────────────────────────────────────────────────
+    match /dares/{dareId} {
+      allow read: if true;
+
+      allow create: if signedIn()
+                    && request.resource.data.creatorUid == uid()
+                    && request.resource.data.completed == false;
+
+      allow update: if
+        // the owner may edit their own mission
+        (signedIn() && resource.data.creatorUid == uid())
+        // everyone else may only move engagement counters, one step at a time
+        || (signedIn() && onlyTouches([
+              'likedBy','likeCount','dislikedBy','dislikeCount',
+              'viewCount','takers','proofCount'
+            ]) && steppedAll())
+        // guests still count a view
+        || (onlyTouches(['viewCount']) && stepped('viewCount'));
+
+      allow delete: if (signedIn() && resource.data.creatorUid == uid()) || isAdmin();
+
+      // ─── applicants (who accepted this mission) ───
+      match /applicants/{applicantId} {
+        function isDareOwner() {
+          return signedIn()
+              && exists(/databases/$(database)/documents/dares/$(dareId))
+              && get(/databases/$(database)/documents/dares/$(dareId)).data.creatorUid == uid();
+        }
+
+        allow read:   if isSelf(applicantId) || isDareOwner();
+        allow create: if isSelf(applicantId)
+                      && request.resource.data.uid == uid()
+                      && request.resource.data.status in ['pending','accepted'];
+        allow update: if isDareOwner();                       // approve / reject
+        allow delete: if isSelf(applicantId) || isDareOwner();
+      }
+    }
+
+    // ─── proofs (submitted videos) ────────────────────────────────────────
+    match /proofs/{proofId} {
+      allow read: if true;
+
+      allow create: if signedIn()
+                    && request.resource.data.takerId == uid()
+                    && request.resource.data.status == 'submitted';
+
+      allow update: if
+        // ONLY the mission owner may judge a proof
+        (signedIn() && resource.data.posterId == uid()
+                    && onlyTouches(['status','rejectionReason'])
+                    && request.resource.data.status in ['approved','rejected'])
+        // anyone signed in may like / dislike / recount comments
+        // (commentCount is a full recount from a query, so it is not step-checked)
+        || (signedIn() && onlyTouches([
+              'likeCount','likedBy','dislikeCount','dislikedBy','commentCount','viewCount'
+            ]) && steppedAll())
+        // guests still count a view
+        || (onlyTouches(['viewCount']) && stepped('viewCount'));
+
+      allow delete: if (signedIn() && (resource.data.takerId == uid()
+                                    || resource.data.posterId == uid()))
+                    || isAdmin();
+    }
+
+    // ─── comments ─────────────────────────────────────────────────────────
+    match /comments/{commentId} {
+      allow read: if true;
+
+      allow create: if signedIn()
+                    && request.resource.data.userId == uid()
+                    && request.resource.data.text is string
+                    && request.resource.data.text.size() > 0
+                    && request.resource.data.text.size() <= 500
+                    && request.resource.data.likeCount == 0;
+
+      allow update: if
+        // the author may edit their own text
+        (signedIn() && resource.data.userId == uid() && onlyTouches(['text','edited','editedAt']))
+        // anyone may like it
+        || (signedIn() && onlyTouches(['likedBy','likeCount']) && stepped('likeCount'))
+        // the video owner may pin a comment on their own video.
+        // exists() first: dare comments reuse this collection with a DARE id in
+        // proofId, so the get() would blow up on those without the guard.
+        || (signedIn()
+            && onlyTouches(['pinned','pinnedBy'])
+            && exists(/databases/$(database)/documents/proofs/$(resource.data.proofId))
+            && get(/databases/$(database)/documents/proofs/$(resource.data.proofId)).data.takerId == uid());
+
+      allow delete: if (signedIn() && resource.data.userId == uid()) || isAdmin();
+    }
+
+    // ─── follows ──────────────────────────────────────────────────────────
+    // Doc id is "<follower>_<target>_<type>", so the id itself is checked to
+    // stop anyone forging a follow on someone else's behalf.
+    match /follows/{followId} {
+      allow read: if true;
+      allow create: if signedIn()
+                    && request.resource.data.followerUid == uid()
+                    && request.resource.data.targetUid != uid()
+                    && followId == uid() + '_' + request.resource.data.targetUid + '_' + request.resource.data.type;
+      allow delete: if signedIn() && resource.data.followerUid == uid();
+      allow update: if false;
+    }
+
+    // ─── reports (abuse) ──────────────────────────────────────────────────
+    // Write-only for users: you can file one, you can never read the queue.
+    match /reports/{reportId} {
+      allow read:   if isAdmin();
+      allow create: if signedIn() && request.resource.data.reporterUid == uid()
+                    && request.resource.data.status == 'pending';
+      allow update, delete: if isAdmin();
+    }
+
+    // ─── notifications ────────────────────────────────────────────────────
+    // Clients CANNOT create these. Cloud Functions write them through the
+    // Admin SDK, which bypasses rules — that is the whole point: otherwise any
+    // user could post any message to any other user's bell.
+    match /notifications/{notifId} {
+      allow read:   if signedIn() && resource.data.toUserId == uid();
+      allow create: if false;
+      allow update: if signedIn() && resource.data.toUserId == uid()
+                    && onlyTouches(['read'])
+                    && request.resource.data.read == true;
+      allow delete: if signedIn() && resource.data.toUserId == uid();
+    }
+
+    // ─── search term counters (trending) ──────────────────────────────────
+    // Public read, but a signed-in client may only nudge a count by one.
+    match /searches/{term} {
+      allow read: if true;
+      allow create: if signedIn()
+                    && request.resource.data.keys().hasOnly(['term','count'])
+                    && request.resource.data.count == 1;
+      allow update: if signedIn()
+                    && onlyTouches(['count'])
+                    && request.resource.data.count == resource.data.count + 1;
+      allow delete: if isAdmin();
+    }
+
+    // ─── default deny ─────────────────────────────────────────────────────
+    // Anything not matched above is refused, including future collections.
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
