@@ -583,7 +583,8 @@ function goPage(pg, _fromPop) {
   const _ovWasOpen = (!_fromPop && !_navBack && _ovStack.length) ? _ovCloseAllSilent() : false;
   try{ _pvStop(); }catch(e){}
   try{ _pauseAllMedia(false); }catch(e){}   // leaving a page stops everything it was playing
-  document.body.classList.remove('tb-hide'); // fresh page → topbar visible
+  document.body.classList.remove('tb-hide');        // fresh page → topbar visible
+  document.body.classList.remove('search-open');    // leaving the results → normal topbar back
   if (typeof _closeDetailOverlays === 'function') _closeDetailOverlays();
   document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
   const el = document.getElementById('page' + pg.charAt(0).toUpperCase() + pg.slice(1));
@@ -4035,7 +4036,7 @@ let commentsProofId = null;
 let commentsCache   = {};
 let replyingToCommentId = null;   // video-detail: comment being replied to
 let shortsReplyingTo    = null;   // shorts: comment being replied to
-let searchType      = 'dares';
+let searchType      = 'all';   // 'all' | 'dares' | 'videos' — set from the ⋮ menu
 let searchDebounceTimer = null;
 let activeExpTab    = 'all';
 const GUEST_ACTION_MSGS = {
@@ -4099,14 +4100,25 @@ function _doSearch(q) {
   if (typeof syncBottomNav === 'function') syncBottomNav('dares');
   const feed=document.getElementById('daresPageFeed');
 
-  // Content type comes from the filter sheet; 'all' keeps the Missions/Videos tabs
-  const type = _sFilters.type === 'all' ? (searchType === 'videos' ? 'videos' : 'missions') : _sFilters.type;
+  // Mobile swaps the app topbar for a YouTube-style results bar (back · query · ⋮)
+  document.body.classList.add('search-open');
+  const tsr = document.getElementById('tsrText'); if (tsr) tsr.textContent = q;
+  _sCloseResMenu();
+  _sSyncTypeMenu();
+
+  // Content type comes from the filter sheet; 'all' defers to the ⋮ menu choice
+  const type = _sFilters.type === 'all'
+    ? (searchType === 'videos' ? 'videos' : (searchType === 'dares' ? 'missions' : 'all'))
+    : _sFilters.type;
   const nFilters = _sActiveFilterCount();
 
   const typeBar=`
     <button class="search-back-btn" onclick="_searchBack()"><span class="mi">arrow_back</span> Back</button>
     <div class="search-type-bar">
       ${_sFilters.type === 'all' ? `
+      <button class="search-type-btn ${searchType==='all'?'active':''}" onclick="setSearchType('all')">
+        <span class="mi">apps</span> All
+      </button>
       <button class="search-type-btn ${searchType==='dares'?'active':''}" onclick="setSearchType('dares')">
         <span class="mi">bolt</span> Missions
       </button>
@@ -4140,6 +4152,17 @@ function _doSearch(q) {
     feed.innerHTML = typeBar + (results.length
       ? countLine(results.length, 'video') + _mixedVideoFeedHtml(results, 'No videos')
       : emptyBlock('videos'));
+  } else if (type === 'all') {
+    // Everything in one feed, the way the home page mixes them
+    const ms = searchMissions(q), vs = searchVideos(q);
+    if (!ms.length && !vs.length) {
+      feed.innerHTML = typeBar + emptyBlock('missions or videos');
+    } else {
+      let html = typeBar + countLine(ms.length + vs.length, 'result');
+      if (vs.length) html += `<div class="search-section-label">Videos (${vs.length})</div>` + _mixedVideoFeedHtml(vs, 'No videos');
+      if (ms.length) html += `<div class="search-section-label">Missions (${ms.length})</div><div class="active-dare-grid">${ms.map(d=>_searchDareCard(d)).join('')}</div>`;
+      feed.innerHTML = html;
+    }
   } else {
     const results   = searchMissions(q);
     const active    = results.filter(d=>!d.completed);
@@ -4981,6 +5004,8 @@ function searchTag(tag){
 function _searchBack(){
   const r = _searchReturn; _searchReturn = null;
   const inp = document.getElementById('searchInput'); if (inp) inp.value = '';
+  document.body.classList.remove('search-open');   // goPage does this too, the detail path doesn't
+  _sCloseResMenu();
   _hideSuggestions();
   if (r && r.dareId && (dares||[]).some(d=>d.id===r.dareId)) { openDareDetail(r.dareId); return; }
   goPage((r && r.page) ? r.page : 'home');
@@ -5428,9 +5453,32 @@ async function renderExplorer() {
 
 function setSearchType(type) {
   searchType=type;
+  _sCloseResMenu();
   const q=(document.getElementById('searchInput').value||'').toLowerCase().trim();
   if (q) _doSearch(q);
 }
+
+// ── Results-page ⋮ menu (mobile): All · Missions · Videos · Filters ──
+function _sToggleResMenu(){
+  const m = document.getElementById('tsrMenu'); if (!m) return;
+  m.classList.toggle('open');
+  _sSyncTypeMenu();
+}
+function _sCloseResMenu(){ document.getElementById('tsrMenu')?.classList.remove('open'); }
+function _sSyncTypeMenu(){
+  ['all','dares','videos'].forEach(t => {
+    document.getElementById('tsrMi-'+t)?.classList.toggle('active', searchType === t);
+  });
+}
+function _sMenuFilters(){ _sCloseResMenu(); openSearchFilters(); }
+// The results field is a display only — tapping ✕ goes back to the search page
+function _searchClear(){
+  const inp = document.getElementById('searchInput'); if (inp) inp.value = '';
+  openMobileSearch();
+}
+document.addEventListener('click', e => {
+  if (!e.target.closest || !e.target.closest('.tsr-menu-wrap')) _sCloseResMenu();
+});
 
 function showGuestPrompt(info, dismissible) {
   document.getElementById('guestPromptIcon').textContent  = info.icon;

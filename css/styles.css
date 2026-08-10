@@ -3769,6 +3769,64 @@ html{scroll-behavior:smooth;}
   background:#fff; color:#000; border:none; font-size:15px; font-weight:700;
   font-family:inherit; cursor:pointer;
 }
+/* ══ Search-results topbar (mobile) — YouTube layout: back · query · ⋮ ══
+   The page's own "Active Missions" header, Back button and Missions/Videos
+   tab row are hidden there; the ⋮ menu carries All / Missions / Videos /
+   Filters instead. Desktop keeps the in-page tab row. */
+.topbar-search{ display:none; align-items:center; gap:6px; flex:1; min-width:0; }
+.tsr-icon{
+  width:40px; height:40px; border-radius:50%; flex-shrink:0;
+  display:flex; align-items:center; justify-content:center;
+  background:transparent; border:none; color:#fff; cursor:pointer;
+  -webkit-tap-highlight-color:transparent;
+}
+.tsr-icon:active{ background:rgba(255,255,255,.12); }
+.tsr-icon .mi{ font-size:23px; }
+.tsr-field{
+  flex:1; min-width:0; display:flex; align-items:center; gap:4px; height:40px;
+  padding:0 6px 0 16px; border-radius:999px;
+  background:#000; border:1px solid rgba(255,255,255,.18); cursor:text;
+}
+.tsr-txt{
+  flex:1; min-width:0; font-size:15px; color:#fff;
+  overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+}
+.tsr-clear{
+  width:30px; height:30px; border-radius:50%; flex-shrink:0;
+  display:flex; align-items:center; justify-content:center;
+  background:none; border:none; color:rgba(255,255,255,.7); cursor:pointer;
+  -webkit-tap-highlight-color:transparent;
+}
+.tsr-clear .mi{ font-size:19px; }
+.tsr-menu-wrap{ position:relative; flex-shrink:0; }
+.tsr-menu{
+  display:none; position:absolute; top:44px; right:0; min-width:184px;
+  background:#0f0f0f; border:1px solid rgba(255,255,255,.12); border-radius:12px;
+  padding:6px; z-index:9200; box-shadow:0 10px 30px rgba(0,0,0,.7);
+}
+.tsr-menu.open{ display:block; }
+.tsr-mi{
+  display:flex; align-items:center; gap:14px;
+  padding:11px 12px; border-radius:8px; cursor:pointer;
+  font-size:14px; color:rgba(255,255,255,.85);
+  -webkit-tap-highlight-color:transparent;
+}
+.tsr-mi .mi{ font-size:20px; color:inherit; }
+.tsr-mi:active{ background:rgba(255,255,255,.08); }
+.tsr-mi.active{ color:#fff; font-weight:600; background:rgba(255,255,255,.10); }
+.tsr-mi-sep{ margin-top:6px; border-top:1px solid rgba(255,255,255,.10); padding-top:12px; border-radius:0 0 8px 8px; }
+
+@media(max-width:768px){
+  body.search-open:not(.detail-open):not(.shorts-open):not(.profile-open) .topbar-left,
+  body.search-open:not(.detail-open):not(.shorts-open):not(.profile-open) .search-wrap,
+  body.search-open:not(.detail-open):not(.shorts-open):not(.profile-open) .topbar-right{ display:none !important; }
+  body.search-open:not(.detail-open):not(.shorts-open):not(.profile-open) .topbar-search{ display:flex; }
+  /* the results feed carries no chrome of its own on mobile */
+  body.search-open #pageDares > .sec-hdr,
+  body.search-open .search-back-btn,
+  body.search-open .search-type-bar{ display:none !important; }
+}
+
 /* Results-page filter button */
 .sres-filter-btn{ position:relative; }
 .sug-del{ width:26px;height:26px;border-radius:50%;background:none;border:none;color:var(--t3);cursor:pointer;

@@ -23,7 +23,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,100..400,0..1,0&icon_names=account_balance_wallet,bookmark,explore,home,person,settings&display=block" rel="stylesheet"/>
 
 <!-- App Styles -->
-<link rel="stylesheet" href="/css/styles.css?v=20260810e"/>
+<link rel="stylesheet" href="/css/styles.css?v=20260810f"/>
 
 <!-- Firebase CDN -->
 <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
@@ -187,6 +187,24 @@
         </div>
       </div>
     </div>
+    <!-- Search-results mode (mobile): YouTube-style bar — back · query · clear · ⋮ -->
+    <div class="topbar-search" id="topbarSearch">
+      <button class="tsr-icon" onclick="_searchBack()" aria-label="Back"><span class="mi">arrow_back</span></button>
+      <div class="tsr-field" onclick="openMobileSearch()">
+        <span class="tsr-txt" id="tsrText">Search</span>
+        <button class="tsr-clear" onclick="event.stopPropagation();_searchClear()" aria-label="Clear"><span class="mi">close</span></button>
+      </div>
+      <div class="tsr-menu-wrap">
+        <button class="tsr-icon" onclick="event.stopPropagation();_sToggleResMenu()" aria-label="More options"><span class="mi">more_vert</span></button>
+        <div class="tsr-menu" id="tsrMenu">
+          <div class="tsr-mi" id="tsrMi-all"     onclick="setSearchType('all')"><span class="mi">apps</span>All</div>
+          <div class="tsr-mi" id="tsrMi-dares"   onclick="setSearchType('dares')"><span class="mi">bolt</span>Missions</div>
+          <div class="tsr-mi" id="tsrMi-videos"  onclick="setSearchType('videos')"><span class="mi">play_circle</span>Videos</div>
+          <div class="tsr-mi tsr-mi-sep"         onclick="_sMenuFilters()"><span class="mi">tune</span>Filters</div>
+        </div>
+      </div>
+    </div>
+
     <!-- Profile mode (mobile): same glassy topbar, buttons swap to Back · socials · Settings -->
     <div class="topbar-profile" id="topbarProfile">
       <button class="icon-btn" onclick="_profileBack()" aria-label="Back"><span class="mi">arrow_back</span></button>
@@ -1056,7 +1074,7 @@
 <div class="toast" id="toast"></div>
 
 <!-- App Logic -->
-<script src="/js/app.js?v=20260810e"></script>
+<script src="/js/app.js?v=20260810f"></script>
 
 <!-- ══ v0.19 NEW MODALS ══ -->
 
