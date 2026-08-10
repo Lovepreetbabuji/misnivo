@@ -3870,25 +3870,29 @@ body.scrolling .yt-card, body.scrolling .active-dare-card, body.scrolling .short
   flex-direction:column; gap:2px; padding:8px 0;
   overflow-y:auto; overscroll-behavior:contain;
 }
+/* Icons only — the label under each one is gone; the name lives in the tooltip */
 .rail-item{
-  display:flex; flex-direction:column; align-items:center; justify-content:center; gap:6px;
-  padding:16px 0; margin:0 4px; border-radius:10px; cursor:pointer;
+  display:flex; align-items:center; justify-content:center;
+  padding:14px 0; margin:0 4px; border-radius:10px; cursor:pointer;
   color:rgba(255,255,255,.82);
   transition:background .15s ease, color .15s ease; -webkit-tap-highlight-color:transparent;
 }
-.rail-item .mi{ font-size:24px; color:inherit; }
-.rail-lbl{ font-size:10px; font-weight:400; line-height:1; text-align:center; color:inherit; }
+.rail-item .mi{ font-size:26px; color:inherit; }
+.rail-lbl{ display:none; }
 .rail-item:hover{ background:rgba(255,255,255,.06); color:#fff; }
 /* Selected = the icon fills in solid white (no pill) */
 .rail-item.active{ background:transparent; color:#fff; }
-.rail-item.active .rail-lbl{ font-weight:600; }
 @media(min-width:769px){ .sb-rail{ display:flex; } }
 
 /* ── The drawer itself (mobile AND desktop) ── */
 .sidebar{
   display:flex !important; flex-direction:column !important;
   position:fixed !important; top:0 !important; left:0 !important; bottom:0 !important;
-  width:min(300px,84vw) !important;
+  /* Width follows the content — a long display name widens it, a short one
+     lets it shrink — clamped so it never gets cramped or eats the screen. */
+  width:max-content !important;
+  min-width:236px !important;
+  max-width:min(340px,86vw) !important;
   padding:0 0 28px !important;
   justify-content:flex-start !important;
   background:#000 !important;

@@ -23,7 +23,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,100..400,0..1,0&icon_names=account_balance_wallet,bookmark,explore,home,person,settings&display=block" rel="stylesheet"/>
 
 <!-- App Styles -->
-<link rel="stylesheet" href="/css/styles.css?v=20260810b"/>
+<link rel="stylesheet" href="/css/styles.css?v=20260810c"/>
 
 <!-- Firebase CDN -->
 <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
@@ -196,10 +196,10 @@
 
   <!-- DESKTOP ICON RAIL — always visible, page background, never moves the content -->
   <nav class="sb-rail" id="sbRail">
-    <div class="rail-item active" data-pg="home"    onclick="goPage('home')"><span class="mi">home</span><span class="rail-lbl">Home</span></div>
-    <div class="rail-item"        data-pg="explore" onclick="goPage('explore')"><span class="mi">explore</span><span class="rail-lbl">Explore</span></div>
-    <div class="rail-item"        data-pg="wallet"  onclick="goPage('wallet')"><span class="mi">account_balance_wallet</span><span class="rail-lbl">Wallet</span></div>
-    <div class="rail-item"        onclick="openSettings()"><span class="mi">settings</span><span class="rail-lbl">Settings</span></div>
+    <div class="rail-item active" data-pg="home"    onclick="goPage('home')"    title="Home"     aria-label="Home"><span class="mi">home</span></div>
+    <div class="rail-item"        data-pg="explore" onclick="goPage('explore')" title="Explore"  aria-label="Explore"><span class="mi">explore</span></div>
+    <div class="rail-item"        data-pg="wallet"  onclick="goPage('wallet')"  title="Wallet"   aria-label="Wallet"><span class="mi">account_balance_wallet</span></div>
+    <div class="rail-item"        onclick="openSettings()"                      title="Settings" aria-label="Settings"><span class="mi">settings</span></div>
   </nav>
 
   <!-- HAMBURGER DRAWER — slides in over the page on mobile AND desktop -->
@@ -1042,7 +1042,7 @@
 <div class="toast" id="toast"></div>
 
 <!-- App Logic -->
-<script src="/js/app.js?v=20260810b"></script>
+<script src="/js/app.js?v=20260810c"></script>
 
 <!-- ══ v0.19 NEW MODALS ══ -->
 
