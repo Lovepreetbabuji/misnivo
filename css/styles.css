@@ -4264,6 +4264,90 @@ body.sb-dragging .sb-overlay{ transition:none !important; }
   .topbar .user-menu{ display:none !important; }
 }
 
+/* ═══════════════════════════════════════════════════════════════════════
+   TOPBAR — same flat black as the page, so it reads as part of it rather
+   than a floating bar of buttons. No glass, no border, no shadow.
+   Buttons are bare outlined icons (hamburger-drawer treatment): no circle,
+   no fill, no border, no neu raise.
+   ═══════════════════════════════════════════════════════════════════════ */
+.topbar{
+  background:#000 !important;
+  backdrop-filter:none !important; -webkit-backdrop-filter:none !important;
+  border-bottom:none !important;
+  box-shadow:none !important;
+}
+.topbar .icon-btn,
+.topbar .search-icon-btn{
+  width:42px; height:42px;
+  background:transparent !important;
+  border:none !important;
+  border-radius:50%;
+  box-shadow:none !important;
+  color:#fff;
+  backdrop-filter:none !important; -webkit-backdrop-filter:none !important;
+  transition:background .15s ease;
+}
+.topbar .icon-btn .mi,
+.topbar .search-icon-btn .mi{
+  font-size:25px; color:#fff;
+  font-family:'Material Symbols Outlined','Material Icons Round';
+  font-variation-settings:'FILL' 0,'wght' 200,'GRAD' 0,'opsz' 24;
+}
+/* hover/press is the only feedback — a faint disc, never a permanent ring */
+.topbar .icon-btn:hover,
+.topbar .search-icon-btn:hover{ background:rgba(255,255,255,.08) !important; transform:none !important; }
+.topbar .icon-btn:active,
+.topbar .search-icon-btn:active{ background:rgba(255,255,255,.14) !important; transform:none !important; box-shadow:none !important; }
+
+/* Wordmark replaces the old red bolt tile */
+.logo-icon, .auth-logo-icon{ display:none !important; }
+.logo-word{
+  font-family:'Roboto',sans-serif;
+  font-size:23px; font-weight:800; letter-spacing:-.6px;
+  color:#fff; line-height:1;
+}
+.auth-logo .logo-word{ font-size:30px; }
+
+/* The desktop search field loses its inset glass too, so the whole bar is flat */
+@media(min-width:769px){
+  .search-wrap{
+    background:#000 !important;
+    border:1px solid rgba(255,255,255,.18) !important;
+    box-shadow:none !important;
+    backdrop-filter:none !important; -webkit-backdrop-filter:none !important;
+  }
+  .search-wrap:focus-within{ border-color:rgba(255,255,255,.35) !important; background:#000 !important; }
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
+   ONE MOTION SPEED — every panel/page entrance uses the same pair, so
+   nothing feels quicker or slower than anything else. Micro-interactions
+   (hover, press, colour) stay fast on purpose; slowing those to .46s reads
+   as lag, not smoothness.
+   ═══════════════════════════════════════════════════════════════════════ */
+:root{ --anim-t:.46s; --anim-e:cubic-bezier(.25,.8,.25,1); }
+
+.sidebar{ transition:transform var(--anim-t) var(--anim-e) !important; }
+.sb-overlay{ transition:opacity var(--anim-t) var(--anim-e) !important; }
+.msearch-page.as-page{ transition:transform var(--anim-t) var(--anim-e), visibility var(--anim-t) !important; }
+.sfilter-wrap{ transition:opacity var(--anim-t) var(--anim-e) !important; }
+.sfilter-sheet{ transition:transform var(--anim-t) var(--anim-e) !important; }
+.overlay{ transition:opacity var(--anim-t) var(--anim-e) !important; }
+.modal{ transition:transform var(--anim-t) var(--anim-e), opacity var(--anim-t) var(--anim-e) !important; }
+.pubprof-overlay{ transition:opacity var(--anim-t) var(--anim-e) !important; }
+.video-detail-overlay{ transition:opacity var(--anim-t) var(--anim-e), visibility var(--anim-t) !important; }
+.dd-col2{ transition:transform var(--anim-t) var(--anim-e) !important; }
+.shorts-details-drawer{ transition:transform var(--anim-t) var(--anim-e) !important; }
+.page.active{ animation-duration:var(--anim-t) !important; animation-timing-function:var(--anim-e) !important; }
+.notif-panel.open{ animation-duration:var(--anim-t) !important; animation-timing-function:var(--anim-e) !important; }
+@media(max-width:768px){
+  .notif-panel{ transition:transform var(--anim-t) var(--anim-e), visibility var(--anim-t) !important; }
+  .topbar{ transition:transform var(--anim-t) var(--anim-e) !important; }
+}
+/* A finger on the drawer must still track 1:1 — this has to beat the rules above */
+body.sb-dragging .sidebar,
+body.sb-dragging .sb-overlay{ transition:none !important; }
+
 /* Pager for older notifications (the live listener only holds the newest 30) */
 .notif-more{
   display:block; width:calc(100% - 24px); margin:10px 12px 20px; padding:12px;

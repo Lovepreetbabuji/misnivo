@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no,viewport-fit=cover"/>
-<title>Mission Market</title>
+<title>Misnivo</title>
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='22' fill='%23FF0033'/%3E%3Cpolygon points='62,8 38,52 55,52 38,92 70,44 52,44 72,8' fill='white'/%3E%3C/svg%3E"/>
 
 <!-- PWA: installs full-screen (standalone app) when added to home screen -->
@@ -12,7 +12,7 @@
 <meta name="mobile-web-app-capable" content="yes"/>
 <meta name="apple-mobile-web-app-capable" content="yes"/>
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
-<meta name="apple-mobile-web-app-title" content="Mission Market"/>
+<meta name="apple-mobile-web-app-title" content="Misnivo"/>
 <link rel="apple-touch-icon" href="/icon.svg"/>
 
 <!-- Fonts -->
@@ -23,7 +23,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,100..400,0..1,0&icon_names=account_balance_wallet,bookmark,explore,home,person,settings&display=block" rel="stylesheet"/>
 
 <!-- App Styles -->
-<link rel="stylesheet" href="/css/styles.css?v=20260810j"/>
+<link rel="stylesheet" href="/css/styles.css?v=20260810k"/>
 
 <!-- Firebase CDN -->
 <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
@@ -68,8 +68,7 @@
 <div id="authScreen">
   <div class="auth-box">
     <div class="auth-logo">
-      <div class="auth-logo-icon"><span class="mi">bolt</span></div>
-      <span style="color:var(--t1)">Mission</span><span style="color:var(--blue2)">Market</span>
+      <span class="logo-word">Misnivo</span>
     </div>
     <p class="auth-tagline">Challenge yourself. Entertain others.<br>Get paid — directly.</p>
     <div class="auth-tabs">
@@ -142,8 +141,7 @@
     <div class="topbar-left">
       <button class="icon-btn" id="menuBtn" onclick="toggleSidebar()" aria-label="Toggle menu"><span class="mi">menu</span></button>
       <div class="logo" onclick="goPage('home')">
-        <div class="logo-icon"><span class="mi">bolt</span></div>
-        <span style="color:var(--t1)">Mission</span><span style="color:var(--blue2)">Market</span>
+        <span class="logo-word">Misnivo</span>
       </div>
     </div>
     <div class="search-wrap" style="position:relative;">
@@ -1037,7 +1035,7 @@
 
       <!-- ── MODE 1: TESTNET MOCK CREATIVE ────────────── -->
       <div id="adMockCreative" class="ad-placeholder-wrap">
-        <div class="ad-brand">Mission Market</div>
+        <div class="ad-brand">Misnivo</div>
         <div class="ad-headline" id="adHeadline">Challenge yourself. Get paid.</div>
         <div class="ad-desc"    id="adDesc">Post missions, earn real bounty money.</div>
         <div class="ad-testnet-badge">🧪 TESTNET AD</div>
@@ -1076,7 +1074,7 @@
 <div class="toast" id="toast"></div>
 
 <!-- App Logic -->
-<script src="/js/app.js?v=20260810j"></script>
+<script src="/js/app.js?v=20260810k"></script>
 
 <!-- ══ v0.19 NEW MODALS ══ -->
 
@@ -1087,7 +1085,7 @@
       <div class="modal-title" id="reportModalTitle">Report</div>
       <button class="modal-close" onclick="closeReportModal2()"><span class="mi">close</span></button>
     </div>
-    <p style="font-size:13px;color:var(--t2);margin-bottom:18px;line-height:1.6;">Help us keep Mission Market safe. Reports are reviewed within 24 hours.</p>
+    <p style="font-size:13px;color:var(--t2);margin-bottom:18px;line-height:1.6;">Help us keep Misnivo safe. Reports are reviewed within 24 hours.</p>
     <div class="f-group">
       <label class="f-label">Report Type</label>
       <select class="f-input" id="reportType" style="cursor:pointer;">
@@ -1334,7 +1332,7 @@
   <div class="modal guest-modal">
     <div class="guest-modal-icon" id="guestPromptIcon"></div>
     <div class="guest-modal-title" id="guestPromptTitle">Create a free account</div>
-    <div class="guest-modal-msg"   id="guestPromptMsg">Join Mission Market to post missions, accept challenges, and earn real money.</div>
+    <div class="guest-modal-msg"   id="guestPromptMsg">Join Misnivo to post missions, accept challenges, and earn real money.</div>
     <button class="btn-fill" onclick="leaveGuestMode('signup')" style="margin-bottom:8px;">Sign Up — it's free</button>
     <button class="btn-ghost-sm" onclick="leaveGuestMode('login')">Already have an account? Sign In</button>
     <button class="btn-ghost-sm btn-tiny" id="guestPromptDismiss" onclick="closeGuestPrompt()" style="margin-top:4px;">Continue browsing</button>

@@ -153,7 +153,7 @@ const AdManager = {
   creatives: [
     { headline: 'Challenge yourself. Get paid.',    desc: 'Post a mission and set your own bounty.', cta: 'Post a Mission →'    },
     { headline: 'Earn money doing missions!',           desc: 'Accept missions and win real bounty.',    cta: 'Start Earning →'  },
-    { headline: 'Your mission, your rules.',            desc: 'Set the bounty. Watch others try.',    cta: 'Try Mission Market →' },
+    { headline: 'Your mission, your rules.',            desc: 'Set the bounty. Watch others try.',    cta: 'Try Misnivo →' },
     { headline: 'Real money. Real challenges.',      desc: '100% escrow — bounty guaranteed.',    cta: 'See Missions →'      }
   ],
 
@@ -2248,7 +2248,7 @@ async function loadLeaderboard() {
 function shareDare(dareId, title) {
   const url = window.location.href.split('?')[0] + '?dare=' + dareId;
   if (navigator.share) {
-    navigator.share({ title:'Mission Market', text:`"${title}" — bounty up for grabs!`, url });
+    navigator.share({ title:'Misnivo', text:`"${title}" — bounty up for grabs!`, url });
   } else {
     navigator.clipboard.writeText(url).then(() => showToast('Link copied to clipboard!'));
   }
@@ -2576,7 +2576,7 @@ function _ppTab(el,id){
 function _pubShare(){
   const url=location.origin+'/u/'+(_ppUid||'');
   const name=_ppData?.name||'this creator';
-  if(navigator.share){ navigator.share({title:'Mission Market — '+name, url}).catch(()=>{}); }
+  if(navigator.share){ navigator.share({title:'Misnivo — '+name, url}).catch(()=>{}); }
   else if(navigator.clipboard){ navigator.clipboard.writeText(url).then(()=>showToast('Profile link copied')).catch(()=>showToast(url)); }
   else showToast(url);
 }
@@ -4244,7 +4244,7 @@ function _onGuestExpired() {
   showGuestPrompt({
     icon:  '⏰',
     title: 'Your guest session has ended',
-    msg:   'Your 15-minute preview is over. Create a free account to keep using Mission Market — it only takes 10 seconds!',
+    msg:   'Your 15-minute preview is over. Create a free account to keep using Misnivo — it only takes 10 seconds!',
   }, false); // false = NOT dismissible
 }
 
@@ -5421,7 +5421,7 @@ function _showInlineAd(player, p) {
     <div class="vd-ad-badge">Ad</div>
     <div class="vd-ad-body">
       <span class="mi" style="font-size:48px;color:var(--blue);">bolt</span>
-      <div class="vd-ad-title">Mission Market</div>
+      <div class="vd-ad-title">Misnivo</div>
       <div class="vd-ad-sub">Your video starts in <b id="vdAdCount">${secs}</b>s</div>
     </div>
     <button class="vd-ad-skip" id="vdAdSkip" disabled>Skip in ${secs}s</button>`;
