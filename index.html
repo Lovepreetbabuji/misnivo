@@ -32,7 +32,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,100..400,0..1,0&icon_names=account_balance_wallet,add,arrow_back,bolt,bookmark,chat_bubble,close,expand_less,explore,home,menu,more_vert,notifications,person,reply,search,send,settings,tune&display=block" rel="stylesheet"/>
 
 <!-- App Styles -->
-<link rel="stylesheet" href="/css/styles.css?v=20260811m"/>
+<link rel="stylesheet" href="/css/styles.css?v=20260811n"/>
 
 <!-- The splash logo must be in flight before anything else competes for the pipe -->
 <link rel="preload" as="image" href="/misnivo.png?v=1" fetchpriority="high"/>
@@ -1129,7 +1129,7 @@
 <!-- App Logic -->
 <!-- defer, so it runs after the Firebase bundles above and after the DOM is
      parsed — same order as before, but nothing blocks the first paint -->
-<script defer src="/js/app.js?v=20260811m"></script>
+<script defer src="/js/app.js?v=20260811n"></script>
 
 <!-- ══ v0.19 NEW MODALS ══ -->
 
@@ -1249,7 +1249,7 @@
       <div class="dd-bar dd-col1">
         <!-- Thumbnail bleeds to both edges; everything under it keeps a thin gutter. -->
         <div class="dd-hero" id="ddHero"></div>
-        <div class="dd-title2" id="ddDareTitle" onclick="openDareDetails()"></div>
+        <div class="dd-title2" onclick="openDareDetails()"><span class="dd-title-txt" id="ddDareTitle"></span><span class="dd-title-more">…</span></div>
 
         <!-- photo → username → Follow -->
         <div class="dd-idrow">
@@ -1337,7 +1337,7 @@
           <button class="vd-center-play" onclick="_vdTogglePlay()" aria-label="Play"><span class="mi">play_arrow</span></button>
           <span class="dd-bounty-badge" id="vdBountyBadge">$0</span>
         </div>
-        <div class="dd-title2" id="vdTitle">—</div>
+        <div class="dd-title2" onclick="toggleVideoDesc()"><span class="dd-title-txt" id="vdTitle">—</span><span class="dd-title-more">…</span></div>
         <div class="dd-rel-meta" id="vdMeta" style="margin:0 0 10px;">—</div>
         <!-- creator + taker dual profiles -->
         <div class="dd-creator vd2-collab" id="vdCollab">

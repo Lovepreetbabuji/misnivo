@@ -2533,7 +2533,7 @@ textarea.f-input{resize:vertical;min-height:84px;}
 /* Keep the main topbar visible — the dare / video page opens BELOW it */
 #dareDetailOverlay, #videoDetailOverlay{ top:56px; }
 /* Topbar turns solid (not transparent) while a detail overlay is open */
-body.detail-open .topbar{ background:rgba(10,10,10,.98) !important; backdrop-filter:none !important; -webkit-backdrop-filter:none !important; }
+body.detail-open .topbar{ background:#000 !important; backdrop-filter:none !important; -webkit-backdrop-filter:none !important; }
 
 /* Scroll-to-top arrow (appears after scrolling the comments/columns down) */
 .dd-scrolltop{ position:fixed; right:22px; bottom:22px; width:46px; height:46px; border-radius:50%; border:1px solid var(--border2); background:#1a1a1a; color:var(--t1); cursor:pointer; display:none; align-items:center; justify-content:center; z-index:170; box-shadow:0 6px 20px rgba(0,0,0,.55); }
@@ -5181,7 +5181,10 @@ body::after{
   #dareDetailOverlay .dd-col1{ padding:0 12px 24px !important; }
   /* flush to the top edge, so only the bottom pair curves */
   #dareDetailOverlay .dd-hero{ margin:0 -12px !important; width:auto !important; border-radius:0 0 14px 14px !important; }
-  #dareDetailOverlay .dd-col3{ margin:12px !important; }
+  #dareDetailOverlay .dd-col3{
+    margin:12px !important; background:#000 !important;
+    border:1px solid rgba(255,255,255,.22) !important; border-radius:14px !important;
+  }
   /* the caption is the only way into the description box on mobile */
   #dareDetailOverlay .dd-title2{ cursor:pointer; }
 }
@@ -5209,3 +5212,10 @@ body::after{
   }
   #dareDetailOverlay .dd-col2{ align-self:flex-start; }
 }
+
+/* ── detail captions: one line, and a … that is always there. The clipped span
+      plus a standalone … means the sign shows whether or not the text overflows,
+      so the caption always reads as something you can tap. ── */
+.dd-title2{ display:flex !important; align-items:baseline; gap:3px; cursor:pointer; }
+.dd-title-txt{ min-width:0; overflow:hidden; white-space:nowrap; }
+.dd-title-more{ flex-shrink:0; color:rgba(255,255,255,.55); font-weight:600; }

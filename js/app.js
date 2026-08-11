@@ -5363,7 +5363,16 @@ function _ddSyncSave(){
   const i = b.querySelector('.mi'); if (i) i.textContent = pinned ? 'bookmark' : 'bookmark_border';
   const l = document.getElementById('ddSaveLbl'); if (l) l.textContent = pinned ? 'Saved' : 'Save';
 }
+// increment(-1) on a zero used to push the stored count below zero — clamp what
+// we show and repair the document once so the -1 does not come back.
+function _ddRepairCounts(d){
+  const fix = {};
+  if ((d.likeCount||0)    < 0){ d.likeCount    = 0; fix.likeCount    = 0; }
+  if ((d.dislikeCount||0) < 0){ d.dislikeCount = 0; fix.dislikeCount = 0; }
+  if (Object.keys(fix).length) db.collection('dares').doc(d.id).update(fix).catch(()=>{});
+}
 function _ddUpdateLikeUI(d){
+  _ddRepairCounts(d);
   const liked = user && (d.likedBy||[]).includes(user.uid);
   const disliked = user && (d.dislikedBy||[]).includes(user.uid);
   const _lb = document.getElementById('ddLikeBtn'), _db = document.getElementById('ddDislikeBtn');
@@ -5375,6 +5384,11 @@ function _ddUpdateLikeUI(d){
   document.getElementById('ddLikeCount').textContent = _fmtCount(d.likeCount||0);
   document.getElementById('ddDislikeCount').textContent = _fmtCount(d.dislikeCount||0);
 }
+// Zero is the floor: below it there is nothing to give back, so write the floor
+// rather than an increment that would keep digging.
+function _decCount(current){
+  return current > 0 ? firebase.firestore.FieldValue.increment(-1) : 0;
+}
 async function likeDare(){
   if (!user) { showToast('Sign in to like'); return; }
   const d = dares.find(x=>x.id===_ddCurrentId); if (!d) return;
@@ -5382,13 +5396,16 @@ async function likeDare(){
   const liked = d.likedBy.includes(user.uid);
   const upd = {};
   if (liked){
-    d.likedBy = d.likedBy.filter(u=>u!==user.uid); d.likeCount = Math.max(0,(d.likeCount||0)-1);
-    upd.likedBy = firebase.firestore.FieldValue.arrayRemove(user.uid); upd.likeCount = firebase.firestore.FieldValue.increment(-1);
+    // second tap on Like just takes the like back — it never becomes a dislike
+    const was = d.likeCount||0;
+    d.likedBy = d.likedBy.filter(u=>u!==user.uid); d.likeCount = Math.max(0, was-1);
+    upd.likedBy = firebase.firestore.FieldValue.arrayRemove(user.uid); upd.likeCount = _decCount(was);
   } else {
     d.likedBy.push(user.uid); d.likeCount = (d.likeCount||0)+1;
     upd.likedBy = firebase.firestore.FieldValue.arrayUnion(user.uid); upd.likeCount = firebase.firestore.FieldValue.increment(1);
-    if (d.dislikedBy.includes(user.uid)){ d.dislikedBy = d.dislikedBy.filter(u=>u!==user.uid); d.dislikeCount = Math.max(0,(d.dislikeCount||0)-1);
-      upd.dislikedBy = firebase.firestore.FieldValue.arrayRemove(user.uid); upd.dislikeCount = firebase.firestore.FieldValue.increment(-1); }
+    if (d.dislikedBy.includes(user.uid)){ const wasD = d.dislikeCount||0;
+      d.dislikedBy = d.dislikedBy.filter(u=>u!==user.uid); d.dislikeCount = Math.max(0, wasD-1);
+      upd.dislikedBy = firebase.firestore.FieldValue.arrayRemove(user.uid); upd.dislikeCount = _decCount(wasD); }
   }
   _ddUpdateLikeUI(d);
   db.collection('dares').doc(d.id).update(upd).catch(()=>{});
@@ -5400,13 +5417,15 @@ async function dislikeDare(){
   const disliked = d.dislikedBy.includes(user.uid);
   const upd = {};
   if (disliked){
-    d.dislikedBy = d.dislikedBy.filter(u=>u!==user.uid); d.dislikeCount = Math.max(0,(d.dislikeCount||0)-1);
-    upd.dislikedBy = firebase.firestore.FieldValue.arrayRemove(user.uid); upd.dislikeCount = firebase.firestore.FieldValue.increment(-1);
+    const was = d.dislikeCount||0;
+    d.dislikedBy = d.dislikedBy.filter(u=>u!==user.uid); d.dislikeCount = Math.max(0, was-1);
+    upd.dislikedBy = firebase.firestore.FieldValue.arrayRemove(user.uid); upd.dislikeCount = _decCount(was);
   } else {
     d.dislikedBy.push(user.uid); d.dislikeCount = (d.dislikeCount||0)+1;
     upd.dislikedBy = firebase.firestore.FieldValue.arrayUnion(user.uid); upd.dislikeCount = firebase.firestore.FieldValue.increment(1);
-    if (d.likedBy.includes(user.uid)){ d.likedBy = d.likedBy.filter(u=>u!==user.uid); d.likeCount = Math.max(0,(d.likeCount||0)-1);
-      upd.likedBy = firebase.firestore.FieldValue.arrayRemove(user.uid); upd.likeCount = firebase.firestore.FieldValue.increment(-1); }
+    if (d.likedBy.includes(user.uid)){ const wasL = d.likeCount||0;
+      d.likedBy = d.likedBy.filter(u=>u!==user.uid); d.likeCount = Math.max(0, wasL-1);
+      upd.likedBy = firebase.firestore.FieldValue.arrayRemove(user.uid); upd.likeCount = _decCount(wasL); }
   }
   _ddUpdateLikeUI(d);
   db.collection('dares').doc(d.id).update(upd).catch(()=>{});
