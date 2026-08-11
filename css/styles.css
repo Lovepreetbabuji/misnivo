@@ -4888,3 +4888,37 @@ body.no-anim .hero-fly{ display:none !important; }
 /* Comment rows used to fade in on every render — with a full list rebuild after
    each action, that fade WAS the blink. */
 .vd-comment{ animation:none !important; }
+
+/* ══ Comment footer: the input row was still a frosted grey bar ══ */
+.dd-cbox-foot{
+  background:#000 !important;
+  border-top:1px solid rgba(255,255,255,.10) !important;
+}
+.vd-comment-field{
+  background:#000 !important;
+  backdrop-filter:none !important; -webkit-backdrop-filter:none !important;
+  border:1px solid rgba(255,255,255,.18) !important;
+}
+.vd-comment-field:focus-within{ border-color:rgba(255,255,255,.4) !important; }
+.vd-comment-input{ font-size:14px !important; }
+
+/* Send: the thin outlined face the drawer/topbar buttons use */
+.vd-comment-send-btn .mi{
+  font-family:'Material Symbols Outlined','Material Icons Round' !important;
+  font-variation-settings:'FILL' 0,'wght' 200,'GRAD' 0,'opsz' 24;
+}
+
+/* Bottom "Hide replies" sits under a fully expanded thread */
+.cmt-rephide{ display:flex; align-items:center; gap:6px; }
+.cmt-rephide .mi{
+  font-size:18px;
+  font-family:'Material Symbols Outlined','Material Icons Round';
+  font-variation-settings:'FILL' 0,'wght' 200,'GRAD' 0,'opsz' 24;
+}
+
+/* the shorts sheet's own input row, same treatment */
+.shorts-comment-input-row, .shorts-cmt-input, .shorts-rowcmts-input{
+  background:#000 !important;
+  backdrop-filter:none !important; -webkit-backdrop-filter:none !important;
+  border-top:1px solid rgba(255,255,255,.10) !important;
+}

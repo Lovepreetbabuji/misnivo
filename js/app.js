@@ -5473,7 +5473,8 @@ function _ddToggleReplies(id, btn){
   const box = btn.nextElementSibling; if (!box) return;
   const show = box.style.display === 'none';
   box.style.display = show ? '' : 'none';
-  if (show) _repOpen.add(id); else _repOpen.delete(id);
+  if (show) _repOpen.add(id);
+  else { _repOpen.delete(id); delete _repShown[id]; }   // collapsed → next open starts at 10 again
   const n = box.children.length;
   btn.innerHTML = show
     ? '<span class="mi">expand_less</span> Hide replies'
@@ -5484,6 +5485,14 @@ function _ddToggleReplies(id, btn){
 // dump all 60 the moment it opened; it now shows ten and grows in tens.
 const _REP_PAGE = 10;
 const _repShown = {};                      // comment id -> replies currently rendered
+// Collapse from the bottom button: fold the thread and put the top toggle back
+// to its 'Show N replies' state.
+function _repHide(id, btn){
+  _repOpen.delete(id); delete _repShown[id];
+  const box = btn.closest('.vd-replies, .shorts-replies');
+  if (box && box.closest('#shortsCommentsList, .shorts-rowcmts')) _renderShortsCommentsList();
+  else _renderDareCommentsBox();
+}
 function _repMore(id, btn){
   _repShown[id] = (_repShown[id] || _REP_PAGE) + _REP_PAGE;
   const box = btn.closest('.vd-replies, .shorts-replies');
@@ -5499,9 +5508,13 @@ function _repMarkup(id, replies, inner, cls){
   const label = open ? '<span class="mi">expand_less</span> Hide replies'
                      : `<span class="mi">expand_more</span> Show ${n} repl${n>1?'ies':'y'}`;
   const shown = Math.min(n, _repShown[id] || _REP_PAGE);
+  // More to load → a Show button. Everything already on screen and the thread
+  // is long enough to have scrolled the top toggle away → a Hide down here too.
   const more = n > shown
     ? `<button class="cmt-repmore" onclick="event.stopPropagation();_repMore('${id}',this)">Show ${Math.min(_REP_PAGE, n-shown)} more repl${(n-shown)>1?'ies':'y'}</button>`
-    : '';
+    : (n > _REP_PAGE
+        ? `<button class="cmt-repmore cmt-rephide" onclick="event.stopPropagation();_repHide('${id}',this)"><span class="mi">expand_less</span> Hide replies</button>`
+        : '');
   return [
     `<button class="cmt-reptoggle" onclick="event.stopPropagation();_ddToggleReplies('${id}',this)">${label}</button>`,
     `<div class="${cls}" id="reps-${id}"${open?'':' style="display:none;"'}>${inner}${more}</div>`
@@ -6531,16 +6544,19 @@ function shortsToggleComments() {
 let _shortsComments = [];
 let _shortsCommentsProofId = null;
 
-async function loadShortsComments(proofId) {
+// quiet = we already have this proof's comments on screen; refresh underneath
+// instead of blanking to 'Loading...'. Posting a comment called this and the
+// whole list flashed away and back every time.
+async function loadShortsComments(proofId, quiet) {
   const box = document.getElementById('shortsCommentsList');
-  box.innerHTML = '<div style="color:var(--t3);text-align:center;padding:20px;">Loading...</div>';
+  if (box && !quiet) box.innerHTML = '<div style="color:var(--t3);text-align:center;padding:20px;">Loading...</div>';
   try {
     const snap = await db.collection('comments').where('proofId','==',proofId).limit(80).get();
     _shortsComments = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
     _shortsCommentsProofId = proofId;
     _renderShortsCommentsList();
   } catch(e) {
-    box.innerHTML = '<div style="color:var(--t3);text-align:center;padding:20px;">Could not load comments</div>';
+    if (box && !quiet) box.innerHTML = '<div style="color:var(--t3);text-align:center;padding:20px;">Could not load comments</div>';
   }
 }
 function _shortsActiveId(){ return document.getElementById('shortsOverlay')?.dataset.proofId; }
@@ -6666,7 +6682,14 @@ async function submitShortsComment() {
       const cc = document.querySelector('.shorts-snap-item.active .shorts-comment-count');
       if (cc) cc.textContent = _fmtCount(p.commentCount);
     }
-    loadShortsComments(pid);
+    // show it straight away, then reconcile with the server without a flash
+    _shortsComments = (_shortsComments || []).concat([{
+      id: 'tmp_' + Date.now(), proofId: pid, userId: user.uid, userName: user.name || 'user',
+      userPhotoURL: user.picture || '', text, likes: 0, likeCount: 0, likedBy: [], parentId,
+      pinned: false, createdAt: firebase.firestore.Timestamp.now()
+    }]);
+    _renderShortsCommentsList();
+    loadShortsComments(pid, true);
   } catch(e) { showToast('Could not post comment'); }
 }
 
