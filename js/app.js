@@ -4417,6 +4417,18 @@ function _vdReplyHtml(c) {
   </div>`;
 }
 // Like/unlike a comment (works for both video-detail & shorts; updates whichever list is cached)
+// Re-rendering a whole comment list means every avatar <img> is destroyed and
+// rebuilt, and the browser repaints them a frame later — that gap is the blink
+// after every like. Liking only ever changes one button, so patch that button.
+function _patchCmtLike(commentId, c){
+  const liked = !!(user && (c.likedBy||[]).includes(user.uid));
+  const n = c.likeCount || 0;
+  document.querySelectorAll('[data-cmt-like="' + commentId + '"]').forEach(function(btn){
+    btn.classList.toggle('liked', liked);
+    btn.innerHTML = '<span class="mi">thumb_up</span>' + (n > 0 ? ' ' + _fmtCount(n) : '');
+  });
+}
+
 async function likeComment(commentId) {
   if (!user) { showToast('Sign in to like'); return; }
   const lists = [commentsCache[commentsProofId], _shortsComments];
@@ -4427,9 +4439,7 @@ async function likeComment(commentId) {
   const liked = c.likedBy.includes(user.uid);
   if (liked) { c.likedBy = c.likedBy.filter(u=>u!==user.uid); c.likeCount = Math.max(0,(c.likeCount||0)-1); }
   else { c.likedBy.push(user.uid); c.likeCount = (c.likeCount||0)+1; }
-  // Re-render whichever view is open
-  if (commentsCache[commentsProofId]) _renderComments(commentsCache[commentsProofId]);
-  if (_shortsComments && _shortsCommentsProofId) _renderShortsCommentsList();
+  _patchCmtLike(commentId, c);   // patch the one button, don't rebuild the list
   try {
     await db.collection('comments').doc(commentId).update({
       likedBy:  liked ? firebase.firestore.FieldValue.arrayRemove(user.uid) : firebase.firestore.FieldValue.arrayUnion(user.uid),
@@ -5429,7 +5439,7 @@ function _ddCommentHtml(c, replies){
     else if (c.pinnedBy === (user&&user.uid)) pinItem = `<button onclick="event.stopPropagation();pinDareComment('${c.id}')"><span class="mi">push_pin</span> Unpin</button>`;
   }
   const acts = `<div class="vd-comment-acts">
-      <button class="cmt-act${liked?' liked':''}" onclick="event.stopPropagation();likeDareComment('${c.id}')"><span class="mi">thumb_up</span>${likeN>0?' '+_fmtCount(likeN):''}</button>
+      <button class="cmt-act${liked?' liked':''}" data-cmt-like="${c.id}" onclick="event.stopPropagation();likeDareComment('${c.id}')"><span class="mi">thumb_up</span>${likeN>0?' '+_fmtCount(likeN):''}</button>
       <button class="cmt-act" onclick="event.stopPropagation();startDareReply('${c.id}','${safeName}')">Reply</button>
       <span class="cmt-more"><button class="cmt-3dots" onclick="event.stopPropagation();_ddToggleCmtMenu(this)"><span class="mi">more_vert</span></button>
         <span class="cmt-menu">${pinItem}<button onclick="event.stopPropagation();reportComment('${c.id}','${safeName}')"><span class="mi">flag</span> Report</button></span></span>
@@ -5438,7 +5448,7 @@ function _ddCommentHtml(c, replies){
   // Replies are HIDDEN by default behind a "Show N replies" toggle
   let repToggle = '', repHtml = '';
   if (replies && replies.length){
-    [repToggle, repHtml] = _repMarkup(c.id, replies, replies.map(r=>_ddCommentHtml(r,null)).join(''), 'vd-replies');
+    [repToggle, repHtml] = _repMarkup(c.id, replies, replies.slice(0, _repShown[c.id] || _REP_PAGE).map(r=>_ddCommentHtml(r,null)).join(''), 'vd-replies');
   }
   return `<div class="vd-comment${replies===null?' vd-reply':''}${c.pinned&&replies!==null?' cmt-is-pinned':''}">
     <div class="vd-comment-av">${_avHtml(c.userPhotoURL, c.userName)}</div>
@@ -5470,15 +5480,31 @@ function _ddToggleReplies(id, btn){
     : `<span class="mi">expand_more</span> Show ${n} repl${n>1?'ies':'y'}`;
 }
 
+// How many replies of a thread are on screen. A thread with 60 replies used to
+// dump all 60 the moment it opened; it now shows ten and grows in tens.
+const _REP_PAGE = 10;
+const _repShown = {};                      // comment id -> replies currently rendered
+function _repMore(id, btn){
+  _repShown[id] = (_repShown[id] || _REP_PAGE) + _REP_PAGE;
+  const box = btn.closest('.vd-replies, .shorts-replies');
+  // re-render through whichever list owns this thread
+  if (box && box.closest('#shortsCommentsList, .shorts-rowcmts')) _renderShortsCommentsList();
+  else _renderDareCommentsBox();
+}
+
 // Shared toggle + container markup, so both comment lists respect _repOpen
 function _repMarkup(id, replies, inner, cls){
   if (!replies || !replies.length) return ['',''];
   const open = _repOpen.has(id), n = replies.length;
   const label = open ? '<span class="mi">expand_less</span> Hide replies'
                      : `<span class="mi">expand_more</span> Show ${n} repl${n>1?'ies':'y'}`;
+  const shown = Math.min(n, _repShown[id] || _REP_PAGE);
+  const more = n > shown
+    ? `<button class="cmt-repmore" onclick="event.stopPropagation();_repMore('${id}',this)">Show ${Math.min(_REP_PAGE, n-shown)} more repl${(n-shown)>1?'ies':'y'}</button>`
+    : '';
   return [
     `<button class="cmt-reptoggle" onclick="event.stopPropagation();_ddToggleReplies('${id}',this)">${label}</button>`,
-    `<div class="${cls}" id="reps-${id}"${open?'':' style="display:none;"'}>${inner}</div>`
+    `<div class="${cls}" id="reps-${id}"${open?'':' style="display:none;"'}>${inner}${more}</div>`
   ];
 }
 // Re-render both the col-1 preview AND (if open) the comments box
@@ -5555,7 +5581,8 @@ async function likeDareComment(commentId){
   const liked = c.likedBy.includes(user.uid);
   if (liked){ c.likedBy = c.likedBy.filter(u=>u!==user.uid); c.likeCount = Math.max(0,(c.likeCount||0)-1); }
   else { c.likedBy.push(user.uid); c.likeCount = (c.likeCount||0)+1; }
-  _renderDareComments();
+  _patchCmtLike(commentId, c);   // patch the one button, don't rebuild the list
+  _ddUpdateCount();
   try {
     await db.collection('comments').doc(commentId).update({
       likedBy: liked ? firebase.firestore.FieldValue.arrayRemove(user.uid) : firebase.firestore.FieldValue.arrayUnion(user.uid),
@@ -6552,7 +6579,7 @@ function _shortsCommentHtml(c, replies, canPin) {
   }
   let repToggle = '', repHtml = '';
   if (replies && replies.length){
-    [repToggle, repHtml] = _repMarkup(c.id, replies, replies.map(r=>_shortsReplyHtml(r)).join(''), 'shorts-replies');
+    [repToggle, repHtml] = _repMarkup(c.id, replies, replies.slice(0, _repShown[c.id] || _REP_PAGE).map(r=>_shortsReplyHtml(r)).join(''), 'shorts-replies');
   }
   return `<div class="shorts-comment ${c.pinned?'pinned':''}">
     <div class="shorts-comment-av">${_avHtml(c.userPhotoURL, c.userName)}</div>
@@ -6561,7 +6588,7 @@ function _shortsCommentHtml(c, replies, canPin) {
       <div class="shorts-comment-head">@${escHtml(c.userName||'user')}</div>
       <div class="shorts-comment-text">${escHtml(c.text||'')}</div>
       <div class="shorts-comment-acts vd-comment-acts">
-        <button class="cmt-act ${liked?'liked':''}" onclick="likeComment('${c.id}')"><span class="mi">thumb_up</span>${likeN>0?' '+_fmtCount(likeN):''}</button>
+        <button class="cmt-act ${liked?'liked':''}" data-cmt-like="${c.id}" onclick="likeComment('${c.id}')"><span class="mi">thumb_up</span>${likeN>0?' '+_fmtCount(likeN):''}</button>
         <button class="cmt-act" onclick="startShortsReply('${c.id}','${safeName}')">Reply</button>
         <span class="cmt-more"><button class="cmt-3dots" onclick="event.stopPropagation();_ddToggleCmtMenu(this)"><span class="mi">more_vert</span></button>
           <span class="cmt-menu">${pinItem}<button onclick="event.stopPropagation();reportComment('${c.id}','${safeName}')"><span class="mi">flag</span> Report</button></span></span>
@@ -6580,7 +6607,7 @@ function _shortsReplyHtml(c) {
       <div class="shorts-comment-head">@${escHtml(c.userName||'user')}</div>
       <div class="shorts-comment-text">${escHtml(c.text||'')}</div>
       <div class="shorts-comment-acts vd-comment-acts">
-        <button class="cmt-act ${liked?'liked':''}" onclick="likeComment('${c.id}')"><span class="mi">thumb_up</span>${likeN>0?' '+_fmtCount(likeN):''}</button>
+        <button class="cmt-act ${liked?'liked':''}" data-cmt-like="${c.id}" onclick="likeComment('${c.id}')"><span class="mi">thumb_up</span>${likeN>0?' '+_fmtCount(likeN):''}</button>
         <button class="cmt-act" onclick="startShortsReply('${c.id}','${safeName}')">Reply</button>
         <span class="cmt-more"><button class="cmt-3dots" onclick="event.stopPropagation();_ddToggleCmtMenu(this)"><span class="mi">more_vert</span></button>
           <span class="cmt-menu"><button onclick="event.stopPropagation();reportComment('${c.id}','${safeName}')"><span class="mi">flag</span> Report</button></span></span>

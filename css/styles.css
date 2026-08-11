@@ -4847,3 +4847,44 @@ body.no-anim .hero-fly{ display:none !important; }
   .shorts-center-play, .vd-center-play{ transition:none; }
   .shorts-dbl-heart.pop{ animation-duration:.01s; }
 }
+
+/* ══ Comment surfaces: flat black, no glass ══
+   Same surface as the hamburger drawer, so the sheet reads as part of the app
+   rather than a frosted panel floating over it. */
+.dd-cbox, .shorts-comments, .shorts-rowcmts{
+  background:#000 !important;
+  backdrop-filter:none !important; -webkit-backdrop-filter:none !important;
+  border-top:1px solid rgba(255,255,255,.10) !important;
+  box-shadow:none !important;
+}
+.dd-cbox-head{ border-bottom:1px solid rgba(255,255,255,.10) !important; }
+.dd-cbox-close{
+  background:transparent !important; border:none !important; color:#fff !important;
+}
+.dd-cbox-close:hover{ background:rgba(255,255,255,.10) !important; }
+
+/* Send: the icon itself, not a coloured disc around it */
+.vd-comment-send-btn{
+  width:38px !important; height:38px !important;
+  background:transparent !important;
+  border:none !important; border-radius:50% !important;
+  color:#fff !important;
+  transition:background .15s ease !important;
+}
+.vd-comment-send-btn:hover{ background:rgba(255,255,255,.10) !important; }
+.vd-comment-send-btn:active{ background:rgba(255,255,255,.16) !important; }
+.vd-comment-send-btn .mi{ font-size:22px !important; color:#fff !important; }
+.vd-comment-send-btn:disabled{ opacity:.4; }
+
+/* "Show N more replies" under a thread */
+.cmt-repmore{
+  display:block; margin:10px 0 2px;
+  background:none; border:none; padding:4px 0;
+  color:rgba(255,255,255,.75); font-family:inherit; font-size:13px; font-weight:500;
+  cursor:pointer; -webkit-tap-highlight-color:transparent;
+}
+.cmt-repmore:hover{ color:#fff; }
+
+/* Comment rows used to fade in on every render — with a full list rebuild after
+   each action, that fade WAS the blink. */
+.vd-comment{ animation:none !important; }
