@@ -4523,11 +4523,12 @@ function _renderRelatedVideos(currentProof) {
 async function _renderVideoDetail(p) {
   if(user){
     db.collection('proofs').doc(p.id).update({viewCount:firebase.firestore.FieldValue.increment(1)})
-      .then(()=>{const n=(p.viewCount||0)+1;p.viewCount=n;const m=document.getElementById('vdMeta');if(m)m.textContent=`${n.toLocaleString('en-IN')} views · ${_relTime(p)}`;_checkViewMilestone(p.id,n,p.takerId,p.dareTitle);}).catch(()=>{});
+      .then(()=>{const n=(p.viewCount||0)+1;p.viewCount=n;const m=document.getElementById('vdMeta');if(m)m.textContent=`${_relTime(p)} • ${n.toLocaleString('en-IN')} views`;_checkViewMilestone(p.id,n,p.takerId,p.dareTitle);}).catch(()=>{});
   }
   // video src is set by openVideoDetail (after ad) — not here
   document.getElementById('vdTitle').textContent = p.dareTitle||'Mission Video';
-  document.getElementById('vdMeta').textContent  = `${(p.viewCount||0).toLocaleString('en-IN')} views · ${_relTime(p)}`;
+  const _vdCap=document.getElementById('vdDescCap'); if(_vdCap) _vdCap.textContent = p.dareTitle||'Mission Video';
+  document.getElementById('vdMeta').textContent  = `${_relTime(p)} • ${(p.viewCount||0).toLocaleString('en-IN')} views`;
   // Bounty badge on the video (top-right) — $ prefixed, no expiry
   const bb=document.getElementById('vdBountyBadge'); if(bb) bb.textContent='$'+(p.dareBounty||0).toLocaleString('en-IN');
   // Creator + Taker dual profiles
@@ -4579,23 +4580,33 @@ async function _renderVideoDetail(p) {
 }
 function _vdUpdateDislikeUI(p){
   const btn=document.getElementById('vdDislikeBtn'); if(!btn) return;
+  _vdRepairCounts(p);
   const disliked = user && (p.dislikedBy||[]).includes(user.uid);
   btn.classList.toggle('liked', !!disliked);
+  const i=btn.querySelector('.mi'); if(i) i.textContent = disliked ? 'thumb_down' : 'thumb_down_off_alt';
   const c=document.getElementById('vdDislikeCount'); if(c) c.textContent=_fmtCount(p.dislikeCount||0);
+}
+// Same floor the missions got: increment(-1) used to fire on a stored zero.
+function _vdRepairCounts(p){
+  const fix={};
+  if((p.likeCount||0)    < 0){ p.likeCount=0;    fix.likeCount=0; }
+  if((p.dislikeCount||0) < 0){ p.dislikeCount=0; fix.dislikeCount=0; }
+  if(Object.keys(fix).length) db.collection('proofs').doc(p.id).update(fix).catch(()=>{});
 }
 async function dislikeProof(){
   if(!user){ showToast('Sign in to dislike'); return; }
   const p=activeProof; if(!p) return;
   p.dislikedBy=p.dislikedBy||[]; const d=p.dislikedBy.includes(user.uid);
-  if(d){ p.dislikedBy=p.dislikedBy.filter(u=>u!==user.uid); p.dislikeCount=Math.max(0,(p.dislikeCount||0)-1); }
-  else { p.dislikedBy.push(user.uid); p.dislikeCount=(p.dislikeCount||0)+1; }
+  const _wasD=p.dislikeCount||0;
+  if(d){ p.dislikedBy=p.dislikedBy.filter(u=>u!==user.uid); p.dislikeCount=Math.max(0,_wasD-1); }
+  else { p.dislikedBy.push(user.uid); p.dislikeCount=_wasD+1; }
   _vdUpdateDislikeUI(p);
-  db.collection('proofs').doc(p.id).update({ dislikedBy:d?firebase.firestore.FieldValue.arrayRemove(user.uid):firebase.firestore.FieldValue.arrayUnion(user.uid), dislikeCount:firebase.firestore.FieldValue.increment(d?-1:1) }).catch(()=>{});
+  db.collection('proofs').doc(p.id).update({ dislikedBy:d?firebase.firestore.FieldValue.arrayRemove(user.uid):firebase.firestore.FieldValue.arrayUnion(user.uid), dislikeCount:d?_decCount(_wasD):firebase.firestore.FieldValue.increment(1) }).catch(()=>{});
   // mutually exclusive: a new dislike clears an existing like
   if(!d && userLikes.includes(p.id)){
     userLikes=userLikes.filter(id=>id!==p.id);
-    p.likeCount=Math.max(0,(p.likeCount||0)-1);
-    db.collection('proofs').doc(p.id).update({likeCount:firebase.firestore.FieldValue.increment(-1)}).catch(()=>{});
+    const _wasL=p.likeCount||0; p.likeCount=Math.max(0,_wasL-1);
+    db.collection('proofs').doc(p.id).update({likeCount:_decCount(_wasL)}).catch(()=>{});
     db.collection('users').doc(user.uid).update({likedProofs:userLikes}).catch(()=>{});
     _updateLikeBtn(p.id, p.likeCount);
   }
@@ -4619,14 +4630,21 @@ function _vdTogglePlay(){
 }
 
 // Description/rules toggle — desktop reveals the middle column (3 cols); mobile = drawer
-function toggleVideoDesc(){
-  const ov=document.getElementById('videoDetailOverlay'); if(!ov) return;
-  if(window.innerWidth<=768){ ov.querySelector('.dd-col2')?.classList.toggle('open'); }
-  else { ov.classList.toggle('vd-show-desc'); }
+function openVideoDesc(){
+  if (window.innerWidth > 768) return;                 // desktop keeps the box open permanently
+  document.querySelector('#videoDetailOverlay .dd-col2')?.classList.add('open');
+  _subOpen('vdDetailsDrawer');
 }
 function closeVideoDesc(){
+  _subDrop('vdDetailsDrawer');
   const ov=document.getElementById('videoDetailOverlay'); if(!ov) return;
   ov.querySelector('.dd-col2')?.classList.remove('open'); ov.classList.remove('vd-show-desc');
+}
+function dismissVideoDesc(){ _subDismiss('vdDetailsDrawer', closeVideoDesc); }
+// The caption is the way in now, so this is open/close rather than a class flip.
+function toggleVideoDesc(){
+  const col2=document.querySelector('#videoDetailOverlay .dd-col2'); if(!col2) return;
+  if (col2.classList.contains('open')) dismissVideoDesc(); else openVideoDesc();
 }
 // Scroll-to-top for the video page
 function _vdScroller(){ const ov=document.getElementById('videoDetailOverlay'); if(!ov) return null; if(window.innerWidth>=769){ const c=ov.querySelector('.dd-col1'); if(c) return c; } return ov; }
@@ -4728,7 +4746,7 @@ function _updateLikeBtn(proofId,count) {
   const isLiked=userLikes.includes(proofId);
   const btn=document.getElementById('vdLikeBtn'); const cntEl=document.getElementById('vdLikeCount');
   if(!btn) return;
-  const mi=btn.querySelector('.mi'); if(mi){ mi.textContent='bolt'; mi.style.color=isLiked?'var(--blue)':''; }
+  const mi=btn.querySelector('.mi'); if(mi){ mi.textContent = isLiked ? 'thumb_up' : 'thumb_up_off_alt'; mi.style.color=''; }
   btn.classList.toggle('liked',isLiked);
   if(cntEl) cntEl.textContent=count.toLocaleString('en-IN');
 }
@@ -5010,8 +5028,10 @@ function _ddBindSwipe(overlayId){
     // its history entry — the caption is the only other way in now, and back
     // has to close the drawer rather than the whole mission.
     const isDare = ov.id === 'dareDetailOverlay';
-    if (dx<0 && col2 && !open){ if (isDare) openDareDetails(); else col2.classList.add('open'); }        // swipe left → open
-    else if (dx>0 && open)   { if (isDare) dismissDareDetails(); else col2.classList.remove('open'); }   // swipe right → close
+    const openFn  = isDare ? openDareDetails    : openVideoDesc;
+    const closeFn = isDare ? dismissDareDetails : dismissVideoDesc;
+    if (dx<0 && col2 && !open) openFn();        // swipe left → open
+    else if (dx>0 && open)     closeFn();       // swipe right → close
   }, {passive:true});
 }
 // Which element actually scrolls? desktop = column 1; mobile = the overlay itself.
@@ -5297,6 +5317,7 @@ window.addEventListener('popstate', function(e){
   // out of these layers grow the stack instead of shrink it
   if (isOpen('ddCommentsBox')){ closeDareComments(); return; }
   if (isOpen('ddDetailsDrawer')){ closeDareDetails(); return; }
+  if (isOpen('vdDetailsDrawer')){ closeVideoDesc(); return; }
   if (isOpen('shortsDetailsDrawer')){ shortsCloseDetails(); return; }
   if (isOpen('collabModal')){ closeCollabModal(); return; }
   if (isOpen('notifPanel')){ _notifCloseNow(); return; }
@@ -6022,8 +6043,9 @@ async function toggleLike(proofId) {
   let newCount=0;
   if(isLiked){
     userLikes=userLikes.filter(id=>id!==proofId);
-    if(p){p.likeCount=Math.max(0,(p.likeCount||0)-1);newCount=p.likeCount;}
-    db.collection('proofs').doc(proofId).update({likeCount:firebase.firestore.FieldValue.increment(-1)}).catch(()=>{});
+    const _wasL=p?(p.likeCount||0):1;
+    if(p){p.likeCount=Math.max(0,_wasL-1);newCount=p.likeCount;}
+    db.collection('proofs').doc(proofId).update({likeCount:_decCount(_wasL)}).catch(()=>{});
   } else {
     userLikes.push(proofId);
     if(p){p.likeCount=(p.likeCount||0)+1;newCount=p.likeCount;}
@@ -6031,9 +6053,10 @@ async function toggleLike(proofId) {
       .then(()=>_checkLikeMilestone(proofId,newCount,p?.takerId,p?.dareTitle)).catch(()=>{});
     // mutually exclusive: liking clears an existing dislike
     if(p && (p.dislikedBy||[]).includes(user.uid)){
+      const _wasD=p.dislikeCount||0;
       p.dislikedBy=p.dislikedBy.filter(u=>u!==user.uid);
-      p.dislikeCount=Math.max(0,(p.dislikeCount||0)-1);
-      db.collection('proofs').doc(proofId).update({dislikedBy:firebase.firestore.FieldValue.arrayRemove(user.uid),dislikeCount:firebase.firestore.FieldValue.increment(-1)}).catch(()=>{});
+      p.dislikeCount=Math.max(0,_wasD-1);
+      db.collection('proofs').doc(proofId).update({dislikedBy:firebase.firestore.FieldValue.arrayRemove(user.uid),dislikeCount:_decCount(_wasD)}).catch(()=>{});
       if(activeProof && activeProof.id===proofId) _vdUpdateDislikeUI(p);
     }
   }
@@ -6427,16 +6450,19 @@ async function shortsDislikeSlide(proofId, btn){
   if (!p) return;
   p.dislikedBy = p.dislikedBy || [];
   const had = p.dislikedBy.includes(user.uid);
-  if (had){ p.dislikedBy = p.dislikedBy.filter(u=>u!==user.uid); p.dislikeCount = Math.max(0,(p.dislikeCount||0)-1); }
-  else    { p.dislikedBy.push(user.uid);                         p.dislikeCount = (p.dislikeCount||0)+1; }
+  // shorts writes the same proof docs the video page reads, so it needs the
+  // same floor — otherwise a count repaired here comes back negative from there
+  const _wasD = p.dislikeCount||0;
+  if (had){ p.dislikedBy = p.dislikedBy.filter(u=>u!==user.uid); p.dislikeCount = Math.max(0,_wasD-1); }
+  else    { p.dislikedBy.push(user.uid);                         p.dislikeCount = _wasD+1; }
   db.collection('proofs').doc(proofId).update({
     dislikedBy: had ? firebase.firestore.FieldValue.arrayRemove(user.uid) : firebase.firestore.FieldValue.arrayUnion(user.uid),
-    dislikeCount: firebase.firestore.FieldValue.increment(had ? -1 : 1)
+    dislikeCount: had ? _decCount(_wasD) : firebase.firestore.FieldValue.increment(1)
   }).catch(()=>{});
   if (!had && typeof userLikes !== 'undefined' && userLikes.includes(proofId)){
     userLikes = userLikes.filter(id => id !== proofId);
-    p.likeCount = Math.max(0,(p.likeCount||0)-1);
-    db.collection('proofs').doc(proofId).update({ likeCount: firebase.firestore.FieldValue.increment(-1) }).catch(()=>{});
+    const _wasL = p.likeCount||0; p.likeCount = Math.max(0,_wasL-1);
+    db.collection('proofs').doc(proofId).update({ likeCount: _decCount(_wasL) }).catch(()=>{});
     db.collection('users').doc(user.uid).update({ likedProofs:userLikes }).catch(()=>{});
   }
   _shortsSyncVote(btn.closest('.shorts-snap-item'), p);
