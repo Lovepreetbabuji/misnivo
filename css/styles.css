@@ -5183,7 +5183,7 @@ body::after{
   #dareDetailOverlay .dd-hero{ margin:0 -12px !important; width:auto !important; border-radius:0 0 14px 14px !important; }
   #dareDetailOverlay .dd-col3{
     margin:12px !important; background:#000 !important;
-    border:1px solid rgba(255,255,255,.22) !important; border-radius:14px !important;
+    border:1px solid rgba(255,255,255,.28) !important; border-radius:14px !important;
   }
   /* the caption is the only way into the description box on mobile */
   #dareDetailOverlay .dd-title2{ cursor:pointer; }
@@ -5203,14 +5203,24 @@ body::after{
   #dareDetailOverlay .dd-follow{ height:34px; line-height:32px; }
   #dareDetailOverlay .vd-action-btn{ height:36px; padding:0 10px !important; }
   #dareDetailOverlay .dd-cta-btn{ height:34px; }
-  /* the three boxes: hamburger black with one thin white hairline */
+  /* The three boxes are one set: same black, same hairline, same radius, same
+     padding — and they all end on the same line. .dd-col2 was hugging its
+     content because of align-self, and the comments card was the only one of
+     the three that is nested, so it needed the column made a flex box before it
+     could grow down to meet the other two. */
   #dareDetailOverlay .dd-col2,
   #dareDetailOverlay .dd-comments,
   #dareDetailOverlay .dd-col3{
-    background:#000 !important; border:1px solid rgba(255,255,255,.22) !important;
-    border-radius:14px !important; padding:16px !important;
+    background:#000 !important;
+    border:1px solid rgba(255,255,255,.28) !important;
+    border-radius:14px !important;
+    padding:16px !important;
+    margin:0 !important;
   }
-  #dareDetailOverlay .dd-col2{ align-self:flex-start; }
+  #dareDetailOverlay .dd-layout{ align-items:stretch !important; }
+  #dareDetailOverlay .dd-col2{ align-self:stretch !important; }
+  #dareDetailOverlay .dd-col1{ display:flex; flex-direction:column; }
+  #dareDetailOverlay .dd-comments{ flex:1 1 auto; margin-top:12px !important; }
 }
 
 /* ── detail captions: one line, and a … that is always there. The clipped span
