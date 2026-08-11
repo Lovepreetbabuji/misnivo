@@ -5006,3 +5006,24 @@ body.no-anim .hero-fly{ display:none !important; }
 }
 /* the floating bottom bar clears the gesture strip in both modes */
 .bottom-nav{ bottom:calc(env(safe-area-inset-bottom, 0px) + 10px) !important; }
+
+/* ══ Whatever the system reveals, it reveals black ══
+   In fullscreen Android brings the status/gesture bars back for a moment on a
+   swipe or a back gesture, and draws them as a translucent scrim — so the colour
+   you see through them is whatever the page is painting underneath. body was
+   black but html was not, and html is what shows in the overscroll gap and
+   behind a scrim before body's background propagates. Both are pinned now, plus
+   color-scheme so the browser's own chrome (overscroll glow, form controls,
+   scrollbars) renders dark instead of flashing white. */
+html{
+  background:#000 !important;
+  color-scheme:dark;
+  overscroll-behavior:none;          /* no white rubber-band strip at the edges */
+}
+body{
+  background:#000 !important;
+  overscroll-behavior-y:none;
+  min-height:100dvh;                 /* fills the viewport even when content is short */
+}
+/* the fixed layers that sit at the very edges keep the same black */
+.topbar, .bottom-nav, .sidebar, .sb-rail{ background-color:#000 !important; }
