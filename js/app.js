@@ -6131,7 +6131,7 @@ function _shortsSlideHtml(p, i) {
       <div class="shorts-rowcmts-foot">
         <div class="cmt-reply-bar shorts-rowreply" id="rowreply-${p.id}" style="display:none;"><span>Replying to <b></b></span><button onclick="event.stopPropagation();cancelShortsReply()"><span class="mi">close</span></button></div>
         <div class="vd-comment-input-row">
-          <input class="vd-comment-input" id="rowinp-${p.id}" placeholder="Add a comment..." maxlength="500"
+          <input class="vd-comment-input" id="rowinp-${p.id}" placeholder="Add a comment..." maxlength="500" autocomplete="off" autocorrect="off" enterkeyhint="send"
                  onkeydown="if(event.key==='Enter'){event.preventDefault();submitShortsComment();}"/>
           <button class="vd-comment-send-btn" onclick="submitShortsComment()"><span class="mi">send</span></button>
         </div>

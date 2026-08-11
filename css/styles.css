@@ -4922,3 +4922,69 @@ body.no-anim .hero-fly{ display:none !important; }
   backdrop-filter:none !important; -webkit-backdrop-filter:none !important;
   border-top:1px solid rgba(255,255,255,.10) !important;
 }
+
+/* ══ Mobile: no scrollbar track anywhere ══
+   The global ::-webkit-scrollbar gives every scrollable box a 4px rail, and on
+   a phone that reads as a stray line riding up and down the right edge. Touch
+   devices don't need a visible one — the content still scrolls exactly the same. */
+@media(max-width:768px){
+  html, body, .main, .page, .overlay, .modal,
+  .dd-cbox-list, .notif-list, .shorts-comments, .shorts-rowcmts-list,
+  .video-detail-overlay, .sidebar, .msearch-page, .dd-col2,
+  #shortsSnapContainer, .shorts-snap-item{
+    scrollbar-width:none !important;
+    -ms-overflow-style:none !important;
+  }
+  html::-webkit-scrollbar, body::-webkit-scrollbar,
+  .main::-webkit-scrollbar, .page::-webkit-scrollbar,
+  .overlay::-webkit-scrollbar, .modal::-webkit-scrollbar,
+  .dd-cbox-list::-webkit-scrollbar, .notif-list::-webkit-scrollbar,
+  .shorts-comments::-webkit-scrollbar, .shorts-rowcmts-list::-webkit-scrollbar,
+  .video-detail-overlay::-webkit-scrollbar, .sidebar::-webkit-scrollbar,
+  .msearch-page::-webkit-scrollbar, .dd-col2::-webkit-scrollbar,
+  #shortsSnapContainer::-webkit-scrollbar, .shorts-snap-item::-webkit-scrollbar{
+    width:0 !important; height:0 !important; display:none !important;
+  }
+}
+
+/* Shorts comment sheet gets the same hairline the mission/video sheets have */
+@media(max-width:768px){
+  .shorts-comments{
+    border:1px solid rgba(255,255,255,.12) !important;
+    border-bottom:none !important;
+    border-radius:16px 16px 0 0 !important;
+  }
+  .shorts-comment-input-row{
+    border-top:1px solid rgba(255,255,255,.10) !important;
+    background:#000 !important;
+  }
+  /* its input + send match the other sheets */
+  .shorts-comment-input-row input{
+    background:#000 !important;
+    border:1px solid rgba(255,255,255,.18) !important;
+    border-radius:50px !important;
+  }
+  .shorts-comment-input-row > button{
+    background:transparent !important; border:none !important; color:#fff !important;
+  }
+  .shorts-comment-input-row > button .mi{
+    font-family:'Material Symbols Outlined','Material Icons Round' !important;
+    font-variation-settings:'FILL' 0,'wght' 200,'GRAD' 0,'opsz' 24;
+    font-size:22px !important;
+  }
+}
+
+/* ══ Edge-to-edge when installed ══
+   In fullscreen there is no system status bar, so the topbar must not keep the
+   gap it was leaving for one; in standalone (the fallback) it still does. */
+@media (display-mode: fullscreen){
+  .topbar{ padding-top:0 !important; }
+  body{ padding-top:0 !important; }
+}
+@media (display-mode: standalone){
+  .topbar{ padding-top:env(safe-area-inset-top, 0px) !important; height:calc(56px + env(safe-area-inset-top, 0px)) !important; }
+  .main{ margin-top:calc(56px + env(safe-area-inset-top, 0px)) !important; }
+  .sb-rail{ top:calc(56px + env(safe-area-inset-top, 0px)) !important; }
+}
+/* the floating bottom bar clears the gesture strip in both modes */
+.bottom-nav{ bottom:calc(env(safe-area-inset-bottom, 0px) + 10px) !important; }

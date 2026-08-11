@@ -30,7 +30,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,100..400,0..1,0&icon_names=account_balance_wallet,add,arrow_back,bolt,bookmark,chat_bubble,close,expand_less,explore,home,menu,more_vert,notifications,person,search,send,settings,tune&display=block" rel="stylesheet"/>
 
 <!-- App Styles -->
-<link rel="stylesheet" href="/css/styles.css?v=20260811d"/>
+<link rel="stylesheet" href="/css/styles.css?v=20260811e"/>
 
 <!-- The splash logo must be in flight before anything else competes for the pipe -->
 <link rel="preload" as="image" href="/misnivo.png?v=1" fetchpriority="high"/>
@@ -1127,7 +1127,7 @@
 <!-- App Logic -->
 <!-- defer, so it runs after the Firebase bundles above and after the DOM is
      parsed — same order as before, but nothing blocks the first paint -->
-<script defer src="/js/app.js?v=20260811d"></script>
+<script defer src="/js/app.js?v=20260811e"></script>
 
 <!-- ══ v0.19 NEW MODALS ══ -->
 
@@ -1311,6 +1311,7 @@
         <div class="vd-input-av" id="ddInputAv">?</div>
         <div class="vd-comment-field">
           <input class="vd-comment-input" id="ddCommentInput" placeholder="Add a comment..." maxlength="500"
+                 autocomplete="off" autocorrect="off" autocapitalize="sentences" spellcheck="true" enterkeyhint="send"
                  onkeydown="if(event.key==='Enter'){event.preventDefault();submitDareComment();}"/>
           <button class="vd-comment-send-btn" onclick="submitDareComment()"><span class="mi">send</span></button>
         </div>
@@ -1449,7 +1450,9 @@
       <button onclick="cancelShortsReply()" title="Cancel"><span class="mi">close</span></button>
     </div>
     <div class="shorts-comment-input-row">
-      <input id="shortsCommentInput" placeholder="Add a comment..." onkeydown="if(event.key==='Enter')submitShortsComment()"/>
+      <input id="shortsCommentInput" placeholder="Add a comment..." maxlength="500"
+             autocomplete="off" autocorrect="off" autocapitalize="sentences" enterkeyhint="send"
+             onkeydown="if(event.key==='Enter'){event.preventDefault();submitShortsComment();}"/>
       <button onclick="submitShortsComment()"><span class="mi">send</span></button>
     </div>
   </div>

@@ -4,10 +4,11 @@
   "description": "Post missions, accept them, submit video proof, win bounties.",
   "start_url": "/",
   "scope": "/",
-  "display": "standalone",
+  "display": "fullscreen",
   "display_override": [
+    "fullscreen",
     "standalone",
-    "fullscreen"
+    "minimal-ui"
   ],
   "orientation": "portrait",
   "background_color": "#000000",
