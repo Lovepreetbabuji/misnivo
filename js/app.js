@@ -4937,14 +4937,13 @@ function openDareDetail(dareId){
   const ddMeta = `${_relTimeStr(d.date)} · ${_fmtCount(d.viewCount||0)} views`;
   const creatorPic = d.creatorPhotoURL || (d.creatorUid === user?.uid ? (user?.picture||'') : '');
   const _ddCu = d.creatorUid||'';
+  // Meta gets its own line under the title; this row is just the avatar and Follow.
+  const _ddMetaEl = document.getElementById('ddMetaLine');
+  if (_ddMetaEl) _ddMetaEl.textContent = ddMeta.replace(/\s*·\s*/g, ' • ');
   document.getElementById('ddCreator').innerHTML = `
-    <div class="dd-creator-av" style="cursor:pointer" onclick="openPublicProfile('${_ddCu}')">${_avHtml(creatorPic, d.creator)}</div>
-    <div class="dd-creator-info" style="cursor:pointer" onclick="openPublicProfile('${_ddCu}')">
-      <div class="dd-creator-name">${escHtml(d.creator||'Creator')}</div>
-      <div class="dd-creator-sub">@${escHtml(d.creatorUsername || (d.creator||'creator'))}</div>
-    </div>
-    ${d.creatorUid !== user?.uid ? `<button class="shorts-follow dd-follow" onclick="toggleFollow('${_ddCu}','creator')">Follow</button>` : ''}
-    <span class="dd-creator-meta">${ddMeta}</span>`;
+    <div class="dd-creator-av" title="${escHtml(d.creator||'Creator')}" style="cursor:pointer" onclick="openPublicProfile('${_ddCu}')">${_avHtml(creatorPic, d.creator)}</div>
+    ${d.creatorUid !== user?.uid ? `<button class="shorts-follow dd-follow" onclick="toggleFollow('${_ddCu}','creator')">Follow</button>` : ''}`;
+  _ddSyncSave();
 
   const desc = d.description || d.desc || '';
   document.getElementById('ddDesc').innerHTML = desc ? `<div class="dd-sec-label">Description</div><p class="dd-desc-text">${escHtml(desc)}</p>` : '';
@@ -5317,18 +5316,36 @@ function _ddReport(){
   const d = dares.find(x=>x.id===_ddCurrentId); if (!d) return;
   openReportModal('dare', _ddCurrentId, d.caption || d.title || 'this mission');
 }
+// Same actions, same handlers — rendered as icon-only pills so the five action
+// buttons in the row are one size. The label survives as title/aria-label.
 function _ddCtaHtml(d){
   const isMine = d.creatorUid === user?.uid;
   const myEntry = (acceptedDares||[]).find(a=>a.dareId===d.id);
-  if (isMine) return `<button class="btn-yours" style="padding:11px 22px;border-radius:50px;width:auto;">Your Mission</button>`;
+  const pill = (cls, icon, label, onclick) =>
+    `<button class="vd-action-btn dd-cta-btn ${cls}" title="${label}" aria-label="${label}"${onclick?` onclick="${onclick}"`:''}><span class="mi">${icon}</span></button>`;
+  if (isMine) return pill('is-mine', 'workspace_premium', 'Your mission', '');
   if (myEntry){
     if (myEntry.proofStatus==='submitted' || myEntry.proofStatus==='approved')
-      return `<button class="btn-proof-done" style="padding:11px 18px;border-radius:50px;"><span class="mi">check_circle</span>Submitted</button>`;
+      return pill('is-done', 'check_circle', 'Proof submitted', '');
     if (myEntry.applicantStatus==='pending')
-      return `<button class="btn-proof-done" style="padding:11px 18px;border-radius:50px;"><span class="mi">hourglass_empty</span>Applied</button>`;
-    return `<button class="btn-proof" style="padding:11px 18px;border-radius:50px;" onclick="closeDareDetail();openProof('${d.id}')"><span class="mi">video_call</span>Submit Proof</button>`;
+      return pill('is-done', 'hourglass_empty', 'Applied', '');
+    return pill('is-cta', 'video_call', 'Submit proof', `closeDareDetail();openProof('${d.id}')`);
   }
-  return `<button class="btn-accept" style="padding:11px 26px;border-radius:50px;" onclick="acceptDare('${d.id}')">${d.takerSelectionMode==='creator_picks'?'Apply':'Accept'}</button>`;
+  return pill('is-cta', 'add', d.takerSelectionMode==='creator_picks'?'Apply':'Accept mission', `acceptDare('${d.id}')`);
+}
+
+// Bookmark = the existing pin, just surfaced as an icon in the top row
+function _ddToggleSave(){
+  if (!_ddCurrentId) return;
+  const pinned = typeof pinnedDares !== 'undefined' && pinnedDares.includes(_ddCurrentId);
+  if (pinned) unpinDare(_ddCurrentId); else pinDare(_ddCurrentId);
+  setTimeout(_ddSyncSave, 150);
+}
+function _ddSyncSave(){
+  const b = document.getElementById('ddSaveBtn'); if (!b) return;
+  const pinned = !!(_ddCurrentId && typeof pinnedDares !== 'undefined' && pinnedDares.includes(_ddCurrentId));
+  b.classList.toggle('on', pinned);
+  const i = b.querySelector('.mi'); if (i) i.textContent = pinned ? 'bookmark' : 'bookmark_border';
 }
 function _ddUpdateLikeUI(d){
   const liked = user && (d.likedBy||[]).includes(user.uid);

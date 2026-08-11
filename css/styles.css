@@ -5041,3 +5041,147 @@ body::after{
   background:#000;
   z-index:0; pointer-events:none;
 }
+
+/* ═══════════════════════════════════════════════════════════════════════
+   MISSION DETAIL — rebuilt to the reference. Structure and styling only;
+   every handler, element id and Firestore call is untouched. Pure black and
+   white on the same #000 the hamburger drawer uses; the thumbnail keeps the
+   16:9 box it already had.
+   ═══════════════════════════════════════════════════════════════════════ */
+#dareDetailOverlay{ background:#000 !important; }
+#dareDetailOverlay .dd-bar{
+  background:transparent !important; border:none !important; box-shadow:none !important;
+  backdrop-filter:none !important; -webkit-backdrop-filter:none !important;
+}
+
+/* ── top nav row: back · bookmark · more ── */
+.dd-topnav{ display:none; align-items:center; gap:8px; padding:10px 2px 12px; }
+.dd-topnav-gap{ flex:1; }
+.dd-nav-btn{
+  width:42px; height:42px; border-radius:50%; flex-shrink:0;
+  display:flex; align-items:center; justify-content:center;
+  background:transparent; border:1px solid rgba(255,255,255,.16);
+  color:#fff; cursor:pointer; -webkit-tap-highlight-color:transparent;
+  transition:background .15s ease, border-color .15s ease;
+}
+.dd-nav-btn .mi{ font-size:22px; color:#fff; }
+.dd-nav-btn:active{ background:rgba(255,255,255,.14); }
+.dd-nav-btn.on{ background:#fff; border-color:#fff; }
+.dd-nav-btn.on .mi{ color:#000; }
+
+/* ── title + meta ── */
+#dareDetailOverlay .dd-title2{
+  font-size:26px !important; font-weight:700 !important; letter-spacing:-.6px;
+  line-height:1.2; color:#fff !important; margin:14px 0 6px !important;
+}
+.dd-metaline{ font-size:14px; color:rgba(255,255,255,.55); margin-bottom:18px; }
+
+/* ── avatar + Follow, with the Description card filling the rest of the row ── */
+.dd-idrow{ display:flex; align-items:center; gap:12px; margin-bottom:16px; }
+#dareDetailOverlay .dd-creator{
+  display:flex !important; align-items:center; gap:10px; flex-shrink:0;
+  background:transparent !important; border:none !important; padding:0 !important; margin:0 !important;
+}
+#dareDetailOverlay .dd-creator-av{
+  width:44px !important; height:44px !important; border-radius:50%; overflow:hidden; flex-shrink:0;
+  background:#141414; border:1px solid rgba(255,255,255,.12);
+  display:flex; align-items:center; justify-content:center; font-size:17px; font-weight:700; color:#fff;
+}
+#dareDetailOverlay .dd-follow{
+  background:transparent !important; border:1px solid rgba(255,255,255,.5) !important;
+  color:#fff !important; border-radius:999px !important;
+  padding:9px 20px !important; font-size:14px !important; font-weight:600 !important;
+  box-shadow:none !important; white-space:nowrap;
+}
+#dareDetailOverlay .dd-follow:hover{ background:rgba(255,255,255,.10) !important; }
+
+.dd-details-btn{
+  flex:1; min-width:0;
+  display:flex !important; align-items:center; gap:12px;
+  background:#0d0d0d !important; border:1px solid rgba(255,255,255,.10) !important;
+  border-radius:16px !important; padding:16px 14px !important;
+  color:#fff !important; font-size:15px; font-weight:600; cursor:pointer;
+  text-align:left; margin:0 !important; box-shadow:none !important;
+  -webkit-tap-highlight-color:transparent;
+}
+.dd-details-lbl{ flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.dd-details-btn .mi{ font-size:22px; color:#fff; flex-shrink:0; }
+.dd-details-chev{ opacity:.6; }
+.dd-details-btn:active{ background:#161616 !important; }
+
+/* ── one row of equal, icon-first action pills ── */
+#dareDetailOverlay .dd-actions{
+  display:flex !important; align-items:center; gap:10px; flex-wrap:nowrap;
+  margin:0 0 20px !important; padding:0 !important; border:none !important;
+}
+#dareDetailOverlay .dd-cta-inline{ display:contents; }
+#dareDetailOverlay .vd-action-btn{
+  height:46px; min-width:46px; padding:0 16px !important;
+  display:inline-flex; align-items:center; justify-content:center; gap:7px;
+  background:#0d0d0d !important; border:1px solid rgba(255,255,255,.10) !important;
+  border-radius:999px !important; color:#fff !important;
+  font-size:14px; font-weight:600; cursor:pointer; box-shadow:none !important;
+  -webkit-tap-highlight-color:transparent; transition:background .15s ease;
+}
+#dareDetailOverlay .vd-action-btn .mi{ font-size:21px; color:#fff !important; }
+#dareDetailOverlay .vd-action-btn:active{ background:#1a1a1a !important; }
+#dareDetailOverlay .vd-action-btn.liked{ background:#fff !important; border-color:#fff !important; color:#000 !important; }
+#dareDetailOverlay .vd-action-btn.liked .mi{ color:#000 !important; }
+/* the primary action still reads as primary, without bringing a colour back */
+#dareDetailOverlay .dd-cta-btn.is-cta{ background:#fff !important; border-color:#fff !important; }
+#dareDetailOverlay .dd-cta-btn.is-cta .mi{ color:#000 !important; }
+#dareDetailOverlay .dd-cta-btn.is-done,
+#dareDetailOverlay .dd-cta-btn.is-mine{ opacity:.75; cursor:default; }
+
+/* ── comments + more missions as cards ── */
+#dareDetailOverlay .dd-card,
+#dareDetailOverlay .dd-col3{
+  background:#0d0d0d !important; border:1px solid rgba(255,255,255,.10) !important;
+  border-radius:18px !important; padding:16px !important; margin-bottom:18px;
+}
+#dareDetailOverlay .vd-sec-title{
+  display:flex; align-items:center; gap:10px;
+  font-size:17px !important; font-weight:600 !important; color:#fff !important;
+  margin:0 0 14px !important;
+}
+#dareDetailOverlay .vd-sec-title .mi{ font-size:20px; color:#fff; }
+#dareDetailOverlay .dd-cmt-count{ color:rgba(255,255,255,.5) !important; font-weight:500 !important; }
+#dareDetailOverlay .dd-viewall{
+  display:block; width:100%; margin:14px 0 0; padding:13px;
+  background:#141414; border:1px solid rgba(255,255,255,.10); border-radius:999px;
+  color:#fff; font-family:inherit; font-size:14px; font-weight:600; cursor:pointer;
+  text-align:center; -webkit-tap-highlight-color:transparent;
+}
+#dareDetailOverlay .dd-viewall:active{ background:#1c1c1c; }
+#dareDetailOverlay .vd-no-comments{ color:rgba(255,255,255,.45) !important; text-align:center; padding:18px 0; }
+#dareDetailOverlay .vd-no-comments .mi{ font-size:34px; opacity:.35; display:block; margin-bottom:8px; }
+
+/* ── mobile: the nav row appears; padding tightens ── */
+@media(max-width:768px){
+  .dd-topnav{ display:flex; }
+  #dareDetailOverlay .dd-col1{ padding:0 16px 40px !important; }
+  #dareDetailOverlay .dd-title2{ font-size:24px !important; }
+}
+/* very narrow: the Description card drops below the avatar row rather than squeezing */
+@media(max-width:400px){
+  .dd-idrow{ flex-wrap:wrap; }
+  .dd-details-btn{ flex-basis:100%; }
+}
+
+/* ── desktop: the sticky bar already carries back + more, so the nav row stays
+      off and the column simply gets more room ── */
+@media(min-width:769px){
+  .dd-topnav{ display:none !important; }
+  #dareDetailOverlay .dd-title2{ font-size:28px !important; }
+  #dareDetailOverlay .dd-col1{ padding-right:8px; }
+  .dd-details-btn{ padding:18px 16px !important; }
+  #dareDetailOverlay .vd-action-btn{ height:44px; }
+  #dareDetailOverlay .dd-topbar{
+    background:#000 !important; backdrop-filter:none !important; -webkit-backdrop-filter:none !important;
+    border:none !important; box-shadow:none !important;
+  }
+  #dareDetailOverlay .vd-back-btn{
+    background:transparent !important; border:1px solid rgba(255,255,255,.16) !important; color:#fff !important;
+  }
+  #dareDetailOverlay .vd-back-btn:hover{ background:rgba(255,255,255,.10) !important; }
+}
