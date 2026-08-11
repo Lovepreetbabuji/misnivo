@@ -32,7 +32,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,100..400,0..1,0&icon_names=account_balance_wallet,add,arrow_back,bolt,bookmark,chat_bubble,close,expand_less,explore,home,menu,more_vert,notifications,person,search,send,settings,tune&display=block" rel="stylesheet"/>
 
 <!-- App Styles -->
-<link rel="stylesheet" href="/css/styles.css?v=20260811j"/>
+<link rel="stylesheet" href="/css/styles.css?v=20260811k"/>
 
 <!-- The splash logo must be in flight before anything else competes for the pipe -->
 <link rel="preload" as="image" href="/misnivo.png?v=1" fetchpriority="high"/>
@@ -1129,7 +1129,7 @@
 <!-- App Logic -->
 <!-- defer, so it runs after the Firebase bundles above and after the DOM is
      parsed — same order as before, but nothing blocks the first paint -->
-<script defer src="/js/app.js?v=20260811j"></script>
+<script defer src="/js/app.js?v=20260811k"></script>
 
 <!-- ══ v0.19 NEW MODALS ══ -->
 
@@ -1239,68 +1239,54 @@
 <!-- ═══ ACTIVE DARE DETAIL OVERLAY ═══ -->
 <div class="video-detail-overlay" id="dareDetailOverlay">
   <div class="dd-wrap">
-    <div class="vd-topbar dd-topbar">
-      <button class="vd-back-btn" onclick="history.back()"><span class="mi">arrow_back</span></button>
-      <div class="vd-topbar-title" id="ddTopTitle"></div>
-      <span class="dd-more dd-top-more">
-        <button class="vd-back-btn" onclick="_ddToggleActionMenu(this)"><span class="mi">more_vert</span></button>
-        <span class="dd-action-menu">
-          <button onclick="shareDare(_ddCurrentId, document.getElementById('ddTopTitle').textContent)"><span class="mi">share</span> Share</button>
-          <button onclick="_ddReport()"><span class="mi">flag</span> Report</button>
-        </span>
-      </span>
-    </div>
+    <!-- No bar over the mission: back is the device gesture, and Save / Share /
+         Report live in the ••• on the actions row. The title element stays as a
+         hidden carrier because the share handlers read it. -->
+    <span id="ddTopTitle" hidden></span>
 
     <div class="dd-layout">
       <!-- ═══ COLUMN 1: thumbnail · bounty · creator+follow · actions · comments ═══ -->
       <div class="dd-bar dd-col1">
-        <!-- Mobile nav row: back · bookmark · more. Sits ABOVE the thumbnail on
-             the page background — not a floating glass bar over the image. -->
-        <div class="dd-topnav">
-          <button class="dd-nav-btn" onclick="history.back()" aria-label="Back"><span class="mi">arrow_back</span></button>
-          <span class="dd-topnav-gap"></span>
-          <button class="dd-nav-btn" id="ddSaveBtn" onclick="_ddToggleSave()" aria-label="Save"><span class="mi">bookmark_border</span></button>
-          <span class="dd-more">
-            <button class="dd-nav-btn" onclick="_ddToggleActionMenu(this)" aria-label="More options"><span class="mi">more_vert</span></button>
-            <span class="dd-action-menu">
-              <button onclick="shareDare(_ddCurrentId, document.getElementById('ddTopTitle').textContent)"><span class="mi">share</span> Share</button>
-              <button onclick="_ddReport()"><span class="mi">flag</span> Report</button>
-            </span>
-          </span>
-        </div>
-
+        <!-- Thumbnail bleeds to both edges; everything under it keeps a thin gutter. -->
         <div class="dd-hero" id="ddHero"></div>
         <div class="dd-title2" id="ddDareTitle"></div>
-        <div class="dd-metaline" id="ddMetaLine"></div>
 
-        <!-- avatar + Follow on the left, Description & rules card filling the right -->
+        <!-- photo → username → Follow -->
         <div class="dd-idrow">
           <div class="dd-creator" id="ddCreator"></div>
-          <button class="dd-details-btn" onclick="openDareDetails()">
-            <span class="mi">description</span>
-            <span class="dd-details-lbl">Description &amp; rules</span>
-            <span class="mi dd-details-chev">chevron_right</span>
-          </button>
         </div>
 
+        <!-- bare outlined icons; only the primary action keeps its word -->
         <div class="dd-actions">
           <span class="dd-cta-inline" id="ddCta"></span>
-          <button class="vd-action-btn" id="ddLikeBtn" onclick="likeDare()" aria-label="Like"><span class="mi">bolt</span> <span id="ddLikeCount">0</span></button>
-          <button class="vd-action-btn" id="ddDislikeBtn" onclick="dislikeDare()" aria-label="Dislike"><span class="mi">thumb_down</span> <span id="ddDislikeCount">0</span></button>
-          <button class="vd-action-btn" onclick="shareDare(_ddCurrentId, document.getElementById('ddTopTitle').textContent)" aria-label="Share"><span class="mi">share</span></button>
+          <span class="dd-act-gap"></span>
+          <button class="vd-action-btn" id="ddLikeBtn" onclick="likeDare()" aria-label="Like"><span class="mi">thumb_up_off_alt</span> <span id="ddLikeCount">0</span></button>
+          <button class="vd-action-btn" id="ddDislikeBtn" onclick="dislikeDare()" aria-label="Dislike"><span class="mi">thumb_down_off_alt</span> <span id="ddDislikeCount">0</span></button>
+          <button class="vd-action-btn" onclick="shareDare(_ddCurrentId, document.getElementById('ddTopTitle').textContent)" aria-label="Share"><span class="mi dd-share-ic">reply</span></button>
           <span class="dd-more">
             <button class="vd-action-btn" onclick="_ddToggleActionMenu(this)" aria-label="More"><span class="mi">more_horiz</span></button>
             <span class="dd-action-menu">
+              <button id="ddSaveBtn" onclick="_ddToggleSave()"><span class="mi">bookmark_border</span> <span id="ddSaveLbl">Save</span></button>
               <button onclick="shareDare(_ddCurrentId, document.getElementById('ddTopTitle').textContent)"><span class="mi">share</span> Share</button>
               <button onclick="_ddReport()"><span class="mi">flag</span> Report</button>
             </span>
           </span>
         </div>
 
-        <!-- Comments PREVIEW (top comment only) — tap to open the comments box -->
-        <div class="dd-comments dd-card">
-          <div class="vd-sec-title" onclick="openDareComments()" style="cursor:pointer;"><span class="mi">chat_bubble</span> <span id="ddCommentsTitle">Comments</span> <span class="dd-cmt-count" id="ddCommentCount">0</span></div>
-          <div id="ddTopComment" onclick="openDareComments()" style="cursor:pointer;"></div>
+        <!-- Description & rules — the age/views line rides on top of it -->
+        <button class="dd-details-btn" onclick="openDareDetails()">
+          <span class="dd-metaline" id="ddMetaLine"></span>
+          <span class="dd-details-row">
+            <span class="mi">description</span>
+            <span class="dd-details-lbl">Description &amp; rules</span>
+            <span class="mi dd-details-chev">chevron_right</span>
+          </span>
+        </button>
+
+        <!-- Comments PREVIEW (top comment only) — the whole card is the tap target -->
+        <div class="dd-comments dd-card" onclick="openDareComments()" style="cursor:pointer;">
+          <div class="vd-sec-title"><span class="mi">chat_bubble</span> <span id="ddCommentsTitle">Comments</span> <span class="dd-cmt-count" id="ddCommentCount">0</span></div>
+          <div id="ddTopComment"></div>
         </div>
       </div>
 

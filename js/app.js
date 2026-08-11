@@ -4941,7 +4941,8 @@ function openDareDetail(dareId){
   const _ddMetaEl = document.getElementById('ddMetaLine');
   if (_ddMetaEl) _ddMetaEl.textContent = ddMeta.replace(/\s*·\s*/g, ' • ');
   document.getElementById('ddCreator').innerHTML = `
-    <div class="dd-creator-av" title="${escHtml(d.creator||'Creator')}" style="cursor:pointer" onclick="openPublicProfile('${_ddCu}')">${_avHtml(creatorPic, d.creator)}</div>
+    <div class="dd-creator-av" style="cursor:pointer" onclick="openPublicProfile('${_ddCu}')">${_avHtml(creatorPic, d.creator)}</div>
+    <span class="dd-creator-nm" style="cursor:pointer" onclick="openPublicProfile('${_ddCu}')">${escHtml(d.creator||'Creator')}</span>
     ${d.creatorUid !== user?.uid ? `<button class="shorts-follow dd-follow" onclick="toggleFollow('${_ddCu}','creator')">Follow</button>` : ''}`;
   _ddSyncSave();
 
@@ -5322,16 +5323,16 @@ function _ddCtaHtml(d){
   const isMine = d.creatorUid === user?.uid;
   const myEntry = (acceptedDares||[]).find(a=>a.dareId===d.id);
   const pill = (cls, icon, label, onclick) =>
-    `<button class="vd-action-btn dd-cta-btn ${cls}" title="${label}" aria-label="${label}"${onclick?` onclick="${onclick}"`:''}><span class="mi">${icon}</span></button>`;
+    `<button class="vd-action-btn dd-cta-btn ${cls}" aria-label="${label}"${onclick?` onclick="${onclick}"`:''}><span class="mi">${icon}</span>${label}</button>`;
   if (isMine) return pill('is-mine', 'workspace_premium', 'Your mission', '');
   if (myEntry){
     if (myEntry.proofStatus==='submitted' || myEntry.proofStatus==='approved')
-      return pill('is-done', 'check_circle', 'Proof submitted', '');
+      return pill('is-done', 'check_circle', 'Submitted', '');
     if (myEntry.applicantStatus==='pending')
       return pill('is-done', 'hourglass_empty', 'Applied', '');
     return pill('is-cta', 'video_call', 'Submit proof', `closeDareDetail();openProof('${d.id}')`);
   }
-  return pill('is-cta', 'add', d.takerSelectionMode==='creator_picks'?'Apply':'Accept mission', `acceptDare('${d.id}')`);
+  return pill('is-cta', 'add', d.takerSelectionMode==='creator_picks'?'Apply':'Accept', `acceptDare('${d.id}')`);
 }
 
 // Bookmark = the existing pin, just surfaced as an icon in the top row
@@ -5346,12 +5347,17 @@ function _ddSyncSave(){
   const pinned = !!(_ddCurrentId && typeof pinnedDares !== 'undefined' && pinnedDares.includes(_ddCurrentId));
   b.classList.toggle('on', pinned);
   const i = b.querySelector('.mi'); if (i) i.textContent = pinned ? 'bookmark' : 'bookmark_border';
+  const l = document.getElementById('ddSaveLbl'); if (l) l.textContent = pinned ? 'Saved' : 'Save';
 }
 function _ddUpdateLikeUI(d){
   const liked = user && (d.likedBy||[]).includes(user.uid);
   const disliked = user && (d.dislikedBy||[]).includes(user.uid);
-  document.getElementById('ddLikeBtn').classList.toggle('liked', !!liked);
-  document.getElementById('ddDislikeBtn').classList.toggle('liked', !!disliked);
+  const _lb = document.getElementById('ddLikeBtn'), _db = document.getElementById('ddDislikeBtn');
+  _lb.classList.toggle('liked', !!liked);
+  _db.classList.toggle('liked', !!disliked);
+  // outlined by default, solid once it is your vote — same as the drawer icons
+  const _li = _lb.querySelector('.mi'); if (_li) _li.textContent = liked ? 'thumb_up' : 'thumb_up_off_alt';
+  const _di = _db.querySelector('.mi'); if (_di) _di.textContent = disliked ? 'thumb_down' : 'thumb_down_off_alt';
   document.getElementById('ddLikeCount').textContent = _fmtCount(d.likeCount||0);
   document.getElementById('ddDislikeCount').textContent = _fmtCount(d.dislikeCount||0);
 }
