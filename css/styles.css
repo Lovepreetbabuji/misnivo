@@ -4974,17 +4974,27 @@ body.no-anim .hero-fly{ display:none !important; }
   }
 }
 
-/* ══ Edge-to-edge when installed ══
-   In fullscreen there is no system status bar, so the topbar must not keep the
-   gap it was leaving for one; in standalone (the fallback) it still does. */
-@media (display-mode: fullscreen){
-  .topbar{ padding-top:0 !important; }
-  body{ padding-top:0 !important; }
-}
-@media (display-mode: standalone){
-  .topbar{ padding-top:env(safe-area-inset-top, 0px) !important; height:calc(56px + env(safe-area-inset-top, 0px)) !important; }
+/* ══ Installed app: keep the clock and battery, paint their strip black ══
+   Fullscreen removed the status bar entirely, which also cut the top and bottom
+   of pages that had been laid out expecting one. Back to standalone — the
+   system draws the bar and fills it with theme_color (#000), so it matches the
+   app instead of showing a lighter band.
+
+   Everything below reserves the notch/status inset ONLY where a bar exists.
+   On Android standalone the inset is 0, so these are no-ops there and only do
+   real work on notched iOS. */
+@media (display-mode: standalone), (display-mode: minimal-ui){
+  .topbar{
+    padding-top:env(safe-area-inset-top, 0px) !important;
+    height:calc(56px + env(safe-area-inset-top, 0px)) !important;
+  }
   .main{ margin-top:calc(56px + env(safe-area-inset-top, 0px)) !important; }
   .sb-rail{ top:calc(56px + env(safe-area-inset-top, 0px)) !important; }
+  .sidebar{ padding-top:env(safe-area-inset-top, 0px) !important; }
+  /* the detail pages have no topbar of their own, so they clear the inset themselves */
+  #dareDetailOverlay .dd-col1,
+  #videoDetailOverlay .vd2-player-wrap{ margin-top:env(safe-area-inset-top, 0px) !important; }
+  .notif-panel-hdr{ padding-top:calc(14px + env(safe-area-inset-top, 0px)) !important; }
 }
 /* the floating bottom bar clears the gesture strip in both modes */
 .bottom-nav{ bottom:calc(env(safe-area-inset-bottom, 0px) + 10px) !important; }
