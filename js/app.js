@@ -4618,10 +4618,21 @@ function _vdReport(){
 }
 // Long video: the native controls fade out, so a paused video showed nothing at
 // all to press. This badge stays put for as long as it is paused.
+let _vdBountyT = null;
 function _vdSyncPaused(){
   const v = document.getElementById('vdPlayer'), w = document.getElementById('vdPlayerWrap');
   if (!v || !w) return;
   w.classList.toggle('is-paused', v.paused || v.ended);
+  _vdBountySync();
+}
+// Visible while paused; on play it pops in for five seconds and then leaves the
+// picture alone.
+function _vdBountySync(){
+  const v = document.getElementById('vdPlayer'), w = document.getElementById('vdPlayerWrap');
+  if (!v || !w) return;
+  clearTimeout(_vdBountyT);
+  w.classList.add('bounty-on');
+  if (!v.paused && !v.ended) _vdBountyT = setTimeout(()=>w.classList.remove('bounty-on'), 5000);
 }
 function _vdTogglePlay(){
   const v = document.getElementById('vdPlayer'); if (!v) return;
@@ -4649,7 +4660,34 @@ function toggleVideoDesc(){
 // Scroll-to-top for the video page
 function _vdScroller(){ const ov=document.getElementById('videoDetailOverlay'); if(!ov) return null; if(window.innerWidth>=769){ const c=ov.querySelector('.dd-col1'); if(c) return c; } return ov; }
 function _vdScrollTop(){ const sc=_vdScroller(); if(sc) sc.scrollTo({top:0,behavior:'smooth'}); }
-function _vdBindScroll(){ const sc=_vdScroller(); const btn=document.getElementById('vdScrollTop'); if(!sc) return; const on=()=>{ if(btn) btn.classList.toggle('show', sc.scrollTop>500); }; if(sc._vdSH) sc.removeEventListener('scroll',sc._vdSH); sc._vdSH=on; sc.addEventListener('scroll',on); if(btn) btn.classList.remove('show'); }
+function _vdBindScroll(){
+  const sc=_vdScroller(); const btn=document.getElementById('vdScrollTop'); if(!sc) return;
+  const on=()=>{
+    if(btn) btn.classList.toggle('show', sc.scrollTop>500);
+    _vdParkPlayer();
+  };
+  if(sc._vdSH) sc.removeEventListener('scroll',sc._vdSH);
+  sc._vdSH=on; sc.addEventListener('scroll',on);
+  if(btn) btn.classList.remove('show');
+  _vdParkPlayer();
+}
+// Mobile keeps the player pinned to the top while you read. Once Related has
+// scrolled up to touch it there is nothing left to read past it, so the player
+// slides away with the page and pauses rather than covering the list.
+function _vdParkPlayer(){
+  const w=document.getElementById('vdPlayerWrap'); if(!w) return;
+  if(window.innerWidth>768){ w.style.transform=''; return; }
+  const rel=document.querySelector('#videoDetailOverlay .dd-col3');
+  const h=w.offsetHeight; if(!rel||!h){ w.style.transform=''; return; }
+  const push=Math.min(h, Math.max(0, h - rel.getBoundingClientRect().top));
+  w.style.transform = push ? 'translateY('+(-push)+'px)' : '';
+  if(push>0){
+    const v=document.getElementById('vdPlayer');
+    if(v && !v.paused && !v._vdParked){ v._vdParked=true; try{ v.pause(); }catch(e){} _vdSyncPaused(); }
+  } else {
+    const v=document.getElementById('vdPlayer'); if(v) v._vdParked=false;
+  }
+}
 
 function _scoredSearch(items,q,textFields,tagFields) {
   return items.map(item=>{
@@ -5017,7 +5055,21 @@ let _ddTouchX=0, _ddTouchY=0, _ddTouchActive=false;
 function _ddBindSwipe(overlayId){
   const ov = document.getElementById(overlayId || 'dareDetailOverlay'); if (!ov || ov._ddSwipeBound) return;
   ov._ddSwipeBound = true;
-  ov.addEventListener('touchstart', e=>{ if (window.innerWidth>768) return; const t=e.touches[0]; _ddTouchX=t.clientX; _ddTouchY=t.clientY; _ddTouchActive=true; }, {passive:true});
+  // A swipe that starts inside something that scrolls sideways — the shorts rail
+  // in Related — is that rail's swipe, not the description drawer's.
+  const _inSideScroller = el => {
+    for (let n = el; n && n !== ov; n = n.parentElement){
+      if (n.nodeType !== 1) continue;
+      const s = getComputedStyle(n);
+      if ((s.overflowX === 'auto' || s.overflowX === 'scroll') && n.scrollWidth > n.clientWidth + 4) return true;
+    }
+    return false;
+  };
+  ov.addEventListener('touchstart', e=>{
+    if (window.innerWidth>768) return;
+    if (_inSideScroller(e.target)) { _ddTouchActive=false; return; }
+    const t=e.touches[0]; _ddTouchX=t.clientX; _ddTouchY=t.clientY; _ddTouchActive=true;
+  }, {passive:true});
   ov.addEventListener('touchend', e=>{
     if (!_ddTouchActive || window.innerWidth>768) return; _ddTouchActive=false;
     const t=e.changedTouches[0]; const dx=t.clientX-_ddTouchX, dy=t.clientY-_ddTouchY;
@@ -5326,12 +5378,35 @@ window.addEventListener('popstate', function(e){
   _dmRouteFromUrl();   // the URL is the source of truth — open/close to match it
 });
 // 3-dots on the dare actions row → Share / Report menu
+function _ddCloseActionMenus(){
+  document.querySelectorAll('.dd-action-menu.open').forEach(m=>{
+    m.classList.remove('open'); m.style.cssText='';
+  });
+}
 function _ddToggleActionMenu(btn){
   const menu = btn.nextElementSibling; if (!menu) return;
-  const open = menu.classList.contains('open');
-  document.querySelectorAll('.dd-action-menu.open').forEach(m=>m.classList.remove('open'));
-  if (!open) menu.classList.add('open');
+  const wasOpen = menu.classList.contains('open');
+  _ddCloseActionMenus();
+  if (wasOpen) return;
+  menu.classList.add('open');
+  // On desktop this row sits inside a column with overflow-y:auto, which clips
+  // an absolutely positioned child. Pin the menu to the viewport instead.
+  const r = btn.getBoundingClientRect();
+  const down = r.top < 240;                       // too near the top to open upward
+  menu.style.position = 'fixed';
+  menu.style.left = 'auto';
+  menu.style.right = Math.max(8, window.innerWidth - r.right) + 'px';
+  menu.style.top    = down ? (r.bottom + 8) + 'px' : 'auto';
+  menu.style.bottom = down ? 'auto' : (window.innerHeight - r.top + 8) + 'px';
+  menu.style.zIndex = '11500';
 }
+// Picking an item closes the menu; so does clicking anywhere outside it.
+document.addEventListener('click', (e)=>{
+  const t = e.target; if (!t || !t.closest) return;
+  if (t.closest('.dd-more > button')) return;                 // the toggle owns that click
+  if (t.closest('.dd-action-menu')) { setTimeout(_ddCloseActionMenus, 0); return; }
+  _ddCloseActionMenus();
+});
 // Click a #tag → run a search for that tag (return-context captured in _doSearch)
 function searchTag(tag){
   const inp = document.getElementById('searchInput'); if (inp) inp.value = '#'+tag;
@@ -5806,6 +5881,7 @@ async function openVideoDetail(proofId) {
   // thumbnail flies into the player box; the video loads underneath it below
   _heroOpen(vov, vov.querySelector('.vd2-player-wrap'));
   _vdBindScroll();
+  _vdSyncPaused();                      // badge on from the start; the play event hides it after 5s
   _ddBindSwipe('videoDetailOverlay');   // swipe-left opens Description & rules here too
   // Then show ad IN the video area, then play. Ad shows once per video per
   // session — coming BACK to a video plays it directly (no repeat ad).

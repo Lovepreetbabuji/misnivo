@@ -5325,3 +5325,22 @@ body::after{
   #videoDetailOverlay .vd2-collab-avs .dd-creator-av{ width:38px !important; height:38px !important; }
   #videoDetailOverlay .vd2-collab-avs .vd2-av2{ left:24px; }
 }
+
+/* ── video page follow-ups ────────────────────────────────────────────────
+   The long player carries native controls, which already draw a play button
+   when paused — the custom centre button made two. Native wins; it also has
+   the scrubber, volume and fullscreen.                                      */
+.vd2-player-wrap .vd-center-play{ display:none !important; }
+
+/* The bounty is a pop, not a sticker: hidden by default, shown while paused,
+   and for five seconds after playback starts. */
+#videoDetailOverlay .dd-bounty-badge{
+  opacity:0; transform:scale(.82); pointer-events:none;
+  transition:opacity .18s ease, transform .26s cubic-bezier(.2,1.5,.4,1);
+}
+#videoDetailOverlay .vd2-player-wrap.bounty-on .dd-bounty-badge{ opacity:1; transform:scale(1); }
+
+/* the pinned player slides out of the way under JS control */
+@media(max-width:768px){
+  #videoDetailOverlay .vd2-player-wrap{ will-change:transform; }
+}
