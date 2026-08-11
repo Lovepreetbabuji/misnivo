@@ -5027,3 +5027,17 @@ body{
 }
 /* the fixed layers that sit at the very edges keep the same black */
 .topbar, .bottom-nav, .sidebar, .sb-rail{ background-color:#000 !important; }
+
+/* ══ Navigation bar: black too ══
+   Android takes the status bar colour from theme_color, but the bottom
+   navigation bar picks up whatever the page paints at its own bottom edge under
+   edge-to-edge. A short page left the canvas showing there, which is the grey
+   band under the floating nav. This keeps a black plate pinned to the bottom
+   edge, behind everything, so that strip is always #000. */
+body::after{
+  content:'';
+  position:fixed; left:0; right:0; bottom:0;
+  height:env(safe-area-inset-bottom, 0px);
+  background:#000;
+  z-index:0; pointer-events:none;
+}
