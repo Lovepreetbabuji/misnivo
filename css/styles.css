@@ -4983,7 +4983,14 @@ body.no-anim .hero-fly{ display:none !important; }
    Everything below reserves the notch/status inset ONLY where a bar exists.
    On Android standalone the inset is 0, so these are no-ops there and only do
    real work on notched iOS. */
-@media (display-mode: standalone), (display-mode: minimal-ui){
+/* Runs in EVERY installed mode, keyed on the insets rather than on the mode.
+   The first fullscreen attempt cut the top and bottom of pages precisely because
+   these rules were keyed on display-mode:standalone and stopped applying the
+   moment fullscreen took over. env() reports 0 when there is nothing to clear,
+   so each rule reserves exactly what the OS asks for and nothing assumes a bar
+   exists — a phone with a camera cutout still gets clearance, one without loses
+   nothing, and neither can end up cropped. */
+@media (display-mode: fullscreen), (display-mode: standalone), (display-mode: minimal-ui){
   .topbar{
     padding-top:env(safe-area-inset-top, 0px) !important;
     height:calc(56px + env(safe-area-inset-top, 0px)) !important;
@@ -4991,10 +4998,11 @@ body.no-anim .hero-fly{ display:none !important; }
   .main{ margin-top:calc(56px + env(safe-area-inset-top, 0px)) !important; }
   .sb-rail{ top:calc(56px + env(safe-area-inset-top, 0px)) !important; }
   .sidebar{ padding-top:env(safe-area-inset-top, 0px) !important; }
-  /* the detail pages have no topbar of their own, so they clear the inset themselves */
+  /* these pages carry no topbar of their own, so they clear the cutout themselves */
   #dareDetailOverlay .dd-col1,
   #videoDetailOverlay .vd2-player-wrap{ margin-top:env(safe-area-inset-top, 0px) !important; }
   .notif-panel-hdr{ padding-top:calc(14px + env(safe-area-inset-top, 0px)) !important; }
+  .msearch-bar{ padding-top:calc(8px + env(safe-area-inset-top, 0px)) !important; }
 }
 /* the floating bottom bar clears the gesture strip in both modes */
 .bottom-nav{ bottom:calc(env(safe-area-inset-bottom, 0px) + 10px) !important; }
