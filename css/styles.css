@@ -2583,7 +2583,7 @@ body.detail-open .topbar{ background:rgba(10,10,10,.98) !important; backdrop-fil
 @media(max-width:768px){
   .dd-col2-close{ display:inline-flex; align-items:center; justify-content:center; float:right; width:34px; height:34px; border-radius:50%; background:var(--bg3); border:1px solid var(--border); color:var(--t1); cursor:pointer; margin:-4px -4px 6px 6px; }
   /* details drawer — notification-panel glass (site glass standard, restored) */
-  #dareDetailOverlay .dd-col2, #videoDetailOverlay .dd-col2{ background:rgba(18,18,18,.78) !important; backdrop-filter:var(--blur) !important; -webkit-backdrop-filter:var(--blur) !important; border-left:1px solid var(--border) !important; }
+  #dareDetailOverlay .dd-col2, #videoDetailOverlay .dd-col2{ background:#000 !important; backdrop-filter:none !important; -webkit-backdrop-filter:none !important; border-left:1px solid rgba(255,255,255,.14) !important; }
 }
 
 /* ─── Comments box (scrollable, with close — desktop + mobile) ─── */
@@ -5059,7 +5059,7 @@ body::after{
 #dareDetailOverlay .dd-topbar{ display:none !important; }
 
 /* ── thumbnail: full bleed, nothing floating on top of it ── */
-#dareDetailOverlay .dd-hero{ border-radius:0 !important; margin:0 !important; }
+#dareDetailOverlay .dd-hero{ border-radius:14px !important; margin:0 !important; }
 #dareDetailOverlay .dd-hero .dd-bounty-badge,
 #dareDetailOverlay .dd-hero .dd-expiry-badge{ font-size:11px; }
 
@@ -5112,7 +5112,7 @@ body::after{
 #dareDetailOverlay .vd-action-btn .mi{ font-size:22px; color:#fff !important; }
 #dareDetailOverlay .vd-action-btn:hover{ background:rgba(255,255,255,.08) !important; }
 #dareDetailOverlay .vd-action-btn:active{ background:rgba(255,255,255,.14) !important; }
-#dareDetailOverlay .dd-share-ic{ transform:scaleX(-1); }
+#dareDetailOverlay .dd-share-ic{ font-family:'Material Symbols Outlined','Material Icons Round' !important; transform:scaleX(-1); }
 /* the one action that has to be found first keeps its word and an outline */
 #dareDetailOverlay .dd-cta-btn{
   height:32px; padding:0 16px !important; gap:6px;
@@ -5124,24 +5124,16 @@ body::after{
 #dareDetailOverlay .dd-cta-btn.is-done,
 #dareDetailOverlay .dd-cta-btn.is-mine{ opacity:.6; cursor:default; }
 
-/* ── Description & rules: below the actions, meta line on top ── */
-#dareDetailOverlay .dd-details-btn {
-  display:block !important; width:100%; margin:12px 0 0 !important;
-  background:#151515 !important; border:none !important; border-radius:12px !important;
-  padding:10px 12px 11px !important; color:#fff !important; cursor:pointer;
-  text-align:left; box-shadow:none !important; font-family:inherit;
-  -webkit-tap-highlight-color:transparent;
-}
-#dareDetailOverlay .dd-details-btn:active { background:#1d1d1d !important; }
+/* ── the age/views line, now at the foot of the description box ── */
 #dareDetailOverlay .dd-metaline{
   display:block; font-size:12px; font-weight:500;
-  color:rgba(255,255,255,.55); margin:0 0 6px;
+  color:rgba(255,255,255,.5); margin:18px 0 0;
+  padding-top:14px; border-top:1px solid rgba(255,255,255,.10);
 }
-#dareDetailOverlay .dd-details-row { display:flex; align-items:center; gap:8px; }
-#dareDetailOverlay .dd-details-lbl { flex:1; min-width:0; font-size:13px; font-weight:600;
-  overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-#dareDetailOverlay .dd-details-row .mi { font-size:18px; color:#fff; flex-shrink:0; }
-#dareDetailOverlay .dd-details-chev { opacity:.5; }
+#dareDetailOverlay .dd-col2-cap{
+  font-size:17px; font-weight:600; line-height:1.3; color:#fff; margin:0 0 14px;
+}
+
 
 /* ── comments: the YouTube card ── */
 #dareDetailOverlay .dd-comments,
@@ -5187,8 +5179,11 @@ body::after{
   /* one 12px gutter, not the 32px the wrap and the column used to add up to;
      the thumbnail pulls back out of it so it still bleeds to both edges */
   #dareDetailOverlay .dd-col1{ padding:0 12px 24px !important; }
-  #dareDetailOverlay .dd-hero{ margin:0 -12px !important; width:auto !important; }
+  /* flush to the top edge, so only the bottom pair curves */
+  #dareDetailOverlay .dd-hero{ margin:0 -12px !important; width:auto !important; border-radius:0 0 14px 14px !important; }
   #dareDetailOverlay .dd-col3{ margin:12px !important; }
+  /* the caption is the only way into the description box on mobile */
+  #dareDetailOverlay .dd-title2{ cursor:pointer; }
 }
 @media(max-width:360px){
   #dareDetailOverlay .dd-title2{ font-size:16px !important; }
@@ -5199,14 +5194,18 @@ body::after{
 /* ── desktop: same page, roomier. No sticky bar here either. ── */
 @media(min-width:769px){
   #dareDetailOverlay .dd-wrap{ padding-top:20px; }
-  #dareDetailOverlay .dd-hero{ border-radius:14px !important; }
   #dareDetailOverlay .dd-title2{ font-size:20px !important; margin-top:14px !important; }
   #dareDetailOverlay .dd-creator-av{ width:38px !important; height:38px !important; }
   #dareDetailOverlay .dd-creator-nm { font-size:15px; }
   #dareDetailOverlay .dd-follow{ height:34px; line-height:32px; }
   #dareDetailOverlay .vd-action-btn{ height:36px; padding:0 10px !important; }
   #dareDetailOverlay .dd-cta-btn{ height:34px; }
-  #dareDetailOverlay .dd-details-btn { padding:12px 14px 13px !important; }
+  /* the three boxes: hamburger black with one thin white hairline */
+  #dareDetailOverlay .dd-col2,
   #dareDetailOverlay .dd-comments,
-  #dareDetailOverlay .dd-col3{ padding:14px !important; }
+  #dareDetailOverlay .dd-col3{
+    background:#000 !important; border:1px solid rgba(255,255,255,.22) !important;
+    border-radius:14px !important; padding:16px !important;
+  }
+  #dareDetailOverlay .dd-col2{ align-self:flex-start; }
 }

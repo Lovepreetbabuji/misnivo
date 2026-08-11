@@ -29,10 +29,10 @@
      ⚠ icon_names is a SUBSET: any icon shown in this face MUST be listed here,
      or the browser finds no glyph and renders the ligature as literal text
      ("menu", "search"). Adding a topbar icon? Add its name below too. -->
-<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,100..400,0..1,0&icon_names=account_balance_wallet,add,arrow_back,bolt,bookmark,chat_bubble,close,expand_less,explore,home,menu,more_vert,notifications,person,search,send,settings,tune&display=block" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,100..400,0..1,0&icon_names=account_balance_wallet,add,arrow_back,bolt,bookmark,chat_bubble,close,expand_less,explore,home,menu,more_vert,notifications,person,reply,search,send,settings,tune&display=block" rel="stylesheet"/>
 
 <!-- App Styles -->
-<link rel="stylesheet" href="/css/styles.css?v=20260811k"/>
+<link rel="stylesheet" href="/css/styles.css?v=20260811m"/>
 
 <!-- The splash logo must be in flight before anything else competes for the pipe -->
 <link rel="preload" as="image" href="/misnivo.png?v=1" fetchpriority="high"/>
@@ -1129,7 +1129,7 @@
 <!-- App Logic -->
 <!-- defer, so it runs after the Firebase bundles above and after the DOM is
      parsed — same order as before, but nothing blocks the first paint -->
-<script defer src="/js/app.js?v=20260811k"></script>
+<script defer src="/js/app.js?v=20260811m"></script>
 
 <!-- ══ v0.19 NEW MODALS ══ -->
 
@@ -1249,7 +1249,7 @@
       <div class="dd-bar dd-col1">
         <!-- Thumbnail bleeds to both edges; everything under it keeps a thin gutter. -->
         <div class="dd-hero" id="ddHero"></div>
-        <div class="dd-title2" id="ddDareTitle"></div>
+        <div class="dd-title2" id="ddDareTitle" onclick="openDareDetails()"></div>
 
         <!-- photo → username → Follow -->
         <div class="dd-idrow">
@@ -1273,16 +1273,6 @@
           </span>
         </div>
 
-        <!-- Description & rules — the age/views line rides on top of it -->
-        <button class="dd-details-btn" onclick="openDareDetails()">
-          <span class="dd-metaline" id="ddMetaLine"></span>
-          <span class="dd-details-row">
-            <span class="mi">description</span>
-            <span class="dd-details-lbl">Description &amp; rules</span>
-            <span class="mi dd-details-chev">chevron_right</span>
-          </span>
-        </button>
-
         <!-- Comments PREVIEW (top comment only) — the whole card is the tap target -->
         <div class="dd-comments dd-card" onclick="openDareComments()" style="cursor:pointer;">
           <div class="vd-sec-title"><span class="mi">chat_bubble</span> <span id="ddCommentsTitle">Comments</span> <span class="dd-cmt-count" id="ddCommentCount">0</span></div>
@@ -1291,11 +1281,13 @@
       </div>
 
       <!-- ═══ COLUMN 2: description + rules (mobile: swipe-left drawer) ═══ -->
-      <div class="dd-bar dd-col2">
-        <button class="dd-col2-close" onclick="closeDareDetails()" aria-label="Close"><span class="mi">close</span></button>
+      <div class="dd-bar dd-col2" id="ddDetailsDrawer">
+        <button class="dd-col2-close" onclick="dismissDareDetails()" aria-label="Close"><span class="mi">close</span></button>
+        <div class="dd-col2-cap" id="ddDescCap"></div>
         <div class="dd-desc" id="ddDesc"></div>
         <div id="ddRulesBar"><div class="dd-rules" id="ddRules"></div></div>
         <div class="dd-tags" id="ddTags"></div>
+        <div class="dd-metaline" id="ddMetaLine"></div>
       </div>
 
       <!-- ═══ COLUMN 3: related dares (16:9) ═══ -->

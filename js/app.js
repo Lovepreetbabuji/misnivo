@@ -4910,6 +4910,7 @@ function openDareDetail(dareId){
 
   document.getElementById('ddTopTitle').textContent = title;
   const ddTitleEl = document.getElementById('ddDareTitle'); if (ddTitleEl) ddTitleEl.textContent = title;
+  const ddCapEl = document.getElementById('ddDescCap'); if (ddCapEl) ddCapEl.textContent = title;
 
   // View count (increment once per open, like proofs)
   if (user) {
@@ -4982,8 +4983,16 @@ function closeDareDetail(){
   _ddCurrentId = null;
 }
 // Mobile: description/rules/tags live in a drawer revealed by a left-swipe
-function openDareDetails(){ document.querySelector('#dareDetailOverlay .dd-col2')?.classList.add('open'); }
-function closeDareDetails(){ document.querySelector('#dareDetailOverlay .dd-col2')?.classList.remove('open'); }
+function openDareDetails(){
+  if (window.innerWidth > 768) return;                 // desktop keeps the box open permanently
+  document.querySelector('#dareDetailOverlay .dd-col2')?.classList.add('open');
+  _subOpen('ddDetailsDrawer');
+}
+function closeDareDetails(){
+  _subDrop('ddDetailsDrawer');
+  document.querySelector('#dareDetailOverlay .dd-col2')?.classList.remove('open');
+}
+function dismissDareDetails(){ _subDismiss('ddDetailsDrawer', closeDareDetails); }
 let _ddTouchX=0, _ddTouchY=0, _ddTouchActive=false;
 // Swipe-left opens Description & rules. Takes an overlay id now, so the
 // long-video page gets the gesture the mission page and shorts already had.
@@ -4997,8 +5006,12 @@ function _ddBindSwipe(overlayId){
     if (Math.abs(dx)<60 || Math.abs(dy)>Math.abs(dx)) return; // not a horizontal swipe
     const col2 = ov.querySelector('.dd-col2');
     const open = col2 && col2.classList.contains('open');
-    if (dx<0 && col2 && !open) col2.classList.add('open');    // swipe left → open
-    else if (dx>0 && open)     col2.classList.remove('open'); // swipe right → close
+    // On the mission page go through the open/dismiss pair so the drawer keeps
+    // its history entry — the caption is the only other way in now, and back
+    // has to close the drawer rather than the whole mission.
+    const isDare = ov.id === 'dareDetailOverlay';
+    if (dx<0 && col2 && !open){ if (isDare) openDareDetails(); else col2.classList.add('open'); }        // swipe left → open
+    else if (dx>0 && open)   { if (isDare) dismissDareDetails(); else col2.classList.remove('open'); }   // swipe right → close
   }, {passive:true});
 }
 // Which element actually scrolls? desktop = column 1; mobile = the overlay itself.
@@ -5283,6 +5296,7 @@ window.addEventListener('popstate', function(e){
   // no _dmPush() here any more — re-pushing while closing is what made backing
   // out of these layers grow the stack instead of shrink it
   if (isOpen('ddCommentsBox')){ closeDareComments(); return; }
+  if (isOpen('ddDetailsDrawer')){ closeDareDetails(); return; }
   if (isOpen('shortsDetailsDrawer')){ shortsCloseDetails(); return; }
   if (isOpen('collabModal')){ closeCollabModal(); return; }
   if (isOpen('notifPanel')){ _notifCloseNow(); return; }
@@ -5330,7 +5344,7 @@ function _ddCtaHtml(d){
       return pill('is-done', 'check_circle', 'Submitted', '');
     if (myEntry.applicantStatus==='pending')
       return pill('is-done', 'hourglass_empty', 'Applied', '');
-    return pill('is-cta', 'video_call', 'Submit proof', `closeDareDetail();openProof('${d.id}')`);
+    return pill('is-cta', 'video_call', 'Submit proof', `openProof('${d.id}')`);
   }
   return pill('is-cta', 'add', d.takerSelectionMode==='creator_picks'?'Apply':'Accept', `acceptDare('${d.id}')`);
 }
