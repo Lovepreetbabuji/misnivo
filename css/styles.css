@@ -5522,3 +5522,26 @@ body.vp-fs-on .dd-scrolltop{ display:none !important; }
   border-bottom:1px solid rgba(255,255,255,.10) !important;
   border-radius:8px 8px 0 0 !important; margin-bottom:4px !important;
 }
+
+/* ── background upload indicator ──────────────────────────────────────────
+   _showBgUploadIndicator() builds this, sets display:flex and appends it to
+   <body> — but nothing ever styled .bg-upload-ind, so it landed at the foot of
+   the document as a bare unpositioned row. It is a floating pill.          */
+.bg-upload-ind{
+  position:fixed; right:16px; bottom:16px; z-index:9600;
+  display:flex; align-items:center; gap:12px;
+  min-width:230px; max-width:min(320px, calc(100vw - 32px));
+  padding:12px 14px; border-radius:14px;
+  background:#000; border:1px solid rgba(255,255,255,.28);
+  box-shadow:0 10px 30px rgba(0,0,0,.55);
+}
+@media(max-width:768px){
+  .bg-upload-ind{ right:12px; left:12px; bottom:calc(72px + env(safe-area-inset-bottom, 0px)); max-width:none; }
+}
+
+/* ── shorts: column 1 and the comments slide in with each new short ───────
+   renderShort() removes and re-adds this class to restart an animation that
+   was never written, so the columns simply snapped. This is that animation. */
+@keyframes shortsColShift{ from{ opacity:0; transform:translateY(14px); } to{ opacity:1; transform:none; } }
+.shorts-col-shift{ animation:shortsColShift .28s cubic-bezier(.25,.8,.25,1) both; }
+body.no-anim .shorts-col-shift{ animation:none; }
