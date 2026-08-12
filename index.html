@@ -32,7 +32,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,100..400,0..1,0&icon_names=account_balance_wallet,add,arrow_back,bolt,bookmark,chat_bubble,close,expand_less,explore,home,menu,more_vert,notifications,person,reply,search,send,settings,thumb_down,thumb_up,tune&display=block" rel="stylesheet"/>
 
 <!-- App Styles -->
-<link rel="stylesheet" href="/css/styles.css?v=20260812a"/>
+<link rel="stylesheet" href="/css/styles.css?v=20260812b"/>
 
 <!-- The splash logo must be in flight before anything else competes for the pipe -->
 <link rel="preload" as="image" href="/misnivo.png?v=1" fetchpriority="high"/>
@@ -1129,7 +1129,7 @@
 <!-- App Logic -->
 <!-- defer, so it runs after the Firebase bundles above and after the DOM is
      parsed — same order as before, but nothing blocks the first paint -->
-<script defer src="/js/app.js?v=20260812a"></script>
+<script defer src="/js/app.js?v=20260812b"></script>
 
 <!-- ══ v0.19 NEW MODALS ══ -->
 
@@ -1332,10 +1332,32 @@
       <!-- ═══ COLUMN 1: video · title · creator+taker · actions · comments ═══ -->
       <div class="dd-bar dd-col1">
         <div class="vd2-player-wrap" id="vdPlayerWrap">
-          <video class="vd-player" id="vdPlayer" controls playsinline
+          <!-- no controls attribute: the native bar's dots menu is Chrome's and cannot be added
+               to, so the whole bar is ours — same reason YouTube ships its own -->
+          <video class="vd-player" id="vdPlayer" playsinline
                  onpause="_vdSyncPaused()" onplay="_vdSyncPaused()" onended="_vdSyncPaused()"></video>
+          <div class="vp-shade"></div>
+          <div class="vp-skip back"><span class="mi">fast_rewind</span>10s</div>
+          <div class="vp-skip fwd"><span class="mi">fast_forward</span>10s</div>
           <button class="vd-center-play" onclick="_vdTogglePlay()" aria-label="Play"><span class="mi">play_arrow</span></button>
           <span class="dd-bounty-badge" id="vdBountyBadge">$0</span>
+          <div class="vp-menu" id="vpMenu"></div>
+          <div class="vp-bar">
+            <div class="vp-seek" id="vpSeek">
+              <div class="vp-seek-buf"></div><div class="vp-seek-fill"></div><div class="vp-seek-knob"></div>
+            </div>
+            <div class="vp-row">
+              <button class="vp-btn" id="vpPlay" aria-label="Play"><span class="mi">play_arrow</span></button>
+              <span class="vp-volwrap">
+                <button class="vp-btn" id="vpMute" aria-label="Mute"><span class="mi">volume_up</span></button>
+                <input class="vp-vol" id="vpVol" type="range" min="0" max="100" value="100" aria-label="Volume"/>
+              </span>
+              <span class="vp-time"><span id="vpCur">0:00</span> / <span id="vpDur">0:00</span></span>
+              <span class="vp-gap"></span>
+              <button class="vp-btn" id="vpMore" aria-label="More"><span class="mi">more_vert</span></button>
+              <button class="vp-btn" id="vpFs" aria-label="Fullscreen"><span class="mi">fullscreen</span></button>
+            </div>
+          </div>
         </div>
         <div class="dd-title2" onclick="toggleVideoDesc()"><span class="dd-title-txt" id="vdTitle">—</span><span class="dd-title-more">…</span></div>
         <!-- creator + taker: both avatars, both handles, Follow at the right edge.

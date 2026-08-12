@@ -5328,11 +5328,6 @@ body::after{
   #videoDetailOverlay .vd2-collab-avs .vd2-av2{ left:24px; }
 }
 
-/* ── video page follow-ups ────────────────────────────────────────────────
-   The long player carries native controls, which already draw a play button
-   when paused — the custom centre button made two. Native wins; it also has
-   the scrubber, volume and fullscreen.                                      */
-.vd2-player-wrap .vd-center-play{ display:none !important; }
 
 /* The bounty is a pop, not a sticker: hidden by default, shown while paused,
    and for five seconds after playback starts. */
@@ -5362,3 +5357,115 @@ body::after{
 #videoDetailOverlay .vd-action-btn.liked .dd-vote-ic{
   font-variation-settings:'FILL' 1, 'wght' 400, 'GRAD' 0, 'opsz' 24;
 }
+
+/* ═══════════════════════════════════════════════════════════════════════
+   OUR OWN LONG-VIDEO CONTROLS
+   The browser's control bar carries a ⋮ that belongs to Chrome and cannot be
+   scripted, which is why Quality could never live there. YouTube does the same
+   thing this does: no `controls` attribute, and the whole bar is ours.
+   ═══════════════════════════════════════════════════════════════════════ */
+.vd2-player-wrap{ cursor:default; }
+.vd2-player-wrap .vd-player::-webkit-media-controls{ display:none !important; }
+
+/* the gradient that keeps white controls readable over a bright frame */
+.vp-shade{
+  position:absolute; left:0; right:0; bottom:0; height:96px; pointer-events:none;
+  background:linear-gradient(to top, rgba(0,0,0,.72), rgba(0,0,0,0));
+  opacity:0; transition:opacity .2s ease; z-index:3;
+}
+.vd2-player-wrap.vp-show .vp-shade{ opacity:1; }
+
+/* ── bottom bar ── */
+.vp-bar{
+  position:absolute; left:0; right:0; bottom:0; z-index:5;
+  padding:0 10px 8px; opacity:0; transform:translateY(6px);
+  transition:opacity .2s ease, transform .2s ease; pointer-events:none;
+}
+.vd2-player-wrap.vp-show .vp-bar{ opacity:1; transform:none; pointer-events:auto; }
+
+/* ── scrub bar ── */
+.vp-seek{
+  position:relative; height:16px; display:flex; align-items:center;
+  cursor:pointer; touch-action:none;
+}
+.vp-seek::before{
+  content:''; position:absolute; left:0; right:0; height:3px; border-radius:3px;
+  background:rgba(255,255,255,.28); transition:height .12s ease;
+}
+.vp-seek-buf, .vp-seek-fill{
+  position:absolute; left:0; height:3px; border-radius:3px; transition:height .12s ease;
+}
+.vp-seek-buf{ background:rgba(255,255,255,.45); width:0; }
+.vp-seek-fill{ background:#fff; width:0; }
+.vp-seek-knob{
+  position:absolute; width:12px; height:12px; border-radius:50%; background:#fff;
+  transform:translateX(-50%) scale(0); transition:transform .12s ease; left:0;
+}
+.vp-seek:hover::before, .vp-seek.drag::before,
+.vp-seek:hover .vp-seek-buf, .vp-seek.drag .vp-seek-buf,
+.vp-seek:hover .vp-seek-fill, .vp-seek.drag .vp-seek-fill{ height:5px; }
+.vp-seek:hover .vp-seek-knob, .vp-seek.drag .vp-seek-knob{ transform:translateX(-50%) scale(1); }
+
+/* ── button row ── */
+.vp-row{ display:flex; align-items:center; gap:2px; margin-top:2px; }
+.vp-btn{
+  width:36px; height:36px; flex-shrink:0; border:none; background:transparent;
+  color:#fff; display:flex; align-items:center; justify-content:center;
+  cursor:pointer; border-radius:50%; -webkit-tap-highlight-color:transparent;
+}
+.vp-btn .mi{ font-size:24px; color:#fff; }
+.vp-btn:hover{ background:rgba(255,255,255,.14); }
+.vp-time{ font-size:12px; color:#fff; font-variant-numeric:tabular-nums; margin-left:6px; white-space:nowrap; }
+.vp-gap{ flex:1; }
+.vp-vol{
+  width:0; opacity:0; height:3px; margin:0 2px; accent-color:#fff; cursor:pointer;
+  transition:width .18s ease, opacity .18s ease; -webkit-appearance:none; appearance:none;
+  background:rgba(255,255,255,.3); border-radius:3px;
+}
+.vp-vol::-webkit-slider-thumb{ -webkit-appearance:none; width:11px; height:11px; border-radius:50%; background:#fff; }
+.vp-volwrap:hover .vp-vol, .vp-vol:focus{ width:64px; opacity:1; }
+.vp-volwrap{ display:flex; align-items:center; }
+
+/* ── the ⋮ menu (no gear anywhere) ── */
+.vp-menu{
+  position:absolute; right:10px; bottom:56px; z-index:7; display:none;
+  min-width:210px; padding:6px; border-radius:12px;
+  background:#212121; border:1px solid rgba(255,255,255,.12);
+  box-shadow:0 10px 30px rgba(0,0,0,.55);
+}
+.vp-menu.open{ display:block; }
+.vp-menu button{
+  display:flex; align-items:center; gap:12px; width:100%; padding:10px 12px;
+  background:none; border:none; color:#fff; font-family:inherit; font-size:13px;
+  font-weight:500; cursor:pointer; border-radius:8px; text-align:left; white-space:nowrap;
+}
+.vp-menu button:hover{ background:rgba(255,255,255,.10); }
+.vp-menu button .mi{ font-size:19px; }
+.vp-menu-val{ margin-left:auto; color:rgba(255,255,255,.55); font-weight:400; }
+.vp-menu-back{ border-bottom:1px solid rgba(255,255,255,.10); border-radius:8px 8px 0 0 !important; margin-bottom:4px; }
+.vp-menu button.sel .vp-menu-val{ color:#fff; }
+
+/* ── double-tap seek feedback ── */
+.vp-skip{
+  position:absolute; top:50%; transform:translateY(-50%); z-index:4;
+  width:88px; height:88px; border-radius:50%; background:rgba(0,0,0,.5);
+  display:flex; align-items:center; justify-content:center; flex-direction:column;
+  color:#fff; font-size:11px; font-weight:700; opacity:0; pointer-events:none;
+  transition:opacity .25s ease;
+}
+.vp-skip .mi{ font-size:26px; }
+.vp-skip.on{ opacity:1; }
+.vp-skip.back{ left:8%; } .vp-skip.fwd{ right:8%; }
+
+/* the centre button is ours again — with no native bar there is only one */
+.vd2-player-wrap .vd-center-play{ display:flex !important; z-index:6; }
+
+@media(max-width:768px){
+  .vp-volwrap{ display:none; }             /* phones use the hardware keys */
+  .vp-btn{ width:34px; height:34px; }
+  .vp-btn .mi{ font-size:22px; }
+  .vp-menu{ bottom:52px; right:8px; }
+}
+/* fullscreen: the wrap becomes the whole screen, so the video must fill it */
+.vd2-player-wrap:fullscreen{ width:100vw; height:100vh; border-radius:0 !important; transform:none !important; }
+.vd2-player-wrap:fullscreen .vd-player{ width:100%; height:100%; object-fit:contain; }

@@ -4622,6 +4622,7 @@ function _vdSyncPaused(){
   const v = document.getElementById('vdPlayer'), w = document.getElementById('vdPlayerWrap');
   if (!v || !w) return;
   w.classList.toggle('is-paused', v.paused || v.ended);
+  if (typeof _vpSyncIcons === 'function') _vpSyncIcons();
   _vdBountySync();
 }
 // Visible while paused; on play it pops in for five seconds and then leaves the
@@ -5879,6 +5880,7 @@ async function openVideoDetail(proofId) {
   // thumbnail flies into the player box; the video loads underneath it below
   _heroOpen(vov, vov.querySelector('.vd2-player-wrap'));
   _vdBindScroll();
+  _vpInit();                            // our control bar replaces the browser's
   _vdSyncPaused();                      // badge on from the start; the play event hides it after 5s
   _ddBindSwipe('videoDetailOverlay');   // swipe-left opens Description & rules here too
   // Then show ad IN the video area, then play. Ad shows once per video per
@@ -6559,6 +6561,17 @@ function shortsOpenMenu(proofId){
   menu.classList.add('open');
   _shortsSetDotsIcon(true);
 }
+let _shortsRate = 1;
+// The shorts ⋮ had no speed control at all; it cycles rather than nesting a
+// submenu, because that sheet is already a scrolling list.
+function shortsSpeed(){
+  const i = _VP_SPEEDS.indexOf(_shortsRate);
+  _shortsRate = _VP_SPEEDS[(i + 1) % _VP_SPEEDS.length];
+  document.querySelectorAll('#shortsSnapContainer video').forEach(v => { v.playbackRate = _shortsRate; });
+  const l = document.getElementById('shortsSpeedLbl');
+  if (l) l.textContent = _shortsRate === 1 ? 'Normal' : _shortsRate + '×';
+  showToast(_shortsRate === 1 ? 'Speed: Normal' : 'Speed: ' + _shortsRate + '×');
+}
 function shortsOpenComments(proofId){
   const ov = document.getElementById('shortsOverlay');
   ov.dataset.proofId = proofId;
@@ -6587,6 +6600,8 @@ function _shortsBuildMenu(p){
     <button class="shorts-menu-action" onclick="shortsDownload()"><span class="mi">download</span> Download</button>
     <button class="shorts-menu-action" onclick="shortsCycleSpeed()"><span class="mi">slow_motion_video</span> Playback speed <span id="shortsSpeedLbl" style="margin-left:auto;color:var(--t3);">${_SHORTS_SPEEDS[_shortsSpeedIdx]}x</span></button>
     <button class="shorts-menu-action" onclick="shortsQuality()"><span class="mi">tune</span> Quality <span id="shortsQLbl" style="margin-left:auto;color:var(--t3);">${_vqLabel()}</span></button>
+    <button class="shorts-menu-action" onclick="shortsQuality()"><span class="mi">tune</span> Quality <span id="shortsQLbl" style="margin-left:auto;color:var(--t3);">${typeof _vqLabel==='function'?_vqLabel():'Auto'}</span></button>
+    <button class="shorts-menu-action" onclick="shortsSpeed()"><span class="mi">speed</span> Playback speed <span id="shortsSpeedLbl" style="margin-left:auto;color:var(--t3);">${_shortsRate===1?'Normal':_shortsRate+'×'}</span></button>
     <button class="shorts-menu-action" onclick="shortsToggleAutoScroll()"><span class="mi">smart_display</span> Auto-scroll <span id="shortsAutoLbl" style="margin-left:auto;color:var(--t3);">${_shortsAutoScroll?'On':'Off'}</span></button>
     <button class="shorts-menu-action" onclick="shortsPiP()"><span class="mi">picture_in_picture_alt</span> Picture-in-picture</button>
     <button class="shorts-menu-report" onclick="openReportModal('proof','${p.id}')"><span class="mi">flag</span> Report</button>
@@ -8287,3 +8302,219 @@ function _resumeBgMedia(){
     else if (acc < -10) document.body.classList.remove('tb-hide');
   }, { passive:true });
 })();
+
+// ════════════════════════════════════════════════════════════════════
+//  LONG-VIDEO PLAYER — ours, not the browser's
+//
+//  The native control bar carries a ⋮ that belongs to Chrome: it cannot be
+//  added to, which is why Quality could never live there. Dropping `controls`
+//  and drawing the bar ourselves is what YouTube does, and it is the only way
+//  to own that menu. Everything the native bar gave us is rebuilt here —
+//  scrub, time, volume, fullscreen — plus Quality, speed and PiP behind a ⋮.
+// ════════════════════════════════════════════════════════════════════
+let _vpHideT = null, _vpBound = false, _vpTapT = null, _vpLastTap = 0;
+const _VP_SPEEDS = [0.25, 0.5, 0.75, 1, 1.25, 1.5, 1.75, 2];
+
+function _vpEls(){
+  return {
+    w: document.getElementById('vdPlayerWrap'),
+    v: document.getElementById('vdPlayer'),
+    seek: document.getElementById('vpSeek'),
+    menu: document.getElementById('vpMenu')
+  };
+}
+function _vpFmt(t){
+  if (!isFinite(t) || t < 0) t = 0;
+  const h = Math.floor(t/3600), m = Math.floor(t%3600/60), s = Math.floor(t%60);
+  return (h ? h + ':' + String(m).padStart(2,'0') : String(m)) + ':' + String(s).padStart(2,'0');
+}
+
+// ── show / auto-hide ──────────────────────────────────────────────────
+function _vpShow(sticky){
+  const {w, v} = _vpEls(); if (!w) return;
+  w.classList.add('vp-show');
+  clearTimeout(_vpHideT);
+  if (sticky) return;
+  if (v && !v.paused && !v.ended) _vpHideT = setTimeout(()=>_vpHide(), 2800);
+}
+function _vpHide(){
+  const {w, menu} = _vpEls(); if (!w) return;
+  if (menu && menu.classList.contains('open')) return;   // never yank the menu away
+  w.classList.remove('vp-show');
+}
+
+// ── painting ──────────────────────────────────────────────────────────
+function _vpPaint(){
+  const {v, seek} = _vpEls(); if (!v || !seek) return;
+  const d = v.duration || 0, pct = d ? (v.currentTime / d) * 100 : 0;
+  seek.querySelector('.vp-seek-fill').style.width = pct + '%';
+  seek.querySelector('.vp-seek-knob').style.left  = pct + '%';
+  let buf = 0;
+  try { if (v.buffered.length) buf = (v.buffered.end(v.buffered.length-1) / d) * 100; } catch(e){}
+  seek.querySelector('.vp-seek-buf').style.width = (isFinite(buf) ? buf : 0) + '%';
+  const c = document.getElementById('vpCur'), dd = document.getElementById('vpDur');
+  if (c)  c.textContent  = _vpFmt(v.currentTime);
+  if (dd) dd.textContent = _vpFmt(d);
+}
+function _vpSyncIcons(){
+  const {v, w} = _vpEls(); if (!v || !w) return;
+  const pb = document.getElementById('vpPlay'), mb = document.getElementById('vpMute');
+  const paused = v.paused || v.ended;
+  if (pb) pb.querySelector('.mi').textContent = paused ? 'play_arrow' : 'pause';
+  if (mb) mb.querySelector('.mi').textContent = v.muted || !v.volume ? 'volume_off' : 'volume_up';
+  const fs = document.getElementById('vpFs');
+  if (fs) fs.querySelector('.mi').textContent = document.fullscreenElement ? 'fullscreen_exit' : 'fullscreen';
+  if (paused) _vpShow(true);
+}
+
+// ── the ⋮ menu ────────────────────────────────────────────────────────
+function _vpMenuRoot(){
+  const {v, menu} = _vpEls(); if (!menu) return;
+  const rate = v ? v.playbackRate : 1;
+  menu.innerHTML =
+    '<button onclick="_vpMenuSpeed()"><span class="mi">speed</span>Playback speed'
+      + '<span class="vp-menu-val">' + (rate === 1 ? 'Normal' : rate + '×') + '</span></button>'
+    + '<button onclick="_vpQuality()"><span class="mi">tune</span>Quality'
+      + '<span class="vp-menu-val">' + (typeof _vqLabel === 'function' ? _vqLabel() : 'Auto') + '</span></button>'
+    + '<button onclick="_vpPiP()"><span class="mi">picture_in_picture_alt</span>Picture-in-picture</button>';
+}
+function _vpMenuSpeed(){
+  const {v, menu} = _vpEls(); if (!menu) return;
+  const rate = v ? v.playbackRate : 1;
+  menu.innerHTML = '<button class="vp-menu-back" onclick="_vpMenuRoot()"><span class="mi">arrow_back</span>Playback speed</button>'
+    + _VP_SPEEDS.map(s =>
+        '<button class="' + (s === rate ? 'sel' : '') + '" onclick="_vpSetSpeed(' + s + ')">'
+        + '<span class="mi">' + (s === rate ? 'check' : 'speed') + '</span>'
+        + (s === 1 ? 'Normal' : s + '×') + '</button>').join('');
+}
+function _vpSetSpeed(s){
+  const {v} = _vpEls(); if (v) v.playbackRate = s;
+  _vpMenuRoot(); _vpShow(true);
+  showToast(s === 1 ? 'Speed: Normal' : 'Speed: ' + s + '×');
+}
+function _vpQuality(){
+  const {v} = _vpEls(); _vpCloseMenu();
+  if (v && typeof openQualityMenu === 'function') openQualityMenu(v);
+}
+function _vpPiP(){
+  const {v} = _vpEls(); _vpCloseMenu(); if (!v) return;
+  try {
+    if (document.pictureInPictureElement) document.exitPictureInPicture();
+    else if (v.requestPictureInPicture) v.requestPictureInPicture();
+    else showToast('Picture-in-picture is not supported here');
+  } catch(e){ showToast('Picture-in-picture is not supported here'); }
+}
+function _vpToggleMenu(){
+  const {menu} = _vpEls(); if (!menu) return;
+  if (menu.classList.contains('open')) { _vpCloseMenu(); return; }
+  _vpMenuRoot(); menu.classList.add('open'); _vpShow(true);
+}
+function _vpCloseMenu(){
+  const {menu} = _vpEls(); if (menu) menu.classList.remove('open');
+  _vpShow();
+}
+
+// ── fullscreen (iOS only ever fullscreens the video element itself) ────
+function _vpFullscreen(){
+  const {w, v} = _vpEls(); if (!w) return;
+  if (document.fullscreenElement) { document.exitFullscreen(); return; }
+  if (w.requestFullscreen) w.requestFullscreen().catch(()=>{});
+  else if (v && v.webkitEnterFullscreen) v.webkitEnterFullscreen();
+  else showToast('Fullscreen is not available here');
+}
+
+// ── seeking ───────────────────────────────────────────────────────────
+function _vpSeekTo(e){
+  const {v, seek} = _vpEls(); if (!v || !seek || !v.duration) return;
+  const r = seek.getBoundingClientRect();
+  const x = Math.min(Math.max(0, (e.clientX - r.left) / r.width), 1);
+  v.currentTime = x * v.duration;
+  _vpPaint();
+}
+function _vpSkip(sec){
+  const {v, w} = _vpEls(); if (!v || !v.duration) return;
+  v.currentTime = Math.min(Math.max(0, v.currentTime + sec), v.duration);
+  const el = w.querySelector('.vp-skip.' + (sec < 0 ? 'back' : 'fwd'));
+  if (el){ el.classList.add('on'); clearTimeout(el._t); el._t = setTimeout(()=>el.classList.remove('on'), 450); }
+  _vpPaint(); _vpShow();
+}
+
+// ── wiring, once ──────────────────────────────────────────────────────
+function _vpInit(){
+  const {w, v, seek, menu} = _vpEls();
+  if (!w || !v || _vpBound) { _vpPaint(); _vpSyncIcons(); return; }
+  _vpBound = true;
+
+  v.removeAttribute('controls');
+
+  v.addEventListener('timeupdate', _vpPaint);
+  v.addEventListener('progress',   _vpPaint);
+  v.addEventListener('durationchange', _vpPaint);
+  ['play','pause','ended','volumechange','ratechange'].forEach(ev => v.addEventListener(ev, _vpSyncIcons));
+  document.addEventListener('fullscreenchange', _vpSyncIcons);
+
+  document.getElementById('vpPlay').onclick = e => { e.stopPropagation(); _vdTogglePlay(); _vpShow(); };
+  document.getElementById('vpMute').onclick = e => { e.stopPropagation(); v.muted = !v.muted; _vpShow(); };
+  document.getElementById('vpFs').onclick   = e => { e.stopPropagation(); _vpFullscreen(); };
+  document.getElementById('vpMore').onclick = e => { e.stopPropagation(); _vpToggleMenu(); };
+  const vol = document.getElementById('vpVol');
+  if (vol) vol.oninput = () => { v.volume = vol.value / 100; v.muted = !+vol.value; };
+
+  // scrub — pointer events cover mouse and touch with one path
+  let dragging = false;
+  seek.addEventListener('pointerdown', e => {
+    dragging = true; seek.classList.add('drag'); seek.setPointerCapture(e.pointerId);
+    _vpSeekTo(e); _vpShow(true); e.stopPropagation();
+  });
+  seek.addEventListener('pointermove', e => { if (dragging) _vpSeekTo(e); });
+  seek.addEventListener('pointerup',   e => {
+    dragging = false; seek.classList.remove('drag');
+    try { seek.releasePointerCapture(e.pointerId); } catch(err){}
+    _vpShow();
+  });
+
+  // tapping the picture: desktop toggles playback, phones reveal the bar first,
+  // and a quick second tap on either side jumps ten seconds
+  w.addEventListener('click', e => {
+    if (e.target.closest('.vp-bar, .vp-menu, .vd-center-play, .dd-bounty-badge')) return;
+    if (menu && menu.classList.contains('open')) { _vpCloseMenu(); return; }
+    const now = Date.now();
+    if (now - _vpLastTap < 300){
+      clearTimeout(_vpTapT); _vpLastTap = 0;
+      const r = w.getBoundingClientRect();
+      _vpSkip(e.clientX - r.left < r.width / 2 ? -10 : 10);
+      return;
+    }
+    _vpLastTap = now;
+    _vpTapT = setTimeout(() => {
+      if (window.innerWidth > 768) { _vdTogglePlay(); _vpShow(); }
+      else if (w.classList.contains('vp-show')) _vpHide(); else _vpShow();
+    }, 300);
+  });
+  w.addEventListener('pointermove', e => { if (e.pointerType === 'mouse') _vpShow(); });
+  w.addEventListener('pointerleave', () => { if (!v.paused) _vpHide(); });
+
+  // keyboard, only while the watch page is the thing on screen
+  document.addEventListener('keydown', e => {
+    const ov = document.getElementById('videoDetailOverlay');
+    if (!ov || !ov.classList.contains('open')) return;
+    const t = e.target;
+    if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.isContentEditable)) return;
+    switch (e.key) {
+      case ' ': case 'k': e.preventDefault(); _vdTogglePlay(); _vpShow(); break;
+      case 'ArrowLeft':   e.preventDefault(); _vpSkip(-5); break;
+      case 'ArrowRight':  e.preventDefault(); _vpSkip(5);  break;
+      case 'f': _vpFullscreen(); break;
+      case 'm': v.muted = !v.muted; _vpShow(); break;
+      default: return;
+    }
+  });
+
+  document.addEventListener('click', e => {
+    if (!menu || !menu.classList.contains('open')) return;
+    if (e.target.closest('.vp-menu, #vpMore')) return;
+    _vpCloseMenu();
+  });
+
+  _vpPaint(); _vpSyncIcons(); _vpShow(true);
+}
