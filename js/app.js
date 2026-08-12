@@ -6563,13 +6563,33 @@ function shortsOpenMenu(proofId){
   if (menu.classList.contains('open')){ shortsCloseMenu(); return; }
   const p = (allProofs.find(x=>x.id===proofId)) || (homeProofs.find(x=>x.id===proofId)); if (!p) return;
   _shortsBuildMenu(p);
+  _shortsPlaceMenu();
   menu.classList.add('open');
   _shortsSetDotsIcon(true);
   _shortsLockFeed(true);          // the sheet belongs to THIS short — hold the feed still
 }
+// Beside the dots that opened it, inside the player — not parked in a corner.
+function _shortsPlaceMenu(){
+  const menu = document.getElementById('shortsMenu'); if (!menu) return;
+  const items = document.querySelectorAll('#shortsSnapContainer .shorts-snap-item');
+  const dots = items[shortsIndex] && items[shortsIndex].querySelector('.shorts-dots');
+  if (!dots){ menu.style.cssText = ''; return; }
+  const r = dots.getBoundingClientRect();
+  const w = Math.min(300, window.innerWidth - 24);
+  const left = Math.max(12, Math.min(r.right - w, window.innerWidth - w - 12));
+  menu.style.position = 'fixed';
+  menu.style.left  = left + 'px';
+  menu.style.right = 'auto';
+  menu.style.top   = (r.bottom + 8) + 'px';
+  menu.style.bottom = 'auto';
+  menu.style.width = w + 'px';
+  menu.style.maxHeight = Math.max(200, window.innerHeight - r.bottom - 24) + 'px';
+  menu.style.zIndex = '2147483000';
+}
 function shortsCloseMenu(){
   const menu = document.getElementById('shortsMenu'); if (!menu) return;
   menu.classList.remove('open');
+  menu.style.cssText = '';
   _shortsSetDotsIcon(false);
   _shortsLockFeed(false);
 }
@@ -6896,6 +6916,7 @@ document.addEventListener('click', e => {
 function shortsToggleMenu() {
   const m = document.getElementById('shortsMenu');
   if (m.classList.contains('open')) { shortsCloseMenu(); return; }
+  _shortsPlaceMenu();
   m.classList.add('open'); _shortsSetDotsIcon(true); _shortsLockFeed(true);
 }
 // Toggle the 3-dots icon → "close" (X) while the menu is open
@@ -8389,7 +8410,7 @@ function _vpMenuRoot(){
   const {v, menu} = _vpEls(); if (!menu) return;
   const rate = v ? v.playbackRate : 1;
   menu.innerHTML =
-    '<button onclick="_vpMenuSpeed()"><span class="mi">speed</span>Playback speed'
+    '<button onclick="event.stopPropagation();_vpMenuSpeed()"><span class="mi">speed</span>Playback speed'
       + '<span class="vp-menu-val">' + (rate === 1 ? 'Normal' : rate + '×') + '</span></button>'
     + '<button onclick="_vpQuality()"><span class="mi">tune</span>Quality'
       + '<span class="vp-menu-val">' + (typeof _vqLabel === 'function' ? _vqLabel() : 'Auto') + '</span></button>'
@@ -8398,9 +8419,9 @@ function _vpMenuRoot(){
 function _vpMenuSpeed(){
   const {v, menu} = _vpEls(); if (!menu) return;
   const rate = v ? v.playbackRate : 1;
-  menu.innerHTML = '<button class="vp-menu-back" onclick="_vpMenuRoot()"><span class="mi">arrow_back</span>Playback speed</button>'
+  menu.innerHTML = '<button class="vp-menu-back" onclick="event.stopPropagation();_vpMenuRoot()"><span class="mi">arrow_back</span>Playback speed</button>'
     + _VP_SPEEDS.map(s =>
-        '<button class="' + (s === rate ? 'sel' : '') + '" onclick="_vpSetSpeed(' + s + ')">'
+        '<button class="' + (s === rate ? 'sel' : '') + '" onclick="event.stopPropagation();_vpSetSpeed(' + s + ')">'
         + '<span class="mi">' + (s === rate ? 'check' : 'speed') + '</span>'
         + (s === 1 ? 'Normal' : s + '×') + '</button>').join('');
 }
@@ -8479,11 +8500,11 @@ function _vpFullscreen(){
   }
   go.then(()=>{
     // a landscape video on a phone is worth turning the screen for — this is
-    // what makes it read as "rotate, then grow"
+    // what makes it read as "rotate, then grow". The grow itself is driven by
+    // fullscreenchange, once layout has actually settled at the new size.
     try{ if (window.innerWidth <= 768 && screen.orientation && screen.orientation.lock)
            screen.orientation.lock('landscape').catch(()=>{}); }catch(e){}
-    _vpFlyFs(w);
-  }).catch(()=>{ if (_vpWasPlaying && v) v.play().catch(()=>{}); });
+  }).catch(()=>{ w._vpFrom = null; if (_vpWasPlaying && v) v.play().catch(()=>{}); });
 }
 function _vpExitFs(){
   const {w} = _vpEls();
@@ -8512,7 +8533,7 @@ function _vpFlyFs(w){
   const a = w.animate(
     [{ transform: 'translate(' + dx + 'px,' + dy + 'px) scale(' + sx + ',' + sy + ')', borderRadius: '14px' },
      { transform: 'none', borderRadius: '0px' }],
-    { duration: 340, easing: 'cubic-bezier(.25,.8,.25,1)' });
+    { duration: 520, easing: 'cubic-bezier(.25,.8,.25,1)' });
   a.onfinish = a.oncancel = done;
 }
 
@@ -8549,7 +8570,9 @@ function _vpInit(){
     // popups belong to whichever tree is being painted now
     _fsAdopt(document.getElementById('vqWrap'));
     _fsAdopt(document.getElementById('vpMenu'));
-    if (!document.fullscreenElement && w._vpFrom) _vpFlyFs(w);   // the exit half
+    // two frames: one for the browser to finish its own fullscreen layout, one
+    // for ours to be measured against it
+    if (w._vpFrom) requestAnimationFrame(()=>requestAnimationFrame(()=>_vpFlyFs(w)));
   });
 
   document.getElementById('vpPlay').onclick = e => { e.stopPropagation(); _vdTogglePlay(); _vpShow(); };
@@ -8611,7 +8634,11 @@ function _vpInit(){
 
   document.addEventListener('click', e => {
     const m = document.querySelector('.vp-menu.open'); if (!m) return;
-    if (e.target.closest && e.target.closest('.vp-menu, #vpMore')) return;
+    // NOT e.target.closest(): rebuilding the menu detaches the clicked node
+    // mid-dispatch and a detached node has no ancestors to walk.
+    const path = (e.composedPath && e.composedPath()) || [];
+    if (path.some(n => n && n.nodeType === 1 &&
+        (n.classList && n.classList.contains('vp-menu') || n.id === 'vpMore'))) return;
     _vpCloseMenu();
   });
 

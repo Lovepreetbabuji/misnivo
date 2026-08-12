@@ -2780,23 +2780,17 @@ body.detail-open .topbar{ background:#000 !important; backdrop-filter:none !impo
 }
 /* Glassy + centered (override the minimalism flat/solid rules) */
 /* Desktop: menu near the rail (right side), not centered */
+/* Placed in JS, beside the dots that opened it. The old fixed corner position
+   and the glass are gone — this rule is an ID selector, so it was outranking
+   the flat-black pass and kept the blur alive. */
 #shortsMenu.shorts-menu{
-  top:auto !important; left:auto !important; right:24px !important; bottom:14vh !important;
   transform:none !important;
-  width:320px; max-width:86%; max-height:70%;
-  background:rgba(20,20,26,0.72) !important;
-  backdrop-filter:var(--blur) !important;
-  -webkit-backdrop-filter:var(--blur) !important;
-  border:1px solid rgba(255,255,255,0.12) !important;
+  background:#000 !important;
+  backdrop-filter:none !important;
+  -webkit-backdrop-filter:none !important;
+  border:1px solid rgba(255,255,255,.28) !important;
+  border-radius:14px !important;
   box-shadow:0 12px 40px rgba(0,0,0,.6) !important;
-}
-/* Mobile: bottom sheet */
-@media(max-width:768px){
-  #shortsMenu.shorts-menu{
-    right:0 !important; left:0 !important; bottom:0 !important; top:auto !important;
-    width:100% !important; max-width:100% !important; max-height:72% !important;
-    border-radius:16px 16px 0 0 !important;
-  }
 }
 /* Details shown in the left info area (desktop) */
 .shorts-details-left{
@@ -2966,7 +2960,6 @@ body.detail-open .topbar{ background:#000 !important; backdrop-filter:none !impo
   .shorts-comments{width:100%;top:auto;bottom:0;height:70%;border-radius:16px 16px 0 0;transform:translateY(100%);}
   .shorts-overlay.comments-open .shorts-comments{transform:translateY(0);}
   .shorts-overlay.comments-open .shorts-stage{transform:none;}
-  .shorts-menu{width:90%;right:5%;}
 }
 
 /* #4: Home long-videos one per row (YouTube watch-feed style) */
