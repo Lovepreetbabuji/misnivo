@@ -32,7 +32,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,100..400,0..1,0&icon_names=account_balance_wallet,add,arrow_back,bolt,bookmark,chat_bubble,close,expand_less,explore,home,menu,more_vert,notifications,person,reply,search,send,settings,thumb_down,thumb_up,tune&display=block" rel="stylesheet"/>
 
 <!-- App Styles -->
-<link rel="stylesheet" href="/css/styles.css?v=20260812z"/>
+<link rel="stylesheet" href="/css/styles.css?v=20260813a"/>
 
 <!-- The splash logo must be in flight before anything else competes for the pipe -->
 <link rel="preload" as="image" href="/misnivo.png?v=1" fetchpriority="high"/>
@@ -749,31 +749,14 @@
     <div class="pd-form">
 
         <div class="pd-block">
-          <div class="pd-block-label">Caption</div>
+          <div class="pd-block-label">Thumbnail <span class="f-opt-tag">Optional</span></div>
           <div class="f-group">
-            <label class="f-label">Caption</label>
-            <input class="f-input" id="pCaption" type="text" placeholder="e.g. Run 5km in under 30 minutes"/>
-          </div>
-          <div class="f-group">
-            <label class="f-label">Description</label>
-            <textarea class="f-input" id="pDesc"
-              placeholder="Describe the challenge — what to do, where, and how..."
-              style="min-height:80px;resize:vertical;"></textarea>
-          </div>
-        </div>
-
-        <div class="pd-block">
-          <div class="pd-block-label">Thumbnail</div>
-          <div class="f-group">
-            <label class="f-label">Mission Thumbnail <span class="f-opt-tag">Optional</span></label>
             <div id="mediaTabImg">
               <input type="file" id="thumbInput" accept="image/*" style="display:none;" onchange="onThumbSelected(event)"/>
               <div class="dare-media-dz" id="thumbDZ" onclick="document.getElementById('thumbInput').click()">
                 <img id="thumbPreview" style="display:none;width:100%;height:100%;object-fit:cover;border-radius:10px;position:absolute;top:0;left:0;"/>
                 <div class="dz-inner" id="thumbDZInner">
-                  <span class="mi" style="font-size:32px;color:var(--t3);">add_photo_alternate</span>
-                  <div style="font-size:13px;font-weight:600;color:var(--t2);">Click to add thumbnail</div>
-                  <div style="font-size:11px;color:var(--t3);">JPG, PNG, WEBP · Max 5MB</div>
+                  <span class="mi" style="font-size:36px;color:var(--t3);">add_photo_alternate</span>
                 </div>
               </div>
               <div class="dz-action-row" id="thumbEditRow" style="display:none;">
@@ -786,27 +769,34 @@
         </div>
 
         <div class="pd-block">
+          <div class="pd-block-label">Caption</div>
+          <div class="f-group">
+            <input class="f-input" id="pCaption" type="text"/>
+          </div>
+          <div class="f-group">
+            <label class="f-label">Description</label>
+            <textarea class="f-input" id="pDesc" style="min-height:80px;resize:vertical;"></textarea>
+          </div>
+        </div>
+
+        <div class="pd-block">
           <div class="pd-block-label">Tags &amp; Reward</div>
           <div class="f-group">
-            <label class="f-label">Tags</label>
             <div class="tags-field" id="tagsField">
               <div class="post-tag-chips" id="tagChips"></div>
-              <input class="tags-inner-input" id="tagInput" type="text"
-                placeholder="Tag likho + Enter dabaao (e.g. fitness)"
-                onkeydown="handleTagInput(event)"/>
+              <input class="tags-inner-input" id="tagInput" type="text" onkeydown="handleTagInput(event)"/>
             </div>
             <div class="f-hint"># symbol auto-added · Max 5 tags</div>
           </div>
           <div class="f-group">
             <label class="f-label">Reward Amount (Rs.)</label>
-            <input class="f-input" id="pReward" type="number" min="0" placeholder="0  (minimum zero, no upper limit)"/>
+            <input class="f-input" id="pReward" type="number" min="0"/>
           </div>
         </div>
 
         <div class="pd-block">
-          <div class="pd-block-label">Rules</div>
+          <div class="pd-block-label">Rules <span class="f-opt-tag">Optional</span></div>
           <div class="f-group">
-            <label class="f-label">Rules <span class="f-opt-tag">Optional</span></label>
             <div id="rulesList"></div>
             <button class="add-rule-btn" onclick="addRule()" type="button"><span class="mi">add_circle</span> Add a Rule</button>
           </div>
@@ -815,14 +805,12 @@
         <div class="pd-block">
           <div class="pd-block-label">Visibility</div>
           <div class="f-group">
-            <label class="f-label">Publish</label>
             <div class="vis-toggle-row">
               <button class="vis-opt active" id="visNow" onclick="switchVis('now')" type="button"><span class="mi">public</span> Publish Now</button>
               <button class="vis-opt" id="visSched" onclick="switchVis('scheduled')" type="button"><span class="mi">schedule</span> Schedule for Later</button>
             </div>
             <div id="scheduleBox" style="display:none;margin-top:10px;">
               <input class="f-input" id="scheduleDate" type="datetime-local" style="margin:0;"/>
-              <div class="f-hint">Your mission will be published automatically at this time.</div>
             </div>
           </div>
           <div class="f-group">
@@ -835,12 +823,10 @@
         <div class="pd-block">
           <div class="pd-block-label">Takers</div>
           <div class="f-group">
-            <label class="f-label">Who can submit proof?</label>
             <div class="vis-toggle-row">
               <button class="vis-opt active" id="tmOpen" onclick="switchTakerMode('open')" type="button"><span class="mi">people</span> Anyone (Open)</button>
               <button class="vis-opt" id="tmPick" onclick="switchTakerMode('creator_picks')" type="button"><span class="mi">how_to_reg</span> I'll Select Takers</button>
             </div>
-            <div class="f-hint" id="takerModeHint">Anyone who accepts can submit proof immediately.</div>
           </div>
         </div>
 
@@ -1086,7 +1072,7 @@
 <!-- App Logic -->
 <!-- defer, so it runs after the Firebase bundles above and after the DOM is
      parsed — same order as before, but nothing blocks the first paint -->
-<script defer src="/js/app.js?v=20260812z"></script>
+<script defer src="/js/app.js?v=20260813a"></script>
 
 <!-- ══ v0.19 NEW MODALS ══ -->
 
