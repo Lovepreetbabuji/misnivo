@@ -1,7 +1,12 @@
 // DareMarket service worker — offline app shell.
 // Purpose: offline/refresh must never break the UI (icon font, css, js, page).
 // Data comes from Firestore's own offline cache; videos are never cached here.
-const VER = 'dm-shell-v1';
+//
+// VER MUST be bumped with the ?v= cache-buster in index.html. A stale VER means
+// the activate step deletes nothing, so every version of css/js ever fetched
+// stays in the cache — and the offline fallback can then pair an old cached
+// index.html with the old assets it points at, rendering a UI from months ago.
+const VER = 'dm-shell-20260812i';
 
 self.addEventListener('install', e => { self.skipWaiting(); });
 self.addEventListener('activate', e => {
@@ -12,8 +17,22 @@ self.addEventListener('activate', e => {
   );
 });
 
+// Whatever the fresh page no longer points at is dead weight that the offline
+// fallback could otherwise resurrect. Prune on every successful navigation, so
+// the cache self-heals even if VER was forgotten.
+async function _prune(html) {
+  const cache = await caches.open(VER);
+  const keys = await cache.keys();
+  await Promise.all(keys.map(k => {
+    const u = new URL(k.url);
+    if (u.origin !== self.location.origin) return;
+    if (!(u.pathname.startsWith('/css/') || u.pathname.startsWith('/js/'))) return;
+    if (html.indexOf(u.pathname + u.search) !== -1) return;   // still referenced
+    return cache.delete(k);
+  }));
+}
+
 self.addEventListener('fetch', e => {
-  self._evt = (self._evt || 0) + 1;                      // debug: handler invocation count
   const req = e.request;
   if (req.method !== 'GET') return;
   const url = new URL(req.url);
@@ -21,7 +40,6 @@ self.addEventListener('fetch', e => {
   // Never intercept: Firebase/auth traffic, Cloudinary video streams/manifests
   if (url.hostname.includes('firestore') || (url.hostname.includes('googleapis.com') && !url.hostname.startsWith('fonts.'))) return;
   if (url.pathname.includes('/video/upload/')) return;
-  self._pass = (self._pass || 0) + 1;                    // debug: made it past the skips
 
   const sameOrigin = url.origin === self.location.origin;
   const isShell = sameOrigin && (
@@ -34,7 +52,10 @@ self.addEventListener('fetch', e => {
   if (req.mode === 'navigate') {
     e.respondWith(
       fetch(req).then(r => {
-        const c = r.clone(); caches.open(VER).then(x => x.put('/', c));
+        const forCache = r.clone();
+        r.clone().text()
+          .then(html => caches.open(VER).then(c => c.put('/', forCache)).then(() => _prune(html)))
+          .catch(() => {});
         return r;
       }).catch(() => caches.match('/'))
     );
@@ -55,7 +76,8 @@ self.addEventListener('fetch', e => {
     return;
   }
 
-  // App shell (css/js/manifest/icon): stale-while-revalidate
+  // App shell (css/js/manifest/icon): stale-while-revalidate. Safe because these
+  // URLs carry ?v= — a new build is a new URL, so it can never be served stale.
   if (isShell) {
     e.respondWith(
       caches.open(VER).then(async c => {

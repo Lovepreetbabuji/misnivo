@@ -8314,7 +8314,27 @@ window.addEventListener('online', ()=>{
 });
 
 // ── Offline app shell (fonts/css/js survive refresh without network) ──
-if ('serviceWorker' in navigator) { try{ navigator.serviceWorker.register('/sw.js'); }catch(e){} }
+// An installed PWA that sits in the background for days never reloads, so it
+// keeps whatever worker it started with. Ask for an update whenever it comes
+// back to the foreground, and reload once if a newer one takes over — otherwise
+// a resumed app can keep serving the build it was opened with.
+if ('serviceWorker' in navigator) {
+  try {
+    const _swHadController = !!navigator.serviceWorker.controller;
+    let _swReloaded = false;
+    navigator.serviceWorker.addEventListener('controllerchange', () => {
+      if (!_swHadController || _swReloaded) return;   // first install: nothing to replace
+      _swReloaded = true;
+      location.reload();
+    });
+    navigator.serviceWorker.register('/sw.js').then(reg => {
+      const check = () => { try { reg.update(); } catch(e){} };
+      document.addEventListener('visibilitychange', () => { if (!document.hidden) check(); });
+      window.addEventListener('online', check);
+      window.addEventListener('pageshow', e => { if (e.persisted) check(); });
+    }).catch(()=>{});
+  } catch(e){}
+}
 
 // ── Pause the world behind popups / page switches; resume on the way back ──
 let _bgPaused = [];
