@@ -5714,3 +5714,62 @@ body.no-anim #shortsOverlay .shorts-comments{ transition:none !important; }
   border-bottom:1px solid rgba(255,255,255,.12) !important;
 }
 .tabs.ptabs-2 .tab{ flex:1 1 0 !important; text-align:center; }
+
+/* ═══════════════════════════════════════════════════════════════════════
+   SETTINGS — flat black, its own top bar, grouped rows
+   ═══════════════════════════════════════════════════════════════════════ */
+#settingsOverlay.as-page, #setSecOverlay.as-page{
+  background:#000 !important;
+  backdrop-filter:none !important; -webkit-backdrop-filter:none !important;
+}
+#settingsOverlay .modal, #setSecOverlay .modal{ background:#000 !important; border:none !important; }
+
+/* header: back arrow left, title centred, nothing on the right but its balance */
+.set-hdr{ display:flex !important; align-items:center; gap:8px; margin-bottom:8px !important; }
+.set-hdr .modal-title{ flex:1; text-align:center; font-size:18px !important; margin:0 !important; }
+.set-hdr .set-hdr-spacer{ width:40px; flex-shrink:0; }
+.set-back{
+  width:40px; height:40px; flex-shrink:0; display:flex; align-items:center; justify-content:center;
+  background:transparent !important; border:none !important; border-radius:0 !important;
+  box-shadow:none !important; color:#fff; cursor:pointer; -webkit-tap-highlight-color:transparent;
+}
+.set-back .mi{ font-size:24px; color:#fff; }
+
+/* group labels down the left, and the sign-out pair at the foot */
+.set-nav-group{
+  font-size:12px; font-weight:700; letter-spacing:.4px; text-transform:uppercase;
+  color:rgba(255,255,255,.45); padding:22px 4px 8px;
+}
+.set-nav-group:first-child{ padding-top:8px; }
+.set-nav-foot{ display:flex; flex-direction:column; gap:10px; margin-top:30px; }
+.set-nav-foot .set-btn{ width:100%; }
+
+@media(max-width:768px){
+  /* every row carries its own rule, so the groups read as lists */
+  #settingsOverlay .set-nav-item{
+    border-bottom:1px solid rgba(255,255,255,.10) !important;
+    padding:16px 4px !important; color:#fff !important;
+  }
+  .set-nav-foot{ margin-top:34px; }
+  /* the page slides in from the right, like every other page */
+  #settingsOverlay.as-page .modal, #setSecOverlay.as-page .modal{
+    transform:translateX(100%);
+    transition:transform .28s cubic-bezier(.32,.72,0,1);
+  }
+  #settingsOverlay.as-page.open .modal, #setSecOverlay.as-page.open .modal{ transform:none; }
+}
+@media(prefers-reduced-motion:reduce){
+  #settingsOverlay.as-page .modal, #setSecOverlay.as-page .modal{ transition:none !important; }
+}
+body.no-anim #settingsOverlay.as-page .modal,
+body.no-anim #setSecOverlay.as-page .modal{ transition:none !important; }
+
+/* the save button now sits at the foot of the form rather than in a header */
+#secEdit .pe-btn-save{
+  width:100%; margin-top:22px; padding:14px !important; border-radius:999px !important;
+  background:#fff !important; color:#000 !important; border:none !important;
+  font-size:14px !important; font-weight:700 !important;
+  display:flex; align-items:center; justify-content:center; gap:8px; cursor:pointer;
+}
+#secEdit .pe-btn-save .mi{ font-size:19px; color:#000 !important; }
+#secEdit .pe-btn-save:disabled{ opacity:.5; cursor:default; }

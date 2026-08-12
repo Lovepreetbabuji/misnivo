@@ -637,7 +637,7 @@ const _PAGE_URL  = { home:'/', explore:'/explore', dares:'/dares', accepted:'/ac
 const _TABS = ['home','dares','chat','profile'];
 const _MODAL_URL = { postOverlay:'/post', proofOverlay:'/submit-proof', settingsOverlay:'/settings',
   notifSettingsOverlay:'/settings/notifications', moreSettingsOverlay:'/settings/more',
-  profileEditOverlay:'/settings/edit', depositOverlay:'/wallet/deposit', withdrawOverlay:'/wallet/withdraw',
+  depositOverlay:'/wallet/deposit', withdrawOverlay:'/wallet/withdraw',
   kycOverlay:'/wallet/kyc', methodOverlay:'/wallet/account', pinOverlay:'/wallet/pin',
   txnDetailOverlay:'/wallet/transaction', followListOverlay:'/followers', photoViewer:'/profile/photo',
   reviewOverlay:'/review-proofs', rejectOverlay:'/reject-proof', reportOverlay:'/report',
@@ -2958,24 +2958,17 @@ function openProfileEdit() {
   document.getElementById('peHandleStatus').className   = 'pe-status ok';
   document.getElementById('peSaveBtn').disabled = false;
   document.getElementById('peSaveBtn').innerHTML = '<span class="mi">check</span> Save Changes';  // clear a stale "Saving..."
-  const _pp = document.getElementById('pePrivate'); if(_pp) _pp.checked = (user.settings && user.settings.private === true);
+  // "Private profile" lives on the Privacy section — the duplicate toggle on the
+  // old visibility page is gone with it
 
-  _ovOpen('profileEditOverlay');
-  _tpInit('profileEditOverlay');   // desktop: show the first section (Photo) in the right pane
+  openSettings();
+  _tpSecById('secEdit');           // desktop: right pane · mobile: its own page
 }
-// Edit Profile → Profile visibility toggle (mirrors Settings > Privacy > Private profile)
-function _pePrivacyChange(el){
-  if(!user) return;
-  user.settings = user.settings || {};
-  user.settings.private = el.checked;
-  const sp = document.getElementById('setPrivate'); if(sp) sp.checked = el.checked;
-  db.collection('users').doc(user.uid).update({ settings:user.settings }).catch(()=>{});
-}
-
 function cancelProfileEdit() {
-  _ovSync('profileEditOverlay');
+  // The form is a settings section now: on mobile that is a page to close, on
+  // desktop it is just the right pane and there is nothing to dismiss.
   peSelectedPhotoFile = null;
-  document.getElementById('profileEditOverlay').classList.remove('open');
+  if (window.innerWidth <= 768) { try { closeSetSec(); } catch(e){} }
 }
 
 // ── Handle (username) input — debounced uniqueness check ─────────────────────
@@ -5291,7 +5284,7 @@ function _ovSync(id){
 const _OV_CLOSERS = {
   postOverlay:          () => closePost(),
   proofOverlay:         () => closeProof(),
-  profileEditOverlay:   () => cancelProfileEdit(),
+
   depositOverlay:       () => closeWalletModal('depositOverlay'),
   withdrawOverlay:      () => closeWalletModal('withdrawOverlay'),
   settingsOverlay:      () => { const e=document.getElementById('settingsOverlay'); if(e) e.classList.remove('open'); },
@@ -5351,7 +5344,7 @@ function _openModalById(id){
     case 'settingsOverlay':      openSettings(); break;
     case 'notifSettingsOverlay': openNotifSettings(); break;
     case 'moreSettingsOverlay':  openMoreSettings(); break;
-    case 'profileEditOverlay':   openProfileEdit(); break;
+    case 'settingsOverlay':      openSettings(); break;
     case 'postOverlay':          openPost(); break;
     case 'depositOverlay':       openDepositModal(); break;
     case 'withdrawOverlay':      openWithdrawModal(); break;

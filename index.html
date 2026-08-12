@@ -32,7 +32,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,100..400,0..1,0&icon_names=account_balance_wallet,add,arrow_back,bolt,bookmark,chat_bubble,close,expand_less,explore,home,menu,more_vert,notifications,person,reply,search,send,settings,thumb_down,thumb_up,tune&display=block" rel="stylesheet"/>
 
 <!-- App Styles -->
-<link rel="stylesheet" href="/css/styles.css?v=20260812w"/>
+<link rel="stylesheet" href="/css/styles.css?v=20260812x"/>
 
 <!-- The splash logo must be in flight before anything else competes for the pipe -->
 <link rel="preload" as="image" href="/misnivo.png?v=1" fetchpriority="high"/>
@@ -615,84 +615,28 @@
 <!-- ══ SETTINGS — YouTube-style: left nav · right options ══ -->
 <div class="overlay as-page" id="settingsOverlay">
   <div class="modal wallet-modal set-modal">
-    <div class="modal-hdr"><div class="modal-title">Settings</div>
-      <button class="modal-close" onclick="closeWalletModal('settingsOverlay')"><span class="mi">close</span></button></div>
+    <div class="modal-hdr set-hdr">
+      <button class="set-back" onclick="closeWalletModal('settingsOverlay')" aria-label="Back"><span class="mi">arrow_back</span></button>
+      <div class="modal-title">Settings</div>
+      <span class="set-hdr-spacer" aria-hidden="true"></span>
+    </div>
     <div class="set-layout">
       <div class="set-nav">
-        <button class="set-nav-item" onclick="openProfileEdit()"><span class="mi">person</span><span class="smr-t">Edit Profile</span></button>
-        <button class="set-nav-item active" data-sec="secNotif" data-title="Notifications" data-url="/settings/notifications" onclick="_tpSec(this)"><span class="mi">notifications</span><span class="smr-t">Notifications</span></button>
-        <button class="set-nav-item" data-sec="secMore" data-title="Additional settings" data-url="/settings/more" onclick="_tpSec(this)"><span class="mi">tune</span><span class="smr-t">Additional settings</span></button>
+        <div class="set-nav-group">Account</div>
+        <button class="set-nav-item active" data-sec="secEdit" data-title="Edit Profile" data-url="/settings/edit" onclick="_tpSec(this)"><span class="mi">person</span><span class="smr-t">Edit Profile</span></button>
+        <button class="set-nav-item" data-sec="secNotif" data-title="Notifications" data-url="/settings/notifications" onclick="_tpSec(this)"><span class="mi">notifications</span><span class="smr-t">Notifications</span></button>
         <button class="set-nav-item" data-sec="secPrivacy" data-title="Privacy" data-url="/settings/privacy" onclick="_tpSec(this)"><span class="mi">lock</span><span class="smr-t">Privacy</span></button>
-        <button class="set-nav-item" data-sec="secAccount" data-title="Account" data-url="/settings/account" onclick="_tpSec(this)"><span class="mi">manage_accounts</span><span class="smr-t">Account</span></button>
-      </div>
-      <div class="set-content">
-        <div class="set-sec" id="secNotif">
-          <div class="set-sec-label">Notifications</div>
-          <label class="set-row"><div class="set-t">Likes &amp; comments</div>
-            <span class="switch"><input type="checkbox" id="setNotifLikes" onchange="_saveSettings()"><span class="sl"></span></span></label>
-          <label class="set-row"><div class="set-t">New followers</div>
-            <span class="switch"><input type="checkbox" id="setNotifFollow" onchange="_saveSettings()"><span class="sl"></span></span></label>
-          <label class="set-row"><div class="set-t">Mission updates</div>
-            <span class="switch"><input type="checkbox" id="setNotifDares" onchange="_saveSettings()"><span class="sl"></span></span></label>
-        </div>
-        <div class="set-sec" id="secMore" style="display:none;">
-          <div class="set-sec-label">Additional settings</div>
-          <label class="set-row"><div><div class="set-t">Autoplay videos</div><div class="set-s">Play videos automatically on hover &amp; scroll</div></div>
-            <span class="switch"><input type="checkbox" id="setAutoplay" onchange="_saveSettings()"><span class="sl"></span></span></label>
-          <div class="set-sec-label">Accessibility</div>
-          <label class="set-row"><div><div class="set-t">Animations</div><div class="set-s">Page slides, menu &amp; panel transitions, and the thumbnail-to-player effect</div></div>
-            <span class="switch"><input type="checkbox" id="setPageAnim" onchange="_saveSettings()"><span class="sl"></span></span></label>
-        </div>
-        <div class="set-sec" id="secPrivacy" style="display:none;">
-          <div class="set-sec-label">Privacy</div>
-          <label class="set-row"><div><div class="set-t">Private profile</div><div class="set-s">Hide your videos &amp; missions from others</div></div>
-            <span class="switch"><input type="checkbox" id="setPrivate" onchange="_saveSettings()"><span class="sl"></span></span></label>
-        </div>
-        <div class="set-sec" id="secAccount" style="display:none;">
-          <div class="set-sec-label">Account</div>
+
+        <div class="set-nav-group">Video and app preference</div>
+        <button class="set-nav-item" data-sec="secMore" data-title="Additional settings" data-url="/settings/more" onclick="_tpSec(this)"><span class="mi">tune</span><span class="smr-t">Additional settings</span></button>
+
+        <div class="set-nav-foot">
           <button class="set-btn" onclick="logout()"><span class="mi">logout</span> Log out</button>
           <button class="set-btn danger" onclick="deleteAccount()"><span class="mi">delete_forever</span> Delete account</button>
         </div>
       </div>
-    </div>
-  </div>
-</div>
-
-<!-- ══ SETTINGS SECTION PAGE (mobile): a tapped section opens as its own page ══ -->
-<div class="overlay as-page" id="setSecOverlay">
-  <div class="modal wallet-modal">
-    <div class="modal-hdr">
-      <button class="modal-close" onclick="closeSetSec()" aria-label="Back"><span class="mi">arrow_back</span></button>
-      <div class="modal-title" style="flex:1;margin-left:6px;" id="setSecTitle">Settings</div>
-    </div>
-    <div id="setSecBody"></div>
-  </div>
-</div>
-
-<!-- ══ PHOTO VIEWER (profile photo lightbox) ══ -->
-<div class="photo-viewer" id="photoViewer" onclick="closePhotoViewer()">
-  <button class="pv-close" onclick="closePhotoViewer()" aria-label="Close"><span class="mi">close</span></button>
-  <img id="photoViewerImg" alt="Profile photo" onclick="event.stopPropagation()"/>
-</div>
-
-<div class="profile-edit-overlay as-page" id="profileEditOverlay" onclick="if(event.target===this)cancelProfileEdit()">
-  <div class="profile-edit-modal set-modal">
-    <div class="modal-hdr">
-      <div class="modal-title">Edit Profile</div>
-      <div class="tp-hdr-right">
-        <button class="pe-btn-save tp-action" id="peSaveBtn" onclick="saveProfile()"><span class="mi">check</span> Save Changes</button>
-        <button class="modal-close" onclick="cancelProfileEdit()"><span class="mi">close</span></button>
-      </div>
-    </div>
-    <div class="set-layout">
-      <div class="set-nav">
-        <button class="set-nav-item active" data-sec="epProfile" data-title="Profile" data-url="/settings/edit/profile" onclick="_tpSec(this)"><span class="mi">account_circle</span><span class="smr-t">Profile</span></button>
-        <button class="set-nav-item" data-sec="epLinks" data-title="Links" data-url="/settings/edit/links" onclick="_tpSec(this)"><span class="mi">link</span><span class="smr-t">Links</span></button>
-        <button class="set-nav-item" data-sec="epVis" data-title="Profile visibility" data-url="/settings/edit/visibility" onclick="_tpSec(this)"><span class="mi">visibility</span><span class="smr-t">Profile visibility</span></button>
-      </div>
       <div class="set-content">
-
-        <div class="set-sec" id="epProfile">
+        <div class="set-sec" id="secEdit">
           <div class="pe-avatar-row">
             <div class="pe-big-av" id="peAvatar" onclick="document.getElementById('pePhotoInput').click()"></div>
             <div>
@@ -720,9 +664,6 @@
             <textarea class="pe-input pe-textarea" id="peBio" placeholder="Tell the community about yourself..." maxlength="160"
                       oninput="document.getElementById('peBioCount').textContent=this.value.length+' / 160'"></textarea>
           </div>
-        </div>
-
-        <div class="set-sec" id="epLinks" style="display:none;">
           <div class="pe-field">
             <div class="pe-label">Website / Contact Link <span>Website, email or contact info</span></div>
             <input class="pe-input" id="peWebsite" type="url" placeholder="https://yourwebsite.com"/>
@@ -732,17 +673,51 @@
             <div class="pe-social-row"><span class="mi">photo_camera</span><input class="pe-input" id="peInsta" type="text" placeholder="Instagram username" maxlength="40"/></div>
             <div class="pe-social-row"><span class="pe-x-logo">X</span><input class="pe-input" id="peX" type="text" placeholder="X (Twitter) username" maxlength="40"/></div>
             <div class="pe-social-row"><span class="mi">smart_display</span><input class="pe-input" id="peYt" type="text" placeholder="YouTube @handle" maxlength="40"/></div>
-          </div>
+          </div>          <button class="pe-btn-save" id="peSaveBtn" onclick="saveProfile()"><span class="mi">check</span> Save Changes</button>
         </div>
-
-        <div class="set-sec" id="epVis" style="display:none;">
+        <div class="set-sec" id="secNotif" style="display:none;">
+          <div class="set-sec-label">Notifications</div>
+          <label class="set-row"><div class="set-t">Likes &amp; comments</div>
+            <span class="switch"><input type="checkbox" id="setNotifLikes" onchange="_saveSettings()"><span class="sl"></span></span></label>
+          <label class="set-row"><div class="set-t">New followers</div>
+            <span class="switch"><input type="checkbox" id="setNotifFollow" onchange="_saveSettings()"><span class="sl"></span></span></label>
+          <label class="set-row"><div class="set-t">Mission updates</div>
+            <span class="switch"><input type="checkbox" id="setNotifDares" onchange="_saveSettings()"><span class="sl"></span></span></label>
+        </div>
+        <div class="set-sec" id="secMore" style="display:none;">
+          <div class="set-sec-label">Additional settings</div>
+          <label class="set-row"><div><div class="set-t">Autoplay videos</div><div class="set-s">Play videos automatically on hover &amp; scroll</div></div>
+            <span class="switch"><input type="checkbox" id="setAutoplay" onchange="_saveSettings()"><span class="sl"></span></span></label>
+          <div class="set-sec-label">Accessibility</div>
+          <label class="set-row"><div><div class="set-t">Animations</div><div class="set-s">Page slides, menu &amp; panel transitions, and the thumbnail-to-player effect</div></div>
+            <span class="switch"><input type="checkbox" id="setPageAnim" onchange="_saveSettings()"><span class="sl"></span></span></label>
+        </div>
+        <div class="set-sec" id="secPrivacy" style="display:none;">
+          <div class="set-sec-label">Privacy</div>
           <label class="set-row"><div><div class="set-t">Private profile</div><div class="set-s">Hide your videos &amp; missions from others</div></div>
-            <span class="switch"><input type="checkbox" id="pePrivate" onchange="_pePrivacyChange(this)"><span class="sl"></span></span></label>
+            <span class="switch"><input type="checkbox" id="setPrivate" onchange="_saveSettings()"><span class="sl"></span></span></label>
         </div>
-
       </div>
     </div>
   </div>
+</div>
+
+<!-- ══ SETTINGS SECTION PAGE (mobile): a tapped section opens as its own page ══ -->
+<div class="overlay as-page" id="setSecOverlay">
+  <div class="modal wallet-modal">
+    <div class="modal-hdr set-hdr">
+      <button class="set-back" onclick="closeSetSec()" aria-label="Back"><span class="mi">arrow_back</span></button>
+      <div class="modal-title" id="setSecTitle">Settings</div>
+      <span class="set-hdr-spacer" aria-hidden="true"></span>
+    </div>
+    <div id="setSecBody"></div>
+  </div>
+</div>
+
+<!-- ══ PHOTO VIEWER (profile photo lightbox) ══ -->
+<div class="photo-viewer" id="photoViewer" onclick="closePhotoViewer()">
+  <button class="pv-close" onclick="closePhotoViewer()" aria-label="Close"><span class="mi">close</span></button>
+  <img id="photoViewerImg" alt="Profile photo" onclick="event.stopPropagation()"/>
 </div>
 
 <!-- VIDEO PLAY MODAL -->
@@ -1115,7 +1090,7 @@
 <!-- App Logic -->
 <!-- defer, so it runs after the Firebase bundles above and after the DOM is
      parsed — same order as before, but nothing blocks the first paint -->
-<script defer src="/js/app.js?v=20260812w"></script>
+<script defer src="/js/app.js?v=20260812x"></script>
 
 <!-- ══ v0.19 NEW MODALS ══ -->
 
