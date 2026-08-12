@@ -5664,3 +5664,51 @@ body.no-anim .shorts-col-shift{ animation:none; }
 }
 body.no-anim .dd-cbox,
 body.no-anim #shortsOverlay .shorts-comments{ transition:none !important; }
+
+/* ═══════════════════════════════════════════════════════════════════════
+   TEXT BUTTONS — one style everywhere, the home page's
+   Explore's trending tabs, the profile and public-profile tabs, the auth
+   tabs, the wallet's method tabs and amount chips, the search filter chips,
+   the no-results suggestions and the post-form tag chips were each styled
+   separately: six different pills, three different active states, some still
+   carrying the old glass and neu shadows. They are all the same control — a
+   row of words you pick one of — so they all read as the home chips now:
+   a flat pill, and the chosen one inverted to white.
+   Icon-only buttons are deliberately untouched.
+   ═══════════════════════════════════════════════════════════════════════ */
+.exp-tab, .auth-tab, .tab, .wmtab, .wchip,
+.sfilter-chip, .snores-chip, .post-tag-chip{
+  font-size:13px !important; font-weight:600 !important;
+  padding:8px 15px !important; border-radius:999px !important;
+  background:var(--surface) !important;
+  border:1px solid rgba(255,255,255,.10) !important;
+  color:var(--t2) !important;
+  box-shadow:none !important;
+  backdrop-filter:none !important; -webkit-backdrop-filter:none !important;
+  font-family:inherit; cursor:pointer; white-space:nowrap;
+  transition:background .15s ease, color .15s ease, border-color .15s ease !important;
+}
+.exp-tab:hover, .auth-tab:hover, .tab:hover, .wmtab:hover, .wchip:hover,
+.sfilter-chip:hover, .snores-chip:hover, .post-tag-chip:hover{
+  color:#fff !important; border-color:rgba(255,255,255,.24) !important;
+  background:var(--surface) !important;
+}
+.exp-tab.active, .auth-tab.active, .tab.active, .wmtab.active, .wchip.active,
+.sfilter-chip.active, .snores-chip.active, .post-tag-chip.active{
+  background:#fff !important; border-color:#fff !important; color:#000 !important;
+  box-shadow:none !important;
+}
+/* the segmented rows stretched their buttons edge to edge; as pills they sit
+   in a row like every other chip bar */
+.tabs, .wallet-mtabs{ background:transparent !important; box-shadow:none !important;
+  border:none !important; padding:0 !important; gap:8px !important; }
+.tab, .wmtab{ flex:0 0 auto !important; }
+
+@media(min-width:769px){
+  .exp-tab, .auth-tab, .tab, .wmtab, .wchip,
+  .sfilter-chip, .snores-chip, .post-tag-chip{ font-size:14px !important; padding:9px 17px !important; }
+}
+@media(max-width:768px){
+  .exp-tab, .auth-tab, .tab, .wmtab, .wchip,
+  .sfilter-chip, .snores-chip, .post-tag-chip{ font-size:13px !important; padding:7px 14px !important; }
+}
