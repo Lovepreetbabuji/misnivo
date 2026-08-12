@@ -976,7 +976,12 @@ body{
   .profile-header{align-items:flex-start;gap:16px;padding:10px 4px 16px;}
   /* 3 SEPARATE action buttons right under the bio — stretched to full width
      (negative margin pulls them left across the avatar column: 92px avatar + 16px gap) */
-  .profile-actions{flex-wrap:nowrap;gap:8px;margin-left:-108px;margin-top:14px;}
+  /* the row is pulled back to the header's left edge (avatar 92 + gap 16) and
+     has to clear the avatar vertically — it used to, only because the avatar was
+     lifted 44px onto the banner. With the banner gone the info column carries the
+     avatar's height and the row sits at the bottom of it. */
+  .profile-info{ display:flex; flex-direction:column; min-height:92px; }
+  .profile-actions{flex-wrap:nowrap;gap:8px;margin-left:-108px;margin-top:auto;padding-top:14px;}
   .prof-edit-btn, .prof-count-box{flex:1;min-width:0;flex-direction:column;gap:1px;padding:9px 4px;min-height:50px;white-space:nowrap;}
   .prof-edit-btn{font-size:13px;}
   .pcb-v{font-size:15px;} .pcb-l{font-size:10.5px;}
