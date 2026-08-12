@@ -4836,6 +4836,9 @@ function _notifCloseNow() {
 }
 
 function closeVideoDetail() {
+  const _vp = document.getElementById('vdPlayer');
+  if (_vp) _vp.playbackRate = 1;                 // speed resets when you leave, like YouTube
+  if (typeof _vpCloseMenu === 'function') _vpCloseMenu();
   document.getElementById('videoDetailOverlay').classList.remove('open');
   document.body.style.overflow='';
   document.body.classList.remove('detail-open');
@@ -6196,6 +6199,8 @@ function openShorts(proofId) {
 
 function closeShorts() {
   const ov = document.getElementById('shortsOverlay');
+  if (typeof shortsCloseMenu === 'function') shortsCloseMenu();
+  _shortsSpeedIdx = 0;                       // speed is per sitting, not per video
   ov.classList.remove('open', 'comments-open');
   shortsCloseDetails();
   document.body.style.overflow = '';
@@ -6555,22 +6560,26 @@ function _shortsSyncVote(it, p){
 }
 function shortsOpenMenu(proofId){
   const menu = document.getElementById('shortsMenu');
-  if (menu.classList.contains('open')){ menu.classList.remove('open'); _shortsSetDotsIcon(false); return; }
+  if (menu.classList.contains('open')){ shortsCloseMenu(); return; }
   const p = (allProofs.find(x=>x.id===proofId)) || (homeProofs.find(x=>x.id===proofId)); if (!p) return;
   _shortsBuildMenu(p);
   menu.classList.add('open');
   _shortsSetDotsIcon(true);
+  _shortsLockFeed(true);          // the sheet belongs to THIS short — hold the feed still
 }
-let _shortsRate = 1;
-// The shorts ⋮ had no speed control at all; it cycles rather than nesting a
-// submenu, because that sheet is already a scrolling list.
-function shortsSpeed(){
-  const i = _VP_SPEEDS.indexOf(_shortsRate);
-  _shortsRate = _VP_SPEEDS[(i + 1) % _VP_SPEEDS.length];
-  document.querySelectorAll('#shortsSnapContainer video').forEach(v => { v.playbackRate = _shortsRate; });
-  const l = document.getElementById('shortsSpeedLbl');
-  if (l) l.textContent = _shortsRate === 1 ? 'Normal' : _shortsRate + '×';
-  showToast(_shortsRate === 1 ? 'Speed: Normal' : 'Speed: ' + _shortsRate + '×');
+function shortsCloseMenu(){
+  const menu = document.getElementById('shortsMenu'); if (!menu) return;
+  menu.classList.remove('open');
+  _shortsSetDotsIcon(false);
+  _shortsLockFeed(false);
+}
+// Scrolling away while the sheet is open was the bug: the sheet stayed, but it
+// was still wired to the short you opened it on, so the next change landed on a
+// video you were no longer watching. YouTube simply does not let the feed move.
+function _shortsLockFeed(lock){
+  const c = document.getElementById('shortsSnapContainer'); if (!c) return;
+  c.style.overflowY = lock ? 'hidden' : '';
+  c.style.scrollSnapType = lock ? 'none' : '';
 }
 function shortsOpenComments(proofId){
   const ov = document.getElementById('shortsOverlay');
@@ -6597,11 +6606,8 @@ function _shortsBuildMenu(p){
       <div class="shorts-menu-row"><span class="shorts-menu-label">Rules</span><span>${rulesHtml}</span></div>
       <div class="shorts-menu-row"><span class="shorts-menu-label">Winning Amount</span><span style="color:var(--blue);font-weight:700;">Rs. ${bounty.toLocaleString('en-IN')}</span></div>
     </div>
-    <button class="shorts-menu-action" onclick="shortsDownload()"><span class="mi">download</span> Download</button>
     <button class="shorts-menu-action" onclick="shortsCycleSpeed()"><span class="mi">slow_motion_video</span> Playback speed <span id="shortsSpeedLbl" style="margin-left:auto;color:var(--t3);">${_SHORTS_SPEEDS[_shortsSpeedIdx]}x</span></button>
     <button class="shorts-menu-action" onclick="shortsQuality()"><span class="mi">tune</span> Quality <span id="shortsQLbl" style="margin-left:auto;color:var(--t3);">${_vqLabel()}</span></button>
-    <button class="shorts-menu-action" onclick="shortsQuality()"><span class="mi">tune</span> Quality <span id="shortsQLbl" style="margin-left:auto;color:var(--t3);">${typeof _vqLabel==='function'?_vqLabel():'Auto'}</span></button>
-    <button class="shorts-menu-action" onclick="shortsSpeed()"><span class="mi">speed</span> Playback speed <span id="shortsSpeedLbl" style="margin-left:auto;color:var(--t3);">${_shortsRate===1?'Normal':_shortsRate+'×'}</span></button>
     <button class="shorts-menu-action" onclick="shortsToggleAutoScroll()"><span class="mi">smart_display</span> Auto-scroll <span id="shortsAutoLbl" style="margin-left:auto;color:var(--t3);">${_shortsAutoScroll?'On':'Off'}</span></button>
     <button class="shorts-menu-action" onclick="shortsPiP()"><span class="mi">picture_in_picture_alt</span> Picture-in-picture</button>
     <button class="shorts-menu-report" onclick="openReportModal('proof','${p.id}')"><span class="mi">flag</span> Report</button>
@@ -6879,9 +6885,18 @@ async function pinShortsComment(commentId) {
 }
 
 // 3-dots menu toggle
+// Anything outside the sheet closes it — the ✕ inside it and the dots that
+// opened it are the two exceptions.
+document.addEventListener('click', e => {
+  const m = document.getElementById('shortsMenu');
+  if (!m || !m.classList.contains('open')) return;
+  if (e.target.closest && (e.target.closest('#shortsMenu') || e.target.closest('.shorts-dots'))) return;
+  shortsCloseMenu();
+});
 function shortsToggleMenu() {
-  const open = document.getElementById('shortsMenu').classList.toggle('open');
-  _shortsSetDotsIcon(open);
+  const m = document.getElementById('shortsMenu');
+  if (m.classList.contains('open')) { shortsCloseMenu(); return; }
+  m.classList.add('open'); _shortsSetDotsIcon(true); _shortsLockFeed(true);
 }
 // Toggle the 3-dots icon → "close" (X) while the menu is open
 function _shortsSetDotsIcon(open){
@@ -8191,6 +8206,8 @@ function openQualityMenu(v){
   m.innerHTML = '<div class="vq-title">Video quality</div>'
     + item('auto', 'Auto (Adaptive)', 'adjusts to your network')
     + opts.map(o=>item(o, o+'p')).join('');
+  if (typeof _fsAdopt === 'function') _fsAdopt(w);   // fullscreen paints only its own subtree
+  w.style.zIndex = '2147483000';
   w.classList.add('open');
 }
 function closeQualityMenu(){ const w=document.getElementById('vqWrap'); if(w) w.classList.remove('open'); }
@@ -8338,8 +8355,8 @@ function _vpShow(sticky){
   if (v && !v.paused && !v.ended) _vpHideT = setTimeout(()=>_vpHide(), 2800);
 }
 function _vpHide(){
-  const {w, menu} = _vpEls(); if (!w) return;
-  if (menu && menu.classList.contains('open')) return;   // never yank the menu away
+  const {w} = _vpEls(); if (!w) return;
+  if (document.querySelector('.vp-menu.open')) return;   // never yank the menu away
   w.classList.remove('vp-show');
 }
 
@@ -8404,10 +8421,31 @@ function _vpPiP(){
     else showToast('Picture-in-picture is not supported here');
   } catch(e){ showToast('Picture-in-picture is not supported here'); }
 }
+// Where a popup has to live to be visible right now.
+function _fsHost(){ return document.fullscreenElement || document.body; }
+// Move a popup into the fullscreen element (or back out again) without losing it.
+function _fsAdopt(el){
+  if (!el) return;
+  const host = _fsHost();
+  if (el.parentElement !== host) host.appendChild(el);
+}
 function _vpToggleMenu(){
-  const {menu} = _vpEls(); if (!menu) return;
+  const {menu, w} = _vpEls(); if (!menu) return;
   if (menu.classList.contains('open')) { _vpCloseMenu(); return; }
-  _vpMenuRoot(); menu.classList.add('open'); _vpShow(true);
+  _vpMenuRoot();
+  // Anchored to the button and parented to the top of the tree: no scrolling
+  // column can clip it and no stacking context can bury it.
+  const btn = document.getElementById('vpMore');
+  _fsAdopt(menu);
+  if (btn){
+    const r = btn.getBoundingClientRect();
+    menu.style.position = 'fixed';
+    menu.style.right  = Math.max(8, window.innerWidth - r.right) + 'px';
+    menu.style.bottom = Math.max(8, window.innerHeight - r.top + 8) + 'px';
+    menu.style.top = 'auto'; menu.style.left = 'auto';
+    menu.style.zIndex = '2147483000';
+  }
+  menu.classList.add('open'); _vpShow(true);
 }
 function _vpCloseMenu(){
   const {menu} = _vpEls(); if (menu) menu.classList.remove('open');
@@ -8415,12 +8453,67 @@ function _vpCloseMenu(){
 }
 
 // ── fullscreen (iOS only ever fullscreens the video element itself) ────
+/* ── 3. Fullscreen the way the rest of the app moves: the picture grows into
+      place instead of snapping. The browser gives no transition of its own, so
+      this is the same FLIP the thumbnails use — measure before, let fullscreen
+      happen, then animate from the old rect to the new one. Playback holds
+      still while it runs, because a video that keeps playing under a scaling
+      transform is what makes these look cheap. ── */
+let _vpWasPlaying = false;
 function _vpFullscreen(){
   const {w, v} = _vpEls(); if (!w) return;
-  if (document.fullscreenElement) { document.exitFullscreen(); return; }
-  if (w.requestFullscreen) w.requestFullscreen().catch(()=>{});
-  else if (v && v.webkitEnterFullscreen) v.webkitEnterFullscreen();
-  else showToast('Fullscreen is not available here');
+  if (document.fullscreenElement || document.webkitFullscreenElement){ _vpExitFs(); return; }
+
+  _vpWasPlaying = v && !v.paused && !v.ended;
+  if (_vpWasPlaying) { try { v.pause(); } catch(e){} }
+  w._vpFrom = w.getBoundingClientRect();
+
+  const go = w.requestFullscreen ? w.requestFullscreen()
+           : w.webkitRequestFullscreen ? Promise.resolve(w.webkitRequestFullscreen())
+           : null;
+  if (!go){
+    if (v && v.webkitEnterFullscreen) v.webkitEnterFullscreen();   // iOS: video only
+    else showToast('Fullscreen is not available here');
+    if (_vpWasPlaying) v.play().catch(()=>{});
+    return;
+  }
+  go.then(()=>{
+    // a landscape video on a phone is worth turning the screen for — this is
+    // what makes it read as "rotate, then grow"
+    try{ if (window.innerWidth <= 768 && screen.orientation && screen.orientation.lock)
+           screen.orientation.lock('landscape').catch(()=>{}); }catch(e){}
+    _vpFlyFs(w);
+  }).catch(()=>{ if (_vpWasPlaying && v) v.play().catch(()=>{}); });
+}
+function _vpExitFs(){
+  const {w} = _vpEls();
+  if (w) w._vpFrom = w.getBoundingClientRect();
+  try{ if (screen.orientation && screen.orientation.unlock) screen.orientation.unlock(); }catch(e){}
+  if (document.exitFullscreen) document.exitFullscreen().catch(()=>{});
+  else if (document.webkitExitFullscreen) document.webkitExitFullscreen();
+}
+// FLIP: the element is already at its destination, so invert to where it was
+// and let it play forward.
+function _vpFlyFs(w){
+  const from = w._vpFrom; w._vpFrom = null;
+  const v = document.getElementById('vdPlayer');
+  const done = ()=>{
+    w.style.transform = '';
+    // mobile pins the player with a transform of its own — hand it back
+    if (typeof _vdParkPlayer === 'function') _vdParkPlayer();
+    if (_vpWasPlaying && v){ v.play().catch(()=>{}); _vpWasPlaying = false; }
+  };
+  if (!from || (typeof _motionOff === 'function' && _motionOff())){ done(); return; }
+  const to = w.getBoundingClientRect();
+  if (!to.width || !to.height){ done(); return; }
+  const sx = from.width / to.width, sy = from.height / to.height;
+  const dx = from.left - to.left + (from.width  - to.width)  / 2;
+  const dy = from.top  - to.top  + (from.height - to.height) / 2;
+  const a = w.animate(
+    [{ transform: 'translate(' + dx + 'px,' + dy + 'px) scale(' + sx + ',' + sy + ')', borderRadius: '14px' },
+     { transform: 'none', borderRadius: '0px' }],
+    { duration: 340, easing: 'cubic-bezier(.25,.8,.25,1)' });
+  a.onfinish = a.oncancel = done;
 }
 
 // ── seeking ───────────────────────────────────────────────────────────
@@ -8451,7 +8544,13 @@ function _vpInit(){
   v.addEventListener('progress',   _vpPaint);
   v.addEventListener('durationchange', _vpPaint);
   ['play','pause','ended','volumechange','ratechange'].forEach(ev => v.addEventListener(ev, _vpSyncIcons));
-  document.addEventListener('fullscreenchange', _vpSyncIcons);
+  document.addEventListener('fullscreenchange', ()=>{
+    _vpSyncIcons();
+    // popups belong to whichever tree is being painted now
+    _fsAdopt(document.getElementById('vqWrap'));
+    _fsAdopt(document.getElementById('vpMenu'));
+    if (!document.fullscreenElement && w._vpFrom) _vpFlyFs(w);   // the exit half
+  });
 
   document.getElementById('vpPlay').onclick = e => { e.stopPropagation(); _vdTogglePlay(); _vpShow(); };
   document.getElementById('vpMute').onclick = e => { e.stopPropagation(); v.muted = !v.muted; _vpShow(); };
@@ -8477,7 +8576,7 @@ function _vpInit(){
   // and a quick second tap on either side jumps ten seconds
   w.addEventListener('click', e => {
     if (e.target.closest('.vp-bar, .vp-menu, .vd-center-play, .dd-bounty-badge')) return;
-    if (menu && menu.classList.contains('open')) { _vpCloseMenu(); return; }
+    if (document.querySelector('.vp-menu.open')) { _vpCloseMenu(); return; }
     const now = Date.now();
     if (now - _vpLastTap < 300){
       clearTimeout(_vpTapT); _vpLastTap = 0;
@@ -8511,8 +8610,8 @@ function _vpInit(){
   });
 
   document.addEventListener('click', e => {
-    if (!menu || !menu.classList.contains('open')) return;
-    if (e.target.closest('.vp-menu, #vpMore')) return;
+    const m = document.querySelector('.vp-menu.open'); if (!m) return;
+    if (e.target.closest && e.target.closest('.vp-menu, #vpMore')) return;
     _vpCloseMenu();
   });
 
