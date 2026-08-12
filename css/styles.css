@@ -5464,7 +5464,7 @@ body::after{
 .vd2-player-wrap .vd-center-play{ display:flex !important; z-index:6; }
 
 @media(max-width:768px){
-  .vp-volwrap{ display:none; }             /* phones use the hardware keys */
+  .vp-vol{ display:none; }                 /* the slider goes; mute stays */
   .vp-btn{ width:34px; height:34px; }
   .vp-btn .mi{ font-size:22px; }
   .vp-menu{ bottom:52px; right:8px; }
@@ -5498,3 +5498,27 @@ body.vp-fs-on .dd-scrolltop{ display:none !important; }
 }
 /* the quality sheet is only used by shorts now — the long player renders its
    list inside the ⋮ menu, next to the button that opened it */
+
+/* ── the shorts ⋮ is the long player's ⋮ ───────────────────────────────────
+   Same rows, same padding, same value column — it is the same control, so it
+   should not be a different-looking box on a different page.               */
+#shortsMenu.shorts-menu{ width:auto !important; min-width:230px; max-width:88vw; padding:6px; }
+#shortsMenu .shorts-menu-body{ padding:0 !important; }
+#shortsMenu .shorts-menu-action,
+#shortsMenu .shorts-menu-report{
+  display:flex !important; align-items:center; gap:12px; width:100%;
+  padding:10px 12px !important; margin:0 !important;
+  background:none !important; border:none !important; color:#fff !important;
+  font-family:inherit; font-size:13px !important; font-weight:500 !important;
+  cursor:pointer; border-radius:8px !important; text-align:left; white-space:nowrap;
+}
+#shortsMenu .shorts-menu-action:hover,
+#shortsMenu .shorts-menu-report:hover{ background:rgba(255,255,255,.10) !important; }
+#shortsMenu .shorts-menu-action .mi,
+#shortsMenu .shorts-menu-report .mi{ font-size:19px !important; }
+#shortsMenu .vp-menu-val{ margin-left:auto; color:rgba(255,255,255,.55); font-weight:400; }
+#shortsMenu .shorts-menu-action.sel .mi{ color:#fff; }
+#shortsMenu .vp-menu-back{
+  border-bottom:1px solid rgba(255,255,255,.10) !important;
+  border-radius:8px 8px 0 0 !important; margin-bottom:4px !important;
+}

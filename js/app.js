@@ -6203,7 +6203,7 @@ function openShorts(proofId) {
 function closeShorts() {
   const ov = document.getElementById('shortsOverlay');
   if (typeof shortsCloseMenu === 'function') shortsCloseMenu();
-  _shortsSpeedIdx = 0;                       // speed is per sitting, not per video
+  _shortsSpeedIdx = 3;                       // speed is per sitting, not per video
   ov.classList.remove('open', 'comments-open');
   shortsCloseDetails();
   document.body.style.overflow = '';
@@ -6577,16 +6577,15 @@ function _shortsPlaceMenu(){
   const items = document.querySelectorAll('#shortsSnapContainer .shorts-snap-item');
   const dots = items[shortsIndex] && items[shortsIndex].querySelector('.shorts-dots');
   if (!dots){ menu.style.cssText = ''; return; }
+  // anchored by its right edge, so the menu's own width never has to be guessed
   const r = dots.getBoundingClientRect();
-  const w = Math.min(300, window.innerWidth - 24);
-  const left = Math.max(12, Math.min(r.right - w, window.innerWidth - w - 12));
   menu.style.position = 'fixed';
-  menu.style.left  = left + 'px';
-  menu.style.right = 'auto';
+  menu.style.right = Math.max(12, window.innerWidth - r.right) + 'px';
+  menu.style.left  = 'auto';
   menu.style.top   = (r.bottom + 8) + 'px';
   menu.style.bottom = 'auto';
-  menu.style.width = w + 'px';
   menu.style.maxHeight = Math.max(200, window.innerHeight - r.bottom - 24) + 'px';
+  menu.style.overflowY = 'auto';
   menu.style.zIndex = '2147483000';
 }
 function shortsCloseMenu(){
@@ -6621,12 +6620,14 @@ function _shortsBuildMenu(p){
   const rulesHtml = (d.rules && d.rules.length)
     ? d.rules.map(r=>`<div class="shorts-rule-item">• ${escHtml(r)}</div>`).join('')
     : '<div class="shorts-rule-item" style="color:var(--t3);">No specific rules.</div>';
+  _shortsMenuP = p;
+  const _sp = _SHORTS_SPEEDS[_shortsSpeedIdx];
   document.getElementById('shortsMenuBody').innerHTML = `
-    <button class="shorts-menu-action" onclick="shortsCycleSpeed()"><span class="mi">slow_motion_video</span> Playback speed <span id="shortsSpeedLbl" style="margin-left:auto;color:var(--t3);">${_SHORTS_SPEEDS[_shortsSpeedIdx]}x</span></button>
-    <button class="shorts-menu-action" onclick="shortsQuality()"><span class="mi">tune</span> Quality <span id="shortsQLbl" style="margin-left:auto;color:var(--t3);">${_vqLabel()}</span></button>
-    <button class="shorts-menu-action" onclick="shortsToggleAutoScroll()"><span class="mi">smart_display</span> Auto-scroll <span id="shortsAutoLbl" style="margin-left:auto;color:var(--t3);">${_shortsAutoScroll?'On':'Off'}</span></button>
-    <button class="shorts-menu-action" onclick="shortsPiP()"><span class="mi">picture_in_picture_alt</span> Picture-in-picture</button>
-    <button class="shorts-menu-report" onclick="openReportModal('proof','${p.id}')"><span class="mi">flag</span> Report</button>
+    <button class="shorts-menu-action" onclick="event.stopPropagation();_shortsMenuSpeed()"><span class="mi">speed</span> Playback speed <span class="vp-menu-val">${_sp===1?'Normal':_sp+'×'}</span></button>
+    <button class="shorts-menu-action" onclick="event.stopPropagation();_shortsMenuQuality()"><span class="mi">tune</span> Quality <span class="vp-menu-val" id="shortsQLbl">${_vqLabel()}</span></button>
+    <button class="shorts-menu-action" onclick="event.stopPropagation();shortsToggleAutoScroll()"><span class="mi">smart_display</span> Auto-scroll <span class="vp-menu-val" id="shortsAutoLbl">${_shortsAutoScroll?'On':'Off'}</span></button>
+    <button class="shorts-menu-action" onclick="event.stopPropagation();shortsPiP()"><span class="mi">picture_in_picture_alt</span> Picture-in-picture</button>
+    <button class="shorts-menu-report" onclick="event.stopPropagation();openReportModal('proof','${p.id}')"><span class="mi">flag</span> Report</button>
   `;
 }
 
@@ -6683,8 +6684,8 @@ function shortsDownload() {
   a.href = p.videoURL; a.download = (p.dareTitle||'dare-short') + '.mp4'; a.target = '_blank';
   document.body.appendChild(a); a.click(); a.remove();
 }
-let _shortsSpeedIdx = 0;
-const _SHORTS_SPEEDS = [1, 1.25, 1.5, 2, 0.5];
+const _SHORTS_SPEEDS = [0.25, 0.5, 0.75, 1, 1.25, 1.5, 1.75, 2];   // same ladder as the long player
+let _shortsSpeedIdx = 3;                                            // → Normal
 let _shortsAutoScroll = false;
 function shortsToggleAutoScroll(){
   _shortsAutoScroll = !_shortsAutoScroll;
@@ -6692,13 +6693,44 @@ function shortsToggleAutoScroll(){
   showToast(_shortsAutoScroll ? 'Auto-scroll on — next short plays automatically' : 'Auto-scroll off');
   const v = _shortsCurrentVideo(); if (v){ v.loop = !_shortsAutoScroll; }
 }
-function shortsCycleSpeed() {
-  const v = _shortsCurrentVideo(); if (!v) return;
-  _shortsSpeedIdx = (_shortsSpeedIdx + 1) % _SHORTS_SPEEDS.length;
-  v.playbackRate = _SHORTS_SPEEDS[_shortsSpeedIdx];
-  const lbl = document.getElementById('shortsSpeedLbl');
-  if (lbl) lbl.textContent = _SHORTS_SPEEDS[_shortsSpeedIdx] + 'x';
-  showToast('Speed: ' + _SHORTS_SPEEDS[_shortsSpeedIdx] + 'x');
+let _shortsMenuP = null;
+function _shortsMenuRoot(){ if (_shortsMenuP) _shortsBuildMenu(_shortsMenuP); }
+// Submenus, not a cycling label — the same shape the long player's ⋮ uses.
+function _shortsMenuSpeed(){
+  const body = document.getElementById('shortsMenuBody'); if (!body) return;
+  const cur = _SHORTS_SPEEDS[_shortsSpeedIdx];
+  body.innerHTML = '<button class="shorts-menu-action vp-menu-back" onclick="event.stopPropagation();_shortsMenuRoot()"><span class="mi">arrow_back</span> Playback speed</button>'
+    + _SHORTS_SPEEDS.map(s =>
+        '<button class="shorts-menu-action' + (s === cur ? ' sel' : '') + '" onclick="event.stopPropagation();_shortsSetSpeed(' + s + ')">'
+        + '<span class="mi">' + (s === cur ? 'check' : 'speed') + '</span> '
+        + (s === 1 ? 'Normal' : s + '×') + '</button>').join('');
+}
+function _shortsSetSpeed(s){
+  _shortsSpeedIdx = Math.max(0, _SHORTS_SPEEDS.indexOf(s));
+  const v = _shortsCurrentVideo(); if (v) v.playbackRate = s;
+  _shortsMenuRoot();
+  showToast(s === 1 ? 'Speed: Normal' : 'Speed: ' + s + '×');
+}
+function _shortsMenuQuality(){
+  const body = document.getElementById('shortsMenuBody'); if (!body) return;
+  const v = _shortsCurrentVideo();
+  let opts = [1080, 720, 480, 360];
+  if (v && v._hls && v._hls.levels && v._hls.levels.length){
+    const set = [...new Set(v._hls.levels.map(L=>Math.min(L.width||0, L.height||0) || L.height || 0))].filter(Boolean);
+    if (set.length) opts = set.sort((a,b)=>b-a);
+  }
+  const cur = String(_vqPref);
+  const row = (val, lbl) =>
+    '<button class="shorts-menu-action' + (cur === String(val) ? ' sel' : '') + '" onclick="event.stopPropagation();_shortsSetQuality(\'' + val + '\')">'
+    + '<span class="mi">' + (cur === String(val) ? 'check' : (val === 'auto' ? 'autorenew' : 'high_quality')) + '</span> '
+    + lbl + '</button>';
+  body.innerHTML = '<button class="shorts-menu-action vp-menu-back" onclick="event.stopPropagation();_shortsMenuRoot()"><span class="mi">arrow_back</span> Quality</button>'
+    + row('auto', 'Auto') + opts.map(o => row(o, o + 'p')).join('');
+}
+function _shortsSetQuality(val){
+  _vqTarget = _shortsCurrentVideo();
+  if (typeof _vqChoose === 'function') _vqChoose(val);
+  _shortsMenuRoot();
 }
 async function shortsPiP() {
   const v = _shortsCurrentVideo(); if (!v) return;
@@ -8230,12 +8262,6 @@ function _vqChoose(val){
   const l = document.getElementById('shortsQLbl'); if(l) l.textContent = _vqLabel();
   closeQualityMenu();
   showToast(_vqPref==='auto' ? 'Quality: Auto (Adaptive)' : 'Quality: '+_vqPref+'p');
-}
-function shortsQuality(){
-  const c = document.getElementById('shortsSnapContainer'); if(!c) return;
-  const it = c.querySelectorAll('.shorts-snap-item')[shortsIndex];
-  const v = it && it.querySelector('video');
-  if(v) openQualityMenu(v);
 }
 
 // ── Buffering spinner: any long/short player that stalls on the network shows
