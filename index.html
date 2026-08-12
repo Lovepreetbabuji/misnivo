@@ -32,7 +32,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,100..400,0..1,0&icon_names=account_balance_wallet,add,arrow_back,bolt,bookmark,chat_bubble,close,expand_less,explore,home,menu,more_vert,notifications,person,reply,search,send,settings,thumb_down,thumb_up,tune&display=block" rel="stylesheet"/>
 
 <!-- App Styles -->
-<link rel="stylesheet" href="/css/styles.css?v=20260812n"/>
+<link rel="stylesheet" href="/css/styles.css?v=20260812p"/>
 
 <!-- The splash logo must be in flight before anything else competes for the pipe -->
 <link rel="preload" as="image" href="/misnivo.png?v=1" fetchpriority="high"/>
@@ -1129,7 +1129,7 @@
 <!-- App Logic -->
 <!-- defer, so it runs after the Firebase bundles above and after the DOM is
      parsed — same order as before, but nothing blocks the first paint -->
-<script defer src="/js/app.js?v=20260812n"></script>
+<script defer src="/js/app.js?v=20260812p"></script>
 
 <!-- ══ v0.19 NEW MODALS ══ -->
 
@@ -1303,6 +1303,7 @@
 <!-- ═══ COMMENTS BOX (scrollable, with close — desktop + mobile) ═══ -->
 <div class="dd-cbox-overlay" id="ddCommentsBox" onclick="if(event.target===this)dismissDareComments()">
   <div class="dd-cbox">
+    <div class="cbox-grip" aria-hidden="true"></div>
     <div class="dd-cbox-head">
       <span class="dd-cbox-title"><span class="mi">chat_bubble</span> Comments <span id="ddBoxCount">0</span></span>
       <button class="dd-cbox-close" onclick="dismissDareComments()" aria-label="Close comments"><span class="mi">close</span></button>
@@ -1466,9 +1467,10 @@
 
   <!-- COLUMN 3: comments (desktop permanent card; mobile slides from bottom) -->
   <div class="shorts-comments">
+    <div class="cbox-grip" aria-hidden="true"></div>
     <div class="shorts-comments-hdr">
-      <span>Comments <b id="shortsCommentsCount">0</b></span>
-      <button onclick="shortsToggleComments()"><span class="mi">close</span></button>
+      <span><span class="mi">chat_bubble</span> Comments <b id="shortsCommentsCount">0</b></span>
+      <button onclick="shortsToggleComments()" aria-label="Close comments"><span class="mi">close</span></button>
     </div>
     <div class="shorts-comments-list" id="shortsCommentsList"></div>
     <div class="cmt-reply-bar" id="shortsReplyBar" style="display:none;">

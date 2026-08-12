@@ -5731,11 +5731,15 @@ function openDareComments(){
   // Mobile + video page: the sheet sits just below the fixed video (doesn't cover it)
   box.classList.toggle('cbox-under-video', _ddHostOverlayId==='videoDetailOverlay');
   _subOpen('ddCommentsBox');
-  _dockToCol1(box.querySelector('.dd-cbox'), _ddHostOverlayId, true);
+  const sheet = box.querySelector('.dd-cbox');
+  _dockToCol1(sheet, _ddHostOverlayId, true);   // desktop: dock over column 1
+  _cboxFit(_ddHostOverlayId);                   // mobile: start at the picture's bottom edge
+  _cboxBindGrip(sheet, 'ddCommentsBox', dismissDareComments);
 }
 function closeDareComments(){                    // plain visual close (page teardown, popstate)
   _subDrop('ddCommentsBox');
-  const box = document.getElementById('ddCommentsBox'); if (box) box.classList.remove('open');
+  const box = document.getElementById('ddCommentsBox');
+  if (box){ box.classList.remove('open'); box.querySelector('.dd-cbox')?.classList.remove('cbox-full'); }
   cancelDareReply();
 }
 // ✕ / tap-outside — hands the pushed entry back so it never piles up
@@ -6612,6 +6616,7 @@ function shortsOpenComments(proofId){
   if (p) ov.dataset.takerId = p.takerId || '';
   shortsCommentsOpen = true;
   ov.classList.add('comments-open');
+  _cboxBindGrip(ov.querySelector('.shorts-comments'), 'shortsOverlay', shortsToggleComments);
   loadShortsComments(proofId);
 }
 function _shortsBuildMenu(p){
@@ -6762,7 +6767,10 @@ function shortsToggleComments() {
   shortsCommentsOpen = !shortsCommentsOpen;
   const ov = document.getElementById('shortsOverlay');
   ov.classList.toggle('comments-open', shortsCommentsOpen);
+  const sheet = ov.querySelector('.shorts-comments');
+  if (sheet && !shortsCommentsOpen) sheet.classList.remove('cbox-full');
   if (shortsCommentsOpen) {
+    _cboxBindGrip(sheet, 'shortsOverlay', shortsToggleComments);
     const pid = ov.dataset.proofId;
     loadShortsComments(pid);
   }
@@ -8729,4 +8737,67 @@ function _vpInit(){
   });
 
   _vpPaint(); _vpSyncIcons(); _vpShow(true);
+}
+
+// ════════════════════════════════════════════════════════════════════
+//  COMMENT SHEETS — shared sizing and the grip gesture
+//  One handler for all three sheets: mission, long video and shorts.
+// ════════════════════════════════════════════════════════════════════
+
+// The sheet starts where the picture ends. Requested for the mission and long
+// video pages: the sheet should touch the bottom of the thumbnail / player
+// rather than being a fixed fraction of the screen.
+function _cboxFit(hostId){
+  const sheet = document.querySelector('#ddCommentsBox .dd-cbox');
+  if (!sheet) return;
+  if (window.innerWidth > 768){ return; }             // desktop docks over column 1 instead
+  sheet.classList.remove('cbox-full');
+  const media = document.querySelector('#' + hostId + ' .vd2-player-wrap')
+             || document.querySelector('#' + hostId + ' .dd-hero');
+  const bottom = media ? media.getBoundingClientRect().bottom : 0;
+  // never past half the screen, so the sheet is always worth opening; and never
+  // negative, which is what a thumbnail scrolled off the top would give
+  const top = Math.max(0, Math.min(bottom, window.innerHeight * 0.5));
+  sheet.style.top = top + 'px';
+  sheet.style.bottom = '0';
+  sheet.style.height = 'auto';
+}
+
+// Drag the grip: down to dismiss, up to fill the screen.
+const _CBOX_CLOSE = 90, _CBOX_FULL = 60;
+function _cboxBindGrip(sheet, scope, onClose){
+  if (!sheet || sheet._gripBound) return;
+  const grip = sheet.querySelector('.cbox-grip'); if (!grip) return;
+  sheet._gripBound = true;
+
+  let startY = 0, dy = 0, dragging = false;
+  const scopeEl = () => document.getElementById(scope) || document.body;
+
+  grip.addEventListener('pointerdown', e => {
+    if (window.innerWidth > 768) return;
+    dragging = true; startY = e.clientY; dy = 0;
+    scopeEl().classList.add('cbox-dragging');
+    try { grip.setPointerCapture(e.pointerId); } catch (err) {}
+  });
+
+  grip.addEventListener('pointermove', e => {
+    if (!dragging) return;
+    dy = e.clientY - startY;
+    // pulling up past full height has nowhere to go — damp it so it feels solid
+    const shown = dy < 0 && sheet.classList.contains('cbox-full') ? dy / 4 : dy;
+    sheet.style.transform = 'translateY(' + Math.max(shown, -60) + 'px)';
+  });
+
+  const end = e => {
+    if (!dragging) return;
+    dragging = false;
+    scopeEl().classList.remove('cbox-dragging');
+    try { grip.releasePointerCapture(e.pointerId); } catch (err) {}
+    sheet.style.transform = '';
+    if (dy > _CBOX_CLOSE) { onClose(); return; }               // flicked down → close
+    if (dy < -_CBOX_FULL) { sheet.classList.add('cbox-full'); return; }  // flicked up → full page
+    if (dy > _CBOX_FULL) sheet.classList.remove('cbox-full');   // a small pull down un-expands
+  };
+  grip.addEventListener('pointerup', end);
+  grip.addEventListener('pointercancel', end);
 }

@@ -2608,10 +2608,9 @@ body.detail-open .topbar{ background:#000 !important; backdrop-filter:none !impo
 .dd-cbox-foot .vd-comment-input-row{ margin:0; }
 /* Desktop: the box is positioned by JS to exactly overlap column 1 (rounded) */
 @media(min-width:769px){ .dd-cbox{ border-radius:16px; } }
-/* Mobile + video page: comment sheet starts at the video's bottom edge (never covers it) */
-@media(max-width:768px){
-  .dd-cbox-overlay.cbox-under-video .dd-cbox{ top:calc(56px + 56.25vw); bottom:0; height:auto; }
-}
+/* Mobile: the sheet's top edge is measured from the real picture in JS
+   (_cboxFit) — the old calc assumed a 56px top bar these pages no longer have,
+   and it only ever applied to the video page. */
 /* Show/hide-replies toggle inside the box */
 .cmt-reptoggle{ display:inline-flex; align-items:center; gap:5px; background:none; border:none; color:var(--blue2); font-size:13px; font-weight:600; cursor:pointer; padding:6px 0; margin-top:4px; font-family:inherit; }
 .cmt-reptoggle .mi{ font-size:18px; }
@@ -5545,3 +5544,116 @@ body.vp-fs-on .dd-scrolltop{ display:none !important; }
 @keyframes shortsColShift{ from{ opacity:0; transform:translateY(14px); } to{ opacity:1; transform:none; } }
 .shorts-col-shift{ animation:shortsColShift .28s cubic-bezier(.25,.8,.25,1) both; }
 body.no-anim .shorts-col-shift{ animation:none; }
+
+/* ═══════════════════════════════════════════════════════════════════════
+   COMMENT SHEETS — one sheet, three pages
+   Mission, long video and shorts were three different boxes: different
+   chrome, only one of them animated, and only one could be dragged. They are
+   the same control, so this is one design and one set of gestures.
+   ═══════════════════════════════════════════════════════════════════════ */
+
+/* The overlay has to stay in the tree or the closing slide never plays —
+   display:none cuts the sheet off mid-animation. */
+.dd-cbox-overlay{ display:block !important; visibility:hidden; pointer-events:none; }
+.dd-cbox-overlay.open{ visibility:visible; pointer-events:auto; }
+
+.dd-cbox,
+#shortsOverlay .shorts-comments{
+  background:#000 !important;
+  backdrop-filter:none !important; -webkit-backdrop-filter:none !important;
+  border:1px solid rgba(255,255,255,.28) !important;
+}
+
+/* ── the grab handle ── */
+.cbox-grip{
+  display:none; flex-shrink:0; padding:10px 0 6px;
+  cursor:grab; touch-action:none; -webkit-tap-highlight-color:transparent;
+}
+.cbox-grip::before{
+  content:''; display:block; width:40px; height:4px; margin:0 auto;
+  border-radius:99px; background:rgba(255,255,255,.32);
+}
+.cbox-grip:active{ cursor:grabbing; }
+.cbox-grip:active::before{ background:rgba(255,255,255,.55); }
+
+/* ── headers and footers, identical on all three ── */
+.dd-cbox-head,
+#shortsOverlay .shorts-comments-hdr{
+  display:flex !important; align-items:center; justify-content:space-between;
+  padding:12px 16px 14px !important; flex-shrink:0;
+  border-bottom:1px solid rgba(255,255,255,.10) !important;
+  font-size:16px !important; font-weight:700 !important; color:#fff !important;
+}
+.dd-cbox-title,
+#shortsOverlay .shorts-comments-hdr > span{
+  display:flex; align-items:center; gap:8px; font-size:16px; font-weight:700; color:#fff;
+}
+.dd-cbox-title .mi,
+#shortsOverlay .shorts-comments-hdr .mi{ font-size:20px; }
+#ddBoxCount, #shortsCommentsCount{ color:rgba(255,255,255,.5); font-weight:600; }
+.dd-cbox-close,
+#shortsOverlay .shorts-comments-hdr > button{
+  width:34px; height:34px; border-radius:50%; flex-shrink:0;
+  display:inline-flex; align-items:center; justify-content:center;
+  background:transparent !important; border:1px solid rgba(255,255,255,.20) !important;
+  color:#fff !important; cursor:pointer;
+}
+.dd-cbox-close:hover,
+#shortsOverlay .shorts-comments-hdr > button:hover{ background:rgba(255,255,255,.10) !important; }
+
+.dd-cbox-list,
+#shortsOverlay .shorts-comments-list{
+  flex:1; overflow-y:auto; padding:16px !important;
+  display:flex; flex-direction:column; gap:18px;
+}
+.dd-cbox-foot,
+#shortsOverlay .shorts-comment-input-row{
+  flex-shrink:0; border-top:1px solid rgba(255,255,255,.10) !important;
+  padding:12px 16px !important; background:#000 !important;
+}
+
+/* ── mobile: a bottom sheet that slides, on all three ── */
+@media(max-width:768px){
+  .cbox-grip{ display:block; }
+
+  .dd-cbox{
+    position:absolute !important; left:0; right:0; bottom:0; top:auto;
+    height:auto; max-height:100%;
+    border-radius:18px 18px 0 0 !important; border-bottom:none !important;
+    transform:translateY(100%);
+    transition:transform .34s cubic-bezier(.32,.72,0,1);
+    will-change:transform;
+  }
+  .dd-cbox-overlay.open .dd-cbox{ transform:translateY(0); }
+
+  #shortsOverlay .shorts-comments{
+    border-radius:18px 18px 0 0 !important; border-bottom:none !important;
+    transition:transform .34s cubic-bezier(.32,.72,0,1);
+  }
+
+  /* while a finger is on the grip the sheet follows it, so no easing */
+  .cbox-dragging .dd-cbox,
+  #shortsOverlay.cbox-dragging .shorts-comments{ transition:none !important; }
+
+  /* swiped up: the sheet takes the whole screen */
+  .dd-cbox.cbox-full{ top:0 !important; }
+  #shortsOverlay .shorts-comments.cbox-full{ top:0 !important; height:100% !important; }
+}
+
+/* ── desktop: mission and long video slide up too. Shorts is a permanent
+      column there, so it is deliberately left alone. ── */
+@media(min-width:769px){
+  .dd-cbox{
+    border-radius:16px !important;
+    transform:translateY(calc(100% + 24px));
+    transition:transform .34s cubic-bezier(.32,.72,0,1);
+    will-change:transform;
+  }
+  .dd-cbox-overlay.open .dd-cbox{ transform:translateY(0); }
+}
+
+@media(prefers-reduced-motion:reduce){
+  .dd-cbox, #shortsOverlay .shorts-comments{ transition:none !important; }
+}
+body.no-anim .dd-cbox,
+body.no-anim #shortsOverlay .shorts-comments{ transition:none !important; }
