@@ -2410,7 +2410,7 @@ function renderProfile() {
   // Tabs: Completed (your won videos) · My Dares · Accepted — all card-style + sub-filters
   _renderProfileSocials(user, 'profSocials');
   _renderProfileSocials(user, 'profSocialsBar');   // mobile: socials shown in the glassy topbar
-  _renderProfileVideos();
+  if(_pAccFilter==='completed') _renderProfileVideos();
   _renderMyDares();
   _renderAcceptedDares();
 
@@ -2511,9 +2511,16 @@ function _renderAcceptedDares(){
   const _at=a=> new Date(a.acceptedDate||a.date||0).getTime()||0;
   let list=[...(acceptedDares||[])].sort((a,b)=>_at(b)-_at(a));   // latest first
   if(_pAccFilter!=='all') list=list.filter(a=>stOf(a)===_pAccFilter);
-  const chips=[['all','All'],['tosubmit','To Submit'],['review','Under Review'],['approved','Approved']]
+  const chips=[['all','All'],['completed','Completed'],['tosubmit','To Submit'],['review','Under Review'],['approved','Approved']]
     .map(([k,l])=>`<button class="pfilter ${_pAccFilter===k?'active':''}" onclick="_setAccFilter('${k}')">${l}</button>`).join('');
   const head=`<div class="pfilter-row">${chips}</div>`;
+  // Completed is the proof-video grid that used to be its own tab — same
+  // renderer, it just fills the panel this bar sits in now.
+  if(_pAccFilter==='completed'){
+    el.innerHTML = head + '<div id="tVideos"></div>';
+    _renderProfileVideos();
+    return;
+  }
   el.innerHTML = head + (list.length
     ? `<div class="active-dare-grid">${list.map(_profileAcceptedCard).join('')}</div>`
     : `<div class="empty" style="padding:32px;"><span class="mi">sports_score</span><div class="empty-title" style="font-size:18px;">Nothing here</div><p class="empty-desc" style="margin-bottom:16px;">Accept a mission from the feed!</p><button class="btn-empty" onclick="goPage('dares')"><span class="mi">arrow_back</span>Browse Missions</button></div>`);
@@ -2856,7 +2863,7 @@ function _renderProfileSocials(u, elId){
 function switchPTab(el, tabId) {
   document.querySelectorAll('#pageProfile .tabs .tab').forEach(t => t.classList.remove('active'));
   if (el) el.classList.add('active');
-  ['tVideos','tMyDares','tAccepted','tTxns'].forEach(id => {
+  ['tMyDares','tAccepted','tTxns'].forEach(id => {
     const e = document.getElementById(id);
     if (e) e.style.display = id === tabId ? 'block' : 'none';
   });

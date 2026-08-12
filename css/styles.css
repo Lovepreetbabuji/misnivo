@@ -5705,3 +5705,12 @@ body.no-anim #shortsOverlay .shorts-comments{ transition:none !important; }
   .exp-tab, .auth-tab, .tab, .wmtab, .wchip,
   .sfilter-chip, .snores-chip, .post-tag-chip{ font-size:13px !important; padding:7px 14px !important; }
 }
+
+/* ── Profile tabs: two of them, equal width, with a rule under the pair so the
+      filter chips below read as a separate row rather than more tabs. ── */
+.tabs.ptabs-2{
+  display:flex !important; gap:10px !important;
+  padding:0 0 14px !important; margin-bottom:14px !important;
+  border-bottom:1px solid rgba(255,255,255,.12) !important;
+}
+.tabs.ptabs-2 .tab{ flex:1 1 0 !important; text-align:center; }

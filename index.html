@@ -32,7 +32,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,100..400,0..1,0&icon_names=account_balance_wallet,add,arrow_back,bolt,bookmark,chat_bubble,close,expand_less,explore,home,menu,more_vert,notifications,person,reply,search,send,settings,thumb_down,thumb_up,tune&display=block" rel="stylesheet"/>
 
 <!-- App Styles -->
-<link rel="stylesheet" href="/css/styles.css?v=20260812v"/>
+<link rel="stylesheet" href="/css/styles.css?v=20260812w"/>
 
 <!-- The splash logo must be in flight before anything else competes for the pipe -->
 <link rel="preload" as="image" href="/misnivo.png?v=1" fetchpriority="high"/>
@@ -396,28 +396,19 @@
           <div class="profile-name" id="profName">—</div>
           <div class="profile-handle" id="profHandle">@—</div>
           <div class="profile-bio" id="profBio" style="display:none;"></div>
-          <!-- 3 options — right under the bio (mobile: stretched full width via CSS) -->
-          <div class="profile-actions">
-            <button class="prof-edit-btn" onclick="openProfileEdit()">Edit Profile</button>
-            <button class="prof-count-box" onclick="_ppFollowList('followers')">
-              <span class="pcb-v" id="profFollowers">0</span><span class="pcb-l">Followers</span>
-            </button>
-            <button class="prof-count-box" onclick="_ppFollowList('following')">
-              <span class="pcb-v" id="profFollowing">0</span><span class="pcb-l">Following</span>
-            </button>
-          </div>
+          <!-- Edit Profile lives in Settings; the follower counts are kept as
+               hidden carriers because the profile loader writes into them. -->
+          <span id="profFollowers" hidden>0</span><span id="profFollowing" hidden>0</span>
           <div class="profile-socials" id="profSocials"></div>
         </div>
       </div>
 
       <!-- Tabs -->
-      <div class="tabs">
-        <button class="tab active" onclick="switchPTab(this,'tVideos')">Completed</button>
-        <button class="tab"        onclick="switchPTab(this,'tMyDares')">My Missions</button>
+      <div class="tabs ptabs-2">
+        <button class="tab active" onclick="switchPTab(this,'tMyDares')">My Missions</button>
         <button class="tab"        onclick="switchPTab(this,'tAccepted')">Accepted</button>
       </div>
-      <div id="tVideos"></div>
-      <div id="tMyDares" style="display:none;"></div>
+      <div id="tMyDares"></div>
       <div id="tAccepted" style="display:none;"></div>
     </div>
 
@@ -1124,7 +1115,7 @@
 <!-- App Logic -->
 <!-- defer, so it runs after the Firebase bundles above and after the DOM is
      parsed — same order as before, but nothing blocks the first paint -->
-<script defer src="/js/app.js?v=20260812v"></script>
+<script defer src="/js/app.js?v=20260812w"></script>
 
 <!-- ══ v0.19 NEW MODALS ══ -->
 
