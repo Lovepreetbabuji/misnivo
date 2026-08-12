@@ -1225,14 +1225,14 @@ function openPost() {
   switchVis('now');
 
   // Modal title
-  const titleEl = document.querySelector('#postOverlay .modal-title');
+  const titleEl = document.getElementById('postTitle');
   if (titleEl) titleEl.textContent = 'Post a New Mission';
 
   const btn = document.getElementById('submitDareBtn');
   if (btn) { btn.disabled = false; btn.innerHTML = '<span class="mi">bolt</span> Post Mission'; }
 
   _ovOpen('postOverlay');
-  _tpInit('postOverlay');   // desktop: show the first section (Caption) in the right pane
+  document.querySelector('#postOverlay .pd-form')?.scrollTo(0, 0);
 }
 
 function closePost() {
@@ -3189,13 +3189,14 @@ async function openEditDare(id) {
   switchVis(currentVis);
   switchTakerMode(currentTakerMode);
 
-  const titleEl = document.querySelector('#postOverlay .modal-title');
+  const titleEl = document.getElementById('postTitle');
   if (titleEl) titleEl.textContent = 'Edit Mission';
 
   const btn = document.getElementById('submitDareBtn');
   if (btn) { btn.disabled=false; btn.innerHTML='<span class="mi">save</span> Save Changes'; }
 
   _ovOpen('postOverlay');
+  document.querySelector('#postOverlay .pd-form')?.scrollTo(0, 0);
 }
 
 // ── DELETE DARE ──────────────────────────────────────────────────────

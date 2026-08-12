@@ -32,7 +32,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,100..400,0..1,0&icon_names=account_balance_wallet,add,arrow_back,bolt,bookmark,chat_bubble,close,expand_less,explore,home,menu,more_vert,notifications,person,reply,search,send,settings,thumb_down,thumb_up,tune&display=block" rel="stylesheet"/>
 
 <!-- App Styles -->
-<link rel="stylesheet" href="/css/styles.css?v=20260812x"/>
+<link rel="stylesheet" href="/css/styles.css?v=20260812y"/>
 
 <!-- The splash logo must be in flight before anything else competes for the pipe -->
 <link rel="preload" as="image" href="/misnivo.png?v=1" fetchpriority="high"/>
@@ -741,25 +741,15 @@
 <!-- POST DARE MODAL — two-pane (left sections · right fields) -->
 <div class="overlay as-page" id="postOverlay">
   <div class="modal post-dare-modal set-modal">
-    <div class="modal-hdr">
-      <div class="modal-title">Post a New Mission</div>
-      <div class="tp-hdr-right">
-        <button class="btn-fill tp-action" onclick="submitDare()" id="submitDareBtn"><span class="mi">bolt</span> Post Mission</button>
-        <button class="modal-close" onclick="closePost()"><span class="mi">close</span></button>
-      </div>
+    <div class="modal-hdr set-hdr">
+      <button class="set-back" onclick="closePost()" aria-label="Back"><span class="mi">arrow_back</span></button>
+      <div class="modal-title" id="postTitle">Post a New Mission</div>
+      <span class="set-hdr-spacer" aria-hidden="true"></span>
     </div>
-    <div class="set-layout">
-      <div class="set-nav">
-        <button class="set-nav-item active" data-sec="pdCaption" data-title="Caption" data-url="/post/caption" onclick="_tpSec(this)"><span class="mi">title</span><span class="smr-t">Caption</span></button>
-        <button class="set-nav-item" data-sec="pdMedia" data-title="Thumbnail" data-url="/post/media" onclick="_tpSec(this)"><span class="mi">image</span><span class="smr-t">Thumbnail</span></button>
-        <button class="set-nav-item" data-sec="pdTags" data-title="Tags &amp; Reward" data-url="/post/tags" onclick="_tpSec(this)"><span class="mi">sell</span><span class="smr-t">Tags &amp; Reward</span></button>
-        <button class="set-nav-item" data-sec="pdRules" data-title="Rules" data-url="/post/rules" onclick="_tpSec(this)"><span class="mi">rule</span><span class="smr-t">Rules</span></button>
-        <button class="set-nav-item" data-sec="pdVis" data-title="Visibility" data-url="/post/visibility" onclick="_tpSec(this)"><span class="mi">visibility</span><span class="smr-t">Visibility</span></button>
-        <button class="set-nav-item" data-sec="pdTakers" data-title="Takers" data-url="/post/takers" onclick="_tpSec(this)"><span class="mi">group</span><span class="smr-t">Takers</span></button>
-      </div>
-      <div class="set-content">
+    <div class="pd-form">
 
-        <div class="set-sec" id="pdCaption">
+        <div class="pd-block">
+          <div class="pd-block-label">Caption</div>
           <div class="f-group">
             <label class="f-label">Caption</label>
             <input class="f-input" id="pCaption" type="text" placeholder="e.g. Run 5km in under 30 minutes"/>
@@ -772,7 +762,8 @@
           </div>
         </div>
 
-        <div class="set-sec" id="pdMedia" style="display:none;">
+        <div class="pd-block">
+          <div class="pd-block-label">Thumbnail</div>
           <div class="f-group">
             <label class="f-label">Mission Thumbnail <span class="f-opt-tag">Optional</span></label>
             <div id="mediaTabImg">
@@ -794,7 +785,8 @@
           </div>
         </div>
 
-        <div class="set-sec" id="pdTags" style="display:none;">
+        <div class="pd-block">
+          <div class="pd-block-label">Tags &amp; Reward</div>
           <div class="f-group">
             <label class="f-label">Tags</label>
             <div class="tags-field" id="tagsField">
@@ -811,7 +803,8 @@
           </div>
         </div>
 
-        <div class="set-sec" id="pdRules" style="display:none;">
+        <div class="pd-block">
+          <div class="pd-block-label">Rules</div>
           <div class="f-group">
             <label class="f-label">Rules <span class="f-opt-tag">Optional</span></label>
             <div id="rulesList"></div>
@@ -819,7 +812,8 @@
           </div>
         </div>
 
-        <div class="set-sec" id="pdVis" style="display:none;">
+        <div class="pd-block">
+          <div class="pd-block-label">Visibility</div>
           <div class="f-group">
             <label class="f-label">Publish</label>
             <div class="vis-toggle-row">
@@ -838,7 +832,8 @@
           </div>
         </div>
 
-        <div class="set-sec" id="pdTakers" style="display:none;">
+        <div class="pd-block">
+          <div class="pd-block-label">Takers</div>
           <div class="f-group">
             <label class="f-label">Who can submit proof?</label>
             <div class="vis-toggle-row">
@@ -849,7 +844,8 @@
           </div>
         </div>
 
-      </div>
+        <button class="btn-fill pd-submit" onclick="submitDare()" id="submitDareBtn"><span class="mi">bolt</span> Post Mission</button>
+
     </div>
   </div>
 </div>
@@ -1090,7 +1086,7 @@
 <!-- App Logic -->
 <!-- defer, so it runs after the Firebase bundles above and after the DOM is
      parsed — same order as before, but nothing blocks the first paint -->
-<script defer src="/js/app.js?v=20260812x"></script>
+<script defer src="/js/app.js?v=20260812y"></script>
 
 <!-- ══ v0.19 NEW MODALS ══ -->
 

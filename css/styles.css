@@ -3896,7 +3896,7 @@ body.ov-open{overflow:hidden;}
      as their own page (setSecOverlay). Otherwise the whole form stacked under the nav. */
   .set-content{display:none;}
   /* header stays on one row: title truncates, action button compact */
-  #postOverlay .modal-title, #profileEditOverlay .modal-title{ flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:18px; }
+  #postOverlay .modal-title{ min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap; }
   .modal-hdr{ gap:8px; }
 }
 
@@ -5773,3 +5773,38 @@ body.no-anim #setSecOverlay.as-page .modal{ transition:none !important; }
 }
 #secEdit .pe-btn-save .mi{ font-size:19px; color:#000 !important; }
 #secEdit .pe-btn-save:disabled{ opacity:.5; cursor:default; }
+
+/* ═══════════════════════════════════════════════════════════════════════
+   POST A MISSION — one scrolling page, flat black, same chrome as Settings
+   Was a six-tab two-pane form (Caption/Thumbnail/Tags/Rules/Visibility/
+   Takers) on both breakpoints. Same fields, same ids, same handlers — laid
+   out top to bottom instead of switched between.
+   ═══════════════════════════════════════════════════════════════════════ */
+#postOverlay.as-page{ background:#000 !important; backdrop-filter:none !important; -webkit-backdrop-filter:none !important; }
+#postOverlay .modal{ background:#000 !important; border:none !important; }
+#postOverlay .modal-hdr.set-hdr .modal-title{ text-align:center; }
+
+.pd-form{ display:flex; flex-direction:column; gap:28px; padding-top:4px; }
+.pd-block-label{
+  font-size:12px; font-weight:700; letter-spacing:.4px; text-transform:uppercase;
+  color:rgba(255,255,255,.45); margin-bottom:10px;
+}
+.pd-submit{
+  width:100%; margin:4px 0 8px; padding:15px !important; border-radius:999px !important;
+  background:#fff !important; color:#000 !important; border:none !important;
+  font-size:14px !important; font-weight:700 !important;
+  display:flex; align-items:center; justify-content:center; gap:8px; cursor:pointer;
+}
+.pd-submit .mi{ font-size:19px; color:#000 !important; }
+.pd-submit:disabled{ opacity:.5; cursor:default; }
+
+@media(max-width:768px){
+  /* the page slides in from the right, like Settings and every other page */
+  #postOverlay.as-page .modal{
+    transform:translateX(100%);
+    transition:transform .28s cubic-bezier(.32,.72,0,1);
+  }
+  #postOverlay.as-page.open .modal{ transform:none; }
+}
+@media(prefers-reduced-motion:reduce){ #postOverlay.as-page .modal{ transition:none !important; } }
+body.no-anim #postOverlay.as-page .modal{ transition:none !important; }
