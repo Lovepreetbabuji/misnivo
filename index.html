@@ -29,10 +29,10 @@
      ⚠ icon_names is a SUBSET: any icon shown in this face MUST be listed here,
      or the browser finds no glyph and renders the ligature as literal text
      ("menu", "search"). Adding a topbar icon? Add its name below too. -->
-<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,100..400,0..1,0&icon_names=account_balance_wallet,add,arrow_back,bolt,bookmark,chat_bubble,close,expand_less,explore,home,menu,more_vert,notifications,person,reply,search,send,settings,tune&display=block" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,100..400,0..1,0&icon_names=account_balance_wallet,add,arrow_back,bolt,bookmark,chat_bubble,close,expand_less,explore,home,menu,more_vert,notifications,person,reply,search,send,settings,thumb_down,thumb_up,tune&display=block" rel="stylesheet"/>
 
 <!-- App Styles -->
-<link rel="stylesheet" href="/css/styles.css?v=20260811r"/>
+<link rel="stylesheet" href="/css/styles.css?v=20260812a"/>
 
 <!-- The splash logo must be in flight before anything else competes for the pipe -->
 <link rel="preload" as="image" href="/misnivo.png?v=1" fetchpriority="high"/>
@@ -1129,7 +1129,7 @@
 <!-- App Logic -->
 <!-- defer, so it runs after the Firebase bundles above and after the DOM is
      parsed — same order as before, but nothing blocks the first paint -->
-<script defer src="/js/app.js?v=20260811r"></script>
+<script defer src="/js/app.js?v=20260812a"></script>
 
 <!-- ══ v0.19 NEW MODALS ══ -->
 
@@ -1260,8 +1260,8 @@
         <div class="dd-actions">
           <span class="dd-cta-inline" id="ddCta"></span>
           <span class="dd-act-gap"></span>
-          <button class="vd-action-btn" id="ddLikeBtn" onclick="likeDare()" aria-label="Like"><span class="mi">thumb_up_off_alt</span> <span id="ddLikeCount">0</span></button>
-          <button class="vd-action-btn" id="ddDislikeBtn" onclick="dislikeDare()" aria-label="Dislike"><span class="mi">thumb_down_off_alt</span> <span id="ddDislikeCount">0</span></button>
+          <button class="vd-action-btn" id="ddLikeBtn" onclick="likeDare()" aria-label="Like"><span class="mi dd-vote-ic">thumb_up</span> <span id="ddLikeCount">0</span></button>
+          <button class="vd-action-btn" id="ddDislikeBtn" onclick="dislikeDare()" aria-label="Dislike"><span class="mi dd-vote-ic">thumb_down</span> <span id="ddDislikeCount">0</span></button>
           <button class="vd-action-btn" onclick="shareDare(_ddCurrentId, document.getElementById('ddTopTitle').textContent)" aria-label="Share"><span class="mi dd-share-ic">reply</span></button>
           <span class="dd-more">
             <button class="vd-action-btn" onclick="_ddToggleActionMenu(this)" aria-label="More"><span class="mi">more_horiz</span></button>
@@ -1353,8 +1353,8 @@
         </div>
 
         <div class="dd-actions">
-          <button class="vd-action-btn" id="vdLikeBtn" onclick="toggleLike(activeProof?.id)" aria-label="Like"><span class="mi">thumb_up_off_alt</span> <span id="vdLikeCount">0</span></button>
-          <button class="vd-action-btn" id="vdDislikeBtn" onclick="dislikeProof()" aria-label="Dislike"><span class="mi">thumb_down_off_alt</span> <span id="vdDislikeCount">0</span></button>
+          <button class="vd-action-btn" id="vdLikeBtn" onclick="toggleLike(activeProof?.id)" aria-label="Like"><span class="mi dd-vote-ic">thumb_up</span> <span id="vdLikeCount">0</span></button>
+          <button class="vd-action-btn" id="vdDislikeBtn" onclick="dislikeProof()" aria-label="Dislike"><span class="mi dd-vote-ic">thumb_down</span> <span id="vdDislikeCount">0</span></button>
           <button class="vd-action-btn" onclick="shareDare(activeProof?.id, activeProof?.dareTitle)" aria-label="Share"><span class="mi dd-share-ic">reply</span></button>
           <span class="dd-more">
             <button class="vd-action-btn" onclick="_ddToggleActionMenu(this)" aria-label="More"><span class="mi">more_horiz</span></button>

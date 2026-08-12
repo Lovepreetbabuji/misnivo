@@ -4583,7 +4583,6 @@ function _vdUpdateDislikeUI(p){
   _vdRepairCounts(p);
   const disliked = user && (p.dislikedBy||[]).includes(user.uid);
   btn.classList.toggle('liked', !!disliked);
-  const i=btn.querySelector('.mi'); if(i) i.textContent = disliked ? 'thumb_down' : 'thumb_down_off_alt';
   const c=document.getElementById('vdDislikeCount'); if(c) c.textContent=_fmtCount(p.dislikeCount||0);
 }
 // Same floor the missions got: increment(-1) used to fire on a stored zero.
@@ -4784,7 +4783,7 @@ function _updateLikeBtn(proofId,count) {
   const isLiked=userLikes.includes(proofId);
   const btn=document.getElementById('vdLikeBtn'); const cntEl=document.getElementById('vdLikeCount');
   if(!btn) return;
-  const mi=btn.querySelector('.mi'); if(mi){ mi.textContent = isLiked ? 'thumb_up' : 'thumb_up_off_alt'; mi.style.color=''; }
+  const mi=btn.querySelector('.mi'); if(mi) mi.style.color='';   // .liked drives the FILL axis
   btn.classList.toggle('liked',isLiked);
   if(cntEl) cntEl.textContent=count.toLocaleString('en-IN');
 }
@@ -5474,9 +5473,8 @@ function _ddUpdateLikeUI(d){
   const _lb = document.getElementById('ddLikeBtn'), _db = document.getElementById('ddDislikeBtn');
   _lb.classList.toggle('liked', !!liked);
   _db.classList.toggle('liked', !!disliked);
-  // outlined by default, solid once it is your vote — same as the drawer icons
-  const _li = _lb.querySelector('.mi'); if (_li) _li.textContent = liked ? 'thumb_up' : 'thumb_up_off_alt';
-  const _di = _db.querySelector('.mi'); if (_di) _di.textContent = disliked ? 'thumb_down' : 'thumb_down_off_alt';
+  // The glyph never changes now — .liked drives the FILL axis, so "outlined"
+  // and "solid" are the same icon rather than two names that can disagree.
   document.getElementById('ddLikeCount').textContent = _fmtCount(d.likeCount||0);
   document.getElementById('ddDislikeCount').textContent = _fmtCount(d.dislikeCount||0);
 }
