@@ -5469,6 +5469,15 @@ body::after{
   .vp-btn .mi{ font-size:22px; }
   .vp-menu{ bottom:52px; right:8px; }
 }
-/* fullscreen: the wrap becomes the whole screen, so the video must fill it */
-.vd2-player-wrap:fullscreen{ width:100vw; height:100vh; border-radius:0 !important; transform:none !important; }
-.vd2-player-wrap:fullscreen .vd-player{ width:100%; height:100%; object-fit:contain; }
+/* Fullscreen is ours, not the browser's: <html> is what goes fullscreen, and
+   this class is what makes the player fill the screen. That keeps the whole
+   document painting — a popup parented to <body> is still on screen — and it
+   leaves the growing animation entirely under our control. */
+.vd2-player-wrap.vp-fs{
+  position:fixed !important; inset:0 !important; top:0 !important; left:0 !important;
+  width:100vw !important; height:100vh !important; height:100dvh !important;
+  max-height:none !important; margin:0 !important; border-radius:0 !important;
+  z-index:2147482000 !important; background:#000;
+}
+.vd2-player-wrap.vp-fs .vd-player{ width:100%; height:100%; object-fit:contain; }
+body.vp-fs-on{ overflow:hidden; }

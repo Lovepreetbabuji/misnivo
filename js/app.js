@@ -6619,13 +6619,6 @@ function _shortsBuildMenu(p){
     ? d.rules.map(r=>`<div class="shorts-rule-item">• ${escHtml(r)}</div>`).join('')
     : '<div class="shorts-rule-item" style="color:var(--t3);">No specific rules.</div>';
   document.getElementById('shortsMenuBody').innerHTML = `
-    <button class="shorts-menu-action shorts-menu-details" onclick="shortsToggleDetails()"><span class="mi">info</span> Details</button>
-    <div id="shortsDetailsBlock" class="shorts-details-block" style="display:none;">
-      <div class="shorts-menu-row"><span class="shorts-menu-label">Caption</span><span>${caption}</span></div>
-      ${desc ? `<div class="shorts-menu-row"><span class="shorts-menu-label">Description</span><span>${desc}</span></div>` : ''}
-      <div class="shorts-menu-row"><span class="shorts-menu-label">Rules</span><span>${rulesHtml}</span></div>
-      <div class="shorts-menu-row"><span class="shorts-menu-label">Winning Amount</span><span style="color:var(--blue);font-weight:700;">Rs. ${bounty.toLocaleString('en-IN')}</span></div>
-    </div>
     <button class="shorts-menu-action" onclick="shortsCycleSpeed()"><span class="mi">slow_motion_video</span> Playback speed <span id="shortsSpeedLbl" style="margin-left:auto;color:var(--t3);">${_SHORTS_SPEEDS[_shortsSpeedIdx]}x</span></button>
     <button class="shorts-menu-action" onclick="shortsQuality()"><span class="mi">tune</span> Quality <span id="shortsQLbl" style="margin-left:auto;color:var(--t3);">${_vqLabel()}</span></button>
     <button class="shorts-menu-action" onclick="shortsToggleAutoScroll()"><span class="mi">smart_display</span> Auto-scroll <span id="shortsAutoLbl" style="margin-left:auto;color:var(--t3);">${_shortsAutoScroll?'On':'Off'}</span></button>
@@ -6924,11 +6917,6 @@ function _shortsSetDotsIcon(open){
   const icon = open ? 'close' : 'more_vert';
   document.querySelectorAll('.shorts-dots .mi').forEach(el=>el.textContent=icon);
   const more = document.querySelector('#shortsFxMoreBtn .mi'); if (more) more.textContent = icon;
-}
-// Mobile: "Details" inside the 3-dots menu expands the caption/description/rules block
-function shortsToggleDetails() {
-  const b = document.getElementById('shortsDetailsBlock');
-  if (b) b.style.display = (b.style.display === 'none' || !b.style.display) ? 'block' : 'none';
 }
 // Desktop: "Details" button under the caption → toggle the glassy details panel (info grows upward)
 function shortsToggleDetailsLeft(btn){
@@ -8401,7 +8389,7 @@ function _vpSyncIcons(){
   if (pb) pb.querySelector('.mi').textContent = paused ? 'play_arrow' : 'pause';
   if (mb) mb.querySelector('.mi').textContent = v.muted || !v.volume ? 'volume_off' : 'volume_up';
   const fs = document.getElementById('vpFs');
-  if (fs) fs.querySelector('.mi').textContent = document.fullscreenElement ? 'fullscreen_exit' : 'fullscreen';
+  if (fs) fs.querySelector('.mi').textContent = _vpIsFs() ? 'fullscreen_exit' : 'fullscreen';
   if (paused) _vpShow(true);
 }
 
@@ -8443,7 +8431,13 @@ function _vpPiP(){
   } catch(e){ showToast('Picture-in-picture is not supported here'); }
 }
 // Where a popup has to live to be visible right now.
-function _fsHost(){ return document.fullscreenElement || document.body; }
+// <html> being the fullscreen element is the normal case now, and popups still
+// belong in <body> then — only a fullscreened element deeper in the tree needs
+// them moved.
+function _fsHost(){
+  const fe = document.fullscreenElement;
+  return (fe && fe !== document.documentElement && fe !== document.body) ? fe : document.body;
+}
 // Move a popup into the fullscreen element (or back out again) without losing it.
 function _fsAdopt(el){
   if (!el) return;
@@ -8460,10 +8454,20 @@ function _vpToggleMenu(){
   _fsAdopt(menu);
   if (btn){
     const r = btn.getBoundingClientRect();
+    const above = r.top - 16;                       // room between the button and the top
     menu.style.position = 'fixed';
     menu.style.right  = Math.max(8, window.innerWidth - r.right) + 'px';
-    menu.style.bottom = Math.max(8, window.innerHeight - r.top + 8) + 'px';
-    menu.style.top = 'auto'; menu.style.left = 'auto';
+    menu.style.left   = 'auto';
+    menu.style.overflowY = 'auto';
+    if (above >= 220){                              // opens upward and still fits
+      menu.style.bottom = (window.innerHeight - r.top + 8) + 'px';
+      menu.style.top = 'auto';
+      menu.style.maxHeight = above + 'px';
+    } else {                                        // no room — drop below instead
+      menu.style.top = (r.bottom + 8) + 'px';
+      menu.style.bottom = 'auto';
+      menu.style.maxHeight = Math.max(160, window.innerHeight - r.bottom - 24) + 'px';
+    }
     menu.style.zIndex = '2147483000';
   }
   menu.classList.add('open'); _vpShow(true);
@@ -8481,42 +8485,51 @@ function _vpCloseMenu(){
       still while it runs, because a video that keeps playing under a scaling
       transform is what makes these look cheap. ── */
 let _vpWasPlaying = false;
+function _vpIsFs(){ const w = _vpEls().w; return !!(w && w.classList.contains('vp-fs')); }
 function _vpFullscreen(){
   const {w, v} = _vpEls(); if (!w) return;
-  if (document.fullscreenElement || document.webkitFullscreenElement){ _vpExitFs(); return; }
+  if (_vpIsFs()){ _vpExitFs(); return; }
 
   _vpWasPlaying = v && !v.paused && !v.ended;
   if (_vpWasPlaying) { try { v.pause(); } catch(e){} }
-  w._vpFrom = w.getBoundingClientRect();
 
-  const go = w.requestFullscreen ? w.requestFullscreen()
-           : w.webkitRequestFullscreen ? Promise.resolve(w.webkitRequestFullscreen())
-           : null;
-  if (!go){
-    if (v && v.webkitEnterFullscreen) v.webkitEnterFullscreen();   // iOS: video only
-    else showToast('Fullscreen is not available here');
-    if (_vpWasPlaying) v.play().catch(()=>{});
-    return;
-  }
-  go.then(()=>{
-    // a landscape video on a phone is worth turning the screen for — this is
-    // what makes it read as "rotate, then grow". The grow itself is driven by
-    // fullscreenchange, once layout has actually settled at the new size.
-    try{ if (window.innerWidth <= 768 && screen.orientation && screen.orientation.lock)
-           screen.orientation.lock('landscape').catch(()=>{}); }catch(e){}
-  }).catch(()=>{ w._vpFrom = null; if (_vpWasPlaying && v) v.play().catch(()=>{}); });
+  const from = w.getBoundingClientRect();
+  // <html> goes fullscreen, not the player: the page is already viewport-sized
+  // so the browser has nothing of its own to animate, and every popup keeps
+  // painting because the whole document is still the fullscreen subtree.
+  const el = document.documentElement;
+  try{
+    if (el.requestFullscreen) el.requestFullscreen().catch(()=>{});
+    else if (el.webkitRequestFullscreen) el.webkitRequestFullscreen();
+    else if (v && v.webkitEnterFullscreen){ v.webkitEnterFullscreen(); if(_vpWasPlaying) v.play().catch(()=>{}); return; }
+  }catch(e){}
+  try{ if (window.innerWidth <= 768 && screen.orientation && screen.orientation.lock)
+         screen.orientation.lock('landscape').catch(()=>{}); }catch(e){}
+
+  w.classList.add('vp-fs');
+  document.body.classList.add('vp-fs-on');
+  _vpFly(w, from);
+  _vpShow(true);
 }
 function _vpExitFs(){
-  const {w} = _vpEls();
-  if (w) w._vpFrom = w.getBoundingClientRect();
+  const {w} = _vpEls(); if (!w) return;
+  const from = w.getBoundingClientRect();
   try{ if (screen.orientation && screen.orientation.unlock) screen.orientation.unlock(); }catch(e){}
-  if (document.exitFullscreen) document.exitFullscreen().catch(()=>{});
-  else if (document.webkitExitFullscreen) document.webkitExitFullscreen();
+  try{
+    if (document.fullscreenElement && document.exitFullscreen) document.exitFullscreen().catch(()=>{});
+    else if (document.webkitFullscreenElement && document.webkitExitFullscreen) document.webkitExitFullscreen();
+  }catch(e){}
+  w.classList.remove('vp-fs');
+  document.body.classList.remove('vp-fs-on');
+  _vpFly(w, from);
 }
+// Escape and the system back button leave fullscreen without going through us.
+document.addEventListener('fullscreenchange', ()=>{
+  if (!document.fullscreenElement && _vpIsFs()) _vpExitFs();
+});
 // FLIP: the element is already at its destination, so invert to where it was
 // and let it play forward.
-function _vpFlyFs(w){
-  const from = w._vpFrom; w._vpFrom = null;
+function _vpFly(w, from){
   const v = document.getElementById('vdPlayer');
   const done = ()=>{
     w.style.transform = '';
@@ -8565,15 +8578,7 @@ function _vpInit(){
   v.addEventListener('progress',   _vpPaint);
   v.addEventListener('durationchange', _vpPaint);
   ['play','pause','ended','volumechange','ratechange'].forEach(ev => v.addEventListener(ev, _vpSyncIcons));
-  document.addEventListener('fullscreenchange', ()=>{
-    _vpSyncIcons();
-    // popups belong to whichever tree is being painted now
-    _fsAdopt(document.getElementById('vqWrap'));
-    _fsAdopt(document.getElementById('vpMenu'));
-    // two frames: one for the browser to finish its own fullscreen layout, one
-    // for ours to be measured against it
-    if (w._vpFrom) requestAnimationFrame(()=>requestAnimationFrame(()=>_vpFlyFs(w)));
-  });
+  document.addEventListener('fullscreenchange', _vpSyncIcons);
 
   document.getElementById('vpPlay').onclick = e => { e.stopPropagation(); _vdTogglePlay(); _vpShow(); };
   document.getElementById('vpMute').onclick = e => { e.stopPropagation(); v.muted = !v.muted; _vpShow(); };
@@ -8602,16 +8607,15 @@ function _vpInit(){
     if (document.querySelector('.vp-menu.open')) { _vpCloseMenu(); return; }
     const now = Date.now();
     if (now - _vpLastTap < 300){
-      clearTimeout(_vpTapT); _vpLastTap = 0;
+      _vpLastTap = 0;
+      _vdTogglePlay();                       // undo what the first tap just did
       const r = w.getBoundingClientRect();
       _vpSkip(e.clientX - r.left < r.width / 2 ? -10 : 10);
       return;
     }
     _vpLastTap = now;
-    _vpTapT = setTimeout(() => {
-      if (window.innerWidth > 768) { _vdTogglePlay(); _vpShow(); }
-      else if (w.classList.contains('vp-show')) _vpHide(); else _vpShow();
-    }, 300);
+    _vdTogglePlay();                         // no delay: the tap answers now
+    _vpShow();
   });
   w.addEventListener('pointermove', e => { if (e.pointerType === 'mouse') _vpShow(); });
   w.addEventListener('pointerleave', () => { if (!v.paused) _vpHide(); });
