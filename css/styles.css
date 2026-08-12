@@ -845,12 +845,6 @@ body{
 ═══════════════════════════════════════════════════════ */
 /* Desktop: center the whole profile block (Instagram-style), no banner box. */
 #pageProfile{max-width:935px;margin:0 auto;}
-.profile-banner{display:none;}
-.profile-banner-brand{
-  font-family:'Roboto',sans-serif;font-weight:900;letter-spacing:.5px;
-  font-size:20px;background:linear-gradient(90deg,var(--t1),var(--blue2));
-  -webkit-background-clip:text;background-clip:text;color:transparent;
-}
 /* Instagram-style header: big avatar (left) · name/bio/actions (right), vertically centered */
 .profile-header{display:flex;align-items:center;gap:46px;padding:26px 12px;position:relative;z-index:1;}
 .profile-pic-wrap{position:relative;flex-shrink:0;}
@@ -976,15 +970,9 @@ body{
 
 /* ── Mobile: profile page — full-bleed banner (brand only) below the normal glassy topbar ── */
 @media(max-width:768px){
-  .profile-banner{display:flex;align-items:center;justify-content:center;height:130px;
-    border-radius:0 0 18px 18px;overflow:hidden;position:relative;background:#161616;margin:0 -12px;
-    box-shadow:0 8px 18px rgba(0,0,0,.4);}
-  .profile-banner::before{content:'';position:absolute;inset:0;
-    background:radial-gradient(ellipse at 30% 40%,rgba(255,255,255,0.07),transparent 60%);}
-  .profile-banner-brand{font-size:26px;position:relative;z-index:1;}
   #profSocials{display:none;}                                            /* mobile socials live in the topbar */
   .profile-pic{width:92px;height:92px;font-size:34px;}
-  .profile-pic-wrap{margin-top:-44px;}
+  .profile-pic-wrap{margin-top:0;}      /* the -44px pull existed only to overlap the removed banner */
   .profile-header{align-items:flex-start;gap:16px;padding:10px 4px 16px;}
   /* 3 SEPARATE action buttons right under the bio — stretched to full width
      (negative margin pulls them left across the avatar column: 92px avatar + 16px gap) */
