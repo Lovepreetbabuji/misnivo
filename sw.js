@@ -6,7 +6,7 @@
 // the activate step deletes nothing, so every version of css/js ever fetched
 // stays in the cache — and the offline fallback can then pair an old cached
 // index.html with the old assets it points at, rendering a UI from months ago.
-const VER = 'dm-shell-20260812m';
+const VER = 'dm-shell-20260812n';
 
 self.addEventListener('install', e => { self.skipWaiting(); });
 self.addEventListener('activate', e => {
@@ -54,7 +54,8 @@ self.addEventListener('fetch', e => {
   const sameOrigin = url.origin === self.location.origin;
   const isShell = sameOrigin && (
     url.pathname === '/' || url.pathname.startsWith('/css/') || url.pathname.startsWith('/js/') ||
-    url.pathname.endsWith('.webmanifest') || url.pathname.endsWith('.svg')
+    url.pathname.endsWith('.webmanifest') || url.pathname.endsWith('.svg') ||
+    url.pathname === '/misnivo.png'   // the logo and the splash — the shell is not a shell without it
   );
   const isFont = url.hostname === 'fonts.googleapis.com' || url.hostname === 'fonts.gstatic.com';
   if (req.mode !== 'navigate' && !isShell && !isFont) return;   // everything else is the browser's own business
