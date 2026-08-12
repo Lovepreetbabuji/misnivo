@@ -8364,7 +8364,10 @@ function _vpShow(sticky){
   w.classList.add('vp-show');
   clearTimeout(_vpHideT);
   if (sticky) return;
-  if (v && !v.paused && !v.ended) _vpHideT = setTimeout(()=>_vpHide(), 2800);
+  // longer on touch: there is no hover to bring them back, so a fumbled tap
+  // should not cost you the whole bar
+  const _wait = window.innerWidth <= 768 ? 4000 : 2800;
+  if (v && !v.paused && !v.ended) _vpHideT = setTimeout(()=>_vpHide(), _wait);
 }
 function _vpHide(){
   const {w} = _vpEls(); if (!w) return;
@@ -8645,7 +8648,11 @@ function _vpInit(){
     if (w.classList.contains('vp-show')) _vpHide(); else _vpShow();
   });
   w.addEventListener('pointermove', e => { if (e.pointerType === 'mouse') _vpShow(); });
-  w.addEventListener('pointerleave', () => { if (!v.paused) _vpHide(); });
+  // MOUSE only. A touch pointer is destroyed the moment the finger lifts, which
+  // fires pointerleave after every single tap — so on a phone this was hiding
+  // the bar again the instant a tap revealed it, and no control was ever on
+  // screen long enough to be pressed.
+  w.addEventListener('pointerleave', e => { if (e.pointerType === 'mouse' && !v.paused) _vpHide(); });
 
   // keyboard, only while the watch page is the thing on screen
   document.addEventListener('keydown', e => {
