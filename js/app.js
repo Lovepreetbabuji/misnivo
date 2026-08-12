@@ -8758,34 +8758,43 @@ function _cboxFit(hostId){
   // never past half the screen, so the sheet is always worth opening; and never
   // negative, which is what a thumbnail scrolled off the top would give
   const top = Math.max(0, Math.min(bottom, window.innerHeight * 0.5));
-  sheet.style.top = top + 'px';
+  sheet._restTop = Math.round(top);
+  _cboxSetTop(sheet, top);
+}
+
+// The sheet is sized by its top edge, with the bottom pinned — so dragging the
+// grip resizes it rather than sliding the whole thing around.
+function _cboxSetTop(sheet, top){
+  sheet.style.top = Math.round(top) + 'px';
   sheet.style.bottom = '0';
   sheet.style.height = 'auto';
 }
-
-// Drag the grip: down to dismiss, up to fill the screen.
-const _CBOX_CLOSE = 90, _CBOX_FULL = 60;
+const _CBOX_SNAP = 60;                       // how far past the resting edge counts as a decision
 function _cboxBindGrip(sheet, scope, onClose){
-  if (!sheet || sheet._gripBound) return;
+  if (!sheet) return;
   const grip = sheet.querySelector('.cbox-grip'); if (!grip) return;
+  // resting height comes from whoever opened it; shorts has no measured edge, so
+  // it keeps the 70% it always had
+  if (sheet._restTop == null) sheet._restTop = Math.round(window.innerHeight * 0.3);
+  if (sheet._gripBound) return;
   sheet._gripBound = true;
 
-  let startY = 0, dy = 0, dragging = false;
+  let startY = 0, startTop = 0, dragging = false;
   const scopeEl = () => document.getElementById(scope) || document.body;
 
   grip.addEventListener('pointerdown', e => {
     if (window.innerWidth > 768) return;
-    dragging = true; startY = e.clientY; dy = 0;
+    dragging = true;
+    startY = e.clientY;
+    startTop = sheet.getBoundingClientRect().top;
     scopeEl().classList.add('cbox-dragging');
     try { grip.setPointerCapture(e.pointerId); } catch (err) {}
   });
 
   grip.addEventListener('pointermove', e => {
     if (!dragging) return;
-    dy = e.clientY - startY;
-    // pulling up past full height has nowhere to go — damp it so it feels solid
-    const shown = dy < 0 && sheet.classList.contains('cbox-full') ? dy / 4 : dy;
-    sheet.style.transform = 'translateY(' + Math.max(shown, -60) + 'px)';
+    // 0 = full screen, larger = shorter. Follows the finger all the way up.
+    _cboxSetTop(sheet, Math.max(0, Math.min(startTop + (e.clientY - startY), window.innerHeight - 60)));
   });
 
   const end = e => {
@@ -8793,10 +8802,14 @@ function _cboxBindGrip(sheet, scope, onClose){
     dragging = false;
     scopeEl().classList.remove('cbox-dragging');
     try { grip.releasePointerCapture(e.pointerId); } catch (err) {}
-    sheet.style.transform = '';
-    if (dy > _CBOX_CLOSE) { onClose(); return; }               // flicked down → close
-    if (dy < -_CBOX_FULL) { sheet.classList.add('cbox-full'); return; }  // flicked up → full page
-    if (dy > _CBOX_FULL) sheet.classList.remove('cbox-full');   // a small pull down un-expands
+    const top = sheet.getBoundingClientRect().top;
+    const rest = sheet._restTop;
+    if (top > rest + _CBOX_SNAP || top > window.innerHeight * 0.75){   // pulled down → close
+      _cboxSetTop(sheet, rest); sheet.classList.remove('cbox-full');
+      onClose(); return;
+    }
+    if (top < rest - _CBOX_SNAP){ _cboxSetTop(sheet, 0); sheet.classList.add('cbox-full'); return; }
+    _cboxSetTop(sheet, rest); sheet.classList.remove('cbox-full');      // not far enough → snap back
   };
   grip.addEventListener('pointerup', end);
   grip.addEventListener('pointercancel', end);
