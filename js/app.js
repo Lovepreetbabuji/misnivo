@@ -1944,7 +1944,7 @@ function _showBgUploadIndicator() {
     ind.id = 'bgUploadInd';
     ind.className = 'bg-upload-ind';
     ind.innerHTML = `
-      <span class="mi" style="font-size:18px;color:var(--blue2);">upload</span>
+      <span class="mi" style="font-size:18px;color:#fff;">upload</span>
       <div style="flex:1;">
         <div style="font-size:12px;font-weight:600;color:var(--t1);">Uploading proof...</div>
         <div style="font-size:11px;color:var(--t3);" id="bgUploadIndPct">0%</div>
@@ -2167,7 +2167,7 @@ function proofItemHTML(p) {
   const statusBadge = isApproved
     ? `<span class="status-badge status-approved">Approved</span>`
     : isRejected
-    ? `<span class="status-badge" style="background:rgba(255,69,58,.15);color:var(--red);border:1px solid rgba(255,69,58,.25);">Rejected</span>`
+    ? `<span class="status-badge" style="background:rgba(255,255,255,.10);color:#fff;border:1px solid rgba(255,255,255,.28);">Rejected</span>`
     : `<span class="status-badge status-submitted">Pending</span>`;
 
   const actions = isPending ? `
@@ -2179,7 +2179,7 @@ function proofItemHTML(p) {
         <span class="mi">thumb_up</span>Approve & Release Rs.${(p.dareBounty||0).toLocaleString('en-IN')}
       </button>
     </div>` : isRejected && p.rejectionReason ? `
-    <div style="font-size:12px;color:var(--red);margin-top:8px;padding:8px 12px;background:rgba(255,69,58,.08);border-radius:8px;">
+    <div style="font-size:12px;color:rgba(255,255,255,.75);margin-top:8px;padding:8px 12px;background:rgba(255,255,255,.06);border-radius:8px;border:1px solid rgba(255,255,255,.14);">
       <strong>Reason:</strong> ${p.rejectionReason}
     </div>` : '';
 
@@ -2318,7 +2318,7 @@ async function loadLeaderboard() {
         <div style="display:flex;align-items:center;gap:14px;flex:1;">
           <div style="font-size:${i<3?'24px':'16px'};min-width:32px;text-align:center;font-weight:700;color:var(--t3);">
             ${i < 3 ? medals[i] : '#'+(i+1)}</div>
-          <div style="width:42px;height:42px;border-radius:50%;background:linear-gradient(135deg,var(--blue),#FF6535);display:flex;align-items:center;justify-content:center;color:#fff;font-size:17px;font-weight:700;flex-shrink:0;">
+          <div style="width:42px;height:42px;border-radius:50%;background:#1a1a1a;border:1px solid rgba(255,255,255,.16);display:flex;align-items:center;justify-content:center;color:#fff;font-size:17px;font-weight:700;flex-shrink:0;">
             ${p.name[0].toUpperCase()}</div>
           <div>
             <div style="font-size:14px;font-weight:600;">${p.name}</div>
@@ -2373,13 +2373,13 @@ function renderProfile() {
       const btn = document.createElement('button');
       btn.textContent = '...more';
       btn.style.cssText =
-        'background:none;border:none;color:var(--blue);cursor:pointer;' +
+        'background:none;border:none;color:#fff;font-weight:600;cursor:pointer;' +
         'font-size:inherit;padding:0;font-family:inherit;font-weight:600;';
       const renderShort = () => {
         bioEl.innerHTML = '';
         const s = document.createElement('span'); s.textContent = shortText + ' ';
         const more = document.createElement('button'); more.textContent = '...more';
-        more.style.cssText = 'background:none;border:none;color:var(--blue);cursor:pointer;font-size:inherit;padding:0;font-family:inherit;font-weight:600;';
+        more.style.cssText = 'background:none;border:none;color:#fff;font-weight:600;cursor:pointer;font-size:inherit;padding:0;font-family:inherit;font-weight:600;';
         more.onclick = renderFull;
         bioEl.appendChild(s); bioEl.appendChild(more);
       };
@@ -2387,7 +2387,7 @@ function renderProfile() {
         bioEl.innerHTML = '';
         const s = document.createElement('span'); s.textContent = fullText + ' ';
         const less = document.createElement('button'); less.textContent = 'show less';
-        less.style.cssText = 'background:none;border:none;color:var(--blue);cursor:pointer;font-size:inherit;padding:0;font-family:inherit;font-weight:600;';
+        less.style.cssText = 'background:none;border:none;color:#fff;font-weight:600;cursor:pointer;font-size:inherit;padding:0;font-family:inherit;font-weight:600;';
         less.onclick = renderShort;
         bioEl.appendChild(s); bioEl.appendChild(less);
       };
@@ -3399,7 +3399,7 @@ function renderApplicantsList(applicants, approvedTakers) {
                <span class="mi" style="font-size:15px;">close</span>
              </button>`
           : `<button onclick="approveTaker('${selectTakersDareId}','${a.uid}','${escHtml(a.name)}')"
-               style="background:linear-gradient(135deg,var(--blue),var(--blue2));color:#fff;border:none;
+               style="background:#fff;color:#000;border:none;
                padding:7px 16px;border-radius:50px;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;">
                Select
              </button>`
@@ -4676,6 +4676,7 @@ function _vdBindScroll(){
 // slides away with the page and pauses rather than covering the list.
 function _vdParkPlayer(){
   const w=document.getElementById('vdPlayerWrap'); if(!w) return;
+  if(w.classList.contains('vp-fs')){ w.style.transform=''; return; }   // fullscreen does not park
   if(window.innerWidth>768){ w.style.transform=''; return; }
   const rel=document.querySelector('#videoDetailOverlay .dd-col3');
   const h=w.offsetHeight; if(!rel||!h){ w.style.transform=''; return; }
@@ -4836,6 +4837,7 @@ function _notifCloseNow() {
 }
 
 function closeVideoDetail() {
+  if (typeof _vpIsFs === 'function' && _vpIsFs()) _vpExitFs();   // else vp-fs-on strands the app with no chrome
   const _vp = document.getElementById('vdPlayer');
   if (_vp) _vp.playbackRate = 1;                 // speed resets when you leave, like YouTube
   if (typeof _vpCloseMenu === 'function') _vpCloseMenu();
@@ -5924,7 +5926,7 @@ function _showInlineAd(player, p) {
   ad.innerHTML = `
     <div class="vd-ad-badge">Ad</div>
     <div class="vd-ad-body">
-      <span class="mi" style="font-size:48px;color:var(--blue);">bolt</span>
+      <span class="mi" style="font-size:48px;color:#fff;">bolt</span>
       <div class="vd-ad-title">Misnivo</div>
       <div class="vd-ad-sub">Your video starts in <b id="vdAdCount">${secs}</b>s</div>
     </div>

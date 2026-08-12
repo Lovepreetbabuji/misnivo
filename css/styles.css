@@ -3216,10 +3216,10 @@ html{scroll-behavior:smooth;}
 }
 .shorts-details-panel{
   margin-top:10px; padding:12px 14px; border-radius:14px; max-height:40vh; overflow-y:auto;
-  background:rgba(255,255,255,0.08) !important;
-  backdrop-filter:var(--blur) !important;
-  -webkit-backdrop-filter:var(--blur) !important;
-  border:1px solid rgba(255,255,255,0.14);
+  background:#000 !important;
+  backdrop-filter:none !important;
+  -webkit-backdrop-filter:none !important;
+  border:1px solid rgba(255,255,255,.28);
 }
 .shorts-details-panel .dd-sec-label{ font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.5px; color:#bbb; margin:8px 0 4px; }
 .shorts-details-panel .dd-sec-label:first-child{ margin-top:0; }
