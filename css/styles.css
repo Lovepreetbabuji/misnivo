@@ -5481,3 +5481,20 @@ body::after{
 }
 .vd2-player-wrap.vp-fs .vd-player{ width:100%; height:100%; object-fit:contain; }
 body.vp-fs-on{ overflow:hidden; }
+/* z-index is judged inside the parent's stacking context, so lifting the player
+   was never going to clear the topbar (9000) while its overlay sat at 150. */
+body.vp-fs-on #videoDetailOverlay{ z-index:2147481000 !important; }
+body.vp-fs-on .topbar,
+body.vp-fs-on .sb-rail,
+body.vp-fs-on .bottom-nav,
+body.vp-fs-on .dd-scrolltop{ display:none !important; }
+
+/* On a phone the centre button IS the pause control, so it stays with the rest
+   of the controls instead of only appearing once the video has already stopped. */
+@media(max-width:768px){
+  .vd2-player-wrap.vp-show .vd-center-play{
+    opacity:1; pointer-events:auto; transform:translate(-50%,-50%) scale(1);
+  }
+}
+/* the quality sheet is only used by shorts now — the long player renders its
+   list inside the ⋮ menu, next to the button that opened it */

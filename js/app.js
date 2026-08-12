@@ -5070,6 +5070,9 @@ function _ddBindSwipe(overlayId){
   };
   ov.addEventListener('touchstart', e=>{
     if (window.innerWidth>768) return;
+    // scrubbing, double-tap seeking, tapping controls — none of that is a page
+    // gesture, and reading a scrub as a swipe was opening the description
+    if (e.target.closest && e.target.closest('.vd2-player-wrap, .dd-hero')) { _ddTouchActive=false; return; }
     if (_inSideScroller(e.target)) { _ddTouchActive=false; return; }
     const t=e.touches[0]; _ddTouchX=t.clientX; _ddTouchY=t.clientY; _ddTouchActive=true;
   }, {passive:true});
@@ -8390,7 +8393,11 @@ function _vpSyncIcons(){
   if (mb) mb.querySelector('.mi').textContent = v.muted || !v.volume ? 'volume_off' : 'volume_up';
   const fs = document.getElementById('vpFs');
   if (fs) fs.querySelector('.mi').textContent = _vpIsFs() ? 'fullscreen_exit' : 'fullscreen';
-  if (paused) _vpShow(true);
+  // the centre button is the pause control on phones, so it has to say which
+  const cp = w.querySelector('.vd-center-play .mi');
+  if (cp) cp.textContent = paused ? 'play_arrow' : 'pause';
+  if (paused) _vpShow(true);          // stays up while stopped
+  else        _vpShow();              // playing → arm the fade-out again
 }
 
 // ── the ⋮ menu ────────────────────────────────────────────────────────
@@ -8400,7 +8407,7 @@ function _vpMenuRoot(){
   menu.innerHTML =
     '<button onclick="event.stopPropagation();_vpMenuSpeed()"><span class="mi">speed</span>Playback speed'
       + '<span class="vp-menu-val">' + (rate === 1 ? 'Normal' : rate + '×') + '</span></button>'
-    + '<button onclick="_vpQuality()"><span class="mi">tune</span>Quality'
+    + '<button onclick="event.stopPropagation();_vpMenuQuality()"><span class="mi">tune</span>Quality'
       + '<span class="vp-menu-val">' + (typeof _vqLabel === 'function' ? _vqLabel() : 'Auto') + '</span></button>'
     + '<button onclick="_vpPiP()"><span class="mi">picture_in_picture_alt</span>Picture-in-picture</button>';
 }
@@ -8418,9 +8425,28 @@ function _vpSetSpeed(s){
   _vpMenuRoot(); _vpShow(true);
   showToast(s === 1 ? 'Speed: Normal' : 'Speed: ' + s + '×');
 }
-function _vpQuality(){
-  const {v} = _vpEls(); _vpCloseMenu();
-  if (v && typeof openQualityMenu === 'function') openQualityMenu(v);
+// The old route opened a separate centred/bottom sheet, which on a phone landed
+// nowhere near the button. Same list, rendered in place.
+function _vpMenuQuality(){
+  const {v, menu} = _vpEls(); if (!menu) return;
+  let opts = [1080, 720, 480, 360];
+  if (v && v._hls && v._hls.levels && v._hls.levels.length){
+    const set = [...new Set(v._hls.levels.map(L=>Math.min(L.width||0, L.height||0) || L.height || 0))].filter(Boolean);
+    if (set.length) opts = set.sort((a,b)=>b-a);
+  }
+  const cur = String(_vqPref);
+  const row = (val, lbl) =>
+    '<button class="' + (cur === String(val) ? 'sel' : '') + '" onclick="event.stopPropagation();_vpSetQuality(\'' + val + '\')">'
+    + '<span class="mi">' + (cur === String(val) ? 'check' : (val === 'auto' ? 'autorenew' : 'high_quality')) + '</span>'
+    + lbl + '</button>';
+  menu.innerHTML = '<button class="vp-menu-back" onclick="event.stopPropagation();_vpMenuRoot()"><span class="mi">arrow_back</span>Quality</button>'
+    + row('auto', 'Auto') + opts.map(o => row(o, o + 'p')).join('');
+}
+function _vpSetQuality(val){
+  const {v} = _vpEls();
+  _vqTarget = v;
+  if (typeof _vqChoose === 'function') _vqChoose(val);
+  _vpMenuRoot(); _vpShow(true);
 }
 function _vpPiP(){
   const {v} = _vpEls(); _vpCloseMenu(); if (!v) return;
@@ -8606,16 +8632,17 @@ function _vpInit(){
     if (e.target.closest('.vp-bar, .vp-menu, .vd-center-play, .dd-bounty-badge')) return;
     if (document.querySelector('.vp-menu.open')) { _vpCloseMenu(); return; }
     const now = Date.now();
-    if (now - _vpLastTap < 300){
+    if (now - _vpLastTap < 300){              // second tap: jump ten seconds
       _vpLastTap = 0;
-      _vdTogglePlay();                       // undo what the first tap just did
       const r = w.getBoundingClientRect();
       _vpSkip(e.clientX - r.left < r.width / 2 ? -10 : 10);
       return;
     }
     _vpLastTap = now;
-    _vdTogglePlay();                         // no delay: the tap answers now
-    _vpShow();
+    if (window.innerWidth > 768){ _vdTogglePlay(); _vpShow(); return; }
+    // phones: show the controls, or put them away again. Pause is the centre
+    // button — a tap anywhere stopping the video is what made this unusable.
+    if (w.classList.contains('vp-show')) _vpHide(); else _vpShow();
   });
   w.addEventListener('pointermove', e => { if (e.pointerType === 'mouse') _vpShow(); });
   w.addEventListener('pointerleave', () => { if (!v.paused) _vpHide(); });
