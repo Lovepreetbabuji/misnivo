@@ -1729,6 +1729,7 @@ function openProof(dareId) {
   proofCapturedFrameBlob = null;
   _proofTermsAcceptedAt = null;
   document.getElementById('proofTermsOverlay')?.classList.remove('open');
+  const _confirmOv = document.getElementById('proofSubmitConfirmOverlay'); if (_confirmOv) _confirmOv.style.display = 'none';
 
   // Dare info
   document.getElementById('proofDareTitle').textContent  = d.caption  || d.title;
@@ -2029,13 +2030,26 @@ function openProofTerms() {
 // Declined, or backed out: the terms page closes, nothing uploads, the form
 // (video, checklist, note) is exactly as it was — the user can just try again.
 function declineProofTerms() {
+  document.getElementById('proofSubmitConfirmOverlay').style.display = 'none';
   _ovSync('proofTermsOverlay');
   document.getElementById('proofTermsOverlay').classList.remove('open');
 }
-// Accepted: record when, close the terms page, and start the real upload —
-// so the video (and its progress) is the very next thing visible.
+// "I Agree" doesn't submit by itself — it asks one more time, on top of the
+// agreement page itself, before anything actually uploads.
 function acceptProofTerms() {
+  document.getElementById('proofSubmitConfirmOverlay').style.display = 'flex';
+}
+// Changed their mind at the last step: just the confirm closes. The terms page
+// is still there underneath, still open, still un-declined.
+function cancelProofSubmitConfirm() {
+  document.getElementById('proofSubmitConfirmOverlay').style.display = 'none';
+}
+// Confirmed for real: record when, close both the confirm and the terms page,
+// and start the upload — so the video (and its progress) is the very next
+// thing visible.
+function confirmProofSubmit() {
   _proofTermsAcceptedAt = Date.now();
+  document.getElementById('proofSubmitConfirmOverlay').style.display = 'none';
   _ovSync('proofTermsOverlay');
   document.getElementById('proofTermsOverlay').classList.remove('open');
   _doSubmitProof();

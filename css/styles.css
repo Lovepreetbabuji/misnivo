@@ -5872,3 +5872,21 @@ body.no-anim #proofOverlay.as-page .modal{ transition:none !important; }
 }
 @media(prefers-reduced-motion:reduce){ #proofTermsOverlay.as-page .modal{ transition:none !important; } }
 body.no-anim #proofTermsOverlay.as-page .modal{ transition:none !important; }
+
+/* ═══════════════════════════════════════════════════════════════════════
+   PROOF SUBMIT CONFIRM — the extra 'are you sure?' on top of the agreement
+   itself. A small centred card, not a page — flat black like the rest of this
+   flow rather than the generic .modal's old glassy dark-red default, and an
+   explicit z-index high enough to sit above the terms page regardless of
+   where _ovStack happens to be at that moment.
+   ═══════════════════════════════════════════════════════════════════════ */
+#proofSubmitConfirmOverlay{ z-index:20000; }
+#proofSubmitConfirmOverlay .modal{
+  background:#0d0d0d !important; backdrop-filter:none !important; -webkit-backdrop-filter:none !important;
+  border:1px solid rgba(255,255,255,.14); box-shadow:none;
+}
+.proof-confirm-modal{ max-width:340px; width:100%; text-align:center; padding:28px 24px 22px; }
+.proof-confirm-icon{ font-size:38px; color:#fff; margin-bottom:12px; display:block; }
+.proof-confirm-title{ font-size:18px; font-weight:700; color:#fff; margin-bottom:8px; }
+.proof-confirm-msg{ font-size:13px; color:rgba(255,255,255,.55); line-height:1.5; margin-bottom:20px; }
+.proof-confirm-modal .btn-submit-proof{ box-shadow:none; margin-bottom:8px; }

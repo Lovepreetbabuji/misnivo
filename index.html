@@ -32,7 +32,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,100..400,0..1,0&icon_names=account_balance_wallet,add,arrow_back,bolt,bookmark,chat_bubble,close,expand_less,explore,home,menu,more_vert,notifications,person,reply,search,send,settings,thumb_down,thumb_up,tune&display=block" rel="stylesheet"/>
 
 <!-- App Styles -->
-<link rel="stylesheet" href="/css/styles.css?v=20260813d"/>
+<link rel="stylesheet" href="/css/styles.css?v=20260813e"/>
 
 <!-- The splash logo must be in flight before anything else competes for the pipe -->
 <link rel="preload" as="image" href="/misnivo.png?v=1" fetchpriority="high"/>
@@ -1029,6 +1029,19 @@
   </div>
 </div>
 
+<!-- One more "are you sure" on top of the agreement itself, before the upload
+     actually begins. Cancel returns to the still-open, still-unaccepted
+     agreement page — it does not decline it. -->
+<div class="overlay" id="proofSubmitConfirmOverlay" style="display:none;" onclick="if(event.target===this)cancelProofSubmitConfirm()">
+  <div class="modal proof-confirm-modal">
+    <span class="mi proof-confirm-icon">help</span>
+    <div class="proof-confirm-title">Submit this proof?</div>
+    <div class="proof-confirm-msg">Your video starts uploading right away, and this becomes your submission for this mission.</div>
+    <button class="btn-submit-proof" onclick="confirmProofSubmit()"><span class="mi">check</span>Yes, Submit</button>
+    <button class="pt-decline" onclick="cancelProofSubmitConfirm()">Cancel</button>
+  </div>
+</div>
+
 <!-- REVIEW PROOFS MODAL -->
 <div class="overlay as-page" id="reviewOverlay">
   <div class="modal" style="max-width:560px;">
@@ -1136,7 +1149,7 @@
 <!-- App Logic -->
 <!-- defer, so it runs after the Firebase bundles above and after the DOM is
      parsed — same order as before, but nothing blocks the first paint -->
-<script defer src="/js/app.js?v=20260813d"></script>
+<script defer src="/js/app.js?v=20260813e"></script>
 
 <!-- ══ v0.19 NEW MODALS ══ -->
 
