@@ -23,7 +23,7 @@ try { db.enablePersistence({ synchronizeTabs: true }).catch(()=>{}); } catch(e){
 // proof for one). Bump AGREEMENT_VERSION whenever the wording below changes —
 // past acceptances keep the version and hash they were shown, so a later
 // change here never rewrites what an old record says the user agreed to.
-const AGREEMENT_VERSION = '1.0';
+const AGREEMENT_VERSION = '1.1';
 const AGREEMENT_TEXT_V1 =
 `1. You are 18 or older
 You confirm you are at least 18 years old. Misnivo does not allow anyone under 18 to accept missions, submit proof, or receive rewards.
@@ -35,7 +35,7 @@ You are choosing to take on this specific mission of your own free will, after r
 You confirm you consider yourself physically and mentally able to complete this mission, that you have any skill, equipment or preparation it requires, and that you will not attempt it under the influence of alcohol or drugs. That judgment is yours and you are responsible for it.
 
 4. You accept the risk
-Missions may involve physical activity or challenge. You understand this, and you accept all risk of injury, loss or damage that may result from attempting one. Misnivo does not perform, supervise or control how missions are carried out, and is not responsible for what happens while you attempt or record one. If anything feels unsafe, stop — no reward is worth your safety.
+Missions may involve physical activity or challenge. You understand this, and you accept all risk of injury, loss or damage that may result from attempting one. Misnivo does not perform, supervise or control how missions are carried out, and is not responsible for what happens while you attempt or record one. Misnivo does not review whether a mission is safe for you personally. Missions that appear dangerous are removed, but you must judge your own safety. If you believe a mission is unsafe or breaks the rules, report it instead of attempting it — every mission and video has a Report option in its menu. If anything feels unsafe, stop — no reward is worth your safety.
 
 5. You will not pay to be selected
 Missions are free to accept. You confirm you have not paid, offered or promised money or anything of value to a mission creator, or to anyone else, in exchange for being selected — and that you will not do so. This is strictly prohibited and results in a permanent ban and forfeited rewards.
@@ -89,6 +89,9 @@ let _agreementScrolledEnd = false;
 let _agreementChecked = false;
 
 function showAgreementModal(mode, onAgree) {
+  // above every _ovOpen-stacked page overlay (9500 + stack depth), and above
+  // the player menus (2147483000) for good measure
+  document.getElementById('agreementOverlay').style.zIndex = '2147483600';
   _agreementOnAgree = onAgree;
   _agreementScrolledEnd = false;
   _agreementChecked = false;
@@ -99,9 +102,8 @@ function showAgreementModal(mode, onAgree) {
   btn.innerHTML = '<span class="mi">check</span>' +
     (mode === 'proof' ? 'I Agree — Submit Proof' : 'I Agree — Accept Mission');
 
-  const body = document.getElementById('agreementBody');
-  body.innerHTML = _agreementRenderHtml(AGREEMENT_TEXT_V1);
-  body.scrollTop = 0;
+  document.getElementById('agreementPoints').innerHTML = _agreementRenderHtml(AGREEMENT_TEXT_V1);
+  document.getElementById('agreementBody').scrollTop = 0;
 
   const cbIcon = document.getElementById('agreementCheckIcon');
   cbIcon.textContent = 'check_box_outline_blank';
@@ -1895,7 +1897,6 @@ function openProof(dareId) {
   proofCapturedFrameBlob = null;
   _proofTermsAcceptedAt = null;
   _proofAgreementId     = null;
-  if (document.getElementById('proofSubmitConfirmOverlay')) _hideProofSubmitConfirm();
 
   // Dare info
   document.getElementById('proofDareTitle').textContent  = d.caption  || d.title;
@@ -2220,43 +2221,25 @@ function submitProof() {
   if (errEl) errEl.style.display = 'none';
 
   // GATE B — the mission agreement, before anything uploads
-  showAgreementModal('proof', () => {
-    const el = document.getElementById('proofSubmitConfirmOverlay');
-    el.style.display = 'flex'; el.classList.add('open');
-  });
+  showAgreementModal('proof', _recordThenUpload);
 }
 
 let _proofTermsAcceptedAt = null;   // ms timestamp, mirrored onto the proof doc
 let _proofAgreementId     = null;   // id of this submission's 'agreements' record
 
-// .overlay's own CSS gates opacity/pointer-events on the .open class, not on
-// display — toggling display alone leaves the box present but invisible.
-function _hideProofSubmitConfirm() {
-  const el = document.getElementById('proofSubmitConfirmOverlay');
-  el.style.display = 'none'; el.classList.remove('open');
-}
-function cancelProofSubmitConfirm() {
-  _hideProofSubmitConfirm();
-}
-// Confirmed: write the agreement record FIRST. If that write fails the upload
-// does not start — an unrecorded acceptance is exactly what this feature exists
-// to prevent.
-async function confirmProofSubmit() {
-  const btn = document.querySelector('#proofSubmitConfirmOverlay .btn-submit-proof');
-  if (btn) { btn.disabled = true; btn.innerHTML = '<span class="mi">hourglass_empty</span>Recording...'; }
+// Agreed: write the agreement record FIRST. If that write fails the upload does
+// not start — an unrecorded acceptance is exactly what this feature exists to
+// prevent.
+async function _recordThenUpload() {
   try {
     _proofAgreementId = await _recordAgreement('proof_submission', proofDareId);
   } catch (e) {
     console.error('agreement save failed:', e);
-    if (btn) { btn.disabled = false; btn.innerHTML = '<span class="mi">check</span>Yes, Submit'; }
-    _hideProofSubmitConfirm();
     const msg = 'Could not record your agreement — please check your connection and try again';
     showToast(msg); _showProofSubmitError(msg);
     return;                                        // upload does NOT start
   }
-  if (btn) { btn.disabled = false; btn.innerHTML = '<span class="mi">check</span>Yes, Submit'; }
   _proofTermsAcceptedAt = Date.now();
-  _hideProofSubmitConfirm();
   _doSubmitProof();
 }
 
