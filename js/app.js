@@ -783,7 +783,7 @@ const _PAGE_URL  = { home:'/', explore:'/explore', dares:'/dares', accepted:'/ac
 // moving left slides in from the left. Anything not listed keeps the old
 // forward/back behaviour.
 const _TABS = ['home','dares','chat','profile'];
-const _MODAL_URL = { postOverlay:'/post', proofOverlay:'/submit-proof', proofTermsOverlay:'/submit-proof/terms', settingsOverlay:'/settings',
+const _MODAL_URL = { postOverlay:'/post', proofOverlay:'/submit-proof', settingsOverlay:'/settings',
   notifSettingsOverlay:'/settings/notifications', moreSettingsOverlay:'/settings/more',
   depositOverlay:'/wallet/deposit', withdrawOverlay:'/wallet/withdraw',
   kycOverlay:'/wallet/kyc', methodOverlay:'/wallet/account', pinOverlay:'/wallet/pin',
@@ -1781,12 +1781,30 @@ async function submitDare() {
 //  open mode       → direct accept, proof allowed immediately
 //  creator_picks   → apply to be considered, wait for creator
 // ════════════════════════════
-async function acceptDare(id) {
+// GATE A — every existing caller of acceptDare() now hits the agreement first;
+// the real work moved to _doAcceptDare() so no call site had to change.
+function acceptDare(id) {
+  if (typeof guestCheck === 'function' && guestCheck('accept')) return;
   const d = dares.find(x => x.id === id);
   if (!d) return;
   if (acceptedDares.find(a => a.dareId === id)) {
     showToast('You already applied or accepted this mission!'); return;
   }
+  showAgreementModal('accept', async () => {
+    try {
+      await _recordAgreement('mission_accept', id);
+    } catch (e) {
+      console.error('agreement save failed:', e);
+      showToast('Could not record your agreement — please check your connection and try again');
+      return;                                      // mission is NOT accepted
+    }
+    _doAcceptDare(id);
+  });
+}
+
+async function _doAcceptDare(id) {
+  const d = dares.find(x => x.id === id);
+  if (!d) return;
 
   const isCreatorPicks = d.takerSelectionMode === 'creator_picks';
   const reward = d.rewardAmount ?? d.bounty ?? 0;
@@ -1876,7 +1894,7 @@ function openProof(dareId) {
   selectedVideoW = 0; selectedVideoH = 0;
   proofCapturedFrameBlob = null;
   _proofTermsAcceptedAt = null;
-  document.getElementById('proofTermsOverlay')?.classList.remove('open');
+  _proofAgreementId     = null;
   if (document.getElementById('proofSubmitConfirmOverlay')) _hideProofSubmitConfirm();
 
   // Dare info
@@ -2161,6 +2179,26 @@ function _showProofSubmitError(msg) {
   errEl.style.display = 'flex';
 }
 
+// ── STEP 3 — AUDIT TRAIL ────────────────────────────────────────────────────
+// One record per acceptance, in its own 'agreements' collection. Stores the
+// version AND a hash of the exact text shown, so a later dispute can prove
+// which wording was on screen — not just that "an agreement" was accepted.
+// Written before the action it authorises; a failure here stops that action.
+async function _recordAgreement(type, missionId) {
+  const ref = await db.collection('agreements').add({
+    userId:           user.uid,
+    userEmail:        user.email || '',
+    type,                                    // 'mission_accept' | 'proof_submission'
+    missionId:        missionId || null,
+    proofId:          null,                  // filled in later for proof_submission
+    agreementVersion: AGREEMENT_VERSION,
+    agreementHash:    _agreementHash(AGREEMENT_TEXT_V1),
+    acceptedAt:       firebase.firestore.FieldValue.serverTimestamp(),
+    userAgent:        navigator.userAgent || ''
+  });
+  return ref.id;
+}
+
 function submitProof() {
   if (!selectedVideo || !proofDareId) return;
 
@@ -2181,48 +2219,44 @@ function submitProof() {
   const errEl = document.getElementById('proofSubmitError');
   if (errEl) errEl.style.display = 'none';
 
-  openProofTerms();
+  // GATE B — the mission agreement, before anything uploads
+  showAgreementModal('proof', () => {
+    const el = document.getElementById('proofSubmitConfirmOverlay');
+    el.style.display = 'flex'; el.classList.add('open');
+  });
 }
 
-let _proofTermsAcceptedAt = null;
-function openProofTerms() {
-  document.getElementById('proofTermsOverlay').classList.add('open');
-  document.querySelector('#proofTermsOverlay .pt-body')?.scrollTo(0, 0);
-  _ovOpen('proofTermsOverlay');
-}
-// Declined, or backed out: the terms page closes, nothing uploads, the form
-// (video, checklist, note) is exactly as it was — the user can just try again.
+let _proofTermsAcceptedAt = null;   // ms timestamp, mirrored onto the proof doc
+let _proofAgreementId     = null;   // id of this submission's 'agreements' record
+
 // .overlay's own CSS gates opacity/pointer-events on the .open class, not on
-// display — toggling display alone (as guestPrompt did, until it was fixed
-// alongside this) leaves the box present but invisible and unclickable.
+// display — toggling display alone leaves the box present but invisible.
 function _hideProofSubmitConfirm() {
   const el = document.getElementById('proofSubmitConfirmOverlay');
   el.style.display = 'none'; el.classList.remove('open');
 }
-function declineProofTerms() {
-  _hideProofSubmitConfirm();
-  _ovSync('proofTermsOverlay');
-  document.getElementById('proofTermsOverlay').classList.remove('open');
-}
-// "I Agree" doesn't submit by itself — it asks one more time, on top of the
-// agreement page itself, before anything actually uploads.
-function acceptProofTerms() {
-  const el = document.getElementById('proofSubmitConfirmOverlay');
-  el.style.display = 'flex'; el.classList.add('open');
-}
-// Changed their mind at the last step: just the confirm closes. The terms page
-// is still there underneath, still open, still un-declined.
 function cancelProofSubmitConfirm() {
   _hideProofSubmitConfirm();
 }
-// Confirmed for real: record when, close both the confirm and the terms page,
-// and start the upload — so the video (and its progress) is the very next
-// thing visible.
-function confirmProofSubmit() {
+// Confirmed: write the agreement record FIRST. If that write fails the upload
+// does not start — an unrecorded acceptance is exactly what this feature exists
+// to prevent.
+async function confirmProofSubmit() {
+  const btn = document.querySelector('#proofSubmitConfirmOverlay .btn-submit-proof');
+  if (btn) { btn.disabled = true; btn.innerHTML = '<span class="mi">hourglass_empty</span>Recording...'; }
+  try {
+    _proofAgreementId = await _recordAgreement('proof_submission', proofDareId);
+  } catch (e) {
+    console.error('agreement save failed:', e);
+    if (btn) { btn.disabled = false; btn.innerHTML = '<span class="mi">check</span>Yes, Submit'; }
+    _hideProofSubmitConfirm();
+    const msg = 'Could not record your agreement — please check your connection and try again';
+    showToast(msg); _showProofSubmitError(msg);
+    return;                                        // upload does NOT start
+  }
+  if (btn) { btn.disabled = false; btn.innerHTML = '<span class="mi">check</span>Yes, Submit'; }
   _proofTermsAcceptedAt = Date.now();
   _hideProofSubmitConfirm();
-  _ovSync('proofTermsOverlay');
-  document.getElementById('proofTermsOverlay').classList.remove('open');
   _doSubmitProof();
 }
 
@@ -2279,7 +2313,7 @@ async function _doSubmitProof() {
     btn.innerHTML = '<span class="mi">hourglass_empty</span>Saving...';
 
     // ── STEP 3: Write proof document to Firestore ─────────────────────────────
-    await db.collection('proofs').add({
+    const _proofRef = await db.collection('proofs').add({
       dareId: proofDareId,
       dareTitle:        d.caption  || d.title,
       dareBounty:       d.rewardAmount ?? d.bounty ?? 0,
@@ -2307,8 +2341,14 @@ async function _doSubmitProof() {
       submittedAt:      todayStr(),
       createdAtMs:      Date.now(),
       rejectionReason:  '',
-      termsAcceptedAt:  _proofTermsAcceptedAt   // when this specific submission's agreement was accepted
+      termsAcceptedAt:  _proofTermsAcceptedAt,  // when this specific submission's agreement was accepted
+      agreementId:      _proofAgreementId       // → the 'agreements' record for this submission
     });
+    // close the loop: the agreement record now points at the proof it authorised
+    if (_proofAgreementId) {
+      db.collection('agreements').doc(_proofAgreementId)
+        .update({ proofId: _proofRef.id }).catch(() => {});
+    }
 
     // ── STEP 4: Increment dare proof count ────────────────────────────────────
     await db.collection('dares').doc(proofDareId).update({
@@ -5540,7 +5580,6 @@ function _ovSync(id){
 const _OV_CLOSERS = {
   postOverlay:          () => closePost(),
   proofOverlay:         () => closeProof(),
-  proofTermsOverlay:    () => declineProofTerms(),   // phone back on the agreement = decline
 
   depositOverlay:       () => closeWalletModal('depositOverlay'),
   withdrawOverlay:      () => closeWalletModal('withdrawOverlay'),
@@ -5613,7 +5652,7 @@ function _openModalById(id){
     case 'searchOverlay':        openMobileSearch(); break;
     case 'sFilterSheet':         openSearchFilters(); break;
     // contextual — URL dikhta hai par refresh restore nahi (need a dare/proof/txn id):
-    // proofOverlay, proofTermsOverlay, reviewOverlay, rejectOverlay, reportOverlay,
+    // proofOverlay, reviewOverlay, rejectOverlay, reportOverlay,
     // selectTakersOverlay, videoPlayOverlay, pinOverlay, txnDetailOverlay
   }
 }
