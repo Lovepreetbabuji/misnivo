@@ -1705,7 +1705,7 @@ const PROOF_CHECKLIST_ITEMS = [
   'My video clearly shows me completing the mission',
   'My face is visible throughout the video',
   'The recording is unedited and continuous',
-  'Video is at least 30 seconds long'
+  'Video is at least 10 seconds long'
 ];
 
 // ── Open proof modal ─────────────────────────────────────────────────────────
@@ -1745,7 +1745,7 @@ function openProof(dareId) {
     'Video must clearly show you completing the mission',
     'Your face must be visible throughout',
     'No cuts or edits — single continuous recording',
-    'Minimum 30 seconds, maximum 10 minutes'
+    'Minimum 10 seconds, maximum 10 minutes'
   ];
   heading.textContent = creatorRules.length ? 'Creator Rules' : 'Proof Requirements';
   _renderProofRules(creatorRules.length ? creatorRules : genericRules);
@@ -1863,7 +1863,12 @@ function _updateProofSubmitBtn() {
 function onVideoSelected(e) {
   const file = e.target.files[0]; if (!file) return;
   if (!file.type.startsWith('video/')) { showToast('Please select a valid video file'); return; }
-  if (file.size > 100 * 1024 * 1024)  { showToast('File too large — maximum 100MB allowed'); return; }
+  if (file.size > 100 * 1024 * 1024)  {
+    const _msg = 'File too large — maximum 100MB allowed';
+    showToast(_msg); _showProofSubmitError(_msg); return;
+  }
+  // a fresh selection clears whatever error the last attempt left behind
+  const _errEl0 = document.getElementById('proofSubmitError'); if (_errEl0) _errEl0.style.display = 'none';
   selectedVideo = file;
   selectedVideoDuration = 0;
   selectedVideoW = 0; selectedVideoH = 0;
@@ -1890,9 +1895,9 @@ function onVideoSelected(e) {
     selectedVideoH = vp.videoHeight || 0;
     const warn = document.getElementById('durationWarn');
     warn.style.display = 'block';
-    if (selectedVideoDuration < 30) {
+    if (selectedVideoDuration < 10) {
       warn.className   = 'dur-warn dur-warn--error';
-      warn.innerHTML   = `<span class="mi">warning</span> Too short (${selectedVideoDuration}s) — minimum 30 seconds required`;
+      warn.innerHTML   = `<span class="mi">warning</span> Too short (${selectedVideoDuration}s) — minimum 10 seconds required`;
     } else if (selectedVideoDuration > 600) {
       warn.className   = 'dur-warn dur-warn--warn';
       warn.innerHTML   = `<span class="mi">info</span> Too long (${Math.floor(selectedVideoDuration/60)}m ${selectedVideoDuration%60}s) — maximum 10 minutes`;
@@ -2000,15 +2005,25 @@ function _hideBgUploadIndicator() {
 // ════════════════════════════════════════════════════════════════════
 // Tapping "Submit Proof" validates the form, then hands off to the terms
 // agreement — the actual upload (_doSubmitProof) only runs if that's accepted.
+// Any error blocking submission — not just upload failures — shows here too,
+// right next to the button, not only as a toast that can fade before it's read.
+function _showProofSubmitError(msg) {
+  const errEl = document.getElementById('proofSubmitError'); if (!errEl) return;
+  errEl.innerHTML = `<span class="mi">error</span>${escHtml(msg)}`;
+  errEl.style.display = 'flex';
+}
+
 function submitProof() {
   if (!selectedVideo || !proofDareId) return;
 
   // Hard block: duration out of range
-  if (selectedVideoDuration > 0 && selectedVideoDuration < 30) {
-    showToast('Video is too short — minimum 30 seconds required'); return;
+  if (selectedVideoDuration > 0 && selectedVideoDuration < 10) {
+    const _msg = 'Video is too short — minimum 10 seconds required';
+    showToast(_msg); _showProofSubmitError(_msg); return;
   }
   if (selectedVideoDuration > 600) {
-    showToast('Video is too long — maximum 10 minutes allowed'); return;
+    const _msg = 'Video is too long — maximum 10 minutes allowed';
+    showToast(_msg); _showProofSubmitError(_msg); return;
   }
 
   const d = dares.find(x => x.id === proofDareId);
@@ -2113,16 +2128,6 @@ async function _doSubmitProof() {
     activeUploadTask = null;
     _hideBgUploadIndicator();
 
-    // A file small enough to transfer in a second or two would otherwise flash
-    // 0%→100% and vanish before anyone could actually see it uploading. Hold
-    // the visible "uploading" state open to at least 10s of real time so the
-    // progress is something you can watch, not something you'd miss.
-    const _uploadElapsed = Date.now() - uploadStartTime;
-    if (_uploadElapsed < 10000) {
-      document.getElementById('uploadStatusText').textContent = 'Finishing up...';
-      await new Promise(r => setTimeout(r, 10000 - _uploadElapsed));
-    }
-
     btn.innerHTML = '<span class="mi">hourglass_empty</span>Saving...';
 
     // ── STEP 3: Write proof document to Firestore ─────────────────────────────
@@ -2193,13 +2198,7 @@ async function _doSubmitProof() {
         e.message.includes('Invalid') ? 'Upload response error — try again' :
         'Upload error: ' + e.message;
       showToast(friendly);
-      // The toast fades in a few seconds; this stays next to the button so the
-      // error is still there if you look back after fixing whatever it was.
-      const errEl = document.getElementById('proofSubmitError');
-      if (errEl) {
-        errEl.innerHTML = `<span class="mi">error</span>${escHtml(friendly)}`;
-        errEl.style.display = 'flex';
-      }
+      _showProofSubmitError(friendly);   // the toast fades; this stays next to the button
       console.error('submitProof error:', e.code, e.message);
     }
   }
