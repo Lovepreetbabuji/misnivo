@@ -18,6 +18,154 @@ try { db.enablePersistence({ synchronizeTabs: true }).catch(()=>{}); } catch(e){
 // Firebase Storage removed — requires paid plan.
 // Using Cloudinary (free, no credit card needed) instead.
 
+// ── MISSION AGREEMENT ──────────────────────────────────────────────────────
+// One text, one version, shown at both gates (accepting a mission, submitting
+// proof for one). Bump AGREEMENT_VERSION whenever the wording below changes —
+// past acceptances keep the version and hash they were shown, so a later
+// change here never rewrites what an old record says the user agreed to.
+const AGREEMENT_VERSION = '1.0';
+const AGREEMENT_TEXT_V1 =
+`1. You are 18 or older
+You confirm you are at least 18 years old. Misnivo does not allow anyone under 18 to accept missions, submit proof, or receive rewards.
+
+2. You are acting voluntarily
+You are choosing to take on this specific mission of your own free will, after reading its description, rules and reward. Nobody at Misnivo assigned it to you or requires you to attempt it. You can abandon a mission at any time, with no penalty.
+
+3. You judge yourself capable of doing it safely
+You confirm you consider yourself physically and mentally able to complete this mission, that you have any skill, equipment or preparation it requires, and that you will not attempt it under the influence of alcohol or drugs. That judgment is yours and you are responsible for it.
+
+4. You accept the risk
+Missions may involve physical activity or challenge. You understand this, and you accept all risk of injury, loss or damage that may result from attempting one. Misnivo does not perform, supervise or control how missions are carried out, and is not responsible for what happens while you attempt or record one. If anything feels unsafe, stop — no reward is worth your safety.
+
+5. You will not pay to be selected
+Missions are free to accept. You confirm you have not paid, offered or promised money or anything of value to a mission creator, or to anyone else, in exchange for being selected — and that you will not do so. This is strictly prohibited and results in a permanent ban and forfeited rewards.
+
+6. Your proof must be lawful and your own
+Any proof video you submit must be genuinely your own attempt — unedited, and not staged with someone standing in for you. Recording and sharing it must not break any law, damage property you don't own, or use a location you weren't allowed to use. If anyone else appears in it, you must have their permission — and if anyone under 18 appears, their parent's or guardian's permission.
+
+7. Misnivo can host and show your proof
+By submitting proof, you give Misnivo permission to store your video and show it on the platform — to the mission creator for review, and, if approved, to other users (including in feeds, Shorts or search). This permission continues for content already published even if you later delete your account, though you may request removal at any time and we will consider it.
+
+8. Misnivo can remove content
+Misnivo may remove any mission or video that breaks its Community Guidelines or the law, or that appears unsafe — at any time, including after a mission creator has approved it. If content is removed for a rules breach after payment, Misnivo may reverse or withhold the reward.
+
+9. Review and reward are not guaranteed
+The mission creator reviews submitted proof and decides whether it meets the mission's rules. Accepting a mission or submitting proof does not guarantee approval or reward — rejected proof does not get paid. If you believe proof was rejected unfairly, you can raise a dispute with Misnivo within 7 days and we will review the decision.
+
+10. This does not make you an employee
+Completing missions and getting paid for them does not make you an employee, contractor or partner of Misnivo. You are acting on your own account.
+
+11. You cover claims that come from your mission
+If someone brings a claim against Misnivo because of how you attempted a mission or what is in your video — for example injury to another person, damage to property, or use of someone else's content — you agree to cover the reasonable costs Misnivo faces because of it.
+
+12. Governing law
+This agreement is governed by the laws of India.`;
+
+// djb2 — small, deterministic, no library. Lets a later dispute confirm exactly
+// which wording a user saw: hash it once here, compare against what's stored
+// on their agreement record.
+function _agreementHash(str) {
+  let hash = 5381;
+  for (let i = 0; i < str.length; i++) {
+    hash = ((hash << 5) + hash + str.charCodeAt(i)) | 0;   // hash*33 + c, kept 32-bit
+  }
+  return (hash >>> 0).toString(16);
+}
+
+// STEP 1 — the reusable modal itself. Not wired to anything yet: no caller
+// gates a real action on it until the accept-mission and submit-proof flows
+// are updated to open it instead of doing what they do today.
+//
+//   showAgreementModal(mode, onAgree)
+//     mode     — 'accept' | 'proof' (only changes the button label and the
+//                small "you already saw this once" note for 'proof')
+//     onAgree  — called once, only after Agree is actually pressed (and only
+//                once the checkbox is ticked AND the text has been scrolled
+//                to its end — both are required, neither alone enables it)
+//
+// Cancelling (✕, the dim backdrop, or the Cancel button) calls nothing.
+let _agreementOnAgree = null;
+let _agreementScrolledEnd = false;
+let _agreementChecked = false;
+
+function showAgreementModal(mode, onAgree) {
+  _agreementOnAgree = onAgree;
+  _agreementScrolledEnd = false;
+  _agreementChecked = false;
+
+  document.getElementById('agreementProofNote').style.display = (mode === 'proof') ? 'flex' : 'none';
+
+  const btn = document.getElementById('agreementAgreeBtn');
+  btn.innerHTML = '<span class="mi">check</span>' +
+    (mode === 'proof' ? 'I Agree — Submit Proof' : 'I Agree — Accept Mission');
+
+  const body = document.getElementById('agreementBody');
+  body.innerHTML = _agreementRenderHtml(AGREEMENT_TEXT_V1);
+  body.scrollTop = 0;
+
+  const cbIcon = document.getElementById('agreementCheckIcon');
+  cbIcon.textContent = 'check_box_outline_blank';
+  document.getElementById('agreementCheckRow').classList.remove('checked');
+  document.getElementById('agreementScrollHint').style.display = 'flex';
+  _agreementUpdateBtn();
+
+  const ov = document.getElementById('agreementOverlay');
+  ov.style.display = 'flex';
+  ov.classList.add('open');   // .overlay gates opacity/pointer-events on .open, not display
+}
+
+// "1. Title\nBody text..." blocks, separated by a blank line, become a
+// numbered heading + paragraph each. Kept separate from AGREEMENT_TEXT_V1
+// itself so the hash is always of the plain legal text, never of markup.
+function _agreementRenderHtml(text) {
+  return text.split(/\n\n+/).map(block => {
+    const m = block.match(/^(\d+)\.\s+(.+?)\n([\s\S]*)$/);
+    if (!m) return '';
+    return `<div class="agreement-pt">
+      <div class="agreement-pt-title"><span class="agreement-pt-num">${m[1]}.</span> ${escHtml(m[2])}</div>
+      <p>${escHtml(m[3])}</p>
+    </div>`;
+  }).join('');
+}
+
+function _agreementOnScroll() {
+  const el = document.getElementById('agreementBody');
+  if (el.scrollTop + el.clientHeight >= el.scrollHeight - 12) {
+    _agreementScrolledEnd = true;
+    document.getElementById('agreementScrollHint').style.display = 'none';
+    _agreementUpdateBtn();
+  }
+}
+
+function _agreementToggleCheck() {
+  _agreementChecked = !_agreementChecked;
+  document.getElementById('agreementCheckIcon').textContent =
+    _agreementChecked ? 'check_box' : 'check_box_outline_blank';
+  document.getElementById('agreementCheckRow').classList.toggle('checked', _agreementChecked);
+  _agreementUpdateBtn();
+}
+
+function _agreementUpdateBtn() {
+  document.getElementById('agreementAgreeBtn').disabled = !(_agreementScrolledEnd && _agreementChecked);
+}
+
+function _agreementHide() {
+  const ov = document.getElementById('agreementOverlay');
+  ov.style.display = 'none'; ov.classList.remove('open');
+}
+
+function _agreementCancel() {
+  _agreementOnAgree = null;
+  _agreementHide();
+}
+
+function _agreementConfirm() {
+  if (document.getElementById('agreementAgreeBtn').disabled) return;   // defensive: no bypassing the two conditions
+  const cb = _agreementOnAgree; _agreementOnAgree = null;
+  _agreementHide();
+  if (cb) cb();
+}
+
 // ── CLOUDINARY CONFIG ─────────────────────────────────────────────────────
 const CLOUDINARY_CLOUD_NAME    = 'ddam2qcpu';
 const CLOUDINARY_UPLOAD_PRESET = 'missionbook';

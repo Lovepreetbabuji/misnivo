@@ -5890,3 +5890,66 @@ body.no-anim #proofTermsOverlay.as-page .modal{ transition:none !important; }
 .proof-confirm-title{ font-size:18px; font-weight:700; color:#fff; margin-bottom:8px; }
 .proof-confirm-msg{ font-size:13px; color:rgba(255,255,255,.55); line-height:1.5; margin-bottom:20px; }
 .proof-confirm-modal .btn-submit-proof{ box-shadow:none; margin-bottom:8px; }
+
+/* ═══════════════════════════════════════════════════════════════════════
+   MISSION AGREEMENT — one modal, shown at both the accept-mission and
+   submit-proof gates. Flat black rather than the spec's #212121/#FF0033 —
+   every button/modal built this session (Settings, Post Mission, Submit
+   Proof) is flat black with a white primary action, and a red CTA would be
+   the one thing on the page fighting that. Ask if you want the red back
+   specifically for this gate — easy to change, this is a deliberate default,
+   not an oversight.
+   ═══════════════════════════════════════════════════════════════════════ */
+.agreement-modal{
+  width:100%; max-width:560px; max-height:88vh;
+  background:#0d0d0d !important; border:1px solid rgba(255,255,255,.14);
+  border-radius:16px; display:flex; flex-direction:column; overflow:hidden;
+  backdrop-filter:none !important; -webkit-backdrop-filter:none !important;
+}
+.agreement-hdr{
+  flex-shrink:0; display:flex; align-items:center; justify-content:space-between;
+  padding:18px 20px 14px; border-bottom:1px solid rgba(255,255,255,.10);
+}
+.agreement-title{ font-size:17px; font-weight:700; color:#fff; }
+.agreement-close{
+  width:32px; height:32px; border-radius:50%; flex-shrink:0;
+  display:flex; align-items:center; justify-content:center;
+  background:transparent; border:1px solid rgba(255,255,255,.18); color:#fff; cursor:pointer;
+}
+.agreement-close:hover{ background:rgba(255,255,255,.08); }
+.agreement-proof-note{
+  flex-shrink:0; display:flex; align-items:flex-start; gap:8px;
+  margin:14px 20px 0; padding:10px 12px; border-radius:10px;
+  background:rgba(255,255,255,.05); border:1px solid rgba(255,255,255,.10);
+  font-size:12px; color:rgba(255,255,255,.6); line-height:1.5;
+}
+.agreement-proof-note .mi{ font-size:16px; flex-shrink:0; margin-top:1px; }
+
+.agreement-body{
+  flex:1; min-height:0; overflow-y:auto; padding:16px 20px;
+  max-height:55vh;
+}
+.agreement-pt{ margin-bottom:16px; }
+.agreement-pt:last-child{ margin-bottom:0; }
+.agreement-pt-title{ font-size:14px; font-weight:700; color:#fff; margin-bottom:4px; }
+.agreement-pt-num{ color:rgba(255,255,255,.5); }
+.agreement-pt p{ font-size:14px; line-height:1.7; color:rgba(255,255,255,.65); }
+
+.agreement-scroll-hint{
+  flex-shrink:0; display:flex; align-items:center; justify-content:center; gap:4px;
+  padding:6px; font-size:11px; font-weight:600; color:rgba(255,255,255,.4);
+  border-top:1px solid rgba(255,255,255,.08);
+}
+.agreement-scroll-hint .mi{ font-size:16px; animation:agreementBounce 1.4s ease-in-out infinite; }
+@keyframes agreementBounce{ 0%,100%{transform:translateY(0);} 50%{transform:translateY(3px);} }
+
+.agreement-foot{ flex-shrink:0; padding:14px 20px calc(14px + env(safe-area-inset-bottom,0px)); }
+#agreementCheckRow{ margin-bottom:12px; }
+.agreement-actions{ display:flex; gap:10px; align-items:center; }
+.agreement-actions .pt-decline{ flex:0 0 auto; width:auto; margin-top:0; padding:12px 16px; }
+.agreement-actions .btn-submit-proof{ flex:1; box-shadow:none; }
+
+@media(max-width:768px){
+  .agreement-modal{ max-width:none; width:100%; height:100%; max-height:none; border-radius:0; }
+  .agreement-body{ max-height:none; }
+}
