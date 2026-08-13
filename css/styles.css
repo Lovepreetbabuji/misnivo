@@ -5831,3 +5831,44 @@ body.no-anim #postOverlay.as-page .modal{ transition:none !important; }
 }
 @media(prefers-reduced-motion:reduce){ #proofOverlay.as-page .modal{ transition:none !important; } }
 body.no-anim #proofOverlay.as-page .modal{ transition:none !important; }
+
+/* ═══════════════════════════════════════════════════════════════════════
+   PROOF SUBMISSION AGREEMENT — same chrome as every other page-like overlay
+   this session (flat black, bare back-arrow header, mobile slide-in), plus a
+   sticky footer so Accept/Decline are reachable without hunting for them.
+   ═══════════════════════════════════════════════════════════════════════ */
+#proofTermsOverlay.as-page{ background:#000 !important; backdrop-filter:none !important; -webkit-backdrop-filter:none !important; }
+#proofTermsOverlay .modal{ background:#000 !important; border:none !important; display:flex; flex-direction:column; padding:0 !important; }
+.proof-terms-modal{ max-width:600px; width:96vw; max-height:92vh; }
+
+.pt-body{ flex:1; overflow-y:auto; padding:18px 20px; }
+.pt-intro{ font-size:13px; color:rgba(255,255,255,.6); line-height:1.5; margin-bottom:20px; }
+.pt-sec{ margin-bottom:18px; }
+.pt-sec-title{ font-size:13px; font-weight:700; color:#fff; margin-bottom:5px; }
+.pt-sec p{ font-size:13px; color:rgba(255,255,255,.65); line-height:1.6; }
+.pt-foot-note{ font-size:12px; color:rgba(255,255,255,.45); line-height:1.5; margin-top:6px; padding-top:14px; border-top:1px solid rgba(255,255,255,.10); }
+
+/* sticky footer — Accept always sits at the true bottom of the page, per the
+   brief, not just at the end of the scrollable text */
+.pt-actions{
+  flex-shrink:0; padding:14px 20px calc(14px + env(safe-area-inset-bottom, 0px));
+  border-top:1px solid rgba(255,255,255,.10); background:#000;
+}
+.pt-actions .btn-submit-proof{ box-shadow:none; }
+.pt-decline{
+  display:block; width:100%; margin-top:10px; padding:8px;
+  background:none; border:none; color:rgba(255,255,255,.5);
+  font-size:13px; font-weight:600; font-family:inherit; cursor:pointer; text-align:center;
+}
+.pt-decline:hover{ color:#fff; }
+
+@media(max-width:768px){
+  .proof-terms-modal{ max-width:none; width:100%; height:100%; max-height:none; border-radius:0; }
+  #proofTermsOverlay.as-page .modal{
+    transform:translateX(100%);
+    transition:transform .28s cubic-bezier(.32,.72,0,1);
+  }
+  #proofTermsOverlay.as-page.open .modal{ transform:none; }
+}
+@media(prefers-reduced-motion:reduce){ #proofTermsOverlay.as-page .modal{ transition:none !important; } }
+body.no-anim #proofTermsOverlay.as-page .modal{ transition:none !important; }

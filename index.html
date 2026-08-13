@@ -32,7 +32,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,100..400,0..1,0&icon_names=account_balance_wallet,add,arrow_back,bolt,bookmark,chat_bubble,close,expand_less,explore,home,menu,more_vert,notifications,person,reply,search,send,settings,thumb_down,thumb_up,tune&display=block" rel="stylesheet"/>
 
 <!-- App Styles -->
-<link rel="stylesheet" href="/css/styles.css?v=20260813b"/>
+<link rel="stylesheet" href="/css/styles.css?v=20260813c"/>
 
 <!-- The splash logo must be in flight before anything else competes for the pipe -->
 <link rel="preload" as="image" href="/misnivo.png?v=1" fetchpriority="high"/>
@@ -874,7 +874,7 @@
     <div class="video-dz" id="videoDZ" onclick="document.getElementById('videoFileInput').click()">
       <span class="mi" id="vdzIcon">video_call</span>
       <div class="vdz-t" id="vdzTitle">Click to select video</div>
-      <div class="vdz-s" id="vdzSub">MP4, MOV, AVI — Max 500MB</div>
+      <div class="vdz-s" id="vdzSub">MP4, MOV, AVI — Max 100MB</div>
     </div>
 
     <!-- Duration warning/ok badge (shown after video loaded) -->
@@ -952,7 +952,7 @@
       </div>
       <div style="height:5px;background:var(--border);border-radius:4px;overflow:hidden;">
         <div id="uploadBar"
-          style="height:100%;width:0%;background:linear-gradient(90deg,var(--blue),var(--blue2));
+          style="height:100%;width:0%;background:#fff;
                  border-radius:4px;transition:width .3s;"></div>
       </div>
       <div id="uploadSpeedText"
@@ -963,6 +963,65 @@
     <button class="btn-submit-proof" id="btnSubmitProof" onclick="submitProof()" disabled>
       <span class="mi">upload</span>Submit Proof
     </button>
+  </div>
+</div>
+
+<!-- PROOF SUBMISSION AGREEMENT — opens on top of #proofOverlay when Submit Proof
+     is tapped; the upload only actually starts once this is accepted. Scoped to
+     this one flow only, not a site-wide terms page. -->
+<div class="overlay as-page" id="proofTermsOverlay">
+  <div class="modal proof-terms-modal">
+    <div class="modal-hdr set-hdr">
+      <button class="set-back" onclick="declineProofTerms()" aria-label="Back"><span class="mi">arrow_back</span></button>
+      <div class="modal-title">Proof Submission Agreement</div>
+      <span class="set-hdr-spacer" aria-hidden="true"></span>
+    </div>
+    <div class="pt-body">
+      <p class="pt-intro">Before your video uploads, please read and confirm the following. This agreement applies only to submitting proof for a mission.</p>
+
+      <div class="pt-sec">
+        <div class="pt-sec-title">1. You accepted this mission voluntarily</div>
+        <p>You chose to accept this specific mission of your own free will, after reading its description, rules and reward. Nobody at Misnivo assigned it to you or required you to attempt it.</p>
+      </div>
+
+      <div class="pt-sec">
+        <div class="pt-sec-title">2. You confirm you were capable of completing it safely</div>
+        <p>By accepting the mission and recording this proof, you confirm you judged yourself physically and mentally able to complete it, and that you had any skill, equipment or preparation it required. You are responsible for that judgment.</p>
+      </div>
+
+      <div class="pt-sec">
+        <div class="pt-sec-title">3. You accept the risk</div>
+        <p>Missions may involve physical activity or challenge. You understand this, and you accept all risk of injury, loss or damage that may result from attempting it. Misnivo did not perform the mission, does not supervise how it is performed, and is not responsible for what happens while you attempt or record it.</p>
+      </div>
+
+      <div class="pt-sec">
+        <div class="pt-sec-title">4. Your video is lawful and your own</div>
+        <p>You confirm the video is genuinely your own attempt, unedited and not staged with someone standing in for you, and that recording and sharing it does not break any law, damage property you don't own, or use a location you weren't allowed to use. If anyone else appears in the video, you confirm you had their permission to include them.</p>
+      </div>
+
+      <div class="pt-sec">
+        <div class="pt-sec-title">5. Misnivo can host and show this video</div>
+        <p>By submitting, you give Misnivo permission to store this video and show it on the platform — to the mission creator for review, and, if approved, to other users (including in feeds, Shorts or search) — for as long as your mission or account remains active.</p>
+      </div>
+
+      <div class="pt-sec">
+        <div class="pt-sec-title">6. Review and reward are not guaranteed</div>
+        <p>The mission creator reviews submitted proof and decides whether it meets the mission's rules. Submitting a video does not guarantee approval or reward — rejected proof does not get paid.</p>
+      </div>
+
+      <div class="pt-sec">
+        <div class="pt-sec-title">7. This does not make you an employee</div>
+        <p>Completing a mission and getting paid for it does not make you an employee, contractor or partner of Misnivo. You are acting on your own account.</p>
+      </div>
+
+      <p class="pt-foot-note">Tapping "I Agree — Submit Proof" below records that you read and accepted this agreement for this submission, and starts your video uploading.</p>
+    </div>
+    <div class="pt-actions">
+      <button class="btn-submit-proof" id="btnAcceptProofTerms" onclick="acceptProofTerms()">
+        <span class="mi">check</span>I Agree — Submit Proof
+      </button>
+      <button class="pt-decline" onclick="declineProofTerms()">Decline — don't submit</button>
+    </div>
   </div>
 </div>
 
@@ -1073,7 +1132,7 @@
 <!-- App Logic -->
 <!-- defer, so it runs after the Firebase bundles above and after the DOM is
      parsed — same order as before, but nothing blocks the first paint -->
-<script defer src="/js/app.js?v=20260813b"></script>
+<script defer src="/js/app.js?v=20260813c"></script>
 
 <!-- ══ v0.19 NEW MODALS ══ -->
 

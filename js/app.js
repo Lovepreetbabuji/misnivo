@@ -635,7 +635,7 @@ const _PAGE_URL  = { home:'/', explore:'/explore', dares:'/dares', accepted:'/ac
 // moving left slides in from the left. Anything not listed keeps the old
 // forward/back behaviour.
 const _TABS = ['home','dares','chat','profile'];
-const _MODAL_URL = { postOverlay:'/post', proofOverlay:'/submit-proof', settingsOverlay:'/settings',
+const _MODAL_URL = { postOverlay:'/post', proofOverlay:'/submit-proof', proofTermsOverlay:'/submit-proof/terms', settingsOverlay:'/settings',
   notifSettingsOverlay:'/settings/notifications', moreSettingsOverlay:'/settings/more',
   depositOverlay:'/wallet/deposit', withdrawOverlay:'/wallet/withdraw',
   kycOverlay:'/wallet/kyc', methodOverlay:'/wallet/account', pinOverlay:'/wallet/pin',
@@ -1727,29 +1727,27 @@ function openProof(dareId) {
   selectedVideoDuration = 0;
   selectedVideoW = 0; selectedVideoH = 0;
   proofCapturedFrameBlob = null;
+  _proofTermsAcceptedAt = null;
+  document.getElementById('proofTermsOverlay')?.classList.remove('open');
 
   // Dare info
   document.getElementById('proofDareTitle').textContent  = d.caption  || d.title;
   document.getElementById('proofDareBounty').textContent =
     'Rs. ' + ((d.rewardAmount ?? d.bounty) || 0).toLocaleString('en-IN');
 
-  // Show dare-specific rules if creator added them; else generic requirements
+  // Rules — dare-specific if the creator added them, else generic requirements.
+  // Each one is now a checkbox: you must tick every rule before you can submit,
+  // the same way the checklist below already works.
   const creatorRules = (d.rules || []).filter(r => r.trim());
   const heading      = document.getElementById('proofRulesHeading');
-  const rulesList    = document.getElementById('proofRulesList');
-  if (creatorRules.length) {
-    heading.textContent = 'Creator Rules';
-    rulesList.innerHTML = creatorRules
-      .map(r => `<div class="proof-rule">• ${escHtml(r)}</div>`).join('');
-  } else {
-    heading.textContent = 'Proof Requirements';
-    rulesList.innerHTML = [
-      'Video must clearly show you completing the mission',
-      'Your face must be visible throughout',
-      'No cuts or edits — single continuous recording',
-      'Minimum 30 seconds, maximum 10 minutes'
-    ].map(r => `<div class="proof-rule">• ${r}</div>`).join('');
-  }
+  const genericRules = [
+    'Video must clearly show you completing the mission',
+    'Your face must be visible throughout',
+    'No cuts or edits — single continuous recording',
+    'Minimum 30 seconds, maximum 10 minutes'
+  ];
+  heading.textContent = creatorRules.length ? 'Creator Rules' : 'Proof Requirements';
+  _renderProofRules(creatorRules.length ? creatorRules : genericRules);
 
   // Render interactive checklist
   _renderProofChecklist();
@@ -1766,7 +1764,7 @@ function openProof(dareId) {
   document.getElementById('videoDZ').classList.remove('has-file');
   document.getElementById('vdzIcon').textContent              = 'video_call';
   document.getElementById('vdzTitle').textContent             = 'Click to select video';
-  document.getElementById('vdzSub').textContent               = 'MP4, MOV, AVI — Max 500MB';
+  document.getElementById('vdzSub').textContent               = 'MP4, MOV, AVI — Max 100MB';
   document.getElementById('videoFileInput').value             = '';
   document.getElementById('proofNote').value                  = '';
   document.getElementById('noteCharCount').textContent        = '0 / 200';
@@ -1791,6 +1789,36 @@ function closeProof() {
   if (activeUploadTask) {
     _showBgUploadIndicator();
   }
+}
+
+// ── Rules — the same tick-before-you-can-submit pattern as the checklist,
+//    applied to this dare's specific rules (or the generic requirements when
+//    the creator didn't add any).
+let proofRuleCheckState = [];
+function _renderProofRules(rules) {
+  proofRuleCheckState = rules.map(() => false);
+  document.getElementById('proofRulesList').innerHTML =
+    rules.map((r, i) => `
+      <div class="proof-check-item" id="prci-${i}" onclick="toggleProofRuleCheck(${i})">
+        <span class="mi proof-check-icon" id="prcicon-${i}">check_box_outline_blank</span>
+        <span class="proof-check-text">${escHtml(r)}</span>
+      </div>`).join('');
+}
+
+function toggleProofRuleCheck(i) {
+  proofRuleCheckState[i] = !proofRuleCheckState[i];
+  const icon = document.getElementById('prcicon-' + i);
+  const row  = document.getElementById('prci-'   + i);
+  if (proofRuleCheckState[i]) {
+    icon.textContent = 'check_box';
+    icon.style.color = '#fff';
+    row.classList.add('checked');
+  } else {
+    icon.textContent = 'check_box_outline_blank';
+    icon.style.color = 'var(--t4)';
+    row.classList.remove('checked');
+  }
+  _updateProofSubmitBtn();
 }
 
 // ── Interactive checklist helpers ─────────────────────────────────────────────
@@ -1820,11 +1848,12 @@ function toggleProofCheck(i) {
   _updateProofSubmitBtn();
 }
 
-// Submit button enables only when: all checklist ticked + video selected
+// Submit button enables only when: all rules ticked + all checklist items ticked + video selected
 function _updateProofSubmitBtn() {
-  const allTicked = proofCheckState.length > 0 && proofCheckState.every(Boolean);
-  const hasVideo  = !!selectedVideo;
-  document.getElementById('btnSubmitProof').disabled = !(allTicked && hasVideo);
+  const rulesTicked = proofRuleCheckState.length > 0 && proofRuleCheckState.every(Boolean);
+  const allTicked   = proofCheckState.length > 0 && proofCheckState.every(Boolean);
+  const hasVideo    = !!selectedVideo;
+  document.getElementById('btnSubmitProof').disabled = !(rulesTicked && allTicked && hasVideo);
 }
 
 // ── Video selected handler ────────────────────────────────────────────────────
@@ -1832,7 +1861,7 @@ function _updateProofSubmitBtn() {
 function onVideoSelected(e) {
   const file = e.target.files[0]; if (!file) return;
   if (!file.type.startsWith('video/')) { showToast('Please select a valid video file'); return; }
-  if (file.size > 500 * 1024 * 1024)  { showToast('File too large — maximum 500MB allowed'); return; }
+  if (file.size > 100 * 1024 * 1024)  { showToast('File too large — maximum 100MB allowed'); return; }
   selectedVideo = file;
   selectedVideoDuration = 0;
   selectedVideoW = 0; selectedVideoH = 0;
@@ -1967,7 +1996,9 @@ function _hideBgUploadIndicator() {
 //  Fixes: contentType metadata (0% stuck bug) · cancel support ·
 //         thumbnail upload · background mode · English strings
 // ════════════════════════════════════════════════════════════════════
-async function submitProof() {
+// Tapping "Submit Proof" validates the form, then hands off to the terms
+// agreement — the actual upload (_doSubmitProof) only runs if that's accepted.
+function submitProof() {
   if (!selectedVideo || !proofDareId) return;
 
   // Hard block: duration out of range
@@ -1981,10 +2012,40 @@ async function submitProof() {
   const d = dares.find(x => x.id === proofDareId);
   if (!d) return;
 
+  openProofTerms();
+}
+
+let _proofTermsAcceptedAt = null;
+function openProofTerms() {
+  document.getElementById('proofTermsOverlay').classList.add('open');
+  document.querySelector('#proofTermsOverlay .pt-body')?.scrollTo(0, 0);
+  _ovOpen('proofTermsOverlay');
+}
+// Declined, or backed out: the terms page closes, nothing uploads, the form
+// (video, checklist, note) is exactly as it was — the user can just try again.
+function declineProofTerms() {
+  _ovSync('proofTermsOverlay');
+  document.getElementById('proofTermsOverlay').classList.remove('open');
+}
+// Accepted: record when, close the terms page, and start the real upload —
+// so the video (and its progress) is the very next thing visible.
+function acceptProofTerms() {
+  _proofTermsAcceptedAt = Date.now();
+  _ovSync('proofTermsOverlay');
+  document.getElementById('proofTermsOverlay').classList.remove('open');
+  _doSubmitProof();
+}
+
+async function _doSubmitProof() {
+  if (!selectedVideo || !proofDareId) return;
+  const d = dares.find(x => x.id === proofDareId);
+  if (!d) return;
+
   const btn = document.getElementById('btnSubmitProof');
   btn.disabled = true;
   btn.innerHTML = '<span class="mi">hourglass_empty</span>Preparing...';
   document.getElementById('uploadWrap').style.display = 'block';
+  document.getElementById('videoDZ')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
   uploadStartTime = Date.now();
 
   try {
@@ -2055,7 +2116,8 @@ async function submitProof() {
       status:           'submitted',
       submittedAt:      todayStr(),
       createdAtMs:      Date.now(),
-      rejectionReason:  ''
+      rejectionReason:  '',
+      termsAcceptedAt:  _proofTermsAcceptedAt   // when this specific submission's agreement was accepted
     });
 
     // ── STEP 4: Increment dare proof count ────────────────────────────────────
@@ -5285,6 +5347,7 @@ function _ovSync(id){
 const _OV_CLOSERS = {
   postOverlay:          () => closePost(),
   proofOverlay:         () => closeProof(),
+  proofTermsOverlay:    () => declineProofTerms(),   // phone back on the agreement = decline
 
   depositOverlay:       () => closeWalletModal('depositOverlay'),
   withdrawOverlay:      () => closeWalletModal('withdrawOverlay'),
@@ -5357,8 +5420,8 @@ function _openModalById(id){
     case 'searchOverlay':        openMobileSearch(); break;
     case 'sFilterSheet':         openSearchFilters(); break;
     // contextual — URL dikhta hai par refresh restore nahi (need a dare/proof/txn id):
-    // proofOverlay, reviewOverlay, rejectOverlay, reportOverlay, selectTakersOverlay,
-    // videoPlayOverlay, pinOverlay, txnDetailOverlay
+    // proofOverlay, proofTermsOverlay, reviewOverlay, rejectOverlay, reportOverlay,
+    // selectTakersOverlay, videoPlayOverlay, pinOverlay, txnDetailOverlay
   }
 }
 
