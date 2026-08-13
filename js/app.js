@@ -1773,6 +1773,7 @@ function openProof(dareId) {
   document.getElementById('uploadBar').style.width            = '0%';
   document.getElementById('uploadPct').textContent            = '0%';
   document.getElementById('uploadSpeedText').textContent      = '';
+  const _errEl = document.getElementById('proofSubmitError'); if (_errEl) _errEl.style.display = 'none';
 
   const btn = document.getElementById('btnSubmitProof');
   btn.disabled = true;
@@ -2012,6 +2013,10 @@ function submitProof() {
   const d = dares.find(x => x.id === proofDareId);
   if (!d) return;
 
+  // a retry after a previous failure shouldn't carry that old error forward
+  const errEl = document.getElementById('proofSubmitError');
+  if (errEl) errEl.style.display = 'none';
+
   openProofTerms();
 }
 
@@ -2086,6 +2091,16 @@ async function _doSubmitProof() {
     activeUploadTask = null;
     _hideBgUploadIndicator();
 
+    // A file small enough to transfer in a second or two would otherwise flash
+    // 0%→100% and vanish before anyone could actually see it uploading. Hold
+    // the visible "uploading" state open to at least 10s of real time so the
+    // progress is something you can watch, not something you'd miss.
+    const _uploadElapsed = Date.now() - uploadStartTime;
+    if (_uploadElapsed < 10000) {
+      document.getElementById('uploadStatusText').textContent = 'Finishing up...';
+      await new Promise(r => setTimeout(r, 10000 - _uploadElapsed));
+    }
+
     btn.innerHTML = '<span class="mi">hourglass_empty</span>Saving...';
 
     // ── STEP 3: Write proof document to Firestore ─────────────────────────────
@@ -2156,6 +2171,13 @@ async function _doSubmitProof() {
         e.message.includes('Invalid') ? 'Upload response error — try again' :
         'Upload error: ' + e.message;
       showToast(friendly);
+      // The toast fades in a few seconds; this stays next to the button so the
+      // error is still there if you look back after fixing whatever it was.
+      const errEl = document.getElementById('proofSubmitError');
+      if (errEl) {
+        errEl.innerHTML = `<span class="mi">error</span>${escHtml(friendly)}`;
+        errEl.style.display = 'flex';
+      }
       console.error('submitProof error:', e.code, e.message);
     }
   }
