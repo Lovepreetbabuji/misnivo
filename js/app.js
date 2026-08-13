@@ -1729,7 +1729,7 @@ function openProof(dareId) {
   proofCapturedFrameBlob = null;
   _proofTermsAcceptedAt = null;
   document.getElementById('proofTermsOverlay')?.classList.remove('open');
-  const _confirmOv = document.getElementById('proofSubmitConfirmOverlay'); if (_confirmOv) _confirmOv.style.display = 'none';
+  if (document.getElementById('proofSubmitConfirmOverlay')) _hideProofSubmitConfirm();
 
   // Dare info
   document.getElementById('proofDareTitle').textContent  = d.caption  || d.title;
@@ -2029,27 +2029,35 @@ function openProofTerms() {
 }
 // Declined, or backed out: the terms page closes, nothing uploads, the form
 // (video, checklist, note) is exactly as it was — the user can just try again.
+// .overlay's own CSS gates opacity/pointer-events on the .open class, not on
+// display — toggling display alone (as guestPrompt did, until it was fixed
+// alongside this) leaves the box present but invisible and unclickable.
+function _hideProofSubmitConfirm() {
+  const el = document.getElementById('proofSubmitConfirmOverlay');
+  el.style.display = 'none'; el.classList.remove('open');
+}
 function declineProofTerms() {
-  document.getElementById('proofSubmitConfirmOverlay').style.display = 'none';
+  _hideProofSubmitConfirm();
   _ovSync('proofTermsOverlay');
   document.getElementById('proofTermsOverlay').classList.remove('open');
 }
 // "I Agree" doesn't submit by itself — it asks one more time, on top of the
 // agreement page itself, before anything actually uploads.
 function acceptProofTerms() {
-  document.getElementById('proofSubmitConfirmOverlay').style.display = 'flex';
+  const el = document.getElementById('proofSubmitConfirmOverlay');
+  el.style.display = 'flex'; el.classList.add('open');
 }
 // Changed their mind at the last step: just the confirm closes. The terms page
 // is still there underneath, still open, still un-declined.
 function cancelProofSubmitConfirm() {
-  document.getElementById('proofSubmitConfirmOverlay').style.display = 'none';
+  _hideProofSubmitConfirm();
 }
 // Confirmed for real: record when, close both the confirm and the terms page,
 // and start the upload — so the video (and its progress) is the very next
 // thing visible.
 function confirmProofSubmit() {
   _proofTermsAcceptedAt = Date.now();
-  document.getElementById('proofSubmitConfirmOverlay').style.display = 'none';
+  _hideProofSubmitConfirm();
   _ovSync('proofTermsOverlay');
   document.getElementById('proofTermsOverlay').classList.remove('open');
   _doSubmitProof();
@@ -4918,7 +4926,9 @@ function _videoCardSearch(p) {
 function applySuggestion(text) { document.getElementById('searchInput').value=text.replace(/^#/,''); _hideSuggestions(); handleSearchImmediate(); }
 
 function closeGuestPrompt() {
-  document.getElementById('guestPrompt').style.display = 'none';
+  const _gp = document.getElementById('guestPrompt');
+  _gp.style.display = 'none';
+  _gp.classList.remove('open');
 }
 
 // UI-driven close (back arrow / ✕ / outside tap) rewinds the entry the open
@@ -5953,7 +5963,9 @@ function guestCheck(actionKey) {
 function leaveGuestMode(tab) {
   _clearGuestSession();
   isGuestMode = false;
-  document.getElementById('guestPrompt').style.display  = 'none';
+  const _gp2 = document.getElementById('guestPrompt');
+  _gp2.style.display = 'none';
+  _gp2.classList.remove('open');
   document.getElementById('appScreen').style.filter     = '';
   document.getElementById('appScreen').style.pointerEvents = '';
   document.getElementById('appScreen').style.display    = 'none';
@@ -6113,7 +6125,9 @@ function showGuestPrompt(info, dismissible) {
   document.getElementById('guestPromptMsg').textContent   = info.msg;
   const dismissBtn = document.getElementById('guestPromptDismiss');
   dismissBtn.style.display = dismissible ? 'block' : 'none';
-  document.getElementById('guestPrompt').style.display    = 'flex';
+  const _gp = document.getElementById('guestPrompt');
+  _gp.style.display = 'flex';
+  _gp.classList.add('open');   // .overlay is opacity/pointer-events gated on .open, not display
 }
 
 const NOTIF_PAGE = 30;
