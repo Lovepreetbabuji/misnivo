@@ -1397,43 +1397,46 @@ body{
   padding:13px 16px;border-radius:14px;font-size:14px;outline:none;
   font-family:inherit;transition:all .2s;
 }
-.f-input:focus{border-color:var(--blue);background:rgba(255,255,255,0.08);box-shadow:0 0 0 3px rgba(255,255,255,0.08);}
+.f-input:focus{border-color:rgba(255,255,255,.4);background:rgba(255,255,255,0.08);box-shadow:0 0 0 3px rgba(255,255,255,0.08);}
 .f-input::placeholder{color:var(--t3);}
 textarea.f-input{resize:vertical;min-height:84px;}
 .f-opt-tag{font-size:10px;font-weight:600;padding:2px 7px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);border-radius:10px;color:var(--t3);margin-left:6px;vertical-align:middle;}
 .f-hint{font-size:11px;color:var(--t3);margin-top:4px;font-family:'Roboto',sans-serif;}
 
 /* ── Video Proof ── */
-.proof-dare-info{background:var(--glass);backdrop-filter:var(--blur);border:1px solid var(--border);border-radius:16px;padding:16px;margin-bottom:20px;box-shadow:4px 4px 12px var(--neu-dark),-2px -2px 7px var(--neu-light);}
+.proof-dare-info{background:#0d0d0d;border:1px solid rgba(255,255,255,.10);border-radius:16px;padding:16px;margin-bottom:20px;}
 .proof-dare-title{font-family:'Roboto',sans-serif;font-size:15px;margin-bottom:4px;}
-.proof-dare-bounty{font-family:'Roboto',sans-serif;font-size:28px;letter-spacing:1px;color:var(--gold);line-height:1;}
-.video-dz{border:2px dashed var(--border2);border-radius:18px;padding:36px 20px;text-align:center;cursor:pointer;transition:all .25s;margin-bottom:16px;background:var(--glass);}
-.video-dz:hover,.video-dz.active{border-color:var(--blue);background:rgba(255,255,255,0.08);transform:scale(1.01);}
-.video-dz.has-file{border-color:var(--green);background:rgba(0,230,118,0.05);}
+.proof-dare-bounty{font-family:'Roboto',sans-serif;font-size:28px;letter-spacing:1px;color:var(--green);line-height:1;}
+.video-dz{border:2px dashed var(--border2);border-radius:18px;padding:36px 20px;text-align:center;cursor:pointer;transition:all .25s;margin-bottom:16px;background:rgba(255,255,255,.02);}
+.video-dz:hover,.video-dz.active{border-color:rgba(255,255,255,.4);background:rgba(255,255,255,0.08);transform:scale(1.01);}
+.video-dz.has-file{border-style:solid;border-color:rgba(255,255,255,0.20);background:rgba(255,255,255,.03);}
 .video-dz .mi{font-size:44px;color:var(--t3);display:block;margin-bottom:12px;}
-.video-dz.has-file .mi{color:var(--green);}
+.video-dz.has-file .mi{color:#fff;}
 .vdz-t{font-size:14px;font-weight:600;color:var(--t2);margin-bottom:4px;}
 .vdz-s{font-size:12px;color:var(--t3);font-family:'Roboto',sans-serif;}
 #videoPreview{width:100%;border-radius:14px;margin-bottom:16px;display:none;max-height:220px;background:#000;}
-.file-info{background:rgba(0,230,118,0.08);border:1px solid rgba(0,230,118,0.25);border-radius:12px;padding:12px 14px;font-size:13px;color:var(--t2);margin-bottom:16px;display:none;align-items:center;gap:8px;font-family:'Roboto',sans-serif;}
-.file-info .mi{font-size:18px;color:var(--green);}
-.proof-rules{background:rgba(255,159,10,0.07);border:1px solid rgba(255,159,10,0.18);border-radius:14px;padding:14px;margin-bottom:16px;}
-.proof-rules-title{font-size:10px;font-weight:700;color:var(--orange);text-transform:uppercase;letter-spacing:.7px;margin-bottom:10px;font-family:'Roboto',sans-serif;}
+.file-info{background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.14);border-radius:12px;padding:12px 14px;font-size:13px;color:var(--t2);margin-bottom:16px;display:none;align-items:center;gap:8px;font-family:'Roboto',sans-serif;}
+.file-info .mi{font-size:18px;color:#fff;}
+.proof-rules{background:#0d0d0d;border:1px solid rgba(255,255,255,.10);border-radius:14px;padding:14px;margin-bottom:16px;}
+.proof-rules-title{font-size:10px;font-weight:700;color:rgba(255,255,255,.55);text-transform:uppercase;letter-spacing:.7px;margin-bottom:10px;font-family:'Roboto',sans-serif;}
+/* text-transform is inherited, and Material Icons ligatures are case-sensitive lowercase —
+   uppercasing this row was rendering the rule/checklist ICONS as literal text ("RULE",
+   "CHECKLIST") instead of glyphs. Excluded here and on the checklist header below. */
+.proof-rules-title .mi, .proof-checklist-hdr .mi{ text-transform:none; }
 .proof-rule{font-size:13px;color:var(--t2);margin-bottom:5px;display:flex;gap:6px;line-height:1.5;}
-.proof-rule::before{content:'•';color:var(--orange);flex-shrink:0;}
+.proof-rule::before{content:'•';color:rgba(255,255,255,.4);flex-shrink:0;}
 .btn-submit-proof{
-  width:100%;padding:14px;
-  background:linear-gradient(135deg,var(--green),#00b844);
-  color:#fff;border:none;border-radius:14px;
-  font-size:14px;font-weight:600;cursor:pointer;font-family:inherit;
+  width:100%;padding:15px;
+  background:#fff;
+  color:#000;border:none;border-radius:999px;
+  font-size:14px;font-weight:700;cursor:pointer;font-family:inherit;
   display:flex;align-items:center;justify-content:center;gap:8px;
-  box-shadow:5px 5px 16px rgba(0,200,100,0.4);
-  transition:all .2s;
+  box-shadow:none;
+  transition:opacity .2s;
 }
-.btn-submit-proof:hover{transform:translateY(-1px);box-shadow:7px 7px 24px rgba(0,200,100,0.55);}
 .btn-submit-proof:active{transform:scale(.97);}
-.btn-submit-proof .mi{font-size:20px;}
-.btn-submit-proof:disabled{background:var(--glass);color:var(--t3);cursor:not-allowed;box-shadow:none;transform:none;}
+.btn-submit-proof .mi{font-size:19px;color:#000;}
+.btn-submit-proof:disabled{background:#fff;color:#000;cursor:not-allowed;box-shadow:none;transform:none;opacity:.5;}
 
 /* ── Review Modals ── */
 .review-dare-header{background:var(--glass);backdrop-filter:var(--blur);border:1px solid var(--border);border-radius:16px;padding:16px 18px;margin-bottom:20px;display:flex;align-items:center;justify-content:space-between;gap:12px;box-shadow:4px 4px 12px var(--neu-dark),-2px -2px 7px var(--neu-light);}
@@ -1482,7 +1485,7 @@ textarea.f-input{resize:vertical;min-height:84px;}
 .dz-remove-btn:hover{background:rgba(255,59,48,.12);border-color:rgba(255,59,48,.4);color:#FF3B30;}
 .fp-label{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--t3);margin-bottom:8px;font-family:'Roboto',sans-serif;}
 .fp-label .mi{font-size:15px;}
-.fp-scrubber{width:100%;margin:6px 0 0;accent-color:var(--blue);cursor:pointer;height:4px;}
+.fp-scrubber{width:100%;margin:6px 0 0;accent-color:#fff;cursor:pointer;height:4px;}
 .fp-pencil-icon{position:absolute;bottom:8px;right:8px;background:rgba(0,0,0,.65);border-radius:50%;width:32px;height:32px;display:flex;align-items:center;justify-content:center;font-size:16px;pointer-events:none;z-index:2;}
 .tags-field{background:rgba(255,255,255,.03);border:1px solid var(--border);border-radius:10px;padding:8px 10px;min-height:44px;display:flex;flex-wrap:wrap;align-items:flex-start;gap:6px;transition:border-color .2s;}
 .tags-field:focus-within{border-color:rgba(255,255,255,0.08);}
@@ -1512,7 +1515,7 @@ textarea.f-input{resize:vertical;min-height:84px;}
 .proof-checklist-grid{display:flex;flex-direction:column;gap:6px;}
 .proof-check-item{display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:8px;cursor:pointer;transition:background .15s;user-select:none;}
 .proof-check-item:hover{background:rgba(255,255,255,.04);}
-.proof-check-item.checked{background:rgba(0,230,118,.07);}
+.proof-check-item.checked{background:rgba(255,255,255,.08);}
 .proof-check-icon{font-size:20px;color:var(--t3);flex-shrink:0;transition:color .2s;}
 .proof-check-text{font-size:13px;color:var(--t2);}
 .proof-check-item.checked .proof-check-text{color:var(--t1);}
@@ -5808,3 +5811,23 @@ body.no-anim #setSecOverlay.as-page .modal{ transition:none !important; }
 }
 @media(prefers-reduced-motion:reduce){ #postOverlay.as-page .modal{ transition:none !important; } }
 body.no-anim #postOverlay.as-page .modal{ transition:none !important; }
+
+/* ═══════════════════════════════════════════════════════════════════════
+   SUBMIT VIDEO PROOF — same chrome as Settings / Post Mission: flat black,
+   bare back-arrow header (no ✕, it doubles as the arrow now), and a mobile
+   slide-in. The page's own accent leftovers (orange rules box, gold bounty,
+   green checklist/dropzone/CTA, and a red focus ring/scrubber from the old
+   theme) were cleaned up inline above; this block is purely the shell.
+   ═══════════════════════════════════════════════════════════════════════ */
+#proofOverlay.as-page{ background:#000 !important; backdrop-filter:none !important; -webkit-backdrop-filter:none !important; }
+#proofOverlay .modal{ background:#000 !important; border:none !important; }
+
+@media(max-width:768px){
+  #proofOverlay.as-page .modal{
+    transform:translateX(100%);
+    transition:transform .28s cubic-bezier(.32,.72,0,1);
+  }
+  #proofOverlay.as-page.open .modal{ transform:none; }
+}
+@media(prefers-reduced-motion:reduce){ #proofOverlay.as-page .modal{ transition:none !important; } }
+body.no-anim #proofOverlay.as-page .modal{ transition:none !important; }

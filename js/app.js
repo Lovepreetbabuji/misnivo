@@ -1810,7 +1810,7 @@ function toggleProofCheck(i) {
   const row  = document.getElementById('pci-'   + i);
   if (proofCheckState[i]) {
     icon.textContent = 'check_box';
-    icon.style.color = '#30D158';
+    icon.style.color = '#fff';
     row.classList.add('checked');
   } else {
     icon.textContent = 'check_box_outline_blank';
