@@ -508,6 +508,8 @@ const _AUTH_HINT   = 'mm_was_signed_in';
 const _splashStart = Date.now();
 let   _splashHidden = false;
 let   _shellShown   = false;
+let   _bootSkelTO   = null;    // declared with the other boot state: _bootShell()
+                               // runs long before the skeleton module's own lines do
 
 function _splashDone(){
   if (_splashHidden) return;
@@ -532,11 +534,9 @@ function _bootShell(){
   _shellShown = true;
   const app = document.getElementById('appScreen');
   if (app) app.style.display = 'block';
-  const grid = document.getElementById('homeVideoGrid');
-  if (grid && !grid.children.length) grid.innerHTML = _skelCards(4);
+  _bootSkelShow(_bootSkelKind());                   // the shape of THIS page, not home's
   _splashDone();
 }
-_bootShell();
 setTimeout(_splashDone, _SPLASH_MAX);               // safety net either way
 
 //  AUTH STATE LISTENER
@@ -557,6 +557,7 @@ auth.onAuthStateChanged(async (fbUser) => {
     _bootRoute();                // open the page/modal the URL points to (deep-link / refresh)
   } else {
     _splashDone();
+    _bootSkelHide();                       // signed out — no page is loading
     document.getElementById('authScreen').style.display = 'flex';
     document.getElementById('appScreen').style.display  = 'none';
   }
@@ -796,6 +797,11 @@ const _MODAL_URL = { postOverlay:'/post', proofOverlay:'/submit-proof', settings
 const _URL_PAGE  = Object.fromEntries(Object.entries(_PAGE_URL ).map(([k,v])=>[v,k]));
 const _URL_MODAL = Object.fromEntries(Object.entries(_MODAL_URL).map(([k,v])=>[v,k]));
 
+// Reveal the shell here rather than at the definition: _bootShell reads _URL_PAGE
+// to decide WHICH page's skeleton to paint, and a const is in the temporal dead
+// zone until this line. Same synchronous tick, so nothing is delayed by it.
+_bootShell();
+
 function goPage(pg, _fromPop) {
   _searchReturn = null;
   // Navigating to a page closes any open page-modal (its history entry gets REPLACED below)
@@ -842,6 +848,10 @@ function goPage(pg, _fromPop) {
     else if (_curPage !== pg) { try{ history.pushState(st, '', url); }catch(e){} }
   }
   _curPage = pg;
+  // Boot skeleton hands over to the page's own render. A pending deep link is
+  // the exception — goPage('home') runs first there and the watch/dare view
+  // opens once its data lands, so the skeleton stays until _maybeInitialRoute.
+  if (typeof _bootSkelHide === 'function' && !_deepLinkPath) _bootSkelHide();
   // coming (back) onto a page: restart the mobile scroll-autoplay for the centered card
   if (typeof _pvIsTouch === 'function' && _pvIsTouch()) setTimeout(()=>{ try{ _pvPlayCentered(); }catch(e){} }, 900);
 }
@@ -955,6 +965,97 @@ function _skelRows(n){
       <div class="skel-meta"><div class="skel skel-line sl-60"></div><div class="skel skel-line sl-40"></div></div></div>`;
   }
   return r;
+}
+
+// ══════════════════════════════════════════════════════════════════════════
+//  BOOT SKELETON — every page loads in its own shape
+//
+//  Refreshing on /wallet used to show the HOME feed skeleton, because the only
+//  boot skeleton there was filled #homeVideoGrid. Now the URL decides the shape.
+//
+//  It lives inside <main>, so it inherits the content area's exact margins and
+//  padding at every breakpoint — no fixed positioning or offset maths to keep
+//  in sync with the topbar.
+//
+//  Rule for every skeleton in this file: it is REPLACED by real content, never
+//  hidden. A display:none skeleton keeps its compositor layer and keeps its
+//  sweep running forever — the same shape as the backdrop-filter bug that cost
+//  68ms a frame. .page:not(.active) .skel::before in the CSS is the backstop.
+// ══════════════════════════════════════════════════════════════════════════
+function _bootSkelKind(){
+  const path = (location.pathname || '/').replace(/\/+$/,'') || '/';
+  const m = path.match(/^\/(watch|shorts|dare|u)\//);
+  if (m) return m[1]==='shorts' ? 'shorts' : m[1]==='u' ? 'profile' : 'detail';
+  if (_URL_PAGE[path]) return _URL_PAGE[path];
+  // a modal URL (/wallet/deposit, /settings) restores onto its base page
+  if (_URL_MODAL[path]) return path.startsWith('/wallet') ? 'wallet'
+                             : path.startsWith('/profile') ? 'profile' : 'home';
+  return 'home';
+}
+
+function _skelLine(w,h,mt){
+  return `<span class="skel skel-line" style="display:block;width:${w};${h?'height:'+h+';':''}${mt?'margin-top:'+mt+';':''}"></span>`;
+}
+
+function _bootSkelHtml(kind){
+  const chips = `<div class="sk-chips">${'<span class="skel sk-chip"></span>'.repeat(5)}</div>`;
+  switch(kind){
+    // a mission or a long video: player block, title, creator row, actions, comments
+    case 'detail': return `<div class="sk-detail">
+      <div class="skel sk-hero"></div>
+      ${_skelLine('86%','16px','18px')}${_skelLine('54%','13px','10px')}
+      <div class="sk-creator"><span class="skel sk-av40"></span>
+        <div class="sk-cmeta">${_skelLine('44%','13px')}${_skelLine('28%','10px','8px')}</div>
+        <span class="skel sk-pill"></span></div>
+      <div class="sk-actions">${'<span class="skel sk-abtn"></span>'.repeat(4)}</div>
+      <div class="skel sk-box"></div>
+      ${_skelRows(3)}</div>`;
+
+    case 'shorts': return `<div class="sk-shorts"><span class="skel skel-fill"></span></div>`;
+
+    case 'profile': return `<div class="sk-profile">
+      <div class="sk-phead"><span class="skel sk-av92"></span>
+        <div class="sk-cmeta">${_skelLine('56%','17px')}${_skelLine('34%','12px','11px')}</div></div>
+      <div class="sk-ptabs"><span class="skel"></span><span class="skel"></span></div>
+      ${_skelCards(2)}</div>`;
+
+    case 'wallet': return `<div class="sk-wallet">
+      <div class="sk-wcard">${_skelLine('120px','10px')}${_skelLine('190px','30px','14px')}
+        <div class="sk-wrow"><span class="skel sk-wstat"></span><span class="skel sk-wstat"></span></div>
+        <div class="sk-wrow"><span class="skel sk-wbtn"></span><span class="skel sk-wbtn"></span></div></div>
+      ${_skelLine('150px','15px','4px')}${_skelRows(5)}</div>`;
+
+    case 'leaderboard': return `<div class="sk-lb">${_skelLine('150px','15px','4px')}${_skelRows(6)}</div>`;
+
+    // Chat is a static "coming soon" panel — nothing loads, so a skeleton there
+    // would be a lie that flashes and resolves into the same empty state.
+    case 'chat':   return '';
+
+    case 'explore': return chips + _skelCards(4);
+    case 'dares':
+    case 'accepted': return _skelCards(4);
+    default: return chips + _skelCards(4);      // home
+  }
+}
+
+function _bootSkelShow(kind){
+  const main = document.querySelector('.main'); if (!main) return;
+  const html = _bootSkelHtml(kind); if (!html) return;
+  let el = document.getElementById('bootSkel');
+  if (!el){ el = document.createElement('div'); el.id = 'bootSkel'; main.appendChild(el); }
+  el.innerHTML = html;
+  document.body.classList.add('boot-skel');
+  // A deep link to a deleted video never resolves, and a stuck skeleton is worse
+  // than a stuck empty state — it promises content that is never coming.
+  clearTimeout(_bootSkelTO);
+  _bootSkelTO = setTimeout(_bootSkelHide, 12000);
+}
+
+function _bootSkelHide(){
+  clearTimeout(_bootSkelTO); _bootSkelTO = null;
+  document.body.classList.remove('boot-skel');
+  const el = document.getElementById('bootSkel');
+  if (el) el.remove();              // removed, not hidden — see the rule above
 }
 
 async function renderHome(cat) {
@@ -1280,6 +1381,10 @@ function renderDaresPage() {
 //  ACCEPTED DARES PAGE
 // ════════════════════════════
 function renderAcceptedPage() {
+  const _f = document.getElementById('acceptedPageFeed');
+  // dares still streaming in — without this the page claims "No Accepted
+  // Missions" for a moment before the first snapshot lands
+  if (_f && !_daresLoaded){ _f.innerHTML = _skelCards(3); return; }
   // #6: Sort latest first
   if (typeof acceptedDares !== 'undefined' && Array.isArray(acceptedDares)) {
     acceptedDares.sort((a,b) => {
@@ -2783,6 +2888,7 @@ function _renderMyDares(){
 }
 function _renderAcceptedDares(){
   const el=document.getElementById('tAccepted'); if(!el) return;
+  if(!_daresLoaded){ el.innerHTML=_skelCards(2); return; }   // matches _renderMyDares
   const stOf=a=> a.applicantStatus==='pending'?'applied' : a.proofStatus==='approved'?'approved' : a.proofStatus==='submitted'?'review' : 'tosubmit';
   const _at=a=> new Date(a.acceptedDate||a.date||0).getTime()||0;
   let list=[...(acceptedDares||[])].sort((a,b)=>_at(b)-_at(a));   // latest first
@@ -5498,7 +5604,7 @@ function _maybeInitialRoute(){
   // boot rewrote the URL to '/' (goPage home) — route from the SAVED deep link
   const src = _deepLinkPath || (location.pathname||'');
   const m = src.match(/^\/(watch|shorts|dare|u)\/([^/?#]+)/);
-  if (!m){ _routedInitial = true; return; }
+  if (!m){ _routedInitial = true; _bootSkelHide(); return; }
   const id = decodeURIComponent(m[2]);
   const ready = (m[1]==='u') ? true                 // public profile fetches its own user doc
     : (m[1]==='dare') ? (dares||[]).some(d=>d.id===id)
@@ -5512,6 +5618,7 @@ function _maybeInitialRoute(){
     else if (m[1]==='shorts') openShorts(id);
     else if (m[1]==='u')      openPublicProfile(id);
     else                      openDareDetail(id);
+    _bootSkelHide();                       // the real view is up
   }
 }
 // ════════════════════════════════════════════════════════════════════
