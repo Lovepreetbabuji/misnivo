@@ -9,6 +9,12 @@ const firebaseConfig = {
   messagingSenderId: "490715782561",
   appId:             "1:490715782561:web:e04d5ea4d86aa3b133ffe0"
 };
+// Published for the AI Logic module in index.html, which runs on the modular
+// SDK and cannot see this scope. One source of truth for the project config.
+window.__fbConfig = firebaseConfig;
+// Flash-Lite: this runs on every post and every edit, so it has to be cheap and
+// fast. Named here so the model can be changed without touching the markup.
+window.AI_SAFETY_MODEL = 'gemini-3-flash-lite';
 firebase.initializeApp(firebaseConfig);
 const auth = firebase.auth();
 const db   = firebase.firestore();
@@ -106,9 +112,9 @@ function checkMissionSafety(title, description) {
 
 // Telemetry, not consent: proof the filter is running, and which words actually
 // show up. Never blocks anything on its own, so a failed write is swallowed.
-function _logSafetyBlock(title, description, category, stage) {
+function _logSafetyBlock(title, description, category, stage, ai) {
   try {
-    db.collection('safety_blocks').add({
+    const rec = {
       userId:      user ? user.uid : null,
       userEmail:   user ? (user.email || '') : '',
       title:       title || '',
@@ -116,14 +122,22 @@ function _logSafetyBlock(title, description, category, stage) {
       category,
       stage:       stage || 'keyword',
       blockedAt:   firebase.firestore.FieldValue.serverTimestamp()
-    }).catch(() => {});
+    };
+    if (ai) {                                  // stage 2 keeps both verdicts
+      rec.check1    = ai.check1 || null;
+      rec.check2    = ai.check2 || null;
+      rec.disagreed = !!ai.disagreed;
+      rec.reason    = ai.reason || '';
+      rec.model     = window.AI_SAFETY_MODEL || '';
+    }
+    db.collection('safety_blocks').add(rec).catch(() => {});
   } catch (e) {}
 }
 
-function _showSafetyBlock(category) {
+function _showSafetyBlock(category, customMsg) {
   const label = SAFETY_CATEGORY_LABELS[category] || 'unsafe activity';
-  document.getElementById('safetyBlockMsg').textContent =
-    'Missions that involve ' + label + " aren't allowed on Misnivo for safety reasons.";
+  document.getElementById('safetyBlockMsg').textContent = customMsg ||
+    ('Missions that involve ' + label + " aren't allowed on Misnivo for safety reasons.");
   const ov = document.getElementById('safetyBlockOverlay');
   ov.style.zIndex = '2147483600';        // above the post form (_ovOpen stacks at 9500+)
   ov.style.display = 'flex';
@@ -132,6 +146,100 @@ function _showSafetyBlock(category) {
 function _safetyBlockClose() {
   const ov = document.getElementById('safetyBlockOverlay');
   ov.style.display = 'none'; ov.classList.remove('open');   // the form is still open behind it
+}
+
+// ══════════════════════════════════════════════════════════════════════════
+//  MISSION SAFETY FILTER — stage 2: the model
+//
+//  Runs only on what the keyword list let through. Two calls, not one: the
+//  second is asked to review the first, because a single model that misreads
+//  Hinglish or misses an indirect risk has nobody checking it.
+//
+//  EVERY failure path blocks. A safety check that passes when it cannot reach
+//  the API is not a safety check — it is a delay before an accident.
+// ══════════════════════════════════════════════════════════════════════════
+const _AI_TIMEOUT_MS = 20000;
+
+// Even with responseMimeType:'application/json' a model will sometimes wrap its
+// answer in ```json fences. Strip them before parsing rather than fail the whole
+// check on formatting.
+function _aiParseJson(raw) {
+  const t = String(raw || '').trim()
+    .replace(/^```(?:json)?\s*/i, '')
+    .replace(/```\s*$/, '')
+    .trim();
+  return JSON.parse(t);
+}
+
+async function _aiAsk(model, prompt) {
+  const res = await Promise.race([
+    model.generateContent(prompt),
+    new Promise((_, rej) => setTimeout(() => rej(new Error('AI timeout')), _AI_TIMEOUT_MS))
+  ]);
+  return _aiParseJson(res.response.text());
+}
+
+// { ok:false, error } on any failure — callers must treat that as "block".
+// { ok:true, safe, reason, concern, disagreed, check1, check2 } otherwise.
+async function checkMissionSafetyAI(title, description) {
+  const task = 'Task: ' + (title || '') + '\n' + (description || '');
+  try {
+    const model = await window._aiReady;
+    if (!model) return { ok:false, error:'AI Logic unavailable' };
+
+    // CHECK 1 — the reviewer
+    const c1 = await _aiAsk(model,
+      'You are a safety reviewer for a task platform. Someone will be paid to do ' +
+      'this task and record a video. Decide if it could cause physical harm, break ' +
+      'a law, target a specific person, or involve anything sexual or degrading.\n' +
+      task + '\n' +
+      'Reply ONLY with JSON: {"safe": true/false, "reason": "one short sentence", ' +
+      '"concern": "category or none"}');
+    if (typeof c1.safe !== 'boolean') return { ok:false, error:'check 1 returned no verdict' };
+
+    // CHECK 2 — the reviewer's reviewer
+    const c2 = await _aiAsk(model,
+      'A first reviewer judged this task. Here is the task and their verdict.\n' +
+      task + '\n' +
+      'Their verdict: ' + JSON.stringify(c1) + '\n' +
+      'Do you agree? Consider anything they may have missed — indirect risk, ' +
+      'Hinglish or slang wording, or a way this could be misused.\n' +
+      'Reply ONLY with JSON: {"agree": true/false, "finalSafe": true/false, ' +
+      '"reason": "one short sentence"}');
+    if (typeof c2.finalSafe !== 'boolean') return { ok:false, error:'check 2 returned no verdict' };
+
+    // Disagreement is not a tie to be broken — it means one of them is wrong
+    // about whether someone gets hurt. Block, and put it in front of a human.
+    const disagreed = (c2.agree === false) || (c1.safe !== c2.finalSafe);
+    const safe = !disagreed && c1.safe && c2.finalSafe;
+
+    return {
+      ok: true, safe, disagreed,
+      reason:  (safe ? '' : (c2.reason || c1.reason || '')),
+      concern: c1.concern || 'none',
+      check1: c1, check2: c2
+    };
+  } catch (e) {
+    console.error('AI safety check failed:', e);
+    return { ok:false, error: (e && e.message) || 'unknown' };
+  }
+}
+
+// Two reviewers who cannot agree is the one case a human has to see.
+function _logManualReview(title, description, ai) {
+  try {
+    db.collection('manual_review').add({
+      userId:      user ? user.uid : null,
+      userEmail:   user ? (user.email || '') : '',
+      title:       title || '',
+      description: description || '',
+      check1:      ai.check1 || null,
+      check2:      ai.check2 || null,
+      model:       window.AI_SAFETY_MODEL || '',
+      reason:      'reviewers disagreed',
+      createdAt:   firebase.firestore.FieldValue.serverTimestamp()
+    }).catch(() => {});
+  } catch (e) {}
 }
 
 // ── MISSION AGREEMENT ──────────────────────────────────────────────────────
@@ -2183,6 +2291,35 @@ async function submitDare() {
   }
 
   const btn = document.getElementById('submitDareBtn');
+  const _btnIdle = editingDareId
+    ? '<span class="mi">bolt</span> Save Changes'
+    : '<span class="mi">bolt</span> Post Mission';
+  const _btnRelease = () => { btn.disabled = false; btn.innerHTML = _btnIdle; };
+
+  // SAFETY GATE, STAGE 2 — the model. Last thing before the uploads start, so a
+  // mission that is going to be blocked never costs one. Runs on edit too:
+  // submitDare is both paths.
+  btn.disabled = true;
+  btn.innerHTML = '<span class="mi">hourglass_empty</span> Checking mission safety...';
+  const _ai = await checkMissionSafetyAI(caption, desc);
+
+  if (!_ai.ok) {
+    // Could not reach a verdict. Blocking is the only honest answer — passing
+    // here would mean the check is decorative the moment the API has a bad day.
+    _btnRelease();
+    showToast("Safety check couldn't complete. Please try again.");
+    return;
+  }
+  if (!_ai.safe) {
+    _logSafetyBlock(caption, desc, _ai.concern || 'none', 'ai', _ai);
+    if (_ai.disagreed) _logManualReview(caption, desc, _ai);
+    _btnRelease();
+    _showSafetyBlock(_ai.concern, _ai.reason
+      ? _ai.reason + " This mission can't be posted on Misnivo."
+      : null);
+    return;
+  }
+
   btn.disabled = true;
   btn.innerHTML = editingDareId
     ? '<span class="mi">hourglass_empty</span> Saving...'

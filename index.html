@@ -32,7 +32,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,100..400,0..1,0&icon_names=account_balance_wallet,add,arrow_back,bolt,bookmark,chat_bubble,close,expand_less,explore,home,menu,more_vert,notifications,person,reply,search,send,settings,thumb_down,thumb_up,tune&display=block" rel="stylesheet"/>
 
 <!-- App Styles -->
-<link rel="stylesheet" href="/css/styles.css?v=20260814d"/>
+<link rel="stylesheet" href="/css/styles.css?v=20260814e"/>
 
 <!-- The splash logo must be in flight before anything else competes for the pipe -->
 <link rel="preload" as="image" href="/misnivo.png?v=1" fetchpriority="high"/>
@@ -1118,7 +1118,35 @@
 <!-- App Logic -->
 <!-- defer, so it runs after the Firebase bundles above and after the DOM is
      parsed — same order as before, but nothing blocks the first paint -->
-<script defer src="/js/app.js?v=20260814d"></script>
+<script defer src="/js/app.js?v=20260814e"></script>
+
+<!-- ══ Firebase AI Logic — stage 2 of the mission safety filter ══
+     A SECOND, modular Firebase app. The rest of the site runs on the compat
+     SDK at 9.22.2, which predates AI Logic entirely, and swapping the whole
+     app over to modular to reach one feature would put auth, Firestore and
+     the offline cache at risk for no gain. This instance shares the same
+     config, is named 'ai', and touches nothing the compat app owns.
+
+     No API key lives here. AI Logic authenticates through the Firebase app
+     itself — the key in firebaseConfig is the ordinary public web key.
+
+     Module scripts run after every deferred script, so app.js has already
+     published __fbConfig by the time this body executes. If anything here
+     fails, _aiReady resolves to null and the safety check FAILS CLOSED. -->
+<script type="module">
+  window._aiReady = (async () => {
+    const [{ initializeApp }, { getAI, getGenerativeModel, GoogleAIBackend }] = await Promise.all([
+      import('https://www.gstatic.com/firebasejs/12.10.0/firebase-app.js'),
+      import('https://www.gstatic.com/firebasejs/12.10.0/firebase-ai.js')
+    ]);
+    const app = initializeApp(window.__fbConfig, 'ai');
+    const ai  = getAI(app, { backend: new GoogleAIBackend() });
+    return getGenerativeModel(ai, {
+      model: window.AI_SAFETY_MODEL,
+      generationConfig: { responseMimeType: 'application/json', temperature: 0 }
+    });
+  })().catch(e => { console.error('AI Logic init failed:', e); return null; });
+</script>
 
 <!-- ══ v0.19 NEW MODALS ══ -->
 
