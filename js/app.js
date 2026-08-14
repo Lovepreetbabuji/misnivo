@@ -577,7 +577,18 @@ async function initUser(fbUser) {
 
   try {
     const ref  = db.collection('users').doc(user.uid);
-    const snap = await ref.get();
+    // The ENTIRE boot waits on this one read — _bootRoute, and therefore the
+    // first page, sits behind it — so a slow server held the boot skeleton for
+    // as long as the server took. Fall back to the cached copy once the wait is
+    // long enough to notice.
+    let snap = await Promise.race([ ref.get(), new Promise(r => setTimeout(() => r(null), 2500)) ]);
+    if (!snap) {
+      // A cache MISS must never look like a first login: that branch CREATES the
+      // user document and would reset a real account's wallet. Only a cached HIT
+      // is allowed to short-circuit; anything else waits for the server.
+      try { const c = await ref.get({ source:'cache' }); if (c.exists) snap = c; } catch(_) {}
+    }
+    if (!snap) snap = await ref.get();
 
     if (!snap.exists) {
       // ── First login: auto-generate a unique username ──────────────────────
@@ -1050,6 +1061,33 @@ function _skelTxnRows(n){
   return r;
 }
 
+// ONE shape per feed, used by the boot skeleton and by the page's own renderer.
+// They used to differ: refreshing /explore painted the explore skeleton, then
+// renderExplorer replaced it with _skelCards() — the HOME feed shape. Two
+// skeletons back to back, the second one belonging to a different page.
+function _skelFeed(pg){
+  switch(pg){
+    case 'explore':  return _skelCards(3);
+    case 'dares':
+    case 'accepted': return _skelDareCards(3);
+    default:         return _skelSecHdr('96px','82px') + _skelDareCards(2)
+                          + `<div style="margin-top:26px;">${_skelSecHdr('72px')}</div>` + _skelCards(2);
+  }
+}
+
+// A loader that appears and disappears inside a blink is a flash, not feedback —
+// and on a warm cache that is every single navigation. So: paint the skeleton
+// only once the wait is long enough to be worth telling someone about.
+// The exception is boot, where a skeleton is already on screen; there the page's
+// own copy must paint immediately or the handover leaves a blank gap.
+const _SKEL_DELAY = 320;
+function _skelAfter(el, html){
+  if (!el) return () => {};
+  if (document.body.classList.contains('boot-skel')){ el.innerHTML = html; return () => {}; }
+  const t = setTimeout(() => { el.innerHTML = html; }, _SKEL_DELAY);
+  return () => clearTimeout(t);
+}
+
 function _bootSkelKind(){
   const path = (location.pathname || '/').replace(/\/+$/,'') || '/';
   const m = path.match(/^\/(watch|shorts|dare|u)\//);
@@ -1123,15 +1161,14 @@ function _bootSkelHtml(kind){
     // would be a lie that flashes and resolves into the same empty state.
     case 'chat':   return '';
 
-    case 'explore': return `${_skelLine('120px','16px')}<div class="sk-chips" style="margin-top:16px;">${'<span class="skel sk-chip"></span>'.repeat(5)}</div>${_skelCards(3)}`;
+    case 'explore': return `${_skelLine('120px','16px')}<div class="sk-chips" style="margin-top:16px;">${'<span class="skel sk-chip"></span>'.repeat(5)}</div>${_skelFeed('explore')}`;
 
     // both open on a section header with an action on the right
-    case 'dares':    return _skelSecHdr('150px','118px') + _skelDareCards(3);
-    case 'accepted': return _skelSecHdr('212px') + _skelDareCards(3);
+    case 'dares':    return _skelSecHdr('150px','118px') + _skelFeed('dares');
+    case 'accepted': return _skelSecHdr('212px') + _skelFeed('accepted');
 
     // home leads with the Missions shelf, then the Videos header and the feed
-    default: return chips + _skelSecHdr('96px','82px') + _skelDareCards(2)
-                  + `<div style="margin-top:26px;">${_skelSecHdr('72px')}</div>` + _skelCards(2);
+    default: return chips + _skelFeed('home');
   }
 }
 
@@ -1168,19 +1205,22 @@ function _bootSkelHide(){
   if (el) el.remove();              // removed, not hidden — see the rule above
 }
 
+let _homeCancelSkel = () => {};
 async function renderHome(cat) {
   if (cat) homeFilterCat = cat;
   const grid = document.getElementById('homeVideoGrid');
+  _homeCancelSkel();                     // a re-entry must not leave an old timer armed
 
   // 1) INSTANT paint from what we already have (memory this session, else the local
   //    IndexedDB cache) — no waiting on the network for repeat opens.
   if (homeProofs && homeProofs.length) {
     _homeRenderFeed();
   } else {
-    if (grid) grid.innerHTML = _skelCards(5);
+    _homeCancelSkel = _skelAfter(grid, _skelFeed('home'));
     try {
       const c = await db.collection('proofs').where('status','==','approved').get({ source:'cache' });
       if (!c.empty) { homeProofs = c.docs.map(d=>({id:d.id,...d.data()})); allProofs = homeProofs;
+        _homeCancelSkel();
         if (typeof _maybeInitialRoute === 'function') _maybeInitialRoute(); _homeRenderFeed(); }
     } catch(e){}
   }
@@ -1190,6 +1230,7 @@ async function renderHome(cat) {
     const snap = await db.collection('proofs').where('status','==','approved').get();
     homeProofs = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
     allProofs = homeProofs; // sync for explorer/search/related
+    _homeCancelSkel();
     if (typeof _maybeInitialRoute === 'function') _maybeInitialRoute();   // deep-link /watch|/shorts
     _homeRenderFeed();
   } catch(e) {
@@ -1452,7 +1493,7 @@ function closeVideoPlay() {
 // ════════════════════════════
 function renderDaresPage() {
   const feed = document.getElementById('daresPageFeed');
-  if (feed && !_daresLoaded){ feed.innerHTML = _skelCards(4); return; }   // still loading (snapshot re-renders)
+  if (feed && !_daresLoaded){ feed.innerHTML = _skelFeed('dares'); return; }   // still loading (snapshot re-renders)
   const now  = new Date();
 
   // Filter: not completed + not expired
@@ -1494,7 +1535,7 @@ function renderAcceptedPage() {
   const _f = document.getElementById('acceptedPageFeed');
   // dares still streaming in — without this the page claims "No Accepted
   // Missions" for a moment before the first snapshot lands
-  if (_f && !_daresLoaded){ _f.innerHTML = _skelCards(3); return; }
+  if (_f && !_daresLoaded){ _f.innerHTML = _skelFeed('accepted'); return; }
   // #6: Sort latest first
   if (typeof acceptedDares !== 'undefined' && Array.isArray(acceptedDares)) {
     acceptedDares.sort((a,b) => {
@@ -2785,7 +2826,7 @@ function closeReview() {
 // ════════════════════════════
 async function loadLeaderboard() {
   const el = document.getElementById('lbContent');
-  if (el) el.innerHTML = _skelRankRows(5);   // entries are boxed cards, not bare rows
+  const _cancel = _skelAfter(el, _skelRankRows(5));   // entries are boxed cards, not bare rows
   try {
     const snap = await db.collection('proofs').where('status','==','approved').get();
     const map  = {};
@@ -2795,6 +2836,7 @@ async function loadLeaderboard() {
       map[p.takerId].earned += p.dareBounty || 0;
       map[p.takerId].count++;
     });
+    _cancel();
     const sorted = Object.values(map).sort((a,b) => b.earned - a.earned).slice(0,20);
     if (!sorted.length) {
       el.innerHTML = `<div class="empty"><span class="mi">emoji_events</span>
@@ -2818,6 +2860,7 @@ async function loadLeaderboard() {
         <div style="font-size:20px;font-weight:700;color:var(--green);">Rs.${p.earned.toLocaleString('en-IN')}</div>
       </div>`).join('');
   } catch(e) {
+    _cancel();
     el.innerHTML = `<div class="empty"><span class="mi">error_outline</span><div class="empty-title">Error</div><p class="empty-desc">${e.message}</p></div>`;
   }
 }
@@ -2982,7 +3025,7 @@ function _setMyFilter(k){ _pMyFilter=k; _renderMyDares(); }
 function _setAccFilter(k){ _pAccFilter=k; _renderAcceptedDares(); }
 function _renderMyDares(){
   const el=document.getElementById('tMyDares'); if(!el||!user) return;
-  if(!_daresLoaded){ el.innerHTML=_skelCards(2); return; }   // dares still loading (slow network)
+  if(!_daresLoaded){ el.innerHTML=_skelDareCards(2); return; }   // dares still loading (slow network)
   let list=(dares||[]).filter(d=>d.creatorUid===user.uid);
   list.sort((a,b)=>{ const ap=pinnedDares.includes(a.id)?1:0,bp=pinnedDares.includes(b.id)?1:0; if(bp!==ap)return bp-ap;
     return (b.createdAt?.toDate?.()?.getTime()||0)-(a.createdAt?.toDate?.()?.getTime()||0); });
@@ -2997,7 +3040,7 @@ function _renderMyDares(){
 }
 function _renderAcceptedDares(){
   const el=document.getElementById('tAccepted'); if(!el) return;
-  if(!_daresLoaded){ el.innerHTML=_skelCards(2); return; }   // matches _renderMyDares
+  if(!_daresLoaded){ el.innerHTML=_skelDareCards(2); return; }   // matches _renderMyDares
   const stOf=a=> a.applicantStatus==='pending'?'applied' : a.proofStatus==='approved'?'approved' : a.proofStatus==='submitted'?'review' : 'tosubmit';
   const _at=a=> new Date(a.acceptedDate||a.date||0).getTime()||0;
   let list=[...(acceptedDares||[])].sort((a,b)=>_at(b)-_at(a));   // latest first
@@ -6464,25 +6507,53 @@ function _showInlineAd(player, p) {
   }, 3000);
 }
 
+let _expSearches = [];        // last known trending searches, so a tab switch repaints instantly
+
 async function renderExplorer() {
   const container=document.getElementById('explorerContent'); if(!container) return;
-  // skeleton only when nothing is cached yet (slow network)
-  if(!(typeof allProofs!=='undefined' && allProofs.length)) container.innerHTML=_skelCards(6);
+
+  // 1) INSTANT paint from whatever we already have — this session's memory, else
+  //    the local IndexedDB cache. Explore was the one feed with no cache-first
+  //    path: a direct refresh waited on a cold network round trip (no timeout),
+  //    while arriving from home was instant because home had filled allProofs.
+  let cancelSkel = () => {};
+  if (typeof allProofs!=='undefined' && allProofs.length) {
+    _explorerPaint();
+  } else {
+    cancelSkel = _skelAfter(container, _skelFeed('explore'));
+    try {
+      const c = await db.collection('proofs').where('status','==','approved').limit(100).get({source:'cache'});
+      if (!c.empty){ allProofs = c.docs.map(d=>({id:d.id,...d.data()})); cancelSkel(); _explorerPaint(); }
+    } catch(e){}
+  }
+
+  // 2) REFRESH from the server in the background (stale-while-revalidate)
   try {
     const snap=await db.collection('proofs').where('status','==','approved').limit(100).get();
     allProofs=snap.docs.map(doc=>({id:doc.id,...doc.data()}));
+    try{const ss=await db.collection('searches').orderBy('count','desc').limit(10).get();_expSearches=ss.docs.map(d=>d.data());}catch(_){}
+    cancelSkel();
+    _explorerPaint();
+  }catch(e){
+    cancelSkel();
+    // only surface the error if there is nothing on screen to keep
+    if(!(typeof allProofs!=='undefined' && allProofs.length))
+      container.innerHTML=`<div class="empty"><span class="mi">error_outline</span><div class="empty-title">Error loading trending</div><p class="empty-desc">${e.message}</p></div>`;
+  }
+}
+
+function _explorerPaint(){
+    const container=document.getElementById('explorerContent'); if(!container) return;
+    const topSearches = _expSearches;
     const mostViewed  =[...allProofs].sort((a,b)=>(b.viewCount||0)-(a.viewCount||0)).slice(0,12);
     const mostAccepted=[...dares].filter(d=>!d.completed).sort((a,b)=>(b.takers||0)-(a.takers||0)).slice(0,6);
     const mostLiked   =[...allProofs].sort((a,b)=>(b.likeCount||0)-(a.likeCount||0)).slice(0,12);
-    let topSearches=[];
-    try{const ss=await db.collection('searches').orderBy('count','desc').limit(10).get();topSearches=ss.docs.map(d=>d.data());}catch(_){}
     const showAll=activeExpTab==='all';
     container.innerHTML=`
       ${showAll||activeExpTab==='viewed'?`<div class="exp-section"><div class="exp-sec-hdr"><span class="exp-fire"></span><div><div class="exp-sec-title">Most Viewed Today</div><div class="exp-sec-sub">Top taker videos</div></div></div>${_mixedVideoFeedHtml(mostViewed,'Complete missions to see videos here!')}</div>`:''}
       ${showAll||activeExpTab==='accepted'?`<div class="exp-section"><div class="exp-sec-hdr"><span class="exp-fire"></span><div><div class="exp-sec-title">Most Accepted Missions</div><div class="exp-sec-sub">Missions everyone wants to try</div></div></div>${mostAccepted.length?`<div class="active-dare-grid">${mostAccepted.map(d=>_explorerDareCard(d)).join('')}</div>`:`<div class="exp-empty">No active missions!</div>`}</div>`:''}
       ${showAll||activeExpTab==='liked'?`<div class="exp-section"><div class="exp-sec-hdr"><span class="exp-fire"></span><div><div class="exp-sec-title">Most Liked Videos</div><div class="exp-sec-sub">Community favorites</div></div></div>${_mixedVideoFeedHtml(mostLiked.filter(p=>(p.likeCount||0)>0),'Like videos to see them here!')}</div>`:''}
       ${showAll||activeExpTab==='searched'?`<div class="exp-section"><div class="exp-sec-hdr"><span class="exp-fire"></span><div><div class="exp-sec-title">Trending Searches</div><div class="exp-sec-sub">What people are looking for</div></div></div>${topSearches.length?`<div class="trending-searches-list">${topSearches.map((s,i)=>`<div class="trending-search-row" onclick="doTrendingSearch('${escHtml(s.term||'')}')"><span class="trending-rank">${i<3?['🥇','🥈','🥉'][i]:'#'+(i+1)}</span><span class="trending-term">${escHtml(s.term||'')}</span><span class="trending-count">${(s.count||0).toLocaleString('en-IN')} searches</span><span class="mi" style="color:var(--t4);margin-left:auto;font-size:14px;">arrow_forward_ios</span></div>`).join('')}</div>`:`<div class="exp-empty">Search for something to start tracking!</div>`}</div>`:''}`;
-  }catch(e){container.innerHTML=`<div class="empty"><span class="mi">error_outline</span><div class="empty-title">Error loading trending</div><p class="empty-desc">${e.message}</p></div>`;}
 }
 
 function setSearchType(type) {
