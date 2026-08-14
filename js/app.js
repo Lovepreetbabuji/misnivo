@@ -61,6 +61,109 @@ If someone brings a claim against Misnivo because of how you attempted a mission
 12. Governing law
 This agreement is governed by the laws of India.`;
 
+// Point 20 of the creator agreement names a city for jurisdiction. Nothing in
+// this repo says which one and a jurisdiction is not something to guess, so the
+// clause stays at country level until a city is set here. Setting one narrows
+// the clause — and changes the text, so bump CREATOR_AGREEMENT_VERSION with it.
+const AGREEMENT_JURISDICTION_CITY = '';        // e.g. 'New Delhi'
+
+// ── MISSION CREATOR AGREEMENT ──────────────────────────────────────────────
+// Shown before the post form opens, so nobody fills in a mission they were
+// never allowed to ask for. Its own version: the creator document and the taker
+// document above change independently of each other.
+const CREATOR_AGREEMENT_VERSION = '1.0';
+const CREATOR_AGREEMENT_TEXT_V1 =
+`1. You are 18 or older
+You confirm you are at least 18 years old. Misnivo does not allow anyone under 18 to post missions or fund rewards.
+
+2. You are responsible for what you ask
+You — not Misnivo — decide what this mission asks someone to do. You are responsible for that decision. If your mission asks for something unsafe or unlawful, that is your responsibility, whether or not Misnivo's checks catch it first.
+
+3. Your mission must be safe
+You confirm this mission does not ask anyone to do anything that could cause physical harm. You will not post missions involving:
+- heights, rooftops, balconies or climbing
+- water, swimming, diving or drowning risk
+- fire, heat, electricity or explosives
+- vehicles, traffic, roads or railway areas
+- weapons of any kind
+- alcohol, drugs, medicines or any substance
+- extreme eating, fasting, or anything swallowed
+- fighting, hitting, or any contact that could injure
+- self-harm, or harm to any other person
+- anyone under 18, or any animal
+- pranks that could cause panic, injury or a police response
+If you are unsure whether something is safe, do not post it.
+
+4. Your mission must be lawful
+You confirm this mission does not ask anyone to break any law, trespass on property, damage anything, record someone without consent, harass or intimidate anyone, or violate anyone's privacy.
+
+5. Your mission must not target a specific person
+Missions must not name, identify, follow, confront or single out any individual. Missions are challenges, not instructions aimed at a person.
+
+6. Your mission must not ask for sexual, intimate or degrading content
+You will not post missions asking for nudity, sexual content, content of a sexual nature, or anything intended to humiliate or degrade the person performing it.
+
+7. You will not ask a taker for money
+Takers accept missions for free. You confirm you have not asked, accepted or agreed to receive money or anything of value from any taker in exchange for selecting them — and that you will not do so. This is strictly prohibited and results in a permanent ban, forfeited funds, and removal of your missions.
+
+8. You are committing the reward
+By posting this mission you are committing to fund the reward shown. The amount is held once your mission goes live and is released to the taker whose proof you approve, minus Misnivo's platform fee. You cannot withdraw a reward that has already been earned.
+
+9. You choose the taker before the work begins
+You select one taker from those who accept your mission. Only that person performs the mission. Once you have selected someone, you are committing to review their proof and to pay the reward if it meets your published rules.
+
+10. You will review fairly and on time
+You agree to review submitted proof within the review period shown, and to judge it only against the rules you published in the mission. You will not reject proof that meets those rules in order to avoid paying. If you do not review within the period, proof that meets your published rules may be approved automatically and the reward released. Unfair or repeated non-review may result in removal of your ability to post missions.
+
+11. Your mission description is accurate
+You confirm the mission's description, rules, reward and review period are accurate and complete. You will not change what you expect after proof is submitted, or reject proof for a rule you did not publish.
+
+12. Rights to the proof video
+The taker keeps ownership of the video they create. By funding a mission you receive the right to view the proof submitted to you, and to share the published video through Misnivo's own sharing features. You do not receive commercial rights, and you may not download, republish, sell, advertise with, or use the video elsewhere without the taker's separate written permission.
+
+13. You will respect the taker's privacy
+Through this mission you may see a taker's video, name and account details. You may use this only to review their proof and complete the mission. You will not contact them outside Misnivo, share their information with anyone, or use it for any other purpose.
+
+14. The money is legitimately yours
+You confirm the funds you use to reward missions are your own and come from a lawful source. You will not use Misnivo to move, disguise or transfer money on behalf of anyone else. Misnivo may ask you to verify your identity or the source of funds, and may hold or refuse a reward while doing so.
+
+15. Missions are not advertising unless declared
+If your mission asks for content that promotes a product, service, brand or business — including your own — you must clearly say so in the mission description. Undeclared promotional missions may be removed.
+
+16. Missions are not employment
+Posting a mission and paying a reward does not make the taker your employee, contractor or agent, and does not make you their employer. You are not directing their work, supervising how they do it, or responsible for their conduct — and they are not acting on your behalf.
+
+17. You will not dispute a payment you owe
+Once you approve proof and the reward is released, you will not raise a chargeback or payment dispute for that amount. Doing so may result in account suspension and recovery of the amount.
+
+18. Misnivo can remove or refuse your mission
+Misnivo may reject, edit, hide or remove any mission at any time — before or after it goes live, and before or after proof is approved — if it breaks these rules, the Community Guidelines or the law, or if it appears unsafe. Misnivo's checks are a safeguard, not an approval or a guarantee that your mission is safe or lawful. If your account is suspended, funds already committed to a live mission remain committed and will be settled under these rules.
+
+19. You cover claims that come from your mission
+If someone brings a claim against Misnivo because of a mission you posted — for example injury to a taker or another person, damage to property, harassment, or breach of someone's rights — you agree to cover the reasonable costs Misnivo faces because of it.
+
+20. Governing law and jurisdiction
+This agreement is governed by the laws of India. Any dispute relating to it will be subject to the exclusive jurisdiction of the courts ${AGREEMENT_JURISDICTION_CITY ? 'at ' + AGREEMENT_JURISDICTION_CITY + ', India' : 'of India'}.`;
+
+// Everything the modal and the audit record need, per gate. Keeping the text,
+// version and button together is what stops a record from claiming a user
+// accepted one document while the screen showed another.
+const _AGREEMENT_DOCS = {
+  mission_create:   { mode:'create', text:() => CREATOR_AGREEMENT_TEXT_V1, version:() => CREATOR_AGREEMENT_VERSION,
+                      title:'Mission Creator Agreement', btn:'I Agree — Post Mission',
+                      note:'Please read and confirm the following before posting a mission.' },
+  mission_accept:   { mode:'accept', text:() => AGREEMENT_TEXT_V1, version:() => AGREEMENT_VERSION,
+                      title:'Mission Agreement', btn:'I Agree — Accept Mission', note:'' },
+  proof_submission: { mode:'proof',  text:() => AGREEMENT_TEXT_V1, version:() => AGREEMENT_VERSION,
+                      title:'Mission Agreement', btn:'I Agree — Submit Proof',
+                      note:'You agreed to this when you accepted the mission. Please confirm again before your video uploads.' }
+};
+function _agreementDoc(modeOrType){
+  if (_AGREEMENT_DOCS[modeOrType]) return _AGREEMENT_DOCS[modeOrType];
+  for (const k in _AGREEMENT_DOCS) if (_AGREEMENT_DOCS[k].mode === modeOrType) return _AGREEMENT_DOCS[k];
+  return _AGREEMENT_DOCS.mission_accept;
+}
+
 // djb2 — small, deterministic, no library. Lets a later dispute confirm exactly
 // which wording a user saw: hash it once here, compare against what's stored
 // on their agreement record.
@@ -88,6 +191,7 @@ let _agreementOnAgree = null;
 let _agreementScrolledEnd = false;
 let _agreementChecked = false;
 
+let _agreementMode = 'accept';
 function showAgreementModal(mode, onAgree) {
   // above every _ovOpen-stacked page overlay (9500 + stack depth), and above
   // the player menus (2147483000) for good measure
@@ -96,13 +200,19 @@ function showAgreementModal(mode, onAgree) {
   _agreementScrolledEnd = false;
   _agreementChecked = false;
 
-  document.getElementById('agreementProofNote').style.display = (mode === 'proof') ? 'flex' : 'none';
+  const doc = _agreementDoc(mode);
+  _agreementMode = mode;
+
+  const note = document.getElementById('agreementProofNote');
+  note.style.display = doc.note ? 'flex' : 'none';
+  document.getElementById('agreementNoteText').textContent = doc.note;
+
+  document.getElementById('agreementTitle').textContent = doc.title;
 
   const btn = document.getElementById('agreementAgreeBtn');
-  btn.innerHTML = '<span class="mi">check</span>' +
-    (mode === 'proof' ? 'I Agree — Submit Proof' : 'I Agree — Accept Mission');
+  btn.innerHTML = '<span class="mi">check</span>' + doc.btn;
 
-  document.getElementById('agreementPoints').innerHTML = _agreementRenderHtml(AGREEMENT_TEXT_V1);
+  document.getElementById('agreementPoints').innerHTML = _agreementRenderHtml(doc.text());
   document.getElementById('agreementBody').scrollTop = 0;
 
   const cbIcon = document.getElementById('agreementCheckIcon');
@@ -123,9 +233,21 @@ function _agreementRenderHtml(text) {
   return text.split(/\n\n+/).map(block => {
     const m = block.match(/^(\d+)\.\s+(.+?)\n([\s\S]*)$/);
     if (!m) return '';
+    // Body lines starting "- " become a list; everything else is a paragraph.
+    // Single-paragraph points render exactly as before.
+    let body = '', list = [];
+    const flush = () => { if (list.length){ body += '<ul class="agreement-pt-list">' +
+      list.map(li => '<li>' + escHtml(li) + '</li>').join('') + '</ul>'; list = []; } };
+    m[3].split('\n').forEach(line => {
+      const t = line.trim();
+      if (!t) return;
+      if (t.startsWith('- ')) list.push(t.slice(2));
+      else { flush(); body += '<p>' + escHtml(t) + '</p>'; }
+    });
+    flush();
     return `<div class="agreement-pt">
       <div class="agreement-pt-title"><span class="agreement-pt-num">${m[1]}.</span> ${escHtml(m[2])}</div>
-      <p>${escHtml(m[3])}</p>
+      ${body}
     </div>`;
   }).join('');
 }
@@ -1602,7 +1724,26 @@ function _handleSearchNow() {
 // ════════════════════════════════════════════════════════════════════
 //  OPEN / CLOSE POST DARE MODAL
 // ════════════════════════════════════════════════════════════════════
+// Shown BEFORE the form, not after it: nobody should fill in a mission they were
+// never allowed to ask for. The record is written first — if that write fails the
+// form does not open, which is the whole point of having a gate.
 function openPost() {
+  if (typeof guestCheck === 'function' && guestCheck('post')) return;
+  showAgreementModal('create', async () => {
+    try {
+      _postAgreementId = await _recordAgreement('mission_create', null);
+    } catch (e) {
+      console.error('creator agreement save failed:', e);
+      showToast('Could not record your agreement — please check your connection and try again');
+      return;                                  // form does NOT open
+    }
+    _doOpenPost();
+  });
+}
+// openEditDare fills the same form itself and does not come through here, so
+// editing an existing mission is not re-gated.
+let _postAgreementId = null;
+function _doOpenPost() {
   // Post modal (z9500) opens ON TOP of the current page — don't close/leave it
   editingDareId = null;
   // Reset all state
@@ -1989,8 +2130,9 @@ async function submitDare() {
       editingDareId = null;
     } else {
       // ── CREATE MODE: new dare ─────────────────────────────────────────────
-      await db.collection('dares').add({
+      const _newDare = await db.collection('dares').add({
         ...dareData,
+        creatorAgreementId: _postAgreementId || null,
         creator:        user.name,
         creatorEmail:   user.email,
         creatorUid:     user.uid,
@@ -2003,6 +2145,14 @@ async function submitDare() {
         date:         todayStr(),
         createdAt:    firebase.firestore.FieldValue.serverTimestamp()
       });
+
+      // The agreement was recorded before the mission existed, so close the loop
+      // now that it does. Best-effort: the acceptance itself is already on file.
+      if (_postAgreementId) {
+        db.collection('agreements').doc(_postAgreementId)
+          .update({ missionId: _newDare.id }).catch(()=>{});
+        _postAgreementId = null;
+      }
 
       if (reward > 0) {
         wallet.balance -= reward;
@@ -2442,14 +2592,17 @@ function _showProofSubmitError(msg) {
 // which wording was on screen — not just that "an agreement" was accepted.
 // Written before the action it authorises; a failure here stops that action.
 async function _recordAgreement(type, missionId) {
+  // version + hash of the document THIS type shows — never a global default, or
+  // a creator acceptance would be filed under the taker agreement's wording
+  const doc = _agreementDoc(type);
   const ref = await db.collection('agreements').add({
     userId:           user.uid,
     userEmail:        user.email || '',
-    type,                                    // 'mission_accept' | 'proof_submission'
-    missionId:        missionId || null,
+    type,                        // 'mission_create' | 'mission_accept' | 'proof_submission'
+    missionId:        missionId || null,     // create: unknown until the mission exists
     proofId:          null,                  // filled in later for proof_submission
-    agreementVersion: AGREEMENT_VERSION,
-    agreementHash:    _agreementHash(AGREEMENT_TEXT_V1),
+    agreementVersion: doc.version(),
+    agreementHash:    _agreementHash(doc.text()),
     acceptedAt:       firebase.firestore.FieldValue.serverTimestamp(),
     userAgent:        navigator.userAgent || ''
   });

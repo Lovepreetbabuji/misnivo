@@ -32,7 +32,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,100..400,0..1,0&icon_names=account_balance_wallet,add,arrow_back,bolt,bookmark,chat_bubble,close,expand_less,explore,home,menu,more_vert,notifications,person,reply,search,send,settings,thumb_down,thumb_up,tune&display=block" rel="stylesheet"/>
 
 <!-- App Styles -->
-<link rel="stylesheet" href="/css/styles.css?v=20260814b"/>
+<link rel="stylesheet" href="/css/styles.css?v=20260814c"/>
 
 <!-- The splash logo must be in flight before anything else competes for the pipe -->
 <link rel="preload" as="image" href="/misnivo.png?v=1" fetchpriority="high"/>
@@ -974,13 +974,13 @@
 <div class="overlay" id="agreementOverlay" style="display:none;" onclick="if(event.target===this)_agreementCancel()">
   <div class="modal agreement-modal">
     <div class="agreement-hdr">
-      <div class="agreement-title">Mission Agreement</div>
+      <div class="agreement-title" id="agreementTitle">Mission Agreement</div>
       <button class="agreement-close" onclick="_agreementCancel()" aria-label="Cancel"><span class="mi">close</span></button>
     </div>
     <div class="agreement-body" id="agreementBody" onscroll="_agreementOnScroll()">
       <div class="agreement-proof-note" id="agreementProofNote" style="display:none;">
         <span class="mi">info</span>
-        You agreed to this when you accepted the mission. Please confirm again before your video uploads.
+        <span id="agreementNoteText"></span>
       </div>
       <div id="agreementPoints"></div>
       <div class="agreement-foot">
@@ -1107,7 +1107,7 @@
 <!-- App Logic -->
 <!-- defer, so it runs after the Firebase bundles above and after the DOM is
      parsed — same order as before, but nothing blocks the first paint -->
-<script defer src="/js/app.js?v=20260814b"></script>
+<script defer src="/js/app.js?v=20260814c"></script>
 
 <!-- ══ v0.19 NEW MODALS ══ -->
 

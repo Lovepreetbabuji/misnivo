@@ -5983,6 +5983,18 @@ body.no-anim #proofOverlay.as-page .modal{ transition:none !important; }
 .agreement-pt-title{ font-size:14px; font-weight:700; color:#fff; margin-bottom:4px; }
 .agreement-pt-num{ color:rgba(255,255,255,.5); }
 .agreement-pt p{ font-size:14px; line-height:1.7; color:rgba(255,255,255,.65); }
+.agreement-pt p + p{ margin-top:10px; }
+/* The prohibited-mission list in the creator agreement. Indented and marked so
+   the eleven items read as a list to scan, not a paragraph to skim past. */
+.agreement-pt-list{ margin:8px 0; padding-left:2px; list-style:none; }
+.agreement-pt-list li{
+  position:relative; padding-left:18px; margin-bottom:5px;
+  font-size:14px; line-height:1.6; color:rgba(255,255,255,.65);
+}
+.agreement-pt-list li::before{
+  content:""; position:absolute; left:4px; top:9px;
+  width:5px; height:5px; border-radius:50%; background:rgba(255,255,255,.4);
+}
 
 /* floats over the bottom of the scroll rather than taking a row of its own,
    so it can't be mistaken for the end of the content */
