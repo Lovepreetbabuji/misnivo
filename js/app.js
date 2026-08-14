@@ -18,6 +18,122 @@ try { db.enablePersistence({ synchronizeTabs: true }).catch(()=>{}); } catch(e){
 // Firebase Storage removed — requires paid plan.
 // Using Cloudinary (free, no credit card needed) instead.
 
+// ══════════════════════════════════════════════════════════════════════════
+//  MISSION SAFETY FILTER — stage 1: keywords
+//
+//  The creator agreement says what a mission may not ask for. This is what
+//  actually stops it. Runs on posting AND on editing, because otherwise "sing a
+//  song" gets posted, agreed to, and then edited into "climb the roof".
+//
+//  Deliberately blunt: it over-blocks rather than under-blocks. A wrongly
+//  blocked mission costs someone a rewrite; a wrongly allowed one costs
+//  somebody's safety.
+// ══════════════════════════════════════════════════════════════════════════
+const BANNED_KEYWORDS = {
+  heights: ['rooftop','roof','chhat','chat pe','balcony','terrace','climb',
+            'chadh','jump from','koodo','kood ja','cliff','ladder','height',
+            'building se','upar se'],
+  water:   ['swim','swimming','dive','diving','drown','doob','paani mein',
+            'river','nadi','pool mein','sea','samundar','lake','well','kuan'],
+  fire:    ['fire','aag','burn','jalao','jala','flame','candle','matchstick',
+            'lighter','petrol','kerosene','electric','current','shock','wire',
+            'explosive','bomb','patakha','firecracker'],
+  vehicle: ['car','bike','scooter','motorcycle','gaadi','drive','driving',
+            'road pe','highway','traffic','railway','train','patri','track pe',
+            'stunt','wheelie','speed'],
+  weapon:  ['knife','chaaku','blade','gun','bandook','pistol','sword','talwar',
+            'weapon','hathiyaar','danda','rod','acid','tezaab'],
+  substance:['alcohol','sharab','daru','beer','whisky','drug','nasha','ganja',
+            'weed','cigarette','smoke','tobacco','gutka','pill','tablet',
+            'medicine','dawai','injection'],
+  eating:  ['eat 10','eat 20','khaao','ghost pepper','mirchi','chilli challenge',
+            'swallow','nigal','fasting','bhookha','starve','raw meat','kachcha',
+            'spoiled','sadha','cinnamon challenge','salt challenge'],
+  fighting:['fight','ladai','punch','maar','hit','slap','thappad','kick','laat',
+            'beat','peet','wrestle','attack','push','dhakka'],
+  selfharm:['cut yourself','self harm','suicide','khudkushi','marne',
+            'hurt yourself','apne aap ko','blood','khoon nikal'],
+  minorAnimal:['child','bachcha','kid','baby','minor','school student','animal',
+            'dog','kutta','cat','billi','cow','gaay','bird','pakshi'],
+  prank:   ['prank','scare','darao','fake call','police','bomb threat','kidnap',
+            'chori','steal','trespass','ghus ja','follow someone','peecha']
+};
+
+// What the person who got blocked is told. Never the matched word — tell someone
+// exactly which word tripped the filter and they will change that one word.
+const SAFETY_CATEGORY_LABELS = {
+  heights:    'heights or climbing',
+  water:      'water or a risk of drowning',
+  fire:       'fire, heat or electricity',
+  vehicle:    'vehicles, roads or railways',
+  weapon:     'weapons',
+  substance:  'alcohol, drugs or other substances',
+  eating:     'extreme eating or swallowing things',
+  fighting:   'fighting or physical contact',
+  selfharm:   'self-harm or harm to another person',
+  minorAnimal:'anyone under 18, or animals',
+  prank:      'pranks that could cause panic, injury or a police response'
+};
+
+// One regex per category, built once.
+//  · word-bounded, so "car" cannot match "scared" and "hit" cannot match
+//    "white" — the list is short common words, and unbounded it would block
+//    almost every mission ever written.
+//  · optional trailing s/es, because "drink 5 beers" and "bring knives" are the
+//    same mission as "beer" and "knife" and must not walk through a plural.
+//  · knife → knives, which a trailing s never catches, and a weapon is exactly
+//    the word not to let through on a spelling technicality.
+const _escRe = w => w.replace(/[.*+?^${}()|[\]\\]/g, m => '\\' + m);
+const _wordForms = w =>
+  /fe$/.test(w) ? [w, w.slice(0, -2) + 'ves']
+  : /[^f]f$/.test(w) ? [w, w.slice(0, -1) + 'ves']
+  : [w];
+const _BANNED_RE = Object.fromEntries(Object.entries(BANNED_KEYWORDS).map(([cat, words]) => [
+  cat,
+  new RegExp('\\b(?:' + words.flatMap(_wordForms).map(_escRe).join('|') + ')(?:e?s)?\\b', 'i')
+]));
+
+function checkMissionSafety(title, description) {
+  const text = ((title || '') + ' ' + (description || ''))
+    .toLowerCase()
+    .replace(/\s+/g, ' ');                 // "chhat   pe" must match "chhat pe"
+  for (const cat in _BANNED_RE) {
+    const m = text.match(_BANNED_RE[cat]);
+    if (m) return { safe: false, category: cat, matched: m[0] };   // first hit wins
+  }
+  return { safe: true, category: null, matched: null };
+}
+
+// Telemetry, not consent: proof the filter is running, and which words actually
+// show up. Never blocks anything on its own, so a failed write is swallowed.
+function _logSafetyBlock(title, description, category, stage) {
+  try {
+    db.collection('safety_blocks').add({
+      userId:      user ? user.uid : null,
+      userEmail:   user ? (user.email || '') : '',
+      title:       title || '',
+      description: description || '',
+      category,
+      stage:       stage || 'keyword',
+      blockedAt:   firebase.firestore.FieldValue.serverTimestamp()
+    }).catch(() => {});
+  } catch (e) {}
+}
+
+function _showSafetyBlock(category) {
+  const label = SAFETY_CATEGORY_LABELS[category] || 'unsafe activity';
+  document.getElementById('safetyBlockMsg').textContent =
+    'Missions that involve ' + label + " aren't allowed on Misnivo for safety reasons.";
+  const ov = document.getElementById('safetyBlockOverlay');
+  ov.style.zIndex = '2147483600';        // above the post form (_ovOpen stacks at 9500+)
+  ov.style.display = 'flex';
+  ov.classList.add('open');              // .overlay gates opacity/pointer-events on .open
+}
+function _safetyBlockClose() {
+  const ov = document.getElementById('safetyBlockOverlay');
+  ov.style.display = 'none'; ov.classList.remove('open');   // the form is still open behind it
+}
+
 // ── MISSION AGREEMENT ──────────────────────────────────────────────────────
 // One text, one version, shown at both gates (accepting a mission, submitting
 // proof for one). Bump AGREEMENT_VERSION whenever the wording below changes —
@@ -2030,6 +2146,16 @@ async function submitDare() {
 
   if (!caption) { showToast('Please add a caption'); return; }
   if (!desc)    { showToast('Please add a description'); return; }
+
+  // SAFETY GATE — before anything uploads, and before the mission is written.
+  // submitDare handles BOTH posting and editing, so this covers the "post
+  // something harmless, then edit it into something dangerous" route too.
+  const _safety = checkMissionSafety(caption, desc);
+  if (!_safety.safe) {
+    _logSafetyBlock(caption, desc, _safety.category, 'keyword');
+    _showSafetyBlock(_safety.category);
+    return;
+  }
   if (!editingDareId && reward > wallet.balance) {
     showToast('Insufficient wallet balance'); return;
   }

@@ -32,7 +32,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,100..400,0..1,0&icon_names=account_balance_wallet,add,arrow_back,bolt,bookmark,chat_bubble,close,expand_less,explore,home,menu,more_vert,notifications,person,reply,search,send,settings,thumb_down,thumb_up,tune&display=block" rel="stylesheet"/>
 
 <!-- App Styles -->
-<link rel="stylesheet" href="/css/styles.css?v=20260814c"/>
+<link rel="stylesheet" href="/css/styles.css?v=20260814d"/>
 
 <!-- The splash logo must be in flight before anything else competes for the pipe -->
 <link rel="preload" as="image" href="/misnivo.png?v=1" fetchpriority="high"/>
@@ -971,6 +971,17 @@
 <!-- MISSION AGREEMENT — one scrolling page. The checkbox and buttons sit at the
      BOTTOM of the same scroll as the 12 points, so reaching them means having
      scrolled past the whole agreement. No separate confirm step. -->
+<!-- Blocked by the safety filter. The post form stays open behind it, so the
+     only action is to go back and change the mission. -->
+<div class="overlay" id="safetyBlockOverlay" style="display:none;" onclick="if(event.target===this)_safetyBlockClose()">
+  <div class="modal safety-modal">
+    <div class="safety-ic"><span class="mi">block</span></div>
+    <div class="safety-title">This mission can't be posted</div>
+    <p class="safety-msg" id="safetyBlockMsg"></p>
+    <button class="safety-btn" onclick="_safetyBlockClose()"><span class="mi">edit</span>Edit Mission</button>
+  </div>
+</div>
+
 <div class="overlay" id="agreementOverlay" style="display:none;" onclick="if(event.target===this)_agreementCancel()">
   <div class="modal agreement-modal">
     <div class="agreement-hdr">
@@ -1107,7 +1118,7 @@
 <!-- App Logic -->
 <!-- defer, so it runs after the Firebase bundles above and after the DOM is
      parsed — same order as before, but nothing blocks the first paint -->
-<script defer src="/js/app.js?v=20260814c"></script>
+<script defer src="/js/app.js?v=20260814d"></script>
 
 <!-- ══ v0.19 NEW MODALS ══ -->
 
