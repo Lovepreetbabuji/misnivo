@@ -32,7 +32,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,100..400,0..1,0&icon_names=account_balance_wallet,add,arrow_back,bolt,bookmark,chat_bubble,close,expand_less,explore,home,menu,more_vert,notifications,person,reply,search,send,settings,thumb_down,thumb_up,tune&display=block" rel="stylesheet"/>
 
 <!-- App Styles -->
-<link rel="stylesheet" href="/css/styles.css?v=20260813k"/>
+<link rel="stylesheet" href="/css/styles.css?v=20260814a"/>
 
 <!-- The splash logo must be in flight before anything else competes for the pipe -->
 <link rel="preload" as="image" href="/misnivo.png?v=1" fetchpriority="high"/>
@@ -379,9 +379,7 @@
       <div class="sec-hdr" style="margin-bottom:24px;">
         <div class="sec-title"><div class="sec-dot"></div>Top Earners</div>
       </div>
-      <div id="lbContent">
-        <div class="empty"><span class="mi">hourglass_empty</span><div class="empty-title">Loading...</div></div>
-      </div>
+      <div id="lbContent"></div>
     </div>
 
     <!-- PROFILE -->
@@ -1109,7 +1107,7 @@
 <!-- App Logic -->
 <!-- defer, so it runs after the Firebase bundles above and after the DOM is
      parsed — same order as before, but nothing blocks the first paint -->
-<script defer src="/js/app.js?v=20260813k"></script>
+<script defer src="/js/app.js?v=20260814a"></script>
 
 <!-- ══ v0.19 NEW MODALS ══ -->
 
@@ -1158,7 +1156,7 @@
 
     <div id="applicantCount" style="font-size:12px;color:var(--t3);margin-bottom:16px;
       font-family:'IBM Plex Mono',monospace;padding:10px 14px;
-      background:rgba(255,255,255,.03);border:1px solid var(--border);border-radius:10px;">Loading...</div>
+      background:rgba(255,255,255,.03);border:1px solid var(--border);border-radius:10px;"></div>
 
     <!-- Random toggle -->
     <button onclick="toggleRandomPanel()" style="width:100%;display:flex;align-items:center;gap:8px;

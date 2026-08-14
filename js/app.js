@@ -982,6 +982,74 @@ function _skelRows(n){
 //  sweep running forever — the same shape as the backdrop-filter bug that cost
 //  68ms a frame. .page:not(.active) .skel::before in the CSS is the backstop.
 // ══════════════════════════════════════════════════════════════════════════
+// mission / accepted card — .active-dare-card geometry (16:9 thumb + av + 2 lines)
+function _skelDareCards(n){
+  let c='';
+  for(let i=0;i<(n||2);i++){
+    c+=`<div class="active-dare-card skel-yt">
+      <div class="adc-thumb"><span class="skel skel-fill"></span></div>
+      <div class="yt-info">
+        <div class="yt-av"><span class="skel" style="display:block;width:100%;height:100%;border-radius:50%;"></span></div>
+        <div class="yt-meta" style="flex:1;min-width:0;">
+          <span class="skel skel-line" style="display:block;width:74%;"></span>
+          <span class="skel skel-line" style="display:block;width:52%;height:11px;margin-top:9px;"></span>
+        </div></div></div>`;
+  }
+  return `<div class="active-dare-grid">${c}</div>`;
+}
+// section header — "Missions … View All →"
+function _skelSecHdr(w, right){
+  return `<div class="home-sec-hdr">
+    <span class="skel skel-line" style="width:${w};height:17px;"></span>
+    ${right?`<span class="skel" style="width:${right};height:16px;border-radius:8px;margin-left:auto;"></span>`:''}
+  </div>`;
+}
+// comment rows — .vd-comment geometry, so it lands wherever comments do
+function _skelComments(n){
+  const body=[92,74,86,66], meta=[38,30,42,34];
+  let r='';
+  for(let i=0;i<(n||4);i++){
+    r+=`<div class="vd-comment sk-cmt">
+      <div class="vd-comment-av"><span class="skel" style="display:block;width:100%;height:100%;border-radius:50%;"></span></div>
+      <div class="vd-comment-body">
+        <span class="skel skel-line" style="display:block;width:${meta[i%4]}%;height:10px;"></span>
+        <span class="skel skel-line" style="display:block;width:${body[i%4]}%;margin-top:9px;"></span>
+        <span class="skel skel-line" style="display:block;width:34%;height:10px;margin-top:10px;"></span>
+      </div></div>`;
+  }
+  return r;
+}
+// leaderboard entries are boxed cards (.dare-mini), not bare rows
+function _skelRankRows(n){
+  let r='';
+  for(let i=0;i<(n||6);i++){
+    r+=`<div class="dare-mini" style="margin-bottom:10px;">
+      <div style="display:flex;align-items:center;gap:14px;flex:1;min-width:0;">
+        <span class="skel" style="width:32px;height:26px;flex:none;"></span>
+        <span class="skel" style="width:42px;height:42px;border-radius:50%;flex:none;"></span>
+        <div style="flex:1;min-width:0;">
+          <span class="skel skel-line" style="display:block;width:44%;height:13px;"></span>
+          <span class="skel skel-line" style="display:block;width:62%;height:10px;margin-top:8px;"></span>
+        </div></div>
+      <span class="skel" style="width:78px;height:20px;flex:none;"></span></div>`;
+  }
+  return r;
+}
+// wallet history rows — .txn-icon is 40px at radius 12, not a circle
+function _skelTxnRows(n){
+  let r='';
+  for(let i=0;i<(n||5);i++){
+    r+=`<div class="sk-txn">
+      <span class="skel" style="width:40px;height:40px;border-radius:12px;flex:none;"></span>
+      <div style="flex:1;min-width:0;">
+        <span class="skel skel-line" style="display:block;width:58%;height:12px;"></span>
+        <span class="skel skel-line" style="display:block;width:34%;height:10px;margin-top:8px;"></span>
+      </div>
+      <span class="skel" style="width:70px;height:18px;flex:none;"></span></div>`;
+  }
+  return r;
+}
+
 function _bootSkelKind(){
   const path = (location.pathname || '/').replace(/\/+$/,'') || '/';
   const m = path.match(/^\/(watch|shorts|dare|u)\//);
@@ -1000,41 +1068,70 @@ function _skelLine(w,h,mt){
 function _bootSkelHtml(kind){
   const chips = `<div class="sk-chips">${'<span class="skel sk-chip"></span>'.repeat(5)}</div>`;
   switch(kind){
-    // a mission or a long video: player block, title, creator row, actions, comments
+    // Mission and long-video pages share this: full-bleed player, one-line title,
+    // creator row ending in Follow, a left action + four icon buttons on the
+    // right, then the Comments card and the More Missions / Related card.
     case 'detail': return `<div class="sk-detail">
       <div class="skel sk-hero"></div>
-      ${_skelLine('86%','16px','18px')}${_skelLine('54%','13px','10px')}
-      <div class="sk-creator"><span class="skel sk-av40"></span>
-        <div class="sk-cmeta">${_skelLine('44%','13px')}${_skelLine('28%','10px','8px')}</div>
-        <span class="skel sk-pill"></span></div>
-      <div class="sk-actions">${'<span class="skel sk-abtn"></span>'.repeat(4)}</div>
-      <div class="skel sk-box"></div>
-      ${_skelRows(3)}</div>`;
+      <div class="sk-dbody">
+        ${_skelLine('46%','15px')}
+        <div class="sk-creator"><span class="skel sk-av40"></span>
+          <span class="skel skel-line" style="width:150px;height:13px;"></span>
+          <span class="skel sk-pill"></span></div>
+        <div class="sk-actions">
+          <span class="skel sk-accept"></span>
+          <span class="sk-acts-r">${'<span class="skel sk-aicon"></span>'.repeat(4)}</span>
+        </div>
+        <div class="dd-bar">${_skelLine('96px','13px')}${_skelLine('62%','12px','14px')}</div>
+        <div class="dd-bar">${_skelLine('126px','13px')}
+          <div style="margin-top:14px;">${_skelDareCards(1)}</div></div>
+      </div></div>`;
 
     case 'shorts': return `<div class="sk-shorts"><span class="skel skel-fill"></span></div>`;
 
+    // mobile profile runs its own topbar, so the skeleton carries one too --
+    // otherwise the site topbar flashes in and straight back out
     case 'profile': return `<div class="sk-profile">
       <div class="sk-phead"><span class="skel sk-av92"></span>
-        <div class="sk-cmeta">${_skelLine('56%','17px')}${_skelLine('34%','12px','11px')}</div></div>
+        <div class="sk-cmeta">${_skelLine('52%','18px')}${_skelLine('36%','12px','11px')}</div></div>
       <div class="sk-ptabs"><span class="skel"></span><span class="skel"></span></div>
-      ${_skelCards(2)}</div>`;
+      <div class="sk-fchips">${'<span class="skel sk-fchip"></span>'.repeat(3)}</div>
+      ${_skelDareCards(2)}</div>`;
 
     case 'wallet': return `<div class="sk-wallet">
-      <div class="sk-wcard">${_skelLine('120px','10px')}${_skelLine('190px','30px','14px')}
+      ${_skelLine('86px','20px')}
+      <div class="wallet-card sk-wcard">
+        ${_skelLine('132px','10px')}${_skelLine('212px','34px','14px')}${_skelLine('200px','10px','12px')}
         <div class="sk-wrow"><span class="skel sk-wstat"></span><span class="skel sk-wstat"></span></div>
-        <div class="sk-wrow"><span class="skel sk-wbtn"></span><span class="skel sk-wbtn"></span></div></div>
-      ${_skelLine('150px','15px','4px')}${_skelRows(5)}</div>`;
+        <div class="sk-wrow sk-wbtns"><span class="skel sk-wbtn"></span><span class="skel sk-wbtn"></span></div>
+      </div>
+      ${_skelLine('92px','17px','26px')}
+      <div class="wstat-card sk-wstats">
+        <div class="sk-wrow" style="margin-top:0;">
+          <span class="skel sk-wsbox"></span><span class="skel sk-wsbox"></span><span class="skel sk-wsbox"></span></div>
+        <div class="skel sk-wchart"></div>
+      </div>
+      ${_skelLine('178px','17px','26px')}
+      <div class="skel sk-wacct"></div>
+      ${_skelLine('132px','16px','26px')}
+      ${_skelTxnRows(5)}</div>`;
 
-    case 'leaderboard': return `<div class="sk-lb">${_skelLine('150px','15px','4px')}${_skelRows(6)}</div>`;
+    case 'leaderboard': return `<div class="sk-lb">${_skelLine('132px','20px')}
+      <div style="margin-top:20px;">${_skelRankRows(5)}</div></div>`;
 
     // Chat is a static "coming soon" panel — nothing loads, so a skeleton there
     // would be a lie that flashes and resolves into the same empty state.
     case 'chat':   return '';
 
-    case 'explore': return chips + _skelCards(4);
-    case 'dares':
-    case 'accepted': return _skelCards(4);
-    default: return chips + _skelCards(4);      // home
+    case 'explore': return `${_skelLine('120px','16px')}<div class="sk-chips" style="margin-top:16px;">${'<span class="skel sk-chip"></span>'.repeat(5)}</div>${_skelCards(3)}`;
+
+    // both open on a section header with an action on the right
+    case 'dares':    return _skelSecHdr('150px','118px') + _skelDareCards(3);
+    case 'accepted': return _skelSecHdr('212px') + _skelDareCards(3);
+
+    // home leads with the Missions shelf, then the Videos header and the feed
+    default: return chips + _skelSecHdr('96px','82px') + _skelDareCards(2)
+                  + `<div style="margin-top:26px;">${_skelSecHdr('72px')}</div>` + _skelCards(2);
   }
 }
 
@@ -1044,7 +1141,13 @@ function _bootSkelShow(kind){
   let el = document.getElementById('bootSkel');
   if (!el){ el = document.createElement('div'); el.id = 'bootSkel'; main.appendChild(el); }
   el.innerHTML = html;
-  document.body.classList.add('boot-skel');
+  document.body.classList.add('boot-skel', 'boot-skel-' + kind);
+  // The watch/mission view and the mobile profile each drop the site topbar.
+  // Reuse the app's own classes rather than re-deriving those rules, or the bar
+  // flashes in and out around the skeleton.
+  if (kind === 'profile') document.body.classList.add('profile-open');
+  if (kind === 'detail') document.body.classList.add('detail-open');
+  if (kind === 'shorts') document.body.classList.add('shorts-open');
   // A deep link to a deleted video never resolves, and a stuck skeleton is worse
   // than a stuck empty state — it promises content that is never coming.
   clearTimeout(_bootSkelTO);
@@ -1053,7 +1156,14 @@ function _bootSkelShow(kind){
 
 function _bootSkelHide(){
   clearTimeout(_bootSkelTO); _bootSkelTO = null;
-  document.body.classList.remove('boot-skel');
+  [...document.body.classList].filter(c => c.indexOf('boot-skel') === 0)
+    .forEach(c => document.body.classList.remove(c));
+  // Hand the chrome back only if nothing real is using it — by the time goPage
+  // calls this it has already set profile-open for the page it landed on, and a
+  // deep link opens its overlay before this runs.
+  if (typeof _curPage === 'undefined' || _curPage !== 'profile') document.body.classList.remove('profile-open');
+  if (!document.querySelector('.video-detail-overlay.open')) document.body.classList.remove('detail-open');
+  if (!document.querySelector('.shorts-overlay.open')) document.body.classList.remove('shorts-open');
   const el = document.getElementById('bootSkel');
   if (el) el.remove();              // removed, not hidden — see the rule above
 }
@@ -2495,8 +2605,7 @@ async function openReviewModal(dareId) {
   document.getElementById('rvDareTitle').textContent  = d.caption || d.title;
   document.getElementById('rvDareBounty').textContent = 'Rs. ' + ((d.rewardAmount ?? d.bounty) || 0).toLocaleString('en-IN');
   document.getElementById('rvDareMeta').textContent   = `${d.takers||0} takers • ${d.proofCount||0} proofs submitted`;
-  document.getElementById('rvProofsList').innerHTML   =
-    `<div class="review-empty"><span class="mi">hourglass_empty</span><p>Loading proofs...</p></div>`;
+  document.getElementById('rvProofsList').innerHTML   = _skelRows(3);
 
   _ovOpen('reviewOverlay');
 
@@ -2676,7 +2785,7 @@ function closeReview() {
 // ════════════════════════════
 async function loadLeaderboard() {
   const el = document.getElementById('lbContent');
-  if (el) el.innerHTML = _skelRows(6);
+  if (el) el.innerHTML = _skelRankRows(5);   // entries are boxed cards, not bare rows
   try {
     const snap = await db.collection('proofs').where('status','==','approved').get();
     const map  = {};
@@ -3686,7 +3795,7 @@ async function openAdminReports() {
   }
   _ovOpen('adminReportsOverlay');
   document.getElementById('adminReportsList').innerHTML =
-    '<div class="empty" style="padding:40px;"><span class="mi">hourglass_empty</span><div class="empty-title">Loading reports...</div></div>';
+    _skelRows(5);
   try {
     const snap = await db.collection('reports').orderBy('createdAt','desc').limit(50).get();
     const reports = snap.docs.map(d=>({id:d.id,...d.data()}));
@@ -3738,7 +3847,9 @@ async function openSelectTakersModal(dareId) {
   document.getElementById('selectTakersDareTitle').textContent = d.caption||d.title||'Mission';
   _ovOpen('selectTakersOverlay');
   document.getElementById('applicantsList').innerHTML =
-    '<div class="empty" style="padding:32px;"><span class="mi">hourglass_empty</span><div class="empty-title">Loading applicants...</div></div>';
+    _skelRows(4);
+  const _ac = document.getElementById('applicantCount');
+  if (_ac) _ac.innerHTML = _skelLine('180px', '11px');
 
   // Reset random panel
   document.getElementById('randomPanel')?.classList.remove('open');
@@ -5923,6 +6034,7 @@ async function dislikeDare(){
 // Top-liked first; if a comment has no likes, latest first. Replies nested
 // (same sort). Desktop: show ALL. Mobile: top 1 + tap-anywhere/"View all", close btn.
 let _ddComments = [];        // ALL comments for the current dare (top-level + replies)
+                             // null WHILE loading — the sheet shows a skeleton for that
 let _ddReplyTo = null;       // comment id currently being replied to
 let _ddReplyToName = '';     // name we're replying to (kept as @-prefix on the text)
 let _ddCanPin = false;       // can the current user pin comments here? (dare creator / video taker)
@@ -5935,7 +6047,10 @@ async function loadDareTopComment(dareId, opts){
   if (opts){ _ddPreviewElId = opts.previewEl||'ddTopComment'; _ddCountElId = opts.countEl||'ddCommentCount'; _ddHostOverlayId = opts.host||'dareDetailOverlay'; }
   else { _ddPreviewElId='ddTopComment'; _ddCountElId='ddCommentCount'; _ddHostOverlayId='dareDetailOverlay'; }
   const el = document.getElementById(_ddPreviewElId);
-  if (el) el.innerHTML = '<div style="color:var(--t3);font-size:13px;padding:10px 0;">Loading...</div>';
+  if (el) el.innerHTML = _skelComments(1);            // card preview shows one
+  const _box = document.getElementById('ddBoxList');  // sheet may already be open
+  if (_box) _box.innerHTML = _skelComments(4);
+  _ddComments = null;                     // null = fetch still out; [] = came back empty
   _ddReplyTo = null; _ddCancelReplyBar();
   try {
     const snap = await db.collection('comments').where('proofId','==',dareId).limit(120).get();
@@ -6090,6 +6205,7 @@ function _renderDarePreview(){
 // Full list inside the scrollable comments box (with replies / like / reply / report)
 function _renderDareCommentsBox(){
   const el = document.getElementById('ddBoxList'); if (!el) return;
+  if (_ddComments === null){ el.innerHTML = _skelComments(4); return; }   // fetch still out
   const all = _ddComments || [];
   const tops = _ddSortComments(all.filter(c=>!c.parentId));
   const byParent = {};
@@ -6251,8 +6367,11 @@ function leaveGuestMode(tab) {
 
 async function loadComments(proofId) {
   commentsProofId=proofId;
+  // #vdComments no longer exists — the watch page shares the mission comment
+  // sheet (see _ddHostOverlayId). Kept working, but it must not throw if revived.
   const el=document.getElementById('vdComments'); const cnt=document.getElementById('vdCommentCount');
-  el.innerHTML='<div style="text-align:center;padding:20px;color:var(--t3);font-size:13px;">Loading...</div>';
+  if(!el) return;
+  el.innerHTML=_skelComments(4);
   try{
     const snap=await db.collection('comments').where('proofId','==',proofId).limit(50).get();
     let comments=snap.docs.map(doc=>({id:doc.id,...doc.data()}));
@@ -7174,7 +7293,7 @@ let _shortsCommentsProofId = null;
 // whole list flashed away and back every time.
 async function loadShortsComments(proofId, quiet) {
   const box = document.getElementById('shortsCommentsList');
-  if (box && !quiet) box.innerHTML = '<div style="color:var(--t3);text-align:center;padding:20px;">Loading...</div>';
+  if (box && !quiet) box.innerHTML = _skelComments(4);
   try {
     const snap = await db.collection('comments').where('proofId','==',proofId).limit(80).get();
     _shortsComments = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
