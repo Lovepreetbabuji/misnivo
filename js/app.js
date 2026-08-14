@@ -14,7 +14,16 @@ const firebaseConfig = {
 window.__fbConfig = firebaseConfig;
 // Flash-Lite: this runs on every post and every edit, so it has to be cheap and
 // fast. Named here so the model can be changed without touching the markup.
-window.AI_SAFETY_MODEL = 'gemini-3-flash-lite';
+//
+// The ALIAS, not a pinned version. Measured against this project's own API:
+//   gemini-flash-lite-latest  2.0s   ← chosen
+//   gemini-3-flash-preview    2.6s
+//   gemini-flash-latest       3.9s
+//   gemini-3-flash-lite, gemini-3-flash, every 2.x name: 404, not available here
+// Two calls per submit, so ~4s end to end. An alias also means a model retiring
+// does not silently turn this check into a 404 — which fails closed, i.e. it
+// would stop every post on the site.
+window.AI_SAFETY_MODEL = 'gemini-flash-lite-latest';
 firebase.initializeApp(firebaseConfig);
 const auth = firebase.auth();
 const db   = firebase.firestore();
@@ -99,8 +108,12 @@ const _BANNED_RE = Object.fromEntries(Object.entries(BANNED_KEYWORDS).map(([cat,
   new RegExp('\\b(?:' + words.flatMap(_wordForms).map(_escRe).join('|') + ')(?:e?s)?\\b', 'i')
 ]));
 
-function checkMissionSafety(title, description) {
-  const text = ((title || '') + ' ' + (description || ''))
+// Rules and tags are typed by the same person as the title, so they are the same
+// risk: a harmless caption over a rule that says "climb onto the roof first" is
+// the whole mission. Everything the creator writes goes through the filter.
+function checkMissionSafety(title, description, rules, tags) {
+  const text = [title, description, (rules || []).join(' '), (tags || []).join(' ')]
+    .join(' ')
     .toLowerCase()
     .replace(/\s+/g, ' ');                 // "chhat   pe" must match "chhat pe"
   for (const cat in _BANNED_RE) {
@@ -112,13 +125,15 @@ function checkMissionSafety(title, description) {
 
 // Telemetry, not consent: proof the filter is running, and which words actually
 // show up. Never blocks anything on its own, so a failed write is swallowed.
-function _logSafetyBlock(title, description, category, stage, ai) {
+function _logSafetyBlock(title, description, category, stage, ai, rules, tags) {
   try {
     const rec = {
       userId:      user ? user.uid : null,
       userEmail:   user ? (user.email || '') : '',
       title:       title || '',
       description: description || '',
+      rules:       rules || [],          // a block may have come from these, not the caption
+      tags:        tags  || [],
       category,
       stage:       stage || 'keyword',
       blockedAt:   firebase.firestore.FieldValue.serverTimestamp()
@@ -181,8 +196,11 @@ async function _aiAsk(model, prompt) {
 
 // { ok:false, error } on any failure — callers must treat that as "block".
 // { ok:true, safe, reason, concern, disagreed, check1, check2 } otherwise.
-async function checkMissionSafetyAI(title, description) {
-  const task = 'Task: ' + (title || '') + '\n' + (description || '');
+async function checkMissionSafetyAI(title, description, rules, tags) {
+  // Same reason as the keyword stage: the rules are part of what is being asked.
+  const task = 'Task: ' + (title || '') + '\n' + (description || '')
+    + ((rules && rules.length) ? '\nRules the taker must follow:\n- ' + rules.join('\n- ') : '')
+    + ((tags  && tags.length)  ? '\nTags: ' + tags.join(', ') : '');
   try {
     const model = await window._aiReady;
     if (!model) return { ok:false, error:'AI Logic unavailable' };
@@ -226,13 +244,15 @@ async function checkMissionSafetyAI(title, description) {
 }
 
 // Two reviewers who cannot agree is the one case a human has to see.
-function _logManualReview(title, description, ai) {
+function _logManualReview(title, description, ai, rules, tags) {
   try {
     db.collection('manual_review').add({
       userId:      user ? user.uid : null,
       userEmail:   user ? (user.email || '') : '',
       title:       title || '',
       description: description || '',
+      rules:       rules || [],
+      tags:        tags  || [],
       check1:      ai.check1 || null,
       check2:      ai.check2 || null,
       model:       window.AI_SAFETY_MODEL || '',
@@ -2258,9 +2278,9 @@ async function submitDare() {
   // SAFETY GATE — before anything uploads, and before the mission is written.
   // submitDare handles BOTH posting and editing, so this covers the "post
   // something harmless, then edit it into something dangerous" route too.
-  const _safety = checkMissionSafety(caption, desc);
+  const _safety = checkMissionSafety(caption, desc, rules, tags);
   if (!_safety.safe) {
-    _logSafetyBlock(caption, desc, _safety.category, 'keyword');
+    _logSafetyBlock(caption, desc, _safety.category, 'keyword', null, rules, tags);
     _showSafetyBlock(_safety.category);
     return;
   }
@@ -2301,7 +2321,7 @@ async function submitDare() {
   // submitDare is both paths.
   btn.disabled = true;
   btn.innerHTML = '<span class="mi">hourglass_empty</span> Checking mission safety...';
-  const _ai = await checkMissionSafetyAI(caption, desc);
+  const _ai = await checkMissionSafetyAI(caption, desc, rules, tags);
 
   if (!_ai.ok) {
     // Could not reach a verdict. Blocking is the only honest answer — passing
@@ -2311,8 +2331,8 @@ async function submitDare() {
     return;
   }
   if (!_ai.safe) {
-    _logSafetyBlock(caption, desc, _ai.concern || 'none', 'ai', _ai);
-    if (_ai.disagreed) _logManualReview(caption, desc, _ai);
+    _logSafetyBlock(caption, desc, _ai.concern || 'none', 'ai', _ai, rules, tags);
+    if (_ai.disagreed) _logManualReview(caption, desc, _ai, rules, tags);
     _btnRelease();
     _showSafetyBlock(_ai.concern, _ai.reason
       ? _ai.reason + " This mission can't be posted on Misnivo."
