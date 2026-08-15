@@ -1300,6 +1300,327 @@ async function _migratePrivate(uid, pub){
   } catch(e){ console.error('private migration failed:', e); return move; }
 }
 
+// ══════════════════════════════════════════════════════════════════════════
+//  ADMIN PANEL  (/admin)
+//
+//  Access is a CUSTOM CLAIM on the auth token, never a field in a document —
+//  a document field can be written by whoever owns the document, a claim can
+//  only be set with the Admin SDK. The same isAdmin() guards the rules, so the
+//  panel and the database agree on who is an admin.
+//
+//  Everything an admin does is written to admin_actions before the effect
+//  lands. That log is append-only even for the admin: without it there is no
+//  way to answer "who banned this person and why" six months later, and no way
+//  to undo a mistake you cannot see.
+// ══════════════════════════════════════════════════════════════════════════
+let _isAdmin = false;          // resolved from the token at sign-in
+let _adminTabName = 'stats';
+let _adminUserCache = [];
+
+async function _resolveAdmin(){
+  _isAdmin = false;
+  try {
+    if (!auth.currentUser) return false;
+    const t = await auth.currentUser.getIdTokenResult();
+    _isAdmin = t.claims && t.claims.admin === true;
+  } catch(e){}
+  return _isAdmin;
+}
+
+// Append-only record of every admin action. Written BEFORE the action, so a
+// failure halfway still leaves evidence that it was attempted.
+async function _adminLog(action, target, detail){
+  try {
+    await db.collection('admin_actions').add({
+      action, target: target || null, detail: detail || '',
+      adminUid: user ? user.uid : null,
+      adminEmail: user ? (user.email || '') : '',
+      at: firebase.firestore.FieldValue.serverTimestamp()
+    });
+  } catch(e){ console.error('admin log failed:', e); throw e; }
+}
+
+function openAdmin(_fromUrl){
+  if (!_isAdmin){ if (typeof goPage==='function') goPage('home'); return; }
+  document.getElementById('adminPanel').style.display = 'block';
+  document.body.classList.add('admin-open');
+  if (!_fromUrl){ try { history.pushState({ _admin:1 }, '', '/admin'); } catch(e){} }
+  _adminTab(_adminTabName);
+}
+function closeAdmin(_fromPop){
+  const el = document.getElementById('adminPanel'); if (!el) return;
+  el.style.display = 'none';
+  document.body.classList.remove('admin-open');
+  if (!_fromPop){ try { history.back(); } catch(e){} }
+}
+function _adminOpen(){ return document.getElementById('adminPanel')
+  && document.getElementById('adminPanel').style.display === 'block'; }
+
+function _adminTab(name){
+  _adminTabName = name;
+  document.querySelectorAll('.adm-tab').forEach(b =>
+    b.classList.toggle('active', b.dataset.tab === name));
+  const body = document.getElementById('adminBody');
+  body.innerHTML = '<div class="adm-load">Loading…</div>';
+  ({ stats:_adminStats, reports:_adminReports, review:_adminReview, users:_adminUsers }[name]
+    || _adminStats)();
+}
+
+const _admFmt = ts => { try { return ts && ts.toDate ? ts.toDate().toLocaleString() : '—'; } catch(e){ return '—'; } };
+const _admAge = ts => {
+  try { const t = ts && ts.toDate ? ts.toDate().getTime() : 0;
+        if (!t) return { h:0, txt:'unknown' };
+        const h = Math.floor((Date.now()-t)/3600000);
+        return { h, txt: h < 24 ? h+'h old' : Math.floor(h/24)+'d old' };
+  } catch(e){ return { h:0, txt:'unknown' }; }
+};
+
+// ── 1. STATS ──────────────────────────────────────────────────────────────
+async function _adminStats(){
+  const body = document.getElementById('adminBody');
+  try {
+    const day = new Date(); day.setHours(0,0,0,0);
+    const [u,d,p,sb,mr,rp] = await Promise.all([
+      db.collection('users').get(), db.collection('dares').get(),
+      db.collection('proofs').get(), db.collection('safety_blocks').get(),
+      db.collection('manual_review').get(), db.collection('reports').get()
+    ]);
+    const newToday = (snap, field) => snap.docs.filter(x => {
+      const t = x.data()[field]; try { return t && t.toDate && t.toDate() >= day; } catch(e){ return false; }
+    }).length;
+    const openReports = rp.docs.filter(x => (x.data().status||'pending') === 'pending');
+    const overdue = openReports.filter(x => _admAge(x.data().createdAt).h > 24).length;
+    const card = (v,l,warn) => `<div class="adm-stat${warn?' warn':''}"><div class="adm-stat-v">${v}</div><div class="adm-stat-l">${escHtml(l)}</div></div>`;
+    body.innerHTML =
+      `<div class="adm-stats">
+        ${card(u.size,'Users')}${card(d.size,'Missions')}${card(p.size,'Proofs')}
+        ${card(newToday(u,'createdAt'),'New users today')}
+        ${card(newToday(d,'createdAt'),'New missions today')}
+        ${card(sb.size,'Missions blocked by the filter')}
+        ${card(mr.size,'Waiting on manual review', mr.size>0)}
+        ${card(openReports.length,'Open reports', openReports.length>0)}
+        ${card(overdue,'Reports past 24h', overdue>0)}
+      </div>
+      <p class="adm-note">The Contact page promises a reply within 24 hours and a
+      resolution within 15 days. "Reports past 24h" is that promise, counted.</p>`;
+  } catch(e){ body.innerHTML = `<div class="adm-err">Could not load stats: ${escHtml(e.message)}</div>`; }
+}
+
+// ── 2. REPORTS ────────────────────────────────────────────────────────────
+async function _adminReports(){
+  const body = document.getElementById('adminBody');
+  try {
+    const snap = await db.collection('reports').orderBy('createdAt','desc').limit(100).get();
+    const rows = snap.docs.map(d => ({ id:d.id, ...d.data() }));
+    const open = rows.filter(r => (r.status||'pending') === 'pending');
+    if (!rows.length){ body.innerHTML = '<div class="adm-empty">No reports.</div>'; return; }
+    body.innerHTML = `<div class="adm-sub">${open.length} open of ${rows.length}</div>` +
+      rows.map(r => {
+        const age = _admAge(r.createdAt);
+        const done = (r.status||'pending') !== 'pending';
+        return `<div class="adm-row${done?' done':''}">
+          <div class="adm-row-top">
+            <span class="adm-pill">${escHtml(r.targetType||'?')}</span>
+            <span class="adm-pill ${age.h>24&&!done?'late':''}">${escHtml(age.txt)}</span>
+            ${done?`<span class="adm-pill ok">${escHtml(r.status)}</span>`:''}
+          </div>
+          <div class="adm-row-title">${escHtml(r.reportType||'')} — ${escHtml(r.targetName||r.targetId||'')}</div>
+          <div class="adm-row-sub">${escHtml(r.reason||'')}</div>
+          <div class="adm-row-meta">by ${escHtml(r.reporterUid||'?').slice(0,10)} · ${_admFmt(r.createdAt)}</div>
+          ${done?'':`<div class="adm-acts">
+            <button onclick="_adminViewTarget('${r.targetType}','${r.targetId}')">View</button>
+            <button class="danger" onclick="_adminRemoveTarget('${r.id}','${r.targetType}','${r.targetId}')">Remove content</button>
+            <button onclick="_adminCloseReport('${r.id}','dismissed')">Ignore</button>
+          </div>`}
+        </div>`;
+      }).join('');
+  } catch(e){ body.innerHTML = `<div class="adm-err">Could not load reports: ${escHtml(e.message)}</div>`; }
+}
+
+function _adminViewTarget(type, id){
+  closeAdmin();
+  setTimeout(() => {
+    try {
+      if (type === 'dare')  openDareDetail(id);
+      else if (type === 'proof' || type === 'video') openVideoDetail(id);
+      else showToast('Nothing to open for this report type');
+    } catch(e){ showToast('Could not open it — it may already be gone'); }
+  }, 260);
+}
+
+async function _adminRemoveTarget(reportId, type, targetId){
+  if (!confirm('Remove this content? This cannot be undone.')) return;
+  try {
+    await _adminLog('remove_content', targetId, type + ' via report ' + reportId);
+    const col = type === 'dare' ? 'dares' : type === 'comment' ? 'comments' : 'proofs';
+    await db.collection(col).doc(targetId).delete();
+    await db.collection('reports').doc(reportId).update({ status:'resolved' });
+    showToast('Content removed');
+    _adminTab('reports');
+  } catch(e){ showToast('Failed: ' + e.message); }
+}
+
+async function _adminCloseReport(id, status){
+  try {
+    await _adminLog('close_report', id, status);
+    await db.collection('reports').doc(id).update({ status });
+    _adminTab('reports');
+  } catch(e){ showToast('Failed: ' + e.message); }
+}
+
+// ── 3. MANUAL REVIEW ──────────────────────────────────────────────────────
+async function _adminReview(){
+  const body = document.getElementById('adminBody');
+  try {
+    const snap = await db.collection('manual_review').orderBy('createdAt','desc').limit(100).get();
+    const rows = snap.docs.map(d => ({ id:d.id, ...d.data() })).filter(r => !r.decided);
+    if (!rows.length){ body.innerHTML = '<div class="adm-empty">Nothing waiting. The two reviewers agreed on everything.</div>'; return; }
+    body.innerHTML = rows.map(r => `
+      <div class="adm-row">
+        <div class="adm-row-title">${escHtml(r.title||'(no title)')}</div>
+        <div class="adm-row-sub">${escHtml(r.description||'')}</div>
+        ${(r.rules&&r.rules.length)?`<div class="adm-row-sub">Rules: ${escHtml(r.rules.join(' · '))}</div>`:''}
+        <div class="adm-verdicts">
+          <div><b>Reviewer 1</b><br>${escHtml(r.check1? (r.check1.safe?'safe':'unsafe') + ' — ' + (r.check1.reason||'') : '—')}</div>
+          <div><b>Reviewer 2</b><br>${escHtml(r.check2? (r.check2.finalSafe?'safe':'unsafe') + ' — ' + (r.check2.reason||'') : '—')}</div>
+        </div>
+        <div class="adm-row-meta">by ${escHtml(r.userEmail||r.userId||'?')} · ${_admFmt(r.createdAt)}</div>
+        <div class="adm-acts">
+          <button onclick="_adminReviewDecide('${r.id}','allowed')">Allow</button>
+          <button class="danger" onclick="_adminReviewDecide('${r.id}','blocked')">Keep blocked</button>
+        </div>
+      </div>`).join('');
+  } catch(e){ body.innerHTML = `<div class="adm-err">Could not load the queue: ${escHtml(e.message)}</div>`; }
+}
+
+async function _adminReviewDecide(id, decision){
+  try {
+    await _adminLog('review_decision', id, decision);
+    await db.collection('manual_review').doc(id).update({
+      decided: decision, decidedAt: firebase.firestore.FieldValue.serverTimestamp() });
+    showToast('Marked ' + decision);
+    _adminTab('review');
+  } catch(e){ showToast('Failed: ' + e.message); }
+}
+
+// ── 4. USERS ──────────────────────────────────────────────────────────────
+async function _adminUsers(){
+  const body = document.getElementById('adminBody');
+  body.innerHTML = `
+    <div class="adm-search">
+      <input id="admUserQ" placeholder="Search username, name or uid" oninput="_adminUserFilter(this.value)"/>
+    </div>
+    <div id="admUserList"><div class="adm-load">Loading…</div></div>`;
+  try {
+    const [us, ds, ps] = await Promise.all([
+      db.collection('users').limit(500).get(),
+      db.collection('dares').get(), db.collection('proofs').get()
+    ]);
+    const dareBy = {}, proofBy = {};
+    ds.docs.forEach(d => { const u=d.data().creatorUid; if(u) dareBy[u]=(dareBy[u]||0)+1; });
+    ps.docs.forEach(d => { const u=d.data().takerId;    if(u) proofBy[u]=(proofBy[u]||0)+1; });
+    _adminUserCache = us.docs.map(d => ({ uid:d.id, ...d.data(),
+      _dares: dareBy[d.id]||0, _proofs: proofBy[d.id]||0 }));
+    _adminUserFilter('');
+  } catch(e){ document.getElementById('admUserList').innerHTML =
+    `<div class="adm-err">Could not load users: ${escHtml(e.message)}</div>`; }
+}
+
+function _adminUserFilter(q){
+  const el = document.getElementById('admUserList'); if (!el) return;
+  const s = (q||'').trim().toLowerCase();
+  const rows = _adminUserCache.filter(u => !s
+    || (u.username||'').toLowerCase().includes(s)
+    || (u.name||'').toLowerCase().includes(s)
+    || u.uid.toLowerCase().includes(s)).slice(0, 60);
+  if (!rows.length){ el.innerHTML = '<div class="adm-empty">No match.</div>'; return; }
+  el.innerHTML = rows.map(u => `
+    <div class="adm-row" id="admu-${u.uid}">
+      <div class="adm-row-title">${escHtml(u.name||'—')} <span class="adm-dim">@${escHtml(u.username||'')}</span></div>
+      <div class="adm-row-meta">${u.uid}</div>
+      <div class="adm-row-sub">${u._dares} missions · ${u._proofs} proofs · joined ${_admFmt(u.createdAt)}</div>
+      <div class="adm-acts">
+        <button onclick="_adminUserDetail('${u.uid}')">Details</button>
+      </div>
+      <div class="adm-detail" id="admd-${u.uid}"></div>
+    </div>`).join('');
+}
+
+// The private drawer is where email, the age check and the ban live. Only an
+// admin (or the person themselves) can read it, which is the whole point.
+async function _adminUserDetail(uid){
+  const el = document.getElementById('admd-'+uid); if (!el) return;
+  if (el.dataset.open === '1'){ el.innerHTML=''; el.dataset.open='0'; return; }
+  el.dataset.open='1';
+  el.innerHTML = '<div class="adm-load">Loading…</div>';
+  try {
+    const [ps, ags] = await Promise.all([
+      db.collection('users').doc(uid).collection('private').doc('main').get(),
+      db.collection('agreements').where('userId','==',uid).limit(20).get()
+    ]);
+    const p = ps.exists ? ps.data() : {};
+    const ag = ags.docs.map(d=>d.data())
+      .sort((a,b)=>((b.acceptedAt&&b.acceptedAt.seconds)||0)-((a.acceptedAt&&a.acceptedAt.seconds)||0));
+    el.innerHTML = `
+      <div class="adm-kv"><span>Email</span><b>${escHtml(p.email||'—')}</b></div>
+      <div class="adm-kv"><span>Date of birth</span><b>${escHtml(p.dateOfBirth||'—')}</b></div>
+      <div class="adm-kv"><span>Under-18 block</span><b>${p.underageBlocked?'YES':'no'}</b></div>
+      <div class="adm-kv"><span>Banned</span><b>${p.banned?'YES — '+escHtml(p.bannedReason||''):'no'}</b></div>
+      <div class="adm-acts">
+        ${p.banned
+          ? `<button onclick="_adminUnban('${uid}')">Unban</button>`
+          : `<button class="danger" onclick="_adminBan('${uid}')">Ban</button>`}
+        ${p.underageBlocked ? `<button onclick="_adminLiftAgeBlock('${uid}')">Lift age block</button>` : ''}
+      </div>
+      <div class="adm-sub" style="margin-top:14px;">Agreements accepted (${ag.length})</div>
+      ${ag.length ? ag.map(a=>`<div class="adm-row-meta">${escHtml(a.type||'')} v${escHtml(a.agreementVersion||'')} · ${_admFmt(a.acceptedAt)}</div>`).join('')
+                  : '<div class="adm-row-meta">none recorded</div>'}`;
+  } catch(e){ el.innerHTML = `<div class="adm-err">${escHtml(e.message)}</div>`; }
+}
+
+async function _adminBan(uid){
+  const reason = prompt('Why is this account being banned? (recorded in the log)');
+  if (reason === null) return;
+  if (!reason.trim()){ showToast('A reason is required'); return; }
+  try {
+    await _adminLog('ban', uid, reason.trim());
+    await db.collection('users').doc(uid).collection('private').doc('main').set({
+      banned: true, bannedReason: reason.trim(),
+      bannedAt: firebase.firestore.FieldValue.serverTimestamp(),
+      bannedBy: user.uid }, { merge:true });
+    showToast('Account banned');
+    const el=document.getElementById('admd-'+uid); if(el) el.dataset.open='0';
+    _adminUserDetail(uid);
+  } catch(e){ showToast('Failed: ' + e.message); }
+}
+
+async function _adminUnban(uid){
+  if (!confirm('Unban this account?')) return;
+  try {
+    await _adminLog('unban', uid, '');
+    await db.collection('users').doc(uid).collection('private').doc('main')
+      .set({ banned:false, bannedReason:'' }, { merge:true });
+    showToast('Account unbanned');
+    const el=document.getElementById('admd-'+uid); if(el) el.dataset.open='0';
+    _adminUserDetail(uid);
+  } catch(e){ showToast('Failed: ' + e.message); }
+}
+
+// The age gate is one-way for the account holder on purpose, so a wrong date of
+// birth can only be undone here. Without this the block is permanent and there
+// is no support path at all.
+async function _adminLiftAgeBlock(uid){
+  if (!confirm('Lift the under-18 block? Only do this if you have checked their age.')) return;
+  try {
+    await _adminLog('lift_age_block', uid, '');
+    await db.collection('users').doc(uid).collection('private').doc('main')
+      .set({ underageBlocked:false }, { merge:true });
+    showToast('Age block lifted — they must re-enter their date of birth');
+    const el=document.getElementById('admd-'+uid); if(el) el.dataset.open='0';
+    _adminUserDetail(uid);
+  } catch(e){ showToast('Failed: ' + e.message); }
+}
+
 // Everything that turns a signed-in account into a running app. Split out so
 // the age gate can hold it back and then run it once the date of birth checks
 // out — the gate is not skippable, so nothing below may start before it.
@@ -1310,6 +1631,9 @@ function _bootApp(){
   if (typeof startNotificationsListener === 'function') startNotificationsListener();
   startDaresListener();
   startMyProofsListener();     // keeps my own proof statuses in step
+  // Admin is a token claim, so it has to be read from the token, not guessed
+  // from a uid. The sidebar entry stays hidden for everyone else.
+  _resolveAdmin().then(ok => { const b = document.getElementById('sbAdmin'); if (b) b.style.display = ok ? '' : 'none'; });
   AdManager.initScrollAds();   // start scroll ad tracker
   _bootRoute();                // open the page/modal the URL points to (deep-link / refresh)
 }
@@ -1482,6 +1806,8 @@ async function initUser(fbUser) {
       user.settings = d.settings || {};   // persist notif/privacy/autoplay settings across reloads
       user.dateOfBirth     = priv.dateOfBirth || null;   // set once, by the age gate
       user.underageBlocked = priv.underageBlocked === true;
+      user.banned          = priv.banned === true;
+      user.bannedReason    = priv.bannedReason || '';
       if (typeof _applyMotionPref === 'function') _applyMotionPref();   // motion pref before the first render
       if (d.photoURL) user.picture = d.photoURL;  // saved photo always wins
     }
@@ -2510,6 +2836,7 @@ function _handleSearchNow() {
 // form does not open, which is the whole point of having a gate.
 function openPost() {
   if (typeof guestCheck === 'function' && guestCheck('post')) return;
+  if (bannedCheck()) return;
   showAgreementModal('create', async () => {
     try {
       _postAgreementId = await _recordAgreement('mission_create', null);
@@ -3017,6 +3344,7 @@ async function submitDare() {
 // the real work moved to _doAcceptDare() so no call site had to change.
 function acceptDare(id) {
   if (typeof guestCheck === 'function' && guestCheck('accept')) return;
+  if (bannedCheck()) return;
   const d = dares.find(x => x.id === id);
   if (!d) return;
   if (acceptedDares.find(a => a.dareId === id)) {
@@ -3434,6 +3762,7 @@ async function _recordAgreement(type, missionId) {
 }
 
 function submitProof() {
+  if (bannedCheck()) return;
   if (!selectedVideo || !proofDareId) return;
 
   // Hard block: duration out of range
@@ -6840,6 +7169,7 @@ function _bootRoute(){
     _deepLinkPath = path;          // goPage('home') replaces the URL with '/' — save it first
     goPage('home'); return;        // → _maybeInitialRoute opens it once the data loads
   }
+  if(path==='/admin'){ goPage('home'); _resolveAdmin().then(ok=>{ if(ok) openAdmin(true); }); return; }
   const pg=_URL_PAGE[path];
   if(pg){ goPage(pg); return; }
   if(path==='/following'){ goPage('profile'); _ppFollowList('following'); return; }
@@ -6877,7 +7207,8 @@ function _openModalById(id){
 }
 
 window.addEventListener('popstate', function(e){
-  if(_legalOpen){ closeLegal(true); return; }            // topmost layer goes first
+  if(_adminOpen()){ closeAdmin(true); return; }          // topmost layer goes first
+  if(_legalOpen){ closeLegal(true); return; }
   if(_ovInPop){ _ovInPop = false; return; }              // our own _ovSync rewind — already handled
   if(_ovStack.length){                                    // a tracked modal is open → close topmost
     const id = _ovStack[_ovStack.length-1];
@@ -7362,6 +7693,17 @@ function enterGuestMode() {
   startDaresListener();
   AdManager.initScrollAds();
   _bootRoute();   // respect a shared deep link (/watch/...) instead of always landing home
+}
+
+// Banned accounts can still sign in and read — they simply cannot add anything.
+// Security rules are what actually stop the write; this exists so the person is
+// told why rather than watching a button do nothing.
+function bannedCheck(){
+  if (!user || !user.banned) return false;
+  showToast(user.bannedReason
+    ? 'Your account is suspended: ' + user.bannedReason
+    : 'Your account is suspended and cannot post or accept missions.');
+  return true;
 }
 
 function guestCheck(actionKey) {

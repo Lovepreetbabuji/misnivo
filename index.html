@@ -32,7 +32,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,100..400,0..1,0&icon_names=account_balance_wallet,add,arrow_back,bolt,bookmark,chat_bubble,close,expand_less,explore,home,menu,more_vert,notifications,person,reply,search,send,settings,thumb_down,thumb_up,tune&display=block" rel="stylesheet"/>
 
 <!-- App Styles -->
-<link rel="stylesheet" href="/css/styles.css?v=20260815h"/>
+<link rel="stylesheet" href="/css/styles.css?v=20260815i"/>
 
 <!-- The splash logo must be in flight before anything else competes for the pipe -->
 <link rel="preload" as="image" href="/misnivo.png?v=1" fetchpriority="high"/>
@@ -293,6 +293,9 @@
       <div class="sb-group-label">MORE</div>
       <div class="nav-item" id="nav-settings" onclick="closeSidebar();openSettings()">
         <span class="mi">settings</span><span class="nav-lbl">Settings</span>
+      </div>
+      <div class="nav-item" id="sbAdmin" style="display:none;" onclick="closeSidebar();openAdmin()">
+        <span class="mi">tune</span><span class="nav-lbl">Admin</span>
       </div>
     </div>
   </aside>
@@ -981,6 +984,22 @@
      scrolled past the whole agreement. No separate confirm step. -->
 <!-- Blocked by the safety filter. The post form stays open behind it, so the
      only action is to go back and change the mission. -->
+<!-- Admin panel. Hidden unless the auth token carries the admin claim; the
+     same claim guards every write in the security rules. -->
+<div class="admin-panel" id="adminPanel" style="display:none;">
+  <div class="adm-bar">
+    <button class="adm-back" onclick="closeAdmin()" aria-label="Back"><span class="mi">arrow_back</span></button>
+    <div class="adm-title">Admin</div>
+  </div>
+  <div class="adm-tabs">
+    <button class="adm-tab active" data-tab="stats"   onclick="_adminTab('stats')">Stats</button>
+    <button class="adm-tab"        data-tab="reports" onclick="_adminTab('reports')">Reports</button>
+    <button class="adm-tab"        data-tab="review"  onclick="_adminTab('review')">Review</button>
+    <button class="adm-tab"        data-tab="users"   onclick="_adminTab('users')">Users</button>
+  </div>
+  <div class="adm-body" id="adminBody"></div>
+</div>
+
 <!-- Legal pages. Above the app and the sign-in screen both, because they have
      to be readable before anyone has an account. -->
 <div class="legal-page" id="legalPage" style="display:none;">
@@ -1164,7 +1183,7 @@
 <!-- App Logic -->
 <!-- defer, so it runs after the Firebase bundles above and after the DOM is
      parsed — same order as before, but nothing blocks the first paint -->
-<script defer src="/js/app.js?v=20260815h"></script>
+<script defer src="/js/app.js?v=20260815i"></script>
 
 <!-- ══ Firebase AI Logic — stage 2 of the mission safety filter ══
      A SECOND, modular Firebase app. The rest of the site runs on the compat

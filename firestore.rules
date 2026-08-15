@@ -28,14 +28,14 @@ rules_version = '2';
 //     balance changes move into Cloud Functions (or a callable that the client
 //     asks rather than tells), the wallet is honour-system.
 //
-//  2. THE USER DOCUMENT IS WORLD-READABLE. Public profiles need name, username,
-//     bio, photo and socials, and Firestore has no field-level read control —
-//     so email, wallet, transaction history, acceptedDares and settings are
-//     readable by anyone who knows a uid. The fix is structural: keep public
-//     fields on users/{uid} and move the rest to users/{uid}/private/, which is
-//     already locked to the owner below and currently unused.
+//  2. THE USER DOCUMENT IS WORLD-READABLE, and always will be — public profiles
+//     need name, username, photo and bio from it, and Firestore has no
+//     field-level read control. DONE: email, dateOfBirth, ageVerifiedAt,
+//     underageBlocked, blockedAt, wallet and the ban now live in
+//     users/{uid}/private/main. STILL PUBLIC and worth moving next:
+//     settings, acceptedDares, pinnedDares, likedProofs.
 //
-//  Neither is a rules bug. Both are worth fixing before real money moves.
+//  The wallet one is not a rules bug and needs a server before real money moves.
 // ═══════════════════════════════════════════════════════════════════════════
 
 service cloud.firestore {
@@ -46,6 +46,17 @@ service cloud.firestore {
     function uid()        { return request.auth.uid; }
     function isSelf(u)    { return signedIn() && uid() == u; }
     function isAdmin()    { return signedIn() && request.auth.token.admin == true; }
+
+    // A ban lives in the owner's private drawer, which clients cannot read.
+    // Rules-internal get() is not subject to that restriction, so the check
+    // works — at the cost of one extra document read on every gated write,
+    // which is the price of enforcing it server-side rather than trusting the
+    // client. exists() first: an account with no private document is not banned.
+    function isBanned() {
+      return signedIn()
+          && exists(/databases/$(database)/documents/users/$(uid())/private/main)
+          && get(/databases/$(database)/documents/users/$(uid())/private/main).data.get('banned', false) == true;
+    }
 
     // keys this update is trying to change
     function touched()    { return request.resource.data.diff(resource.data).affectedKeys(); }
@@ -76,9 +87,6 @@ service cloud.firestore {
 
     // ─── users ────────────────────────────────────────────────────────────
     // Public read: guests and the feed need names/avatars/usernames.
-    // ⚠ Everything on this document is therefore world-readable — see
-    //   FIREBASE_SETUP.md, the wallet and email still need moving into
-    //   users/{uid}/private/ before this collection is genuinely safe.
     match /users/{userId} {
       allow read: if true;
 
@@ -122,13 +130,21 @@ service cloud.firestore {
       // button. Delete is refused outright for the same reason: dropping the
       // document would drop the block with it.
       match /private/{docId} {
-        allow read:   if isSelf(userId);
+        // An admin reads it to answer a support question and writes it to ban,
+        // unban or lift a wrong age block — the account holder cannot do the
+        // last two for itself, by design, so the admin path has to exist.
+        allow read:   if isSelf(userId) || isAdmin();
         allow create: if isSelf(userId);
-        allow update: if isSelf(userId)
+        allow update: if isAdmin()
+                      || isSelf(userId)
                       && (!touched().hasAny(['dateOfBirth'])
                           || resource.data.get('dateOfBirth', null) == null)
                       && (!touched().hasAny(['underageBlocked'])
-                          || request.resource.data.underageBlocked == true);
+                          || request.resource.data.underageBlocked == true)
+                      // same shape as the age block: an account may not lift
+                      // its own suspension
+                      && (!touched().hasAny(['banned'])
+                          || request.resource.data.banned == true);
         allow delete: if false;
       }
       // Push tokens: the owner registers them, only Functions read them.
@@ -152,7 +168,7 @@ service cloud.firestore {
     match /dares/{dareId} {
       allow read: if true;
 
-      allow create: if signedIn()
+      allow create: if signedIn() && !isBanned()
                     && request.resource.data.creatorUid == uid()
                     && request.resource.data.completed == false;
 
@@ -178,7 +194,7 @@ service cloud.firestore {
         }
 
         allow read:   if isSelf(applicantId) || isDareOwner();
-        allow create: if isSelf(applicantId)
+        allow create: if isSelf(applicantId) && !isBanned()
                       && request.resource.data.uid == uid()
                       && request.resource.data.status in ['pending','accepted'];
         allow update: if isDareOwner();                       // approve / reject
@@ -190,7 +206,7 @@ service cloud.firestore {
     match /proofs/{proofId} {
       allow read: if true;
 
-      allow create: if signedIn()
+      allow create: if signedIn() && !isBanned()
                     && request.resource.data.takerId == uid()
                     && request.resource.data.status == 'submitted';
 
@@ -240,7 +256,7 @@ service cloud.firestore {
 
       allow read: if true;
 
-      allow create: if signedIn()
+      allow create: if signedIn() && !isBanned()
                     && request.resource.data.userId == uid()
                     && request.resource.data.text is string
                     && request.resource.data.text.size() > 0
@@ -358,6 +374,15 @@ service cloud.firestore {
       allow read:   if isAdmin();
       allow create: if signedIn() && request.resource.data.userId == uid();
       allow update, delete: if isAdmin();
+    }
+
+    // ─── admin action log ─────────────────────────────────────────────────
+    // Append-only, even for the admin who wrote it. A moderation log that can
+    // be edited afterwards answers no question worth asking.
+    match /admin_actions/{id} {
+      allow read:   if isAdmin();
+      allow create: if isAdmin() && request.resource.data.adminUid == uid();
+      allow update, delete: if false;
     }
 
     // ─── default deny ─────────────────────────────────────────────────────

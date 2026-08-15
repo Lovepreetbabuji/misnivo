@@ -5979,6 +5979,65 @@ body.no-anim #proofOverlay.as-page .modal{ transition:none !important; }
   flex:1; min-height:0; overflow-y:auto; padding:16px 20px;
   max-height:70vh;
 }
+/* ── Admin panel ── */
+.admin-panel{
+  position:fixed; inset:0; z-index:2147483520;
+  background:#0f0f0f; font-family:'Roboto',sans-serif; display:none;
+}
+body.admin-open{ overflow:hidden; }
+.adm-bar{ height:56px; display:flex; align-items:center; gap:6px; padding:0 10px;
+  border-bottom:1px solid rgba(255,255,255,.08); }
+.adm-back{ background:none; border:none; color:#fff; padding:8px; cursor:pointer; display:flex; }
+.adm-title{ font-size:17px; font-weight:600; color:#fff; }
+.adm-tabs{ display:flex; gap:6px; padding:10px 12px; overflow-x:auto;
+  border-bottom:1px solid rgba(255,255,255,.08); }
+.adm-tab{ flex:none; padding:8px 16px; border-radius:16px; cursor:pointer;
+  background:#212121; border:1px solid rgba(255,255,255,.1); color:rgba(255,255,255,.7);
+  font-size:13px; font-family:inherit; }
+.adm-tab.active{ background:#fff; color:#0f0f0f; border-color:#fff; font-weight:600; }
+.adm-body{ position:absolute; top:113px; left:0; right:0; bottom:0; overflow-y:auto;
+  -webkit-overflow-scrolling:touch; padding:16px 12px 60px; }
+.adm-load,.adm-empty,.adm-err{ padding:26px 4px; text-align:center; font-size:14px; color:rgba(255,255,255,.5); }
+.adm-err{ color:#FF6B6B; }
+.adm-sub{ font-size:12px; color:rgba(255,255,255,.5); margin-bottom:10px; }
+.adm-note{ font-size:12px; line-height:1.6; color:rgba(255,255,255,.45); margin-top:16px; }
+
+.adm-stats{ display:grid; grid-template-columns:repeat(auto-fill,minmax(140px,1fr)); gap:10px; }
+.adm-stat{ background:#212121; border:1px solid rgba(255,255,255,.08); border-radius:12px; padding:16px 14px; }
+.adm-stat.warn{ border-color:rgba(255,0,51,.5); }
+.adm-stat-v{ font-size:26px; font-weight:700; color:#fff; }
+.adm-stat-l{ font-size:12px; color:rgba(255,255,255,.55); margin-top:4px; line-height:1.4; }
+
+.adm-row{ background:#212121; border:1px solid rgba(255,255,255,.08); border-radius:12px;
+  padding:14px; margin-bottom:10px; }
+.adm-row.done{ opacity:.5; }
+.adm-row-top{ display:flex; gap:6px; flex-wrap:wrap; margin-bottom:8px; }
+.adm-pill{ font-size:11px; padding:3px 9px; border-radius:10px;
+  background:rgba(255,255,255,.08); color:rgba(255,255,255,.7); }
+.adm-pill.late{ background:rgba(255,0,51,.18); color:#FF6B6B; }
+.adm-pill.ok{ background:rgba(0,230,118,.15); color:#00E676; }
+.adm-row-title{ font-size:15px; font-weight:600; color:#fff; line-height:1.4; }
+.adm-row-sub{ font-size:13px; color:rgba(255,255,255,.65); margin-top:5px; line-height:1.6; }
+.adm-row-meta{ font-size:11px; color:rgba(255,255,255,.4); margin-top:6px; word-break:break-all; }
+.adm-dim{ color:rgba(255,255,255,.45); font-weight:400; }
+.adm-acts{ display:flex; gap:8px; flex-wrap:wrap; margin-top:12px; }
+.adm-acts button{ padding:8px 14px; border-radius:16px; cursor:pointer; font-family:inherit;
+  font-size:13px; background:#fff; color:#0f0f0f; border:none; }
+.adm-acts button.danger{ background:#FF0033; color:#fff; }
+.adm-verdicts{ display:grid; grid-template-columns:1fr; gap:8px; margin-top:10px; }
+.adm-verdicts > div{ background:rgba(255,255,255,.04); border-radius:8px; padding:10px;
+  font-size:12px; line-height:1.6; color:rgba(255,255,255,.7); }
+@media(min-width:600px){ .adm-verdicts{ grid-template-columns:1fr 1fr; } }
+.adm-search input{ width:100%; box-sizing:border-box; padding:12px 14px; border-radius:10px;
+  background:#212121; border:1px solid rgba(255,255,255,.12); color:#fff;
+  font-size:16px; font-family:inherit; margin-bottom:12px; }
+.adm-search input:focus{ outline:none; border-color:rgba(255,255,255,.35); }
+.adm-detail{ margin-top:12px; }
+.adm-kv{ display:flex; justify-content:space-between; gap:12px; padding:7px 0;
+  border-top:1px solid rgba(255,255,255,.07); font-size:13px; }
+.adm-kv span{ color:rgba(255,255,255,.5); }
+.adm-kv b{ color:#fff; font-weight:500; text-align:right; word-break:break-all; }
+
 /* ── Legal pages (Terms / Privacy / Guidelines / Contact) ──
    Below the age gate, above everything else: a blocked account must not read
    its way around the gate, but a signed-out visitor must be able to read these
