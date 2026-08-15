@@ -376,6 +376,18 @@ service cloud.firestore {
       allow update, delete: if isAdmin();
     }
 
+    // ─── feedback ─────────────────────────────────────────────────────────
+    // Write-only for users, admin-read. Nobody browses other people's
+    // complaints, and nobody edits one after sending it.
+    match /feedback/{id} {
+      allow read:   if isAdmin();
+      allow create: if signedIn() && request.resource.data.userId == uid()
+                    && request.resource.data.message is string
+                    && request.resource.data.message.size() > 0
+                    && request.resource.data.message.size() <= 2000;
+      allow update, delete: if isAdmin();
+    }
+
     // ─── admin action log ─────────────────────────────────────────────────
     // Append-only, even for the admin who wrote it. A moderation log that can
     // be edited afterwards answers no question worth asking.

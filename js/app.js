@@ -1301,6 +1301,54 @@ async function _migratePrivate(uid, pub){
 }
 
 // ══════════════════════════════════════════════════════════════════════════
+//  FEEDBACK
+//
+//  The whole point of Phase 2 is hearing what breaks from the people it breaks
+//  for. So this records WHERE they were and what they were using, not just the
+//  message — "the button does nothing" is unactionable without them.
+//
+//  Write-only from the client and admin-read: nobody browses other people's
+//  complaints.
+// ══════════════════════════════════════════════════════════════════════════
+function openFeedback(){
+  if (typeof guestCheck === 'function' && guestCheck()) return;
+  const t = document.getElementById('fbText'); if (t) t.value = '';
+  const e = document.getElementById('fbErr');  if (e) e.textContent = '';
+  const b = document.getElementById('fbSend'); if (b){ b.disabled = false; b.textContent = 'Send'; }
+  const ov = document.getElementById('feedbackOverlay');
+  ov.style.zIndex = '2147483450';
+  ov.style.display = 'flex'; ov.classList.add('open');
+}
+function closeFeedback(){
+  const ov = document.getElementById('feedbackOverlay');
+  ov.style.display = 'none'; ov.classList.remove('open');
+}
+async function sendFeedback(){
+  const t = document.getElementById('fbText');
+  const e = document.getElementById('fbErr');
+  const b = document.getElementById('fbSend');
+  const msg = (t.value || '').trim();
+  if (msg.length < 5){ e.textContent = 'Please tell us a little more.'; return; }
+  if (msg.length > 2000){ e.textContent = 'That is too long — 2000 characters max.'; return; }
+  e.textContent = ''; b.disabled = true; b.textContent = 'Sending...';
+  try {
+    await db.collection('feedback').add({
+      userId:    user ? user.uid : null,
+      message:   msg,
+      // where they were when it went wrong — the part that makes this useful
+      page:      (typeof _curPage !== 'undefined' ? _curPage : '') + ' ' + location.pathname,
+      userAgent: navigator.userAgent || '',
+      createdAt: firebase.firestore.FieldValue.serverTimestamp()
+    });
+    closeFeedback();
+    showToast('Thank you — we read every one of these');
+  } catch(err){
+    b.disabled = false; b.textContent = 'Send';
+    e.textContent = 'Could not send that — please check your connection.';
+  }
+}
+
+// ══════════════════════════════════════════════════════════════════════════
 //  ADMIN PANEL  (/admin)
 //
 //  Access is a CUSTOM CLAIM on the auth token, never a field in a document —
@@ -1362,8 +1410,8 @@ function _adminTab(name){
     b.classList.toggle('active', b.dataset.tab === name));
   const body = document.getElementById('adminBody');
   body.innerHTML = '<div class="adm-load">Loading…</div>';
-  ({ stats:_adminStats, reports:_adminReports, review:_adminReview, users:_adminUsers }[name]
-    || _adminStats)();
+  ({ stats:_adminStats, reports:_adminReports, review:_adminReview,
+     users:_adminUsers, feedback:_adminFeedback }[name] || _adminStats)();
 }
 
 const _admFmt = ts => { try { return ts && ts.toDate ? ts.toDate().toLocaleString() : '—'; } catch(e){ return '—'; } };
@@ -1501,6 +1549,24 @@ async function _adminReviewDecide(id, decision){
     showToast('Marked ' + decision);
     _adminTab('review');
   } catch(e){ showToast('Failed: ' + e.message); }
+}
+
+// ── 5. FEEDBACK ───────────────────────────────────────────────────────────
+async function _adminFeedback(){
+  const body = document.getElementById('adminBody');
+  try {
+    const snap = await db.collection('feedback').orderBy('createdAt','desc').limit(100).get();
+    if (snap.empty){ body.innerHTML = '<div class="adm-empty">No feedback yet.</div>'; return; }
+    body.innerHTML = snap.docs.map(d => {
+      const f = d.data();
+      return `<div class="adm-row">
+        <div class="adm-row-sub" style="margin-top:0;">${escHtml(f.message||'')}</div>
+        <div class="adm-row-meta">${escHtml(f.page||'')} · ${_admFmt(f.createdAt)}</div>
+        <div class="adm-row-meta">${escHtml(f.userId||'signed out')}</div>
+        <div class="adm-row-meta">${escHtml((f.userAgent||'').slice(0,110))}</div>
+      </div>`;
+    }).join('');
+  } catch(e){ body.innerHTML = `<div class="adm-err">Could not load feedback: ${escHtml(e.message)}</div>`; }
 }
 
 // ── 4. USERS ──────────────────────────────────────────────────────────────
@@ -7163,6 +7229,28 @@ document.addEventListener('click', (e)=>{
 });
 
 // Open the page/modal that the URL points to (deep-link / refresh / address-bar visit)
+// Every path the app actually serves. Anything else is a wrong address and now
+// says so instead of silently dropping the visitor on the home feed, which
+// looks like the link worked and hides broken links from everyone.
+function _isKnownPath(path){
+  if (path === '/' || path === '/admin' || path === '/following') return true;
+  if (/^\/(watch|shorts|dare|u)\//.test(path)) return true;
+  if (_URL_PAGE[path] || _URL_MODAL[path] || _URL_LEGAL[path]) return true;
+  return false;
+}
+
+function show404(){
+  const el = document.getElementById('page404'); if (!el) return;
+  el.style.display = 'flex';
+  document.body.classList.add('nf-open');
+}
+function close404(goHome){
+  const el = document.getElementById('page404'); if (!el) return;
+  el.style.display = 'none';
+  document.body.classList.remove('nf-open');
+  if (goHome){ try { history.replaceState({_page:'home'}, '', '/'); } catch(e){} goPage('home'); }
+}
+
 function _bootRoute(){
   const path=(location.pathname||'/').replace(/\/+$/,'')||'/';
   if(/^\/(watch|shorts|dare|u)\//.test(path)){
@@ -7180,6 +7268,7 @@ function _bootRoute(){
     goPage(base); _openModalById(mid); return;
   }
   goPage('home');
+  if (!_isKnownPath(path)) show404();      // wrong address: say so
 }
 function _openModalById(id){
   // a refresh on /wallet/deposit must not resurrect a paused modal

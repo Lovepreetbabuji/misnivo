@@ -5979,6 +5979,48 @@ body.no-anim #proofOverlay.as-page .modal{ transition:none !important; }
   flex:1; min-height:0; overflow-y:auto; padding:16px 20px;
   max-height:70vh;
 }
+/* ── Feedback ── */
+.fb-modal{
+  max-width:460px; width:calc(100% - 40px); padding:26px 24px 22px;
+  background:#212121; border:1px solid rgba(255,255,255,.12); border-radius:16px;
+  font-family:'Roboto',sans-serif;
+}
+.fb-title{ font-size:19px; font-weight:700; color:#fff; margin-bottom:8px; }
+.fb-sub{ font-size:13px; line-height:1.6; color:rgba(255,255,255,.6); margin-bottom:18px; }
+.fb-text{
+  width:100%; box-sizing:border-box; padding:14px; border-radius:10px; resize:vertical;
+  background:#0f0f0f; border:1px solid rgba(255,255,255,.14); color:#fff;
+  font-size:16px; font-family:inherit; line-height:1.6;
+}
+.fb-text:focus{ outline:none; border-color:rgba(255,255,255,.4); }
+.fb-err{ min-height:18px; margin-top:8px; font-size:13px; color:#FF6B6B; }
+.fb-acts{ display:flex; gap:10px; margin-top:12px; }
+.fb-cancel,.fb-send{
+  flex:1; padding:13px; border:none; border-radius:24px; cursor:pointer;
+  font-size:15px; font-weight:600; font-family:inherit;
+}
+.fb-cancel{ background:rgba(255,255,255,.1); color:#fff; }
+.fb-send{ background:#FF0033; color:#fff; }
+.fb-send:disabled{ opacity:.6; cursor:default; }
+
+/* ── 404 ── */
+.nf-page{
+  position:fixed; inset:0; z-index:2147483400;
+  background:#0f0f0f; display:none; align-items:center; justify-content:center;
+  padding:24px; font-family:'Roboto',sans-serif;
+}
+body.nf-open{ overflow:hidden; }
+.nf-card{ width:100%; max-width:420px; text-align:center; }
+.nf-code{ font-size:64px; font-weight:700; color:#FF0033; line-height:1; }
+.nf-title{ font-size:21px; font-weight:700; color:#fff; margin:16px 0 10px; }
+.nf-text{ font-size:14px; line-height:1.7; color:rgba(255,255,255,.65); margin-bottom:26px; }
+.nf-btn{
+  display:inline-flex; align-items:center; justify-content:center; gap:8px;
+  padding:13px 26px; border:none; border-radius:24px; cursor:pointer;
+  background:#FF0033; color:#fff; font-size:15px; font-weight:600; font-family:inherit;
+}
+.nf-btn .mi{ font-size:19px; }
+
 /* ── Admin panel ── */
 .admin-panel{
   position:fixed; inset:0; z-index:2147483520;
