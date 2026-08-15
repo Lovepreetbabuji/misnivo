@@ -1243,6 +1243,63 @@ auth.onAuthStateChanged(async (fbUser) => {
   }
 });
 
+// ══════════════════════════════════════════════════════════════════════════
+//  PUBLIC / PRIVATE SPLIT
+//
+//  users/{uid} is world-readable and has to stay that way: public profiles need
+//  a name, username, photo and bio, and Firestore has no field-level reads. So
+//  anything that is nobody else's business lives in users/{uid}/private/main,
+//  which the rules lock to the owner.
+//
+//  Moved: email, dateOfBirth, ageVerifiedAt, underageBlocked, blockedAt, wallet.
+//  Still public: name, username, photoURL, bio, website, socials — and, for now,
+//  settings/acceptedDares/pinnedDares/likedProofs, which are next but touch far
+//  more code than this change should.
+// ══════════════════════════════════════════════════════════════════════════
+const PRIVATE_FIELDS = ['email','dateOfBirth','ageVerifiedAt','underageBlocked','blockedAt','wallet'];
+const _privRef = uid => db.collection('users').doc(uid || user.uid).collection('private').doc('main');
+
+// Existing accounts still carry these at the top level. Copy them down, then
+// delete the originals — one write each, and only the owner's own client can do
+// it, so it happens the next time each person signs in.
+// Legacy scrub. dares and proofs used to store email addresses, and both
+// collections are world-readable, so moving email out of the user document
+// alone would not have kept the promise. New writes no longer include them;
+// this removes the copies already stored, from the only clients allowed to.
+let _emailScrubDone = false;
+function _scrubLegacyEmails(){
+  if (_emailScrubDone || !user) return;
+  _emailScrubDone = true;
+  const del = firebase.firestore.FieldValue.delete();
+  (dares||[]).forEach(d => {
+    if (d.creatorUid === user.uid && d.creatorEmail !== undefined)
+      db.collection('dares').doc(d.id).update({ creatorEmail: del }).catch(()=>{});
+  });
+  ['takerId','posterId'].forEach(field => {
+    db.collection('proofs').where(field,'==',user.uid).get().then(s => {
+      s.docs.forEach(doc => {
+        const v = doc.data(), upd = {};
+        if (v.takerEmail  !== undefined) upd.takerEmail  = del;
+        if (v.posterEmail !== undefined) upd.posterEmail = del;
+        if (Object.keys(upd).length) doc.ref.update(upd).catch(()=>{});
+      });
+    }).catch(()=>{});
+  });
+}
+
+async function _migratePrivate(uid, pub){
+  const move = {};
+  PRIVATE_FIELDS.forEach(k => { if (pub && pub[k] !== undefined) move[k] = pub[k]; });
+  if (!Object.keys(move).length) return null;
+  try {
+    await _privRef(uid).set(move, { merge:true });          // private copy first
+    const strip = {};
+    Object.keys(move).forEach(k => { strip[k] = firebase.firestore.FieldValue.delete(); });
+    await db.collection('users').doc(uid).update(strip);    // then drop the public copy
+    return move;
+  } catch(e){ console.error('private migration failed:', e); return move; }
+}
+
 // Everything that turns a signed-in account into a running app. Split out so
 // the age gate can hold it back and then run it once the date of birth checks
 // out — the gate is not skippable, so nothing below may start before it.
@@ -1324,8 +1381,7 @@ async function _ageSubmit(){
 
   try {
     if (age >= 18){
-      await db.collection('users').doc(user.uid)
-        .update({ dateOfBirth: dob, ageVerifiedAt: stamp });
+      await _privRef().set({ dateOfBirth: dob, ageVerifiedAt: stamp }, { merge:true });
       user.dateOfBirth = dob;
       _ageGateHide();
       _bootApp();
@@ -1333,8 +1389,7 @@ async function _ageSubmit(){
     }
     // Under 18. Save the block first — if this write fails the account is still
     // kept out of the app for this session, it just is not remembered yet.
-    await db.collection('users').doc(user.uid)
-      .update({ dateOfBirth: dob, underageBlocked: true, blockedAt: stamp });
+    await _privRef().set({ dateOfBirth: dob, underageBlocked: true, blockedAt: stamp }, { merge:true });
     user.dateOfBirth = dob; user.underageBlocked = true;
     _ageGateShow('blocked');
   } catch(e){
@@ -1393,18 +1448,29 @@ async function initUser(fbUser) {
       acceptedDares = [];
       pinnedDares   = [];
       const batch = db.batch();
+      // public half — no email, no wallet
       batch.set(db.collection('users').doc(user.uid), {
-        name: user.name, email: user.email,
+        name: user.name,
         photoURL: user.picture || '',
         username: handle, bio: '', website: '',
-        wallet, acceptedDares, pinnedDares: [],
+        acceptedDares, pinnedDares: [],
         createdAt: firebase.firestore.FieldValue.serverTimestamp()
       });
+      // private half — owner only
+      batch.set(_privRef(user.uid), { email: user.email, wallet });
       batch.set(db.collection('usernames').doc(handle), { uid: user.uid });
       await batch.commit();
     } else {
       const d   = snap.data();
-      wallet        = d.wallet        || { balance:100000, pending:0, transactions:[] };
+      // Anything still at the top level belongs in private/ — move it, then read
+      // the drawer. A returning account migrates itself on this one sign-in.
+      const moved = await _migratePrivate(user.uid, d);
+      let priv = {};
+      try { const ps = await _privRef(user.uid).get(); if (ps.exists) priv = ps.data() || {}; } catch(e){}
+      if (moved) priv = { ...moved, ...priv };
+
+      user.email    = priv.email || user.email;   // falls back to the auth record
+      wallet        = priv.wallet     || { balance:100000, pending:0, transactions:[] };
       acceptedDares = d.acceptedDares || [];
       _reconcileTakerApprovals();   // in case dares already loaded
       pinnedDares   = d.pinnedDares   || [];
@@ -1414,8 +1480,8 @@ async function initUser(fbUser) {
       user.website  = d.website  || '';
       user.socials  = d.socials  || {};   // persist Instagram/X/YouTube links across reloads
       user.settings = d.settings || {};   // persist notif/privacy/autoplay settings across reloads
-      user.dateOfBirth     = d.dateOfBirth || null;      // set once, by the age gate
-      user.underageBlocked = d.underageBlocked === true;
+      user.dateOfBirth     = priv.dateOfBirth || null;   // set once, by the age gate
+      user.underageBlocked = priv.underageBlocked === true;
       if (typeof _applyMotionPref === 'function') _applyMotionPref();   // motion pref before the first render
       if (d.photoURL) user.picture = d.photoURL;  // saved photo always wins
     }
@@ -1531,6 +1597,7 @@ function startDaresListener() {
       dares = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
       _daresLoaded = true;
       _reconcileTakerApprovals();   // creator picked me? → unlock Submit Proof
+      _scrubLegacyEmails();         // one-shot: drop email from my old dares/proofs
       if (typeof _maybeInitialRoute === 'function') _maybeInitialRoute();   // deep-link /dare/:id
       _daresRerenderDebounced();    // batch bursts of doc changes into one rebuild
     }, (err) => {
@@ -2882,7 +2949,7 @@ async function submitDare() {
           title: (_delta>0?'Reward raised: ':'Reward lowered (refund): ') + caption.substring(0,25),
           amount: Math.abs(_delta), ref:'REF'+Date.now().toString(36).toUpperCase(), date: todayStr()
         });
-        await db.collection('users').doc(user.uid).update({ wallet });
+        await _privRef().set({ wallet }, { merge:true });
       }
       closePost();
       showToast('Mission updated successfully!');
@@ -2893,7 +2960,6 @@ async function submitDare() {
         ...dareData,
         creatorAgreementId: _postAgreementId || null,
         creator:        user.name,
-        creatorEmail:   user.email,
         creatorUid:     user.uid,
         creatorUsername: user.username || '',
         creatorPhotoURL: user.picture || '',
@@ -2921,7 +2987,7 @@ async function submitDare() {
           title:'Mission Posted: ' + caption.substring(0,30),
           amount: reward, ref:'REF'+Date.now().toString(36).toUpperCase(), date: todayStr()
         });
-        await db.collection('users').doc(user.uid).update({ wallet });
+        await _privRef().set({ wallet }, { merge:true });
       }
 
       closePost();
@@ -3469,11 +3535,11 @@ async function _doSubmitProof() {
       dareTitle:        d.caption  || d.title,
       dareBounty:       d.rewardAmount ?? d.bounty ?? 0,
       posterId:         d.creatorUid,
-      posterEmail:      d.creatorEmail,
+
       takerId:          user.uid,
       takerName:        user.name,
       takerUsername:    user.username || (user.name||'user').toLowerCase().replace(/[^a-z0-9_.]/g,''),
-      takerEmail:       user.email,
+
       takerPhotoURL:    user.picture || '',
       posterName:       d.creator || '',
       posterUsername:   d.creatorUsername || '',
@@ -3633,7 +3699,7 @@ function proofItemHTML(p) {
         <div class="taker-av">${_avHtml(p.takerPhotoURL, p.takerName)}</div>
         <div>
           <div class="taker-name">${p.takerName||'Unknown'}</div>
-          <div class="taker-date">${_relTimeStr(p.submittedAt)} · ${p.takerEmail||''}</div>
+          <div class="taker-date">${_relTimeStr(p.submittedAt)} · @${escHtml(p.takerUsername||'user')}</div>
         </div>
       </div>
       ${statusBadge}
@@ -4651,7 +4717,7 @@ async function deleteDare(id) {
       wallet.transactions.unshift({ id:'w'+Date.now()+Math.floor(Math.random()*1000), ts:Date.now(), status:'completed',
         type:'credit', category:'refund', title:'Mission Deleted (Refund): '+title.slice(0,25), amount:reward,
         ref:'REF'+Date.now().toString(36).toUpperCase(), date:todayStr() });
-      await db.collection('users').doc(user.uid).update({ wallet });
+      await _privRef().set({ wallet }, { merge:true });
     }
     showToast('Mission deleted' + (WALLET_ENABLED && reward>0 && !d.completed
       ? ` · Rs.${reward.toLocaleString('en-IN')} refunded` : ''));
@@ -8551,7 +8617,7 @@ function _walletAddTxn(o){
     ref: o.ref || ('REF'+Date.now().toString(36).toUpperCase()),
     date: todayStr()
   });
-  if (user) db.collection('users').doc(user.uid).update({ wallet }).catch(()=>{});
+  if (user) _privRef().set({ wallet }, { merge:true }).catch(()=>{});
 }
 
 // Auto-refund: your own dares that expired without being completed → bounty back
@@ -8574,7 +8640,7 @@ async function _walletReconcileExpired(){
     db.collection('dares').doc(d.id).update({ refunded:true, completed:true }).catch(()=>{});
     changed = true;
   }
-  if (changed) db.collection('users').doc(user.uid).update({ wallet }).catch(()=>{});
+  if (changed) _privRef().set({ wallet }, { merge:true }).catch(()=>{});
   return changed;
 }
 
@@ -8697,12 +8763,12 @@ function _executeWithdraw(amt){
     type:'debit', category:'withdraw', title:'Withdrawal to '+((wallet.methods||[])[0]?.label||'bank'), amount:amt,
     ref:'REF'+Date.now().toString(36).toUpperCase(), date:todayStr() };
   wallet.transactions=wallet.transactions||[]; wallet.transactions.unshift(tx);
-  if(user) db.collection('users').doc(user.uid).update({wallet}).catch(()=>{});
+  if(user) _privRef().set({ wallet }, { merge:true }).catch(()=>{});
   closeWalletModal('withdrawOverlay');
   showToast('Withdrawal initiated · processing');
   renderWallet();
   setTimeout(()=>{ tx.status='completed';                       // testnet: simulate settlement
-    if(user) db.collection('users').doc(user.uid).update({wallet}).catch(()=>{});
+    if(user) _privRef().set({ wallet }, { merge:true }).catch(()=>{});
     const wp=document.getElementById('pageWallet'); if(wp&&wp.classList.contains('active')) renderWallet();
     _walletNotify('Withdrawal completed', `Rs.${amt.toLocaleString('en-IN')} sent to your account`, false);
     showToast('Withdrawal completed');
@@ -8736,7 +8802,7 @@ function submitKyc(){
   if(name.length<3){ showToast('Enter your full name'); return; }
   if(!/^[A-Z]{5}[0-9]{4}[A-Z]$/.test(pan)){ showToast('Enter a valid PAN (ABCDE1234F)'); return; }
   wallet.kyc={ status:'verified', name, pan };          // testnet: instant approval
-  if(user) db.collection('users').doc(user.uid).update({ wallet }).catch(()=>{});
+  if(user) _privRef().set({ wallet }, { merge:true }).catch(()=>{});
   closeWalletModal('kycOverlay'); showToast('KYC verified ✓'); renderWallet();
 }
 
@@ -8770,13 +8836,13 @@ function addMethod(){
     m={ id:'m'+Date.now(), type:'bank', label:'••••'+num.slice(-4), sub:nm+' · '+ifsc };
   }
   wallet.methods.push(m);
-  if(user) db.collection('users').doc(user.uid).update({ wallet }).catch(()=>{});
+  if(user) _privRef().set({ wallet }, { merge:true }).catch(()=>{});
   closeWalletModal('methodOverlay'); showToast('Account added'); renderWallet();
 }
 function removeMethod(id){
   if (!WALLET_ENABLED) return;
   wallet.methods=(wallet.methods||[]).filter(m=>m.id!==id);
-  if(user) db.collection('users').doc(user.uid).update({ wallet }).catch(()=>{});
+  if(user) _privRef().set({ wallet }, { merge:true }).catch(()=>{});
   renderWallet();
 }
 
@@ -8810,7 +8876,7 @@ function _pinSubmit(){
     closeWalletModal('pinOverlay'); const cb=_pinCb; _pinCb=null; if(cb) cb();
   } else {
     wallet.pin=v;
-    if(user) db.collection('users').doc(user.uid).update({ wallet }).catch(()=>{});
+    if(user) _privRef().set({ wallet }, { merge:true }).catch(()=>{});
     closeWalletModal('pinOverlay'); showToast('PIN saved ✓'); renderWallet();
   }
 }

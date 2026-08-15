@@ -90,27 +90,46 @@ service cloud.firestore {
                         || request.resource.data.get('email', '') == request.auth.token.email);
 
       // Only the account owner, and only the fields the UI actually edits.
-      // The age fields are one-way on purpose. A date of birth can be written
-      // once and never rewritten, and an under-18 block can be set but never
-      // cleared — otherwise the gate is a formality anyone can undo from the
-      // console. Lifting a wrong block is an admin job, by design.
-      allow update: if isSelf(userId)
-                    && onlyTouches([
-                         'name','username','bio','website','socials','photoURL',
-                         'settings','wallet','acceptedDares','pinnedDares',
-                         'likedProofs','fcmUpdatedAt',
-                         'dateOfBirth','ageVerifiedAt','underageBlocked','blockedAt'
-                       ])
-                    && (!touched().hasAny(['dateOfBirth'])
-                        || resource.data.get('dateOfBirth', null) == null)
-                    && (!touched().hasAny(['underageBlocked'])
-                        || request.resource.data.underageBlocked == true);
+      // email, dateOfBirth, ageVerifiedAt, underageBlocked, blockedAt and wallet
+      // are NOT here any more — they live in private/main below, because this
+      // document is world-readable and those are nobody else's business.
+      allow update: if (isSelf(userId)
+                        && onlyTouches([
+                             'name','username','bio','website','socials','photoURL',
+                             'settings','acceptedDares','pinnedDares',
+                             'likedProofs','fcmUpdatedAt'
+                           ]))
+                    // One-way migration: an existing account may REMOVE the old
+                    // top-level copies once they have been written to private/.
+                    // Removal only — none of them may survive the write, so this
+                    // branch can never be used to set or change one.
+                    || (isSelf(userId)
+                        && onlyTouches(['email','dateOfBirth','ageVerifiedAt',
+                                        'underageBlocked','blockedAt','wallet'])
+                        && !('email'           in request.resource.data)
+                        && !('dateOfBirth'     in request.resource.data)
+                        && !('ageVerifiedAt'   in request.resource.data)
+                        && !('underageBlocked' in request.resource.data)
+                        && !('blockedAt'       in request.resource.data)
+                        && !('wallet'          in request.resource.data));
 
       allow delete: if isSelf(userId) || isAdmin();
 
-      // Owner-only drawer for anything that must never be public.
+      // Owner-only drawer: email, date of birth, age verification and the wallet.
+      // NOT a plain read/write — the age check has to keep the same one-way
+      // guarantees it had while these fields lived on the public document, or
+      // moving them here would quietly hand every blocked account the undo
+      // button. Delete is refused outright for the same reason: dropping the
+      // document would drop the block with it.
       match /private/{docId} {
-        allow read, write: if isSelf(userId);
+        allow read:   if isSelf(userId);
+        allow create: if isSelf(userId);
+        allow update: if isSelf(userId)
+                      && (!touched().hasAny(['dateOfBirth'])
+                          || resource.data.get('dateOfBirth', null) == null)
+                      && (!touched().hasAny(['underageBlocked'])
+                          || request.resource.data.underageBlocked == true);
+        allow delete: if false;
       }
       // Push tokens: the owner registers them, only Functions read them.
       match /tokens/{token} {
@@ -186,7 +205,16 @@ service cloud.firestore {
               'likeCount','likedBy','dislikeCount','dislikedBy','commentCount','viewCount'
             ]) && steppedAll())
         // guests still count a view
-        || (onlyTouches(['viewCount']) && stepped('viewCount'));
+        || (onlyTouches(['viewCount']) && stepped('viewCount'))
+        // One-way cleanup: proofs used to store both parties' email addresses,
+        // and this collection is world-readable. Either party may REMOVE those
+        // fields from a proof they are part of. Removal only — neither may
+        // survive the write, so this can never be used to set one.
+        || (signedIn()
+            && (resource.data.takerId == uid() || resource.data.posterId == uid())
+            && onlyTouches(['takerEmail','posterEmail'])
+            && !('takerEmail'  in request.resource.data)
+            && !('posterEmail' in request.resource.data));
 
       allow delete: if (signedIn() && (resource.data.takerId == uid()
                                     || resource.data.posterId == uid()))
