@@ -32,7 +32,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,100..400,0..1,0&icon_names=account_balance_wallet,add,arrow_back,bolt,bookmark,chat_bubble,close,expand_less,explore,home,menu,more_vert,notifications,person,reply,search,send,settings,thumb_down,thumb_up,tune&display=block" rel="stylesheet"/>
 
 <!-- App Styles -->
-<link rel="stylesheet" href="/css/styles.css?v=20260815g"/>
+<link rel="stylesheet" href="/css/styles.css?v=20260815h"/>
 
 <!-- The splash logo must be in flight before anything else competes for the pipe -->
 <link rel="preload" as="image" href="/misnivo.png?v=1" fetchpriority="high"/>
@@ -173,8 +173,8 @@
     <button class="bn-post"                      onclick="openPost()"        aria-label="Post a mission">
       <span class="mi">add</span>
     </button>
-    <button class="bn-item" id="bn-chat"         onclick="goPage('chat')"    aria-label="Chat">
-      <span class="mi">chat_bubble</span><span>Chat</span>
+    <button class="bn-item" id="bn-accepted"     onclick="goPage('accepted')" aria-label="My missions">
+      <span class="mi">bookmark</span><span>Accepted</span>
     </button>
     <button class="bn-item" id="bn-profile"      onclick="goPage('profile')" aria-label="Profile">
       <span class="mi">person</span><span>Profile</span>
@@ -368,14 +368,8 @@
       <div id="acceptedPageFeed"></div>
     </div>
 
-    <!-- CHAT — placeholder; the real thing isn't built yet -->
-    <div class="page" id="pageChat">
-      <div class="empty" style="padding-top:90px;">
-        <span class="mi">chat_bubble</span>
-        <div class="empty-title">Chat</div>
-        <p class="empty-desc">Coming soon.</p>
-      </div>
-    </div>
+    <!-- Private chat removed (see js/app.js). Mission comments are the only
+         conversation on Misnivo, and they are public. -->
 
     <!-- LEADERBOARD -->
     <div class="page" id="pageLeaderboard">
@@ -1170,7 +1164,7 @@
 <!-- App Logic -->
 <!-- defer, so it runs after the Firebase bundles above and after the DOM is
      parsed — same order as before, but nothing blocks the first paint -->
-<script defer src="/js/app.js?v=20260815g"></script>
+<script defer src="/js/app.js?v=20260815h"></script>
 
 <!-- ══ Firebase AI Logic — stage 2 of the mission safety filter ══
      A SECOND, modular Firebase app. The rest of the site runs on the compat

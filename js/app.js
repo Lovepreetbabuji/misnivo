@@ -1694,12 +1694,15 @@ let _curPage = null;        // last page shown (avoid duplicate history pushes)
 let _pageNavInit = false;   // first goPage uses replaceState, rest pushState
 
 // Real URLs (slash-style, YouTube-like) for tracked pages + modals
-const _PAGE_URL  = { home:'/', explore:'/explore', dares:'/dares', accepted:'/accepted', wallet:'/wallet', profile:'/profile', leaderboard:'/leaderboard', chat:'/chat' };
+// No /chat. Private messaging was removed: a side deal struck in a DM cannot be
+// seen or moderated, and that is not a risk this platform can carry. Mission
+// comments remain, and they are public.
+const _PAGE_URL  = { home:'/', explore:'/explore', dares:'/dares', accepted:'/accepted', wallet:'/wallet', profile:'/profile', leaderboard:'/leaderboard' };
 // Bottom-nav order, left to right. Drives BOTH the swipe direction and which
 // way a page slides in: moving right in this list slides in from the right,
 // moving left slides in from the left. Anything not listed keeps the old
 // forward/back behaviour.
-const _TABS = ['home','dares','chat','profile'];
+const _TABS = ['home','dares','accepted','profile'];
 const _MODAL_URL = { postOverlay:'/post', proofOverlay:'/submit-proof', settingsOverlay:'/settings',
   notifSettingsOverlay:'/settings/notifications', moreSettingsOverlay:'/settings/more',
   depositOverlay:'/wallet/deposit', withdrawOverlay:'/wallet/withdraw',
@@ -2060,10 +2063,6 @@ function _bootSkelHtml(kind){
 
     case 'leaderboard': return `<div class="sk-lb">${_skelLine('132px','20px')}
       <div style="margin-top:20px;">${_skelRankRows(5)}</div></div>`;
-
-    // Chat is a static "coming soon" panel — nothing loads, so a skeleton there
-    // would be a lie that flashes and resolves into the same empty state.
-    case 'chat':   return '';
 
     case 'explore': return `${_skelLine('120px','16px')}<div class="sk-chips" style="margin-top:16px;">${'<span class="skel sk-chip"></span>'.repeat(5)}</div>${_skelFeed('explore')}`;
 
@@ -5281,7 +5280,7 @@ document.addEventListener('touchcancel', _sbDragEnd,   { passive: true  });
 // PURPOSE: Sync bottom nav highlight when page changes
 function syncBottomNav(pg) {
   document.querySelectorAll('.bn-item').forEach(b => b.classList.remove('active'));
-  const map = { home:'bn-home', dares:'bn-dares', chat:'bn-chat',
+  const map = { home:'bn-home', dares:'bn-dares', accepted:'bn-accepted',
                 profile:'bn-profile', leaderboard:'bn-leaderboard' };
   const el = map[pg] ? document.getElementById(map[pg]) : null;
   if (el) el.classList.add('active');
