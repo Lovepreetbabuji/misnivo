@@ -4106,7 +4106,11 @@ async function openPublicProfile(uid){
   const bio = document.getElementById('ppBio');
   if (bio){ bio.textContent = u?.bio || ''; bio.style.display = (u?.bio && u.bio.trim()) ? 'block' : 'none'; }
   const pic = document.getElementById('ppPic');
-  if (pic){ pic.innerHTML = u?.picture ? `<img src="${u.picture}" alt="av"/>` : name[0].toUpperCase(); }
+  // The document stores photoURL — saveProfile writes it, initUser reads it.
+  // 'picture' only ever exists on the in-memory user object, so reading it off a
+  // fetched document was always undefined and every public avatar fell back to
+  // an initial.
+  if (pic){ pic.innerHTML = u?.photoURL ? `<img src="${u.photoURL}" alt="av"/>` : name[0].toUpperCase(); }
   const ban = document.getElementById('ppBanner');
   if (ban){ ban.style.background = u?.banner ? `url(${u.banner}) center/cover` : ''; }
   // reset tabs to Videos
@@ -4208,7 +4212,7 @@ function _flRender(list){
     const f=_flFollowing.has(u.uid);
     const btn=isMe?'':`<button class="fl-follow${f?' following':''}" onclick="event.stopPropagation();_flToggleFollow('${u.uid}',this)">${f?'Following':'Follow'}</button>`;
     return `<div class="fl-row" onclick="_flGoProfile('${u.uid}')">
-      <div class="fl-av">${_avHtml(u.picture,u.name)}</div>
+      <div class="fl-av">${_avHtml(u.photoURL,u.name)}</div>
       <div class="fl-info"><div class="fl-name">${escHtml(u.name||'User')}</div><div class="fl-handle">@${escHtml(u.username||'user')}</div></div>
       ${btn}</div>`;
   }).join('');
