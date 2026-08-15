@@ -69,37 +69,188 @@ try { db.enablePersistence({ synchronizeTabs: true }).catch(()=>{}); } catch(e){
 //  anyone has an account — the sign-up screen links straight to them.
 // ══════════════════════════════════════════════════════════════════════════
 const LEGAL_PLACEHOLDER = '[Content to be added]';
-// One date for now; give each document its own once they are published
-// separately. Shown at the foot of every page.
-const LEGAL_UPDATED = '[date]';
+const LEGAL_UPDATED = '15 August 2026';
+const LEGAL_CONTACT = 'lovep959245@gmail.com';
+const LEGAL_SUPPORT = 'misnivo.support@gmail.com';
 
 const _LEGAL_URL  = { terms:'/terms', privacy:'/privacy', guidelines:'/guidelines', contact:'/contact' };
 const _URL_LEGAL  = Object.fromEntries(Object.entries(_LEGAL_URL).map(([k,v])=>[v,k]));
 
 const LEGAL_DOCS = {
+
+  // ── TERMS ───────────────────────────────────────────────────────────────
+  // Written against the two in-app agreements (AGREEMENT_TEXT_V1 for takers,
+  // CREATOR_AGREEMENT_TEXT_V1 for creators). If those change, change these too.
   terms: { title:'Terms of Service', short:'Terms', sections:[
-    'Who can use Misnivo','How missions work','Payments and rewards',
-    'What you may not do','Content and ownership','Account suspension',
-    'Disputes','Changes to these terms','Governing law' ] },
+    { h:'Who can use Misnivo', body:
+      'Misnivo is only for people aged 18 or older. When you first sign in we ask for your date of birth, and accounts that report an age under 18 are blocked.\n' +
+      'You need an account to post a mission, accept one, or submit a video. You can browse without an account as a guest.\n' +
+      'You are responsible for what happens on your account. Do not share your sign-in with anyone.' },
 
+    { h:'How missions work', body:
+      'Misnivo is a place to get a small task done and paid for. Nobody pays anything to take part, and nobody risks anything — a taker is simply paid for work they were selected to do.\n' +
+      'A creator posts a mission with a description, rules and a reward amount. Anyone eligible can accept it. Accepting is free — a taker never pays anything to Misnivo or to a creator, and anyone who asks a taker for money to be selected is permanently banned.\n' +
+      'The creator then selects one taker. Only that person carries out the mission and records a video as proof. The creator reviews the video against the rules they published.\n' +
+      'A creator must judge proof only against the rules they published, must not change what they expect after the fact, and must review within the period shown on the mission.' },
+
+    { h:'Payments and rewards', body:
+      'Payments are not live yet. The wallet is switched off, no real money moves through Misnivo today, and no payment method is connected. Reward amounts shown on missions are recorded with the mission but nothing is charged or paid out.\n' +
+      'When payments do go live, the reward will be held when a mission goes live and released to the taker whose proof the creator approves, minus a platform fee. We will publish the fee and update this page before that happens.\n' +
+      'There is no identity verification (KYC) on Misnivo yet. It will be required before any withdrawal is possible.' },
+
+    { h:'What you may not do', body:
+      'Do not post a mission that could hurt someone. The Community Guidelines list what is not allowed, and that list is the same one the safety filter checks against.\n' +
+      'Do not ask anyone to break the law, trespass, damage property, record someone without their consent, or harass or intimidate anyone.\n' +
+      'Do not aim a mission at a named or identifiable person. Missions are challenges, not instructions pointed at someone.\n' +
+      'Do not ask for nudity, sexual content, or anything meant to humiliate or degrade the person doing it.\n' +
+      'Do not pay, or accept payment, to be selected for a mission.\n' +
+      'Do not submit a video that is not genuinely your own attempt, and do not submit someone else in your place.\n' +
+      'Do not use Misnivo to move money on behalf of anyone else.' },
+
+    { h:'Content and ownership', body:
+      'You keep ownership of the videos you create. Nothing here transfers copyright to Misnivo or to a creator.\n' +
+      'By submitting proof you give Misnivo permission to store your video and show it on the platform — to the creator for review, and, if it is approved, to other users in feeds, Shorts and search. This permission continues for content that is already published even if you later delete your account, though you may ask us to remove it and we will consider the request.\n' +
+      'A creator who funds a mission gets the right to view the proof submitted to them and to share the published video using the sharing built into Misnivo. They do not get commercial rights, and may not download, republish, sell or advertise with the video without the taker’s separate written permission.\n' +
+      'If anyone else appears in your video you must have their permission, and if anyone under 18 appears you must have their parent’s or guardian’s permission.' },
+
+    { h:'Account suspension', body:
+      'We may reject, hide or remove any mission or video at any time — before or after it goes live, and before or after proof is approved — if it breaks these Terms, the Community Guidelines or the law, or if it looks unsafe.\n' +
+      'Misnivo runs an automated safety check on mission text. It is a safeguard, not an approval, and it is not a guarantee that a mission is safe or lawful. Passing the check does not mean we have reviewed or endorsed a mission.\n' +
+      'We may suspend or close an account for repeated or serious breaches, including asking a taker for money, paying to be selected, or repeatedly refusing to review proof fairly.' },
+
+    { h:'Disputes', body:
+      'If you believe your proof was rejected unfairly, you can raise a dispute with us within 7 days of the decision and we will review it.\n' +
+      'For anything else, including a complaint about content on Misnivo, write to our Grievance Officer. Contact details and the timelines we work to are on the Contact & Grievance page.\n' +
+      'Completing missions and being paid for them does not make you an employee, contractor, partner or agent of Misnivo, and does not make a creator your employer. Everyone acts on their own account.\n' +
+      'If someone brings a claim against Misnivo because of a mission you posted or how you attempted one — for example injury, damage to property, harassment, or use of someone else’s content — you agree to cover the reasonable costs we face because of it.' },
+
+    { h:'Changes to these terms', body:
+      'We may update these Terms as Misnivo changes. The date at the bottom of this page shows when it was last changed.\n' +
+      'If a change is significant we will tell you in the app before it takes effect. Continuing to use Misnivo after a change means you accept the updated Terms.\n' +
+      'The in-app agreements you accept when posting, accepting or submitting proof are recorded separately with the exact wording you were shown at that moment. A later change here does not rewrite what you already agreed to.' },
+
+    { h:'Governing law', body:
+      'These Terms are governed by the laws of India.' } ] },
+
+  // ── PRIVACY ─────────────────────────────────────────────────────────────
+  // Written from the code, not a template. Every item below is something the
+  // app actually reads or writes today.
   privacy: { title:'Privacy Policy', short:'Privacy', sections:[
-    'What we collect','Why we collect it','Who we share it with',
-    'How long we keep it','Your rights (access, delete)','Cookies',
-    'Data security','Contact us about privacy' ] },
+    { h:'What we collect', body:
+      'When you sign in with Google we receive your name, email address and profile photo from your Google account. If you sign up with an email and password, we receive your name and email address.\n' +
+      'When you first sign in we ask for your date of birth, and store it along with the date it was verified. If the date of birth reports an age under 18, we record that the account is blocked.\n' +
+      'From your profile: your username, bio, website and any social links you add, and your settings.\n' +
+      'From missions you post: the caption, description, rules, tags, reward amount, expiry, and any thumbnail or preview video you upload.\n' +
+      'From missions you accept: which missions, when, and whether you were selected.\n' +
+      'From proof you submit: the video itself, its thumbnail, and technical details of the file (its name, size, length and dimensions).\n' +
+      'Comments you write, and which videos and missions you liked, disliked or pinned.\n' +
+      'Reports you file, and the reason you give.\n' +
+      'When you accept one of the in-app agreements, we record who accepted it, when, which agreement it was, and a fingerprint of the exact wording shown to you, together with your browser’s user-agent string.\n' +
+      'If the safety filter blocks a mission, we record the mission text, why it was blocked, and the automated verdicts.\n' +
+      'Search terms are counted so we can show what is trending. These counts are not linked to your account.\n' +
+      'The app also stores two small values in your browser: your preferred video quality, and a flag remembering you were signed in so the app can start faster.' },
 
+    { h:'Why we collect it', body:
+      'To run your account and show your profile to other people on Misnivo.\n' +
+      'To show missions and videos, and to let creators review the proof submitted to them.\n' +
+      'To confirm you are 18 or older, which we are required to do.\n' +
+      'To keep the platform safe — the safety filter checks mission text before it can be posted, and reports let people flag content to us.\n' +
+      'To keep a record of the agreements you accepted, which we need if there is ever a dispute or a legal question about what you agreed to.\n' +
+      'We do not use your information for advertising, and we do not build advertising profiles. Misnivo does not run ads today.\n' +
+      'We do not use analytics or tracking services. There are no third-party trackers on Misnivo.' },
+
+    { h:'Who we share it with', body:
+      'We do not sell your information, and we do not share it for advertising.\n' +
+      'Other people on Misnivo see your public profile — your name, username, photo, bio and links — and any missions, videos and comments you publish. Please treat everything you post as public.\n' +
+      'A creator whose mission you accept sees your name and username, and the video you submit to them. They may use it only to review your proof and complete the mission.\n' +
+      'We use these service providers, who process data on our behalf:\n' +
+      'Google Firebase — sign-in, and the database that stores everything described above.\n' +
+      'Cloudinary — the videos and images you upload are stored and served from Cloudinary.\n' +
+      'Cloudflare — hosting and delivery of the site. Like any web host, it processes network requests, including IP addresses.\n' +
+      'Google Gemini, through Firebase AI Logic — the text of a mission is sent to Google’s AI service to be checked for safety before it can be posted. This is the mission title, description, rules and tags only. Your videos, comments and private details are never sent to it.\n' +
+      'We may disclose information if we are required to by law, a court order, or a valid request from a government authority.' },
+
+    { h:'How long we keep it', body:
+      'Your account information is kept while your account exists.\n' +
+      'Missions, videos and comments are kept while they are published on Misnivo.\n' +
+      'Agreement records and safety-filter records are kept even after the related content is removed, because their whole purpose is to show what was agreed and what was blocked. We keep them as long as they may be needed for a legal or safety question.\n' +
+      'Date-of-birth and age-verification records are kept while the account exists, including for accounts blocked for being under 18 — otherwise the block could simply be re-tried.' },
+
+    { h:'Your rights (access, delete)', body:
+      'You can see and edit most of your information in the app: your name, username, bio, links and settings.\n' +
+      'You can delete your own missions, your own videos and your own comments.\n' +
+      'To get a copy of your information, or to have your account deleted, write to ' + LEGAL_CONTACT + ' and we will act on it.\n' +
+      'Some things survive deletion, and we want to be straight about it: content you published and that others have already interacted with may remain, and agreement and safety records are kept for the reasons above. Your date of birth cannot be changed once it is set — this is deliberate, so the age check cannot be worked around.' },
+
+    { h:'Cookies', body:
+      'Misnivo does not use tracking or advertising cookies.\n' +
+      'Signing in uses Firebase Authentication, which stores your session in your browser so you stay signed in. Clearing your browser storage signs you out.\n' +
+      'The app also keeps two small values in your browser: your preferred video quality, and a flag remembering you were signed in so the app can start faster. Neither identifies you to anyone else.' },
+
+    { h:'Data security', body:
+      'Access to the database is restricted by security rules: you can write only your own account, your own missions, your own videos and your own comments. Agreement and safety records can be written but never edited or deleted, including by the person who created them.\n' +
+      'Sign-in and passwords are handled by Firebase Authentication. We never see or store your password.\n' +
+      'Being honest about the limits: profile information on Misnivo is public by design, and Misnivo is an early-stage platform run by one person. No service can promise perfect security. Please do not put anything in a mission, video or comment that you would not want to be public.' },
+
+    { h:'Contact us about privacy', body:
+      'For any question about this policy, or to ask for a copy or deletion of your data, write to ' + LEGAL_CONTACT + '.' } ] },
+
+  // ── GUIDELINES ──────────────────────────────────────────────────────────
   guidelines: { title:'Community Guidelines', short:'Guidelines', sections:[
-    'What Misnivo is for',
-    { h:'Missions that are not allowed', list:'BANNED' },
-    'Content rules','Respecting others','Reporting',
-    'What happens if you break the rules' ] },
+    { h:'What Misnivo is for', body:
+      'Misnivo is for small, safe, creative tasks that someone can film and be paid for. Someone asks for something to be done, someone else does it and records it, and the person who asked pays for the work.\n' +
+      'Nobody pays to take part, and nobody is competing against anyone — a creator picks one person and pays them for the work. If a mission is only interesting because it is dangerous, it does not belong here.' },
 
+    { h:'Missions that are not allowed', body:
+      'Missions must not ask anyone to do anything that could cause physical harm. In particular, missions involving any of the following are not allowed:',
+      list:'BANNED',
+      after:'This is the same list our automated safety filter checks against. If you are unsure whether something is safe, do not post it.' },
+
+    { h:'Content rules', body:
+      'Your video must be your own genuine attempt. Do not edit it to fake the result, and do not have someone else stand in for you.\n' +
+      'Do not post anything unlawful, or anything that infringes someone else’s copyright.\n' +
+      'No nudity or sexual content, and nothing intended to humiliate or degrade the person in it.\n' +
+      'If anyone else appears in your video, you must have their permission. If anyone under 18 appears, you must have their parent’s or guardian’s permission.\n' +
+      'If a mission asks for content promoting a product, service, brand or business — including your own — the mission description must say so clearly.' },
+
+    { h:'Respecting others', body:
+      'Do not name, follow, confront or single out an individual in a mission.\n' +
+      'No harassment, bullying, threats, or hate directed at anyone or at any group.\n' +
+      'Do not share anyone’s private information — including addresses, phone numbers, or anything that identifies where someone lives or works.\n' +
+      'If you take part in a mission, use what you learn about the other person only to complete it. Do not contact them outside Misnivo or pass their details on.\n' +
+      'Takers never pay to take part. Asking a taker for money in exchange for selecting them results in a permanent ban.' },
+
+    { h:'Reporting', body:
+      'Every mission and every video has a Report option in its menu. Use it if you see something unsafe or against these guidelines.\n' +
+      'If a mission looks dangerous, report it instead of attempting it. No reward is worth your safety.\n' +
+      'For anything urgent or serious, write to our Grievance Officer — the details are on the Contact & Grievance page.\n' +
+      'Reports go to us, not to the person you are reporting.' },
+
+    { h:'What happens if you break the rules', body:
+      'Depending on what happened, we may remove the mission or video, refuse a reward, restrict what your account can do, or close it.\n' +
+      'Serious breaches — asking a taker for money, paying to be selected, content involving anyone under 18, or anything that puts a person in danger — mean a permanent ban.\n' +
+      'We may remove content at any time, including after a creator has approved it. Our automated checks are a safeguard, not an approval, and passing them does not mean a mission has been reviewed by a person.' } ] },
+
+  // ── CONTACT ─────────────────────────────────────────────────────────────
   contact: { title:'Contact & Grievance', short:'Contact', sections:[
-    { h:'Grievance Officer', body:'Name: [Officer name]\nEmail: [grievance@misnivo.com]' },
-    { h:'Response timeline',
-      body:'We acknowledge every complaint within 24 hours, and resolve it within 15 days.' },
-    { h:'General contact', body:'Email: [support@misnivo.com]' },
-    { h:'How to report content',
-      body:'Every mission and video has a Report option in its menu. ' + LEGAL_PLACEHOLDER } ] }
+    { h:'Grievance Officer', body:
+      'In line with the Information Technology (Intermediary Guidelines and Digital Media Ethics Code) Rules, 2021, our Grievance Officer is:\n' +
+      'Name: Lovepreet Singh\n' +
+      'Email: ' + LEGAL_CONTACT + '\n' +
+      'Please write from the email address on your Misnivo account, and include a link to the mission or video you are writing about.' },
+
+    { h:'Response timeline', body:
+      'We acknowledge every complaint within 24 hours of receiving it.\n' +
+      'We resolve complaints within 15 days.\n' +
+      'Where we are required to remove content by a court order or an order from a government authority, we act within 36 hours.' },
+
+    { h:'General contact', body:
+      'For help with your account or anything that is not a complaint, write to ' + LEGAL_SUPPORT + '.' },
+
+    { h:'How to report content', body:
+      'The quickest way is in the app: every mission and every video has a Report option in its menu. Choose a reason and add anything you want us to know. Reports come to us, not to the person you are reporting.\n' +
+      'You can also email the Grievance Officer above. Include a link to the content and tell us what is wrong with it.\n' +
+      'If you believe someone is in immediate danger, contact your local emergency services first.' } ] }
 };
 
 // The banned list is read from the safety filter's own categories, so the
@@ -109,13 +260,22 @@ function _legalBannedList(){
     .map(c => '<li>' + escHtml(SAFETY_CATEGORY_LABELS[c] || c) + '</li>').join('');
 }
 
+function _legalParas(text){
+  return text.split('\n').filter(Boolean).map(l => '<p>' + escHtml(l) + '</p>').join('');
+}
+// A section can carry text, a list, and text after the list — the guidelines
+// need all three around the banned-mission list.
 function _legalSectionHtml(sec){
-  const h    = typeof sec === 'string' ? sec : sec.h;
-  const body = typeof sec === 'string' ? null : sec.body;
-  let inner;
-  if (sec.list === 'BANNED') inner = '<ul class="legal-list">' + _legalBannedList() + '</ul>';
-  else if (body)             inner = body.split('\n').map(l => '<p>' + escHtml(l) + '</p>').join('');
-  else                       inner = '<p class="legal-todo">' + LEGAL_PLACEHOLDER + '</p>';
+  const h = typeof sec === 'string' ? sec : sec.h;
+  if (typeof sec === 'string' || (!sec.body && !sec.list))
+    return '<h2 class="legal-h2">' + escHtml(h) + '</h2>'
+         + '<p class="legal-todo">' + LEGAL_PLACEHOLDER + '</p>';
+  let inner = sec.body ? _legalParas(sec.body) : '';
+  if (sec.list === 'BANNED')
+    inner += '<ul class="legal-list">' + _legalBannedList() + '</ul>';
+  else if (Array.isArray(sec.list))
+    inner += '<ul class="legal-list">' + sec.list.map(i => '<li>' + escHtml(i) + '</li>').join('') + '</ul>';
+  if (sec.after) inner += _legalParas(sec.after);
   return '<h2 class="legal-h2">' + escHtml(h) + '</h2>' + inner;
 }
 
@@ -123,7 +283,8 @@ function _legalHtml(kind){
   const d = LEGAL_DOCS[kind];
   return '<h1 class="legal-h1">' + escHtml(d.title) + '</h1>'
        + d.sections.map(_legalSectionHtml).join('')
-       + '<p class="legal-updated">Last updated: ' + escHtml(LEGAL_UPDATED) + '</p>';
+       + '<p class="legal-updated">Last updated: ' + escHtml(LEGAL_UPDATED)
+       + '<br>If you have questions about this page, contact us at ' + escHtml(LEGAL_CONTACT) + '</p>';
 }
 
 // ── open / close ──
