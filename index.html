@@ -148,6 +148,9 @@
       <button class="btn-fill" onclick="emailSignup()">Create Account</button>
       <p class="auth-note">Already have an account? <a href="#" onclick="switchTab('login')">Sign In</a></p>
     </div>
+    <p class="auth-legal">By continuing, you agree to our
+      <a onclick="openLegal('terms')">Terms of Service</a> and
+      <a onclick="openLegal('privacy')">Privacy Policy</a></p>
   </div>
 </div>
 
@@ -533,6 +536,17 @@
         <button class="btn-fill" style="margin-top:16px;" id="pinSubmitBtn" onclick="_pinSubmit()">Save PIN</button>
       </div>
     </div>
+
+    <!-- Site footer — inside main, so it sits under whichever page is showing -->
+    <footer class="site-foot">
+      <div class="site-foot-links">
+        <a onclick="openLegal('terms')">Terms</a>
+        <a onclick="openLegal('privacy')">Privacy</a>
+        <a onclick="openLegal('guidelines')">Guidelines</a>
+        <a onclick="openLegal('contact')">Contact</a>
+      </div>
+      <div class="site-foot-copy">&copy; 2026 Misnivo</div>
+    </footer>
 
   </main>
 </div>
@@ -973,6 +987,26 @@
      scrolled past the whole agreement. No separate confirm step. -->
 <!-- Blocked by the safety filter. The post form stays open behind it, so the
      only action is to go back and change the mission. -->
+<!-- Legal pages. Above the app and the sign-in screen both, because they have
+     to be readable before anyone has an account. -->
+<div class="legal-page" id="legalPage" style="display:none;">
+  <div class="legal-bar">
+    <button class="legal-back" onclick="closeLegal()" aria-label="Back">
+      <span class="mi">arrow_back</span><span>Back</span>
+    </button>
+  </div>
+  <div class="legal-scroll" id="legalScroll">
+    <div class="legal-body" id="legalBody"></div>
+    <div class="legal-foot-links">
+      <a onclick="openLegal('terms')">Terms</a>
+      <a onclick="openLegal('privacy')">Privacy</a>
+      <a onclick="openLegal('guidelines')">Guidelines</a>
+      <a onclick="openLegal('contact')">Contact</a>
+    </div>
+    <div class="legal-copy">&copy; 2026 Misnivo</div>
+  </div>
+</div>
+
 <!-- 18+ gate. Deliberately NOT an .overlay: those close on a backdrop click and
      live in the modal z-stack. This one cannot be dismissed and sits above
      everything, including the auth screen. -->

@@ -57,6 +57,110 @@ try { db.enablePersistence({ synchronizeTabs: true }).catch(()=>{}); } catch(e){
 // Using Cloudinary (free, no credit card needed) instead.
 
 // ══════════════════════════════════════════════════════════════════════════
+//  LEGAL PAGES — Terms, Privacy, Community Guidelines, Contact & Grievance
+//
+//  Required under India's IT Rules 2021; without them there is no safe-harbour
+//  protection. Structure only for now — every section says [Content to be
+//  added] until the real wording lands, so the layout, routes, footer and
+//  links can all be finished and tested first.
+//
+//  They are a full-screen layer rather than a .page inside #appScreen, because
+//  #appScreen is hidden when signed out and these have to be readable BEFORE
+//  anyone has an account — the sign-up screen links straight to them.
+// ══════════════════════════════════════════════════════════════════════════
+const LEGAL_PLACEHOLDER = '[Content to be added]';
+// One date for now; give each document its own once they are published
+// separately. Shown at the foot of every page.
+const LEGAL_UPDATED = '[date]';
+
+const _LEGAL_URL  = { terms:'/terms', privacy:'/privacy', guidelines:'/guidelines', contact:'/contact' };
+const _URL_LEGAL  = Object.fromEntries(Object.entries(_LEGAL_URL).map(([k,v])=>[v,k]));
+
+const LEGAL_DOCS = {
+  terms: { title:'Terms of Service', short:'Terms', sections:[
+    'Who can use Misnivo','How missions work','Payments and rewards',
+    'What you may not do','Content and ownership','Account suspension',
+    'Disputes','Changes to these terms','Governing law' ] },
+
+  privacy: { title:'Privacy Policy', short:'Privacy', sections:[
+    'What we collect','Why we collect it','Who we share it with',
+    'How long we keep it','Your rights (access, delete)','Cookies',
+    'Data security','Contact us about privacy' ] },
+
+  guidelines: { title:'Community Guidelines', short:'Guidelines', sections:[
+    'What Misnivo is for',
+    { h:'Missions that are not allowed', list:'BANNED' },
+    'Content rules','Respecting others','Reporting',
+    'What happens if you break the rules' ] },
+
+  contact: { title:'Contact & Grievance', short:'Contact', sections:[
+    { h:'Grievance Officer', body:'Name: [Officer name]\nEmail: [grievance@misnivo.com]' },
+    { h:'Response timeline',
+      body:'We acknowledge every complaint within 24 hours, and resolve it within 15 days.' },
+    { h:'General contact', body:'Email: [support@misnivo.com]' },
+    { h:'How to report content',
+      body:'Every mission and video has a Report option in its menu. ' + LEGAL_PLACEHOLDER } ] }
+};
+
+// The banned list is read from the safety filter's own categories, so the
+// guidelines and what the filter actually blocks cannot drift apart.
+function _legalBannedList(){
+  return Object.keys(BANNED_KEYWORDS)
+    .map(c => '<li>' + escHtml(SAFETY_CATEGORY_LABELS[c] || c) + '</li>').join('');
+}
+
+function _legalSectionHtml(sec){
+  const h    = typeof sec === 'string' ? sec : sec.h;
+  const body = typeof sec === 'string' ? null : sec.body;
+  let inner;
+  if (sec.list === 'BANNED') inner = '<ul class="legal-list">' + _legalBannedList() + '</ul>';
+  else if (body)             inner = body.split('\n').map(l => '<p>' + escHtml(l) + '</p>').join('');
+  else                       inner = '<p class="legal-todo">' + LEGAL_PLACEHOLDER + '</p>';
+  return '<h2 class="legal-h2">' + escHtml(h) + '</h2>' + inner;
+}
+
+function _legalHtml(kind){
+  const d = LEGAL_DOCS[kind];
+  return '<h1 class="legal-h1">' + escHtml(d.title) + '</h1>'
+       + d.sections.map(_legalSectionHtml).join('')
+       + '<p class="legal-updated">Last updated: ' + escHtml(LEGAL_UPDATED) + '</p>';
+}
+
+// ── open / close ──
+// A legal page pushes its own history entry, so the phone back button closes it
+// like any other layer. Arriving straight on /terms pushes nothing, and Back
+// then returns to the app rather than leaving the site.
+let _legalOpen = null, _legalPushed = false;
+
+function openLegal(kind, _fromUrl){
+  if (!LEGAL_DOCS[kind]) return;
+  document.getElementById('legalBody').innerHTML = _legalHtml(kind);
+  document.getElementById('legalPage').style.display = 'block';
+  const sc = document.getElementById('legalScroll'); if (sc) sc.scrollTop = 0;
+  document.body.classList.add('legal-open');
+  if (!_fromUrl){
+    try { history.pushState({ _legal:kind }, '', _LEGAL_URL[kind]); _legalPushed = true; } catch(e){}
+  } else { _legalPushed = false; }
+  _legalOpen = kind;
+}
+
+function closeLegal(_fromPop){
+  if (!_legalOpen) return;
+  document.getElementById('legalPage').style.display = 'none';
+  document.body.classList.remove('legal-open');
+  _legalOpen = null;
+  if (_fromPop) return;                       // the URL already moved
+  if (_legalPushed){ _legalPushed = false; try { history.back(); } catch(e){} }
+  else { try { history.replaceState({}, '', '/'); } catch(e){} }   // landed here directly
+}
+
+// Captured at load, before goPage rewrites the URL to '/' — same trick
+// _deepLinkPath uses for /watch and /dare.
+let _legalBoot = null;
+try { _legalBoot = _URL_LEGAL[(location.pathname||'/').replace(/\/+$/,'') || '/'] || null; } catch(e){}
+function _legalOpenIfBooted(){ if (_legalBoot){ const k=_legalBoot; _legalBoot=null; openLegal(k, true); } }
+
+// ══════════════════════════════════════════════════════════════════════════
 //  MISSION SAFETY FILTER — stage 1: keywords
 //
 //  The creator agreement says what a mission may not ask for. This is what
@@ -967,12 +1071,14 @@ auth.onAuthStateChanged(async (fbUser) => {
     if (user && user.underageBlocked === true) { _ageGateShow('blocked'); return; }
     if (user && !user.dateOfBirth)             { _ageGateShow('ask');     return; }
     _bootApp();
+    _legalOpenIfBooted();                  // arrived on /terms while signed in
   } else {
     _splashDone();
     _ageGateHide();                        // a sign-out from the blocked screen
     _bootSkelHide();                       // signed out — no page is loading
     document.getElementById('authScreen').style.display = 'flex';
     document.getElementById('appScreen').style.display  = 'none';
+    _legalOpenIfBooted();                  // legal pages are readable without an account
   }
 });
 
@@ -6541,6 +6647,7 @@ function _openModalById(id){
 }
 
 window.addEventListener('popstate', function(e){
+  if(_legalOpen){ closeLegal(true); return; }            // topmost layer goes first
   if(_ovInPop){ _ovInPop = false; return; }              // our own _ovSync rewind — already handled
   if(_ovStack.length){                                    // a tracked modal is open → close topmost
     const id = _ovStack[_ovStack.length-1];
