@@ -45,9 +45,14 @@ try { db.enablePersistence({ synchronizeTabs: true }).catch(()=>{}); } catch(e){
 //  somebody's safety.
 // ══════════════════════════════════════════════════════════════════════════
 const BANNED_KEYWORDS = {
+  // Roman-script Hindi has no fixed spelling, so every plausible vowel of the
+  // same word has to be here. "12m sai kodo" got posted because the list had
+  // 'koodo' and not 'kodo'.
   heights: ['rooftop','roof','chhat','chat pe','balcony','terrace','climb',
-            'chadh','jump from','koodo','kood ja','cliff','ladder','height',
-            'building se','upar se'],
+            'chadh','chadho','chadhna','jump','jump from','jump off',
+            'koodo','kood','kood ja','kodo','kudo','kudna','koodna','kudho',
+            'chalaang','cliff','ladder','height','building se','upar se',
+            'manzil','floor se','se koodo','se kodo'],
   water:   ['swim','swimming','dive','diving','drown','doob','paani mein',
             'river','nadi','pool mein','sea','samundar','lake','well','kuan'],
   fire:    ['fire','aag','burn','jalao','jala','flame','candle','matchstick',
@@ -207,21 +212,41 @@ async function checkMissionSafetyAI(title, description, rules, tags) {
 
     // CHECK 1 — the reviewer
     const c1 = await _aiAsk(model,
-      'You are a safety reviewer for a task platform. Someone will be paid to do ' +
-      'this task and record a video. Decide if it could cause physical harm, break ' +
-      'a law, target a specific person, or involve anything sexual or degrading.\n' +
-      task + '\n' +
+      'You are a safety reviewer for a task platform used in India. Someone will be ' +
+      'paid to do this task and record a video.\n\n' +
+      'The text is usually short and informal, written in Roman-script Hindi or ' +
+      'Hinglish with no fixed spelling — "koodo", "kodo", "kudo" and "kood" all mean ' +
+      '"jump"; "sai" is usually "se" ("from").\n\n' +
+      'Decide if it could cause physical harm, break a law, target a specific person, ' +
+      'or involve anything sexual or degrading. Not allowed: heights or climbing, ' +
+      'water, fire or electricity, vehicles or roads, weapons, alcohol or drugs, ' +
+      'extreme eating or swallowing, fighting, self-harm, anyone under 18 or animals, ' +
+      'and pranks that could cause panic or a police response.\n\n' +
+      'How to judge:\n' +
+      '- Consider every plausible reading, including misspellings. If ANY plausible ' +
+      'reading is dangerous, answer unsafe.\n' +
+      '- If you cannot confidently tell what is being asked, answer UNSAFE. Never ' +
+      'assume a harmless meaning for text you cannot read. Guessing wrong here gets ' +
+      'somebody hurt; guessing wrong the other way costs them a rewrite.\n\n' +
+      task + '\n\n' +
       'Reply ONLY with JSON: {"safe": true/false, "reason": "one short sentence", ' +
       '"concern": "category or none"}');
     if (typeof c1.safe !== 'boolean') return { ok:false, error:'check 1 returned no verdict' };
 
     // CHECK 2 — the reviewer's reviewer
     const c2 = await _aiAsk(model,
-      'A first reviewer judged this task. Here is the task and their verdict.\n' +
-      task + '\n' +
-      'Their verdict: ' + JSON.stringify(c1) + '\n' +
+      'A first reviewer judged this task for a task platform used in India. Here is ' +
+      'the task and their verdict.\n\n' +
+      task + '\n\n' +
+      'Their verdict: ' + JSON.stringify(c1) + '\n\n' +
       'Do you agree? Consider anything they may have missed — indirect risk, ' +
-      'Hinglish or slang wording, or a way this could be misused.\n' +
+      'Roman-script Hindi or slang wording, or a way this could be misused.\n' +
+      'The text has no fixed spelling: "koodo", "kodo", "kudo" and "kood" all mean ' +
+      '"jump"; "sai" is usually "se" ("from"). A number with m, metre or feet is a ' +
+      'height.\n' +
+      'If the first reviewer assumed a harmless meaning for wording that is not ' +
+      'clearly readable, that is a MISS — say so and answer finalSafe false. Text ' +
+      'nobody can confidently read is unsafe.\n\n' +
       'Reply ONLY with JSON: {"agree": true/false, "finalSafe": true/false, ' +
       '"reason": "one short sentence"}');
     if (typeof c2.finalSafe !== 'boolean') return { ok:false, error:'check 2 returned no verdict' };
