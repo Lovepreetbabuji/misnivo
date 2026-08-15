@@ -9,6 +9,29 @@ const firebaseConfig = {
   messagingSenderId: "490715782561",
   appId:             "1:490715782561:web:e04d5ea4d86aa3b133ffe0"
 };
+// ══════════════════════════════════════════════════════════════════════════
+//  WALLET — PAUSED (Phase 3 turns it back on)
+//
+//  Nothing is deleted. The markup stays in the DOM, the wallet field stays on
+//  every user document in Firestore, and every money path is WRAPPED rather
+//  than removed. Set this to true and the wallet comes back exactly as it was —
+//  no code to rewrite.
+//
+//  What the flag does when false:
+//    · hides the wallet page, its nav entries and every wallet modal (one CSS
+//      rule against .wallet-off, so nothing has to re-render)
+//    · sends /wallet to home instead
+//    · skips every balance check, debit, credit and refund
+//    · stops reading or writing the wallet field in Firestore
+//
+//  Missions are untouched: bounty amounts still show, and posting, accepting
+//  and proof submission all work. Only the money accounting is skipped.
+// ══════════════════════════════════════════════════════════════════════════
+const WALLET_ENABLED = false;
+// On <html>, not <body>: it applies before the first paint, so a paused wallet
+// never flashes on screen on the way out.
+document.documentElement.classList.toggle('wallet-off', !WALLET_ENABLED);
+
 // Published for the AI Logic module in index.html, which runs on the modular
 // SDK and cannot see this scope. One source of truth for the project config.
 window.__fbConfig = firebaseConfig;
@@ -1205,6 +1228,7 @@ const _URL_MODAL = Object.fromEntries(Object.entries(_MODAL_URL).map(([k,v])=>[v
 _bootShell();
 
 function goPage(pg, _fromPop) {
+  if (pg === 'wallet' && !WALLET_ENABLED) pg = 'home';   // paused: /wallet lands on home
   _searchReturn = null;
   // Navigating to a page closes any open page-modal (its history entry gets REPLACED below)
   const _ovWasOpen = (!_fromPop && !_navBack && _ovStack.length) ? _ovCloseAllSilent() : false;
@@ -1483,9 +1507,9 @@ function _bootSkelKind(){
   const path = (location.pathname || '/').replace(/\/+$/,'') || '/';
   const m = path.match(/^\/(watch|shorts|dare|u)\//);
   if (m) return m[1]==='shorts' ? 'shorts' : m[1]==='u' ? 'profile' : 'detail';
-  if (_URL_PAGE[path]) return _URL_PAGE[path];
+  if (_URL_PAGE[path]) return (_URL_PAGE[path] === 'wallet' && !WALLET_ENABLED) ? 'home' : _URL_PAGE[path];
   // a modal URL (/wallet/deposit, /settings) restores onto its base page
-  if (_URL_MODAL[path]) return path.startsWith('/wallet') ? 'wallet'
+  if (_URL_MODAL[path]) return (path.startsWith('/wallet') && WALLET_ENABLED) ? 'wallet'
                              : path.startsWith('/profile') ? 'profile' : 'home';
   return 'home';
 }
@@ -2309,13 +2333,18 @@ async function submitDare() {
     _showSafetyBlock(_safety.category);
     return;
   }
-  if (!editingDareId && reward > wallet.balance) {
-    showToast('Insufficient wallet balance'); return;
-  }
-  if (editingDareId) {   // editing: only the reward *increase* needs more balance
-    const _oldD = dares.find(d=>d.id===editingDareId);
-    const _oldR = _oldD ? (_oldD.rewardAmount ?? _oldD.bounty ?? 0) : 0;
-    if (reward - _oldR > wallet.balance) { showToast('Insufficient balance to raise the reward'); return; }
+  // Balance gating is part of the wallet, so it pauses with it. The reward
+  // amount is still collected and still shown on the mission — it just is not
+  // charged to anything yet.
+  if (WALLET_ENABLED) {
+    if (!editingDareId && reward > wallet.balance) {
+      showToast('Insufficient wallet balance'); return;
+    }
+    if (editingDareId) {   // editing: only the reward *increase* needs more balance
+      const _oldD = dares.find(d=>d.id===editingDareId);
+      const _oldR = _oldD ? (_oldD.rewardAmount ?? _oldD.bounty ?? 0) : 0;
+      if (reward - _oldR > wallet.balance) { showToast('Insufficient balance to raise the reward'); return; }
+    }
   }
 
   // Expiry
@@ -2422,7 +2451,7 @@ async function submitDare() {
         ...dareData,
         updatedAt: firebase.firestore.FieldValue.serverTimestamp()
       });
-      if (_delta !== 0) {                 // keep escrow accounting in sync
+      if (WALLET_ENABLED && _delta !== 0) {   // keep escrow accounting in sync
         wallet.balance -= _delta;
         wallet.transactions = wallet.transactions || [];
         wallet.transactions.unshift({
@@ -2462,7 +2491,7 @@ async function submitDare() {
         _postAgreementId = null;
       }
 
-      if (reward > 0) {
+      if (WALLET_ENABLED && reward > 0) {
         wallet.balance -= reward;
         wallet.transactions.unshift({
           id:'w'+Date.now()+Math.floor(Math.random()*1000), ts:Date.now(), status:'completed',
@@ -3196,7 +3225,9 @@ function proofItemHTML(p) {
 async function approveProof(proofId) {
   const proof = currentProofs.find(p => p.id === proofId);
   if (!proof) return;
-  if (!confirm(`Approve and transfer Rs.${(proof.dareBounty||0).toLocaleString('en-IN')} to ${proof.takerName}?`)) return;
+  if (!confirm(WALLET_ENABLED
+      ? `Approve and transfer Rs.${(proof.dareBounty||0).toLocaleString('en-IN')} to ${proof.takerName}?`
+      : `Approve ${proof.takerName}'s proof?`)) return;
 
   try {
     await db.collection('proofs').doc(proofId).update({ status: 'approved' });
@@ -3205,27 +3236,35 @@ async function approveProof(proofId) {
     const takerSnap = await takerRef.get();
     if (takerSnap.exists) {
       const takerData = takerSnap.data();
-      const tw = takerData.wallet || { balance:0, pending:0, transactions:[] };
-      const _bw = proof.dareBounty || 0;
-      tw.pending = (tw.pending||0) + _bw;   // won bounty lands in "pending earnings" until claimed
-      tw.transactions = tw.transactions || [];
-      tw.transactions.unshift({
-        id:'w'+Date.now()+Math.floor(Math.random()*1000), ts:Date.now(), status:'completed',
-        type:'credit', category:'bounty_won',
-        title:'Bounty Won: ' + (proof.dareTitle||'').substring(0,30),
-        amount: _bw, ref:'REF'+Date.now().toString(36).toUpperCase(), date: todayStr()
-      });
+      // The taker's mission record must still be marked approved — that is
+      // mission state, not money. Only the payout half pauses.
       const tAD = (takerData.acceptedDares||[]).map(a =>
         a.dareId === proof.dareId ? {...a, proofStatus:'approved'} : a
       );
-      await takerRef.update({ wallet: tw, acceptedDares: tAD });
+      const _upd = { acceptedDares: tAD };
+      if (WALLET_ENABLED) {
+        const tw = takerData.wallet || { balance:0, pending:0, transactions:[] };
+        const _bw = proof.dareBounty || 0;
+        tw.pending = (tw.pending||0) + _bw;   // won bounty lands in "pending earnings" until claimed
+        tw.transactions = tw.transactions || [];
+        tw.transactions.unshift({
+          id:'w'+Date.now()+Math.floor(Math.random()*1000), ts:Date.now(), status:'completed',
+          type:'credit', category:'bounty_won',
+          title:'Bounty Won: ' + (proof.dareTitle||'').substring(0,30),
+          amount: _bw, ref:'REF'+Date.now().toString(36).toUpperCase(), date: todayStr()
+        });
+        _upd.wallet = tw;
+      }
+      await takerRef.update(_upd);
     }
 
     await db.collection('dares').doc(proof.dareId).update({ completed: true });
 
     currentProofs = currentProofs.map(p => p.id === proofId ? {...p, status:'approved'} : p);
     renderProofsList();
-    showToast(`Rs.${(proof.dareBounty||0).toLocaleString('en-IN')} ${proof.takerName} sent successfully!`);
+    showToast(WALLET_ENABLED
+      ? `Rs.${(proof.dareBounty||0).toLocaleString('en-IN')} ${proof.takerName} sent successfully!`
+      : `Proof approved — ${proof.takerName} completed the mission`);
   } catch(e) {
     showToast('Error: ' + e.message);
   }
@@ -4200,19 +4239,21 @@ async function deleteDare(id) {
   const d = dares.find(x => x.id === id);
   if (!d) return;
   const title = d.caption || d.title || 'this mission';
-  if (!confirm(`Delete "${title}"?\n\nIf you set a reward, it will be refunded to your wallet.`)) return;
+  if (!confirm(`Delete "${title}"?` + (WALLET_ENABLED
+      ? '\n\nIf you set a reward, it will be refunded to your wallet.' : ''))) return;
   try {
     await db.collection('dares').doc(id).delete();
     // Refund reward if dare was not completed
     const reward = d.rewardAmount ?? d.bounty ?? 0;
-    if (reward > 0 && !d.completed) {
+    if (WALLET_ENABLED && reward > 0 && !d.completed) {
       wallet.balance += reward;
       wallet.transactions.unshift({ id:'w'+Date.now()+Math.floor(Math.random()*1000), ts:Date.now(), status:'completed',
         type:'credit', category:'refund', title:'Mission Deleted (Refund): '+title.slice(0,25), amount:reward,
         ref:'REF'+Date.now().toString(36).toUpperCase(), date:todayStr() });
       await db.collection('users').doc(user.uid).update({ wallet });
     }
-    showToast('Mission deleted' + (reward>0&&!d.completed ? ` · Rs.${reward.toLocaleString('en-IN')} refunded` : ''));
+    showToast('Mission deleted' + (WALLET_ENABLED && reward>0 && !d.completed
+      ? ` · Rs.${reward.toLocaleString('en-IN')} refunded` : ''));
     renderProfile();
   } catch(e) { showToast('Error: '+e.message); }
 }
@@ -6341,6 +6382,9 @@ function _bootRoute(){
   goPage('home');
 }
 function _openModalById(id){
+  // a refresh on /wallet/deposit must not resurrect a paused modal
+  if (!WALLET_ENABLED && ['depositOverlay','withdrawOverlay','kycOverlay',
+      'methodOverlay','pinOverlay','txnDetailOverlay'].indexOf(id) >= 0) return;
   switch(id){
     case 'settingsOverlay':      openSettings(); break;
     case 'notifSettingsOverlay': openNotifSettings(); break;
@@ -8092,6 +8136,7 @@ function _walletLocked(){
 
 // Add a transaction + persist the wallet (current user)
 function _walletAddTxn(o){
+  if (!WALLET_ENABLED) return;   // paused: nothing is written to the wallet field
   wallet.transactions = wallet.transactions || [];
   wallet.transactions.unshift({
     id: 'w'+Date.now()+Math.floor(Math.random()*1000),
@@ -8109,6 +8154,7 @@ function _walletAddTxn(o){
 
 // Auto-refund: your own dares that expired without being completed → bounty back
 async function _walletReconcileExpired(){
+  if (!WALLET_ENABLED) return false;          // no refunds to reconcile while paused
   if (!user || typeof dares === 'undefined') return false;
   const now = Date.now(); let changed = false;
   for (const d of (dares||[])){
@@ -8131,6 +8177,7 @@ async function _walletReconcileExpired(){
 }
 
 function renderWallet() {
+  if (!WALLET_ENABLED) return;
   wallet = wallet || { balance:0, pending:0, transactions:[] };
   wallet.pending = wallet.pending || 0;
   _walletReconcileExpired().then(changed=>{ if (changed) renderWallet(); });
@@ -8186,6 +8233,7 @@ function _walletSetFilter(k){ _walletFilter = k; renderWallet(); }
 function _walletSearchInput(v){ _walletQuery = (v||'').trim(); _renderWalletTxns(); }
 
 function openTxnDetail(id){
+  if (!WALLET_ENABLED) return;
   const t = (wallet.transactions||[]).find(x=>x.id===id); if(!t) return;
   const cat = _wtxnCat(t), meta = _WTXN_CATS[cat]||_WTXN_CATS.other;
   const credit = (t.type||meta.type)==='credit';
@@ -8202,6 +8250,7 @@ function openTxnDetail(id){
 
 // ── Deposit / Withdraw (testnet) ──
 function openDepositModal(){
+  if (!WALLET_ENABLED) return;
   if(!user){ showToast('Sign in first'); return; }
   const inp=document.getElementById('depositAmt'); if(inp) inp.value='';
   const chips=document.getElementById('depositChips');
@@ -8210,6 +8259,7 @@ function openDepositModal(){
   setTimeout(()=>inp&&inp.focus(),50);
 }
 function doDeposit(){
+  if (!WALLET_ENABLED) return;
   const amt=Math.floor(+document.getElementById('depositAmt').value||0);
   if(amt<=0){ showToast('Enter a valid amount'); return; }
   if(amt>500000){ showToast('Max Rs.5,00,000 per deposit (testnet)'); return; }
@@ -8221,6 +8271,7 @@ function doDeposit(){
   renderWallet();
 }
 function openWithdrawModal(){
+  if (!WALLET_ENABLED) return;
   if(!user){ showToast('Sign in first'); return; }
   const inp=document.getElementById('withdrawAmt'); if(inp) inp.value='';
   const av=document.getElementById('withdrawAvail'); if(av) av.textContent='Available: Rs. '+(wallet.balance||0).toLocaleString('en-IN');
@@ -8228,6 +8279,7 @@ function openWithdrawModal(){
   setTimeout(()=>inp&&inp.focus(),50);
 }
 function doWithdraw(){
+  if (!WALLET_ENABLED) return;
   const amt=Math.floor(+document.getElementById('withdrawAmt').value||0);
   if(amt<=0){ showToast('Enter a valid amount'); return; }
   if(amt>(wallet.balance||0)){ showToast('Insufficient available balance'); return; }
@@ -8237,6 +8289,7 @@ function doWithdraw(){
   if(wallet.pin){ closeWalletModal('withdrawOverlay'); _pinVerify(exec); } else exec();
 }
 function _executeWithdraw(amt){
+  if (!WALLET_ENABLED) return;
   wallet.balance-=amt;
   const tx={ id:'w'+Date.now()+Math.floor(Math.random()*1000), ts:Date.now(), status:'processing',
     type:'debit', category:'withdraw', title:'Withdrawal to '+((wallet.methods||[])[0]?.label||'bank'), amount:amt,
@@ -8254,6 +8307,7 @@ function _executeWithdraw(amt){
   }, 4000);
 }
 function claimPending(){
+  if (!WALLET_ENABLED) return;
   const amt=wallet.pending||0; if(amt<=0) return;
   wallet.balance=(wallet.balance||0)+amt; wallet.pending=0;
   _walletAddTxn({ category:'claim', title:'Pending earnings claimed', amount:amt });
@@ -8265,6 +8319,7 @@ function closeWalletModal(id){ _ovSync(id); const el=document.getElementById(id)
 
 // ── KYC ──
 function openKycModal(){
+  if (!WALLET_ENABLED) return;
   if(!user){ showToast('Sign in first'); return; }
   wallet.kyc = wallet.kyc || { status:'none' };
   if(wallet.kyc.status==='verified'){ showToast('KYC already verified ✓'); return; }
@@ -8273,6 +8328,7 @@ function openKycModal(){
   _ovOpen('kycOverlay');
 }
 function submitKyc(){
+  if (!WALLET_ENABLED) return;
   const name=(document.getElementById('kycName').value||'').trim();
   const pan=(document.getElementById('kycPan').value||'').trim().toUpperCase();
   if(name.length<3){ showToast('Enter your full name'); return; }
@@ -8292,11 +8348,13 @@ function _methodTab(t){
   document.getElementById('methodBank').style.display = t==='bank'?'':'none';
 }
 function openMethodModal(){
+  if (!WALLET_ENABLED) return;
   if(!user){ showToast('Sign in first'); return; }
   ['mUpi','mBankName','mBankNum','mBankIfsc'].forEach(id=>{ const e=document.getElementById(id); if(e) e.value=''; });
   _methodTab('upi'); _ovOpen('methodOverlay');
 }
 function addMethod(){
+  if (!WALLET_ENABLED) return;
   wallet.methods=wallet.methods||[]; let m=null;
   if(_methodType==='upi'){
     const v=(document.getElementById('mUpi').value||'').trim();
@@ -8314,6 +8372,7 @@ function addMethod(){
   closeWalletModal('methodOverlay'); showToast('Account added'); renderWallet();
 }
 function removeMethod(id){
+  if (!WALLET_ENABLED) return;
   wallet.methods=(wallet.methods||[]).filter(m=>m.id!==id);
   if(user) db.collection('users').doc(user.uid).update({ wallet }).catch(()=>{});
   renderWallet();
@@ -8322,6 +8381,7 @@ function removeMethod(id){
 // ── Transaction PIN (set / verify) ──
 let _pinCb=null, _pinMode='set';
 function openPinModal(){
+  if (!WALLET_ENABLED) return;
   _pinMode = wallet.pin ? 'change':'set';
   document.getElementById('pinTitle').textContent = wallet.pin?'Change transaction PIN':'Set transaction PIN';
   document.getElementById('pinNote').innerHTML = '<span class="mi">lock</span> A 4-digit PIN protects your withdrawals.';
@@ -8340,6 +8400,7 @@ function _pinVerify(cb){
   setTimeout(()=>document.getElementById('pinInput').focus(),60);
 }
 function _pinSubmit(){
+  if (!WALLET_ENABLED) return;
   const v=(document.getElementById('pinInput').value||'').trim();
   if(!/^\d{4}$/.test(v)){ showToast('Enter a 4-digit PIN'); return; }
   if(_pinMode==='verify'){
@@ -8425,6 +8486,7 @@ function _renderWalletStats(){
 
 // ── Statement export (CSV) ──
 function exportWalletCSV(){
+  if (!WALLET_ENABLED) return;
   const txns=(wallet.transactions||[]).slice().sort((a,b)=>_wtxnTs(b)-_wtxnTs(a));
   if(!txns.length){ showToast('No transactions to export'); return; }
   const esc=s=>`"${(''+s).replace(/"/g,'""')}"`;

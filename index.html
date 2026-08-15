@@ -32,7 +32,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,100..400,0..1,0&icon_names=account_balance_wallet,add,arrow_back,bolt,bookmark,chat_bubble,close,expand_less,explore,home,menu,more_vert,notifications,person,reply,search,send,settings,thumb_down,thumb_up,tune&display=block" rel="stylesheet"/>
 
 <!-- App Styles -->
-<link rel="stylesheet" href="/css/styles.css?v=20260815a"/>
+<link rel="stylesheet" href="/css/styles.css?v=20260815b"/>
 
 <!-- The splash logo must be in flight before anything else competes for the pipe -->
 <link rel="preload" as="image" href="/misnivo.png?v=1" fetchpriority="high"/>
@@ -223,7 +223,7 @@
             <div class="dd-email" id="ddEmail">—</div>
           </div>
           <div class="dd-item" onclick="goPage('profile');closeDD()"><span class="mi">person</span>My Profile</div>
-          <div class="dd-item" onclick="goPage('wallet');closeDD()"><span class="mi">account_balance_wallet</span>My Wallet</div>
+          <div class="dd-item" data-wallet onclick="goPage('wallet');closeDD()"><span class="mi">account_balance_wallet</span>My Wallet</div>
           <div class="dd-item" onclick="goProfileTab('tMyDares');closeDD()"><span class="mi">assignment</span>My Missions</div>
           <div class="dd-item" onclick="closeDD();openSettings()"><span class="mi">settings</span>Settings</div>
           <div class="dd-item admin-link" onclick="openAdminReports();closeDD()" id="adminDDItem" style="display:none;"><span class="mi">admin_panel_settings</span>Admin Reports</div>
@@ -261,7 +261,7 @@
   <nav class="sb-rail" id="sbRail">
     <div class="rail-item active" data-pg="home"    onclick="goPage('home')"    title="Home"     aria-label="Home"><span class="mi">home</span></div>
     <div class="rail-item"        data-pg="explore" onclick="goPage('explore')" title="Explore"  aria-label="Explore"><span class="mi">explore</span></div>
-    <div class="rail-item"        data-pg="wallet"  onclick="goPage('wallet')"  title="Wallet"   aria-label="Wallet"><span class="mi">account_balance_wallet</span></div>
+    <div class="rail-item" data-wallet data-pg="wallet"  onclick="goPage('wallet')"  title="Wallet"   aria-label="Wallet"><span class="mi">account_balance_wallet</span></div>
     <div class="rail-item"        onclick="openSettings()"                      title="Settings" aria-label="Settings"><span class="mi">settings</span></div>
   </nav>
 
@@ -283,7 +283,7 @@
         <span class="mi">home</span><span class="nav-lbl">Home</span>
       </div>
       <div class="nav-item" id="nav-explore" onclick="goPage('explore')"><span class="mi">explore</span><span class="nav-lbl">Explore</span></div>
-      <div class="nav-item" id="nav-wallet" onclick="goPage('wallet')">
+      <div class="nav-item" data-wallet id="nav-wallet" onclick="goPage('wallet')">
         <span class="mi">account_balance_wallet</span><span class="nav-lbl">Wallet</span>
       </div>
       <div class="sb-div"></div>
@@ -411,7 +411,7 @@
     </div>
 
     <!-- ══ WALLET PAGE ══ -->
-    <div class="page" id="pageWallet">
+    <div class="page" data-wallet id="pageWallet">
       <div class="sec-title" style="margin-bottom:20px;"><div class="sec-dot"></div>Wallet</div>
       <div class="wallet-card">
         <div class="wallet-label">Available Balance</div>
@@ -1118,7 +1118,7 @@
 <!-- App Logic -->
 <!-- defer, so it runs after the Firebase bundles above and after the DOM is
      parsed — same order as before, but nothing blocks the first paint -->
-<script defer src="/js/app.js?v=20260815a"></script>
+<script defer src="/js/app.js?v=20260815b"></script>
 
 <!-- ══ Firebase AI Logic — stage 2 of the mission safety filter ══
      A SECOND, modular Firebase app. The rest of the site runs on the compat

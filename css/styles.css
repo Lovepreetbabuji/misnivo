@@ -5979,6 +5979,14 @@ body.no-anim #proofOverlay.as-page .modal{ transition:none !important; }
   flex:1; min-height:0; overflow-y:auto; padding:16px 20px;
   max-height:70vh;
 }
+/* ── Wallet paused (WALLET_ENABLED = false in app.js) ──
+   Hidden, never removed: the markup stays in the DOM so renderProfile and the
+   rest can keep writing to #walletBal without null checks, and turning the flag
+   back on restores everything with no re-render. Every wallet modal already
+   shares .wallet-ov, so the two selectors cover the whole surface. */
+.wallet-off [data-wallet],
+.wallet-off .wallet-ov { display:none !important; }
+
 /* ── Safety block ── */
 /* No width here on purpose. On mobile .modal is a bottom sheet
    (position:fixed; bottom:0; left:0; right:0) and a width of its own turns it
