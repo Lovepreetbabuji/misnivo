@@ -16,6 +16,26 @@ rules_version = '2';
 //  Admin is a CUSTOM CLAIM (request.auth.token.admin), never a document field,
 //  so it cannot be self-granted. Set it with the Admin SDK:
 //    admin.auth().setCustomUserClaims(uid, { admin: true })
+//
+//  ─────────────────────────────────────────────────────────────────────────
+//  TWO THINGS THESE RULES CANNOT FIX, both from where the data lives:
+//
+//  1. THE WALLET IS CLIENT-WRITTEN. wallet.balance sits on users/{uid}, and
+//     the app debits and credits it from the browser, so the owner must be
+//     allowed to write it. That means the owner can also write 99999999. No
+//     rule can tell a legitimate debit from a made-up one — only a server can,
+//     because only a server knows what the balance is supposed to be. Until
+//     balance changes move into Cloud Functions (or a callable that the client
+//     asks rather than tells), the wallet is honour-system.
+//
+//  2. THE USER DOCUMENT IS WORLD-READABLE. Public profiles need name, username,
+//     bio, photo and socials, and Firestore has no field-level read control —
+//     so email, wallet, transaction history, acceptedDares and settings are
+//     readable by anyone who knows a uid. The fix is structural: keep public
+//     fields on users/{uid} and move the rest to users/{uid}/private/, which is
+//     already locked to the owner below and currently unused.
+//
+//  Neither is a rules bug. Both are worth fixing before real money moves.
 // ═══════════════════════════════════════════════════════════════════════════
 
 service cloud.firestore {
@@ -47,6 +67,12 @@ service cloud.firestore {
     function steppedAll() {
       return stepped('likeCount') && stepped('dislikeCount') && stepped('viewCount');
     }
+    // Known and accepted: the app's count-repair helpers (_ddRepairCounts,
+    // _vdRepairCounts) reset a negative stored counter straight to 0, which is a
+    // jump of more than one step and so is refused for anyone who is not the
+    // owner. Both calls are .catch()'d best-effort repairs, so the repair simply
+    // does not apply — nothing breaks. Loosening the step check to let them
+    // through would also let anyone write likeCount = 1000000.
 
     // ─── users ────────────────────────────────────────────────────────────
     // Public read: guests and the feed need names/avatars/usernames.
@@ -160,6 +186,21 @@ service cloud.firestore {
 
     // ─── comments ─────────────────────────────────────────────────────────
     match /comments/{commentId} {
+      // A comment's proofId holds a PROOF id on a video and a DARE id on a
+      // mission — one collection serves both surfaces — so a pin check has to
+      // try both, each behind exists() or the get() blows up on the other kind.
+      // Video: the taker who made it OR the creator who paid for it may pin.
+      // Mission: the creator may pin. Both match _ddCanPin in the app.
+      function pinnerOfProof() {
+        return exists(/databases/$(database)/documents/proofs/$(resource.data.proofId))
+            && (get(/databases/$(database)/documents/proofs/$(resource.data.proofId)).data.takerId == uid()
+             || get(/databases/$(database)/documents/proofs/$(resource.data.proofId)).data.get('posterId','') == uid());
+      }
+      function pinnerOfDare() {
+        return exists(/databases/$(database)/documents/dares/$(resource.data.proofId))
+            && get(/databases/$(database)/documents/dares/$(resource.data.proofId)).data.creatorUid == uid();
+      }
+
       allow read: if true;
 
       allow create: if signedIn()
@@ -174,13 +215,10 @@ service cloud.firestore {
         (signedIn() && resource.data.userId == uid() && onlyTouches(['text','edited','editedAt']))
         // anyone may like it
         || (signedIn() && onlyTouches(['likedBy','likeCount']) && stepped('likeCount'))
-        // the video owner may pin a comment on their own video.
-        // exists() first: dare comments reuse this collection with a DARE id in
-        // proofId, so the get() would blow up on those without the guard.
+        // pin / unpin, by whoever owns the thing being commented on
         || (signedIn()
             && onlyTouches(['pinned','pinnedBy'])
-            && exists(/databases/$(database)/documents/proofs/$(resource.data.proofId))
-            && get(/databases/$(database)/documents/proofs/$(resource.data.proofId)).data.takerId == uid());
+            && (pinnerOfProof() || pinnerOfDare()));
 
       allow delete: if (signedIn() && resource.data.userId == uid()) || isAdmin();
     }
@@ -233,8 +271,63 @@ service cloud.firestore {
       allow delete: if isAdmin();
     }
 
+    // ─── agreements — LEGAL AUDIT TRAIL ───────────────────────────────────
+    // What a person accepted, when, and the hash of the exact wording they were
+    // shown. The app never reads these back — they exist for a dispute — so the
+    // client can write one and nothing else.
+    //
+    // Without this block the collection falls to the default deny below, and
+    // because every gate writes its record BEFORE the action and refuses to
+    // continue if that write fails, that would stop anyone posting a mission,
+    // accepting one, or submitting proof. It is not an optional section.
+    //
+    // The one permitted edit is the link to what the agreement authorised: a
+    // creator agreement is recorded before the mission exists and a proof
+    // agreement before the proof does, so each starts with a null id. Only
+    // those two fields, only by the person who signed it, and only while still
+    // null — the consent itself can never be rewritten.
+    match /agreements/{agreementId} {
+      allow read: if isAdmin();
+
+      allow create: if signedIn()
+                    && request.resource.data.userId == uid()
+                    && request.resource.data.type in
+                         ['mission_create','mission_accept','proof_submission']
+                    && request.resource.data.agreementVersion is string
+                    && request.resource.data.agreementHash is string;
+
+      allow update: if signedIn()
+                    && resource.data.userId == uid()
+                    && onlyTouches(['missionId','proofId'])
+                    && (!touched().hasAny(['missionId']) || resource.data.get('missionId', null) == null)
+                    && (!touched().hasAny(['proofId'])   || resource.data.get('proofId',   null) == null);
+
+      allow delete: if false;
+    }
+
+    // ─── safety filter logs ───────────────────────────────────────────────
+    // Write-only for clients, and deliberately so: someone who just got blocked
+    // must not be able to read the queue back, because that is a list of the
+    // words to avoid next time.
+    match /safety_blocks/{id} {
+      allow read:   if isAdmin();
+      allow create: if signedIn() && request.resource.data.userId == uid();
+      allow update, delete: if false;
+    }
+
+    // The two AI reviewers disagreed about whether a mission is safe. A human
+    // decides, so an admin needs to be able to work the queue.
+    match /manual_review/{id} {
+      allow read:   if isAdmin();
+      allow create: if signedIn() && request.resource.data.userId == uid();
+      allow update, delete: if isAdmin();
+    }
+
     // ─── default deny ─────────────────────────────────────────────────────
     // Anything not matched above is refused, including future collections.
+    // NOTE: that cuts both ways — adding a collection to the app without adding
+    // it here silently breaks the feature. agreements/safety_blocks/manual_review
+    // above were exactly that, added to the app after these rules were written.
     match /{document=**} {
       allow read, write: if false;
     }
