@@ -967,6 +967,7 @@ auth.onAuthStateChanged(async (fbUser) => {
     isGuestMode = false; _clearGuestSession(); _setTopbarMode('user');
   if(typeof startNotificationsListener==="function") startNotificationsListener();
     startDaresListener();
+    startMyProofsListener();     // keeps my own proof statuses in step
     AdManager.initScrollAds();   // start scroll ad tracker
     _bootRoute();                // open the page/modal the URL points to (deep-link / refresh)
   } else {
@@ -1101,6 +1102,57 @@ function _daresRerenderDebounced(){
     }
   }, 180);
 }
+// ══════════════════════════════════════════════════════════════════════════
+//  The taker keeps their OWN record straight
+//
+//  A mission creator cannot write to the taker's user document — that is
+//  someone else's document, and the rules refuse it. So the proof itself is the
+//  single source of truth for its status, and the taker's client mirrors it
+//  into their own acceptedDares. Live, through a listener, so "Under Review"
+//  becomes "Approved" the moment the creator approves it.
+//
+//  Same idea as _reconcileTakerApprovals, which already does this for being
+//  picked for a mission.
+// ══════════════════════════════════════════════════════════════════════════
+let myProofsUnsub = null;
+
+function _reconcileMyProofs(proofs){
+  if (!user || !Array.isArray(acceptedDares) || !acceptedDares.length) return false;
+  // dareId -> the status of MY proof for it
+  const byDare = {};
+  (proofs||[]).forEach(p => { if (p.dareId) byDare[p.dareId] = p.status; });
+
+  let changed = false;
+  acceptedDares.forEach(a => {
+    const st = byDare[a.dareId];
+    if (!st) return;
+    // rejected sends it back to "To Submit" so the taker can try again —
+    // matching what the creator's client used to write directly
+    const want = st === 'approved' ? 'approved' : st === 'rejected' ? 'pending' : 'submitted';
+    if (a.proofStatus !== want){
+      a.proofStatus = want;
+      if (want === 'pending') a.proofFilename = '';
+      changed = true;
+    }
+  });
+  if (changed) db.collection('users').doc(user.uid).update({ acceptedDares }).catch(()=>{});
+  return changed;
+}
+
+function startMyProofsListener(){
+  if (myProofsUnsub) myProofsUnsub();
+  if (!user) return;
+  // equality on one field — no composite index needed
+  myProofsUnsub = db.collection('proofs').where('takerId','==',user.uid)
+    .onSnapshot(snap => {
+      const mine = snap.docs.map(d => ({ id:d.id, ...d.data() }));
+      if (_reconcileMyProofs(mine)){
+        if (typeof _renderAcceptedDares === 'function') _renderAcceptedDares();
+        if (typeof renderAcceptedPage  === 'function' && _curPage === 'accepted') renderAcceptedPage();
+      }
+    }, err => console.error('My proofs listener error:', err));
+}
+
 function startDaresListener() {
   if (daresUnsub) daresUnsub();
   daresUnsub = db.collection('dares')
@@ -1184,6 +1236,7 @@ async function emailSignup() {
 // ════════════════════════════
 async function logout() {
   if (daresUnsub) { daresUnsub(); daresUnsub = null; }
+  if (myProofsUnsub) { myProofsUnsub(); myProofsUnsub = null; }
   // the notifications listener was never torn down — it kept running against
   // the signed-out uid and left the last user's rows in memory
   if (notifUnsub) { notifUnsub(); notifUnsub = null; }
@@ -3230,35 +3283,19 @@ async function approveProof(proofId) {
       : `Approve ${proof.takerName}'s proof?`)) return;
 
   try {
-    await db.collection('proofs').doc(proofId).update({ status: 'approved' });
-
-    const takerRef  = db.collection('users').doc(proof.takerId);
-    const takerSnap = await takerRef.get();
-    if (takerSnap.exists) {
-      const takerData = takerSnap.data();
-      // The taker's mission record must still be marked approved — that is
-      // mission state, not money. Only the payout half pauses.
-      const tAD = (takerData.acceptedDares||[]).map(a =>
-        a.dareId === proof.dareId ? {...a, proofStatus:'approved'} : a
-      );
-      const _upd = { acceptedDares: tAD };
-      if (WALLET_ENABLED) {
-        const tw = takerData.wallet || { balance:0, pending:0, transactions:[] };
-        const _bw = proof.dareBounty || 0;
-        tw.pending = (tw.pending||0) + _bw;   // won bounty lands in "pending earnings" until claimed
-        tw.transactions = tw.transactions || [];
-        tw.transactions.unshift({
-          id:'w'+Date.now()+Math.floor(Math.random()*1000), ts:Date.now(), status:'completed',
-          type:'credit', category:'bounty_won',
-          title:'Bounty Won: ' + (proof.dareTitle||'').substring(0,30),
-          amount: _bw, ref:'REF'+Date.now().toString(36).toUpperCase(), date: todayStr()
-        });
-        _upd.wallet = tw;
-      }
-      await takerRef.update(_upd);
-    }
-
-    await db.collection('dares').doc(proof.dareId).update({ completed: true });
+    // ONE batch: the proof and the mission move together or not at all. This
+    // used to be three separate awaits with a write to the TAKER's user document
+    // in the middle — which security rules correctly refuse, since it is someone
+    // else's document. The proof was already approved by then and the mission
+    // never got closed, so a failure left the two halves disagreeing.
+    //
+    // The taker's own copy is no longer written from here at all. Their client
+    // reconciles it from the proof itself (_reconcileMyProofs), the same way
+    // _reconcileTakerApprovals already handles being picked for a mission.
+    const batch = db.batch();
+    batch.update(db.collection('proofs').doc(proofId), { status: 'approved' });
+    batch.update(db.collection('dares').doc(proof.dareId), { completed: true });
+    await batch.commit();
 
     currentProofs = currentProofs.map(p => p.id === proofId ? {...p, status:'approved'} : p);
     renderProofsList();
@@ -3289,20 +3326,15 @@ async function confirmReject() {
   if (!proof) return;
 
   try {
-    await db.collection('proofs').doc(rejectProofId).update({ status: 'rejected', rejectionReason: reason });
-
-    const takerRef  = db.collection('users').doc(proof.takerId);
-    const takerSnap = await takerRef.get();
-    if (takerSnap.exists) {
-      const tAD = (takerSnap.data().acceptedDares||[]).map(a =>
-        a.dareId === proof.dareId ? {...a, proofStatus:'pending', proofFilename:''} : a
-      );
-      await takerRef.update({ acceptedDares: tAD });
-    }
-
-    await db.collection('dares').doc(proof.dareId).update({
-      proofCount: firebase.firestore.FieldValue.increment(-1)
-    });
+    // Same shape as approve: one batch, and nothing written to the taker's
+    // document. Their client puts the mission back to "To Submit" itself once
+    // it sees the rejected proof.
+    const batch = db.batch();
+    batch.update(db.collection('proofs').doc(rejectProofId),
+                 { status: 'rejected', rejectionReason: reason });
+    batch.update(db.collection('dares').doc(proof.dareId),
+                 { proofCount: firebase.firestore.FieldValue.increment(-1) });
+    await batch.commit();
 
     currentProofs = currentProofs.map(p =>
       p.id === rejectProofId ? {...p, status:'rejected', rejectionReason: reason} : p
