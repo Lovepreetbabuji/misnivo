@@ -90,12 +90,21 @@ service cloud.firestore {
                         || request.resource.data.get('email', '') == request.auth.token.email);
 
       // Only the account owner, and only the fields the UI actually edits.
+      // The age fields are one-way on purpose. A date of birth can be written
+      // once and never rewritten, and an under-18 block can be set but never
+      // cleared — otherwise the gate is a formality anyone can undo from the
+      // console. Lifting a wrong block is an admin job, by design.
       allow update: if isSelf(userId)
                     && onlyTouches([
                          'name','username','bio','website','socials','photoURL',
                          'settings','wallet','acceptedDares','pinnedDares',
-                         'likedProofs','fcmUpdatedAt'
-                       ]);
+                         'likedProofs','fcmUpdatedAt',
+                         'dateOfBirth','ageVerifiedAt','underageBlocked','blockedAt'
+                       ])
+                    && (!touched().hasAny(['dateOfBirth'])
+                        || resource.data.get('dateOfBirth', null) == null)
+                    && (!touched().hasAny(['underageBlocked'])
+                        || request.resource.data.underageBlocked == true);
 
       allow delete: if isSelf(userId) || isAdmin();
 

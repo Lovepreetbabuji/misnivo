@@ -973,6 +973,24 @@
      scrolled past the whole agreement. No separate confirm step. -->
 <!-- Blocked by the safety filter. The post form stays open behind it, so the
      only action is to go back and change the mission. -->
+<!-- 18+ gate. Deliberately NOT an .overlay: those close on a backdrop click and
+     live in the modal z-stack. This one cannot be dismissed and sits above
+     everything, including the auth screen. -->
+<div class="age-gate" id="ageGate" style="display:none;">
+  <div class="age-card">
+    <div class="age-ic"><span class="mi">calendar_month</span></div>
+    <div class="age-title" id="ageTitle">One quick thing</div>
+    <p class="age-text" id="ageText">Misnivo is only for people 18 and older. Please enter your date of birth.</p>
+    <div id="ageForm">
+      <label class="age-label" for="ageDob">Date of birth</label>
+      <input class="age-input" id="ageDob" type="date" autocomplete="bday"/>
+      <div class="age-err" id="ageErr"></div>
+      <button class="age-btn" id="ageBtn" onclick="_ageSubmit()">Continue</button>
+    </div>
+    <button class="age-btn age-btn-out" id="ageSignOut" style="display:none;" onclick="logout()">Sign Out</button>
+  </div>
+</div>
+
 <div class="overlay" id="safetyBlockOverlay" style="display:none;" onclick="if(event.target===this)_safetyBlockClose()">
   <div class="modal safety-modal">
     <div class="safety-ic"><span class="mi">block</span></div>

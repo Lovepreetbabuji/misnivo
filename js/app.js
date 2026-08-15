@@ -962,21 +962,121 @@ auth.onAuthStateChanged(async (fbUser) => {
   if (fbUser) {
     await initUser(fbUser);
     _splashDone();
-    document.getElementById('authScreen').style.display = 'none';
-    document.getElementById('appScreen').style.display  = 'block';
-    isGuestMode = false; _clearGuestSession(); _setTopbarMode('user');
-  if(typeof startNotificationsListener==="function") startNotificationsListener();
-    startDaresListener();
-    startMyProofsListener();     // keeps my own proof statuses in step
-    AdManager.initScrollAds();   // start scroll ad tracker
-    _bootRoute();                // open the page/modal the URL points to (deep-link / refresh)
+    // 18+ gate. Guests never reach here — guest mode is a client-side flag with
+    // no Firebase user at all — so it only ever asks a signed-in account.
+    if (user && user.underageBlocked === true) { _ageGateShow('blocked'); return; }
+    if (user && !user.dateOfBirth)             { _ageGateShow('ask');     return; }
+    _bootApp();
   } else {
     _splashDone();
+    _ageGateHide();                        // a sign-out from the blocked screen
     _bootSkelHide();                       // signed out — no page is loading
     document.getElementById('authScreen').style.display = 'flex';
     document.getElementById('appScreen').style.display  = 'none';
   }
 });
+
+// Everything that turns a signed-in account into a running app. Split out so
+// the age gate can hold it back and then run it once the date of birth checks
+// out — the gate is not skippable, so nothing below may start before it.
+function _bootApp(){
+  document.getElementById('authScreen').style.display = 'none';
+  document.getElementById('appScreen').style.display  = 'block';
+  isGuestMode = false; _clearGuestSession(); _setTopbarMode('user');
+  if (typeof startNotificationsListener === 'function') startNotificationsListener();
+  startDaresListener();
+  startMyProofsListener();     // keeps my own proof statuses in step
+  AdManager.initScrollAds();   // start scroll ad tracker
+  _bootRoute();                // open the page/modal the URL points to (deep-link / refresh)
+}
+
+// ══════════════════════════════════════════════════════════════════════════
+//  18+ AGE GATE
+//
+//  Asked once, on the first sign-in where the account has no date of birth —
+//  so existing accounts get it the next time they open the app, and nobody is
+//  ever asked twice. Not dismissible: no close button, no backdrop click, and
+//  the app itself does not start until it is answered.
+// ══════════════════════════════════════════════════════════════════════════
+function _ageFromDob(dobStr){
+  const d = new Date(dobStr + 'T00:00:00');
+  if (isNaN(d.getTime())) return null;
+  const now = new Date();
+  let age = now.getFullYear() - d.getFullYear();
+  const m = now.getMonth() - d.getMonth();
+  if (m < 0 || (m === 0 && now.getDate() < d.getDate())) age--;   // birthday not reached this year
+  return age;
+}
+
+function _ageGateShow(mode){
+  _bootSkelHide();
+  const app = document.getElementById('appScreen'); if (app) app.style.display = 'none';
+  const auth_ = document.getElementById('authScreen'); if (auth_) auth_.style.display = 'none';
+
+  const blocked = (mode === 'blocked');
+  document.getElementById('ageTitle').textContent = blocked
+    ? 'Thanks for stopping by' : 'One quick thing';
+  document.getElementById('ageText').textContent = blocked
+    ? 'Misnivo is only available to people 18 and older. Thank you for your interest.'
+    : 'Misnivo is only for people 18 and older. Please enter your date of birth.';
+  document.getElementById('ageForm').style.display    = blocked ? 'none' : 'block';
+  document.getElementById('ageSignOut').style.display = blocked ? 'flex' : 'none';
+  document.getElementById('ageErr').textContent = '';
+
+  const inp = document.getElementById('ageDob');
+  if (inp && !blocked){
+    inp.max = new Date().toISOString().slice(0,10);   // no future dates
+    inp.value = '';
+  }
+  document.getElementById('ageGate').style.display = 'flex';
+  document.body.classList.add('age-gated');
+}
+
+function _ageGateHide(){
+  const g = document.getElementById('ageGate');
+  if (g) g.style.display = 'none';
+  document.body.classList.remove('age-gated');
+}
+
+async function _ageSubmit(){
+  const inp = document.getElementById('ageDob');
+  const err = document.getElementById('ageErr');
+  const btn = document.getElementById('ageBtn');
+  const dob = (inp.value || '').trim();
+  const say = m => { err.textContent = m; };
+
+  if (!dob) return say('Please enter your date of birth.');
+  const age = _ageFromDob(dob);
+  if (age === null)        return say('That date does not look right.');
+  if (age < 0)             return say('That date is in the future.');
+  if (age > 120)           return say('Please check the year.');
+
+  say('');
+  btn.disabled = true; btn.textContent = 'Saving...';
+  const stamp = firebase.firestore.FieldValue.serverTimestamp();
+
+  try {
+    if (age >= 18){
+      await db.collection('users').doc(user.uid)
+        .update({ dateOfBirth: dob, ageVerifiedAt: stamp });
+      user.dateOfBirth = dob;
+      _ageGateHide();
+      _bootApp();
+      return;
+    }
+    // Under 18. Save the block first — if this write fails the account is still
+    // kept out of the app for this session, it just is not remembered yet.
+    await db.collection('users').doc(user.uid)
+      .update({ dateOfBirth: dob, underageBlocked: true, blockedAt: stamp });
+    user.dateOfBirth = dob; user.underageBlocked = true;
+    _ageGateShow('blocked');
+  } catch(e){
+    console.error('age gate save failed:', e);
+    if (age < 18){ user.underageBlocked = true; _ageGateShow('blocked'); return; }
+    btn.disabled = false; btn.textContent = 'Continue';
+    say('Could not save that — please check your connection and try again.');
+  }
+}
 
 // ════════════════════════════
 //  INIT USER FROM FIRESTORE
@@ -1047,6 +1147,8 @@ async function initUser(fbUser) {
       user.website  = d.website  || '';
       user.socials  = d.socials  || {};   // persist Instagram/X/YouTube links across reloads
       user.settings = d.settings || {};   // persist notif/privacy/autoplay settings across reloads
+      user.dateOfBirth     = d.dateOfBirth || null;      // set once, by the age gate
+      user.underageBlocked = d.underageBlocked === true;
       if (typeof _applyMotionPref === 'function') _applyMotionPref();   // motion pref before the first render
       if (d.photoURL) user.picture = d.photoURL;  // saved photo always wins
     }
