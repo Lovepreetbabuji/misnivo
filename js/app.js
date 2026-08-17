@@ -6791,10 +6791,25 @@ document.addEventListener('click', (e) => {
   if (!thumb) return;
   const img = thumb.querySelector('img');
   const url = img && (img.currentSrc || img.src);
-  if (!url) return;                                   // placeholder tile — nothing to fly
+  // No image on this card. A mission or a proof posted without a thumbnail —
+  // both are optional — shows a placeholder tile instead, and that tile is
+  // still the thing the person tapped. Fly a copy of it rather than skipping
+  // the animation, which is why this only ever worked on older content.
+  let node = null;
+  if (!url) {
+    node = thumb.cloneNode(true);
+    // the badges are absolutely positioned and would grow to full size on the
+    // way up; the tile itself is what should travel
+    node.querySelectorAll('.adc-bounty,.adc-kind,.adc-status,.pdc-status,.pdc-proofs,' +
+      '.yt-dur,.yt-bounty,.short-bounty-tag,.dd-expiry-badge,.adc-menu-wrap,img')
+      .forEach(n => n.remove());
+    node.style.cssText = 'position:absolute;inset:0;width:100%;height:100%;margin:0;border-radius:0;';
+    if (!node.children.length && !node.textContent.trim()) node = null;   // truly empty
+  }
+  if (!url && !node) return;
   const r = thumb.getBoundingClientRect();
   if (!r.width || !r.height) return;
-  _heroSrc = { r, url, radius:getComputedStyle(thumb).borderRadius, t:Date.now() };
+  _heroSrc = { r, url, node, radius:getComputedStyle(thumb).borderRadius, t:Date.now() };
 }, true);
 
 function _heroFly(destEl){
@@ -6827,7 +6842,8 @@ function _heroFly(destEl){
 
   const pic = document.createElement('div');
   pic.className = 'hero-fly-pic';
-  pic.style.backgroundImage = 'url("' + String(s.url).replace(/"/g, '%22') + '")';
+  if (s.url) pic.style.backgroundImage = 'url("' + String(s.url).replace(/"/g, '%22') + '")';
+  else       pic.appendChild(s.node);        // placeholder tile: fly the tile itself
   fly.appendChild(pic);
   document.body.appendChild(fly);
 
