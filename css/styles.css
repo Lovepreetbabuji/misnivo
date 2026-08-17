@@ -6003,19 +6003,22 @@ body.no-anim #proofOverlay.as-page .modal{ transition:none !important; }
 /* ── Date / time wheel ── */
 .dtp-input{ cursor:pointer; }
 .dtp-overlay{
-  position:fixed; inset:0; z-index:2147483470; display:none;
-  align-items:flex-end; justify-content:center;
+  /* above .age-gate (2147483640) — the wheel is asked for FROM the gate, so it
+     has to paint on top of it or the tap does nothing at all */
+  position:fixed; inset:0; z-index:2147483645; display:none;
+  align-items:center; justify-content:center;      /* centred, not a bottom sheet */
   background:rgba(0,0,0,.6); opacity:0; transition:opacity .2s ease;
   font-family:'Roboto',sans-serif;
+  padding:20px;
 }
 .dtp-overlay.open{ opacity:1; }
 .dtp-sheet{
-  width:100%; max-width:520px; background:#212121;
-  border-radius:18px 18px 0 0; padding:10px 16px 18px;
-  transform:translateY(100%); transition:transform .24s cubic-bezier(.25,.8,.25,1);
+  width:100%; max-width:420px; background:#212121;
+  border-radius:16px; padding:16px 16px 18px;
+  transform:scale(.94); opacity:0; transition:transform .2s ease, opacity .2s ease;
 }
-.dtp-overlay.open .dtp-sheet{ transform:translateY(0); }
-.dtp-grip{ width:38px; height:4px; border-radius:2px; background:rgba(255,255,255,.25); margin:0 auto 12px; }
+.dtp-overlay.open .dtp-sheet{ transform:scale(1); opacity:1; }
+.dtp-grip{ display:none; }
 .dtp-title{ font-size:16px; font-weight:600; color:#fff; text-align:center; margin-bottom:10px; }
 
 .dtp-wheel{ position:relative; height:200px; }
@@ -6037,6 +6040,10 @@ body.no-anim #proofOverlay.as-page .modal{ transition:none !important; }
   white-space:nowrap;
 }
 .dtp-item.on{ color:#fff; font-weight:600; }
+/* a moment that has already gone — visible so the column keeps its shape, but
+   dimmed and skipped when the wheel settles */
+.dtp-item.past{ color:rgba(255,255,255,.13); }
+.dtp-item.past.on{ color:rgba(255,255,255,.3); font-weight:400; }
 .dtp-sep{ align-self:center; color:rgba(255,255,255,.4); font-size:18px; padding:0 2px; }
 /* five columns is tight on a phone — let the numbers shrink rather than wrap */
 .dtp-has-time .dtp-item{ font-size:15px; }

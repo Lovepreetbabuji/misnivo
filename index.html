@@ -37,7 +37,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,100..400,0..1,0&icon_names=account_balance_wallet,add,arrow_back,bolt,bookmark,chat_bubble,close,expand_less,explore,home,menu,more_vert,notifications,person,reply,search,send,settings,thumb_down,thumb_up,tune&display=block" rel="stylesheet"/>
 
 <!-- App Styles -->
-<link rel="stylesheet" href="/css/styles.css?v=20260815r"/>
+<link rel="stylesheet" href="/css/styles.css?v=20260815s"/>
 
 <!-- The splash logo must be in flight before anything else competes for the pipe -->
 <link rel="preload" as="image" href="/misnivo.png?v=1" fetchpriority="high"/>
@@ -841,14 +841,14 @@
             <div id="scheduleBox" style="display:none;margin-top:10px;">
               <input class="f-input dtp-input" id="scheduleDate" type="text" readonly inputmode="none"
                      data-dt-mode="datetime" placeholder="Pick a date and time" style="margin:0;"
-                     onclick="openDatePicker('scheduleDate','datetime',{minYear:new Date().getFullYear(),maxYear:new Date().getFullYear()+2,title:'When should it go live?'})"/>
+                     onclick="openDatePicker('scheduleDate','datetime',{minDate:new Date(),minYear:new Date().getFullYear(),maxYear:new Date().getFullYear()+2,title:'When should it go live?'})"/>
             </div>
           </div>
           <div class="f-group">
             <label class="f-label">Mission Expiry <span class="f-opt-tag">Optional</span></label>
             <input class="f-input dtp-input" id="pExpiry" type="text" readonly inputmode="none"
                    data-dt-mode="datetime" placeholder="Pick a date and time" style="margin:0;"
-                   onclick="openDatePicker('pExpiry','datetime',{minYear:new Date().getFullYear(),maxYear:new Date().getFullYear()+2,title:'When does it expire?'})"/>
+                   onclick="openDatePicker('pExpiry','datetime',{minDate:new Date(),minYear:new Date().getFullYear(),maxYear:new Date().getFullYear()+2,title:'When does it expire?'})"/>
             <div class="f-hint">Mission auto-closes after this time and disappears from the feed.</div>
           </div>
         </div>
@@ -1253,7 +1253,7 @@
 <!-- App Logic -->
 <!-- defer, so it runs after the Firebase bundles above and after the DOM is
      parsed — same order as before, but nothing blocks the first paint -->
-<script defer src="/js/app.js?v=20260815r"></script>
+<script defer src="/js/app.js?v=20260815s"></script>
 
 <!-- ══ Firebase AI Logic — stage 2 of the mission safety filter ══
      A SECOND, modular Firebase app. The rest of the site runs on the compat

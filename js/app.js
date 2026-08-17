@@ -1348,9 +1348,42 @@ function _dtValue(id){
 function _dtColumn(key, items, selected){
   return '<div class="dtp-col" data-key="' + key + '">'
     + '<div class="dtp-pad"></div>'
-    + items.map(it => '<div class="dtp-item" data-v="' + it.v + '"'
+    + items.map(it => '<div class="dtp-item' + (it.past ? ' past' : '') + '" data-v="' + it.v + '"'
+        + (it.past ? ' data-past="1"' : '')
         + (it.v === selected ? ' data-sel="1"' : '') + '>' + escHtml(it.t) + '</div>').join('')
     + '<div class="dtp-pad"></div></div>';
+}
+
+// An expiry or a publish time in the past is not a choice anyone means to make,
+// and the browser's own picker never allowed it. The floor cascades: only once
+// the year and month match the floor's does the day matter, and so on down to
+// the minute — otherwise every December would grey out its early days.
+function _dtFloor(){ return _dtState.min instanceof Date && !isNaN(_dtState.min) ? _dtState.min : null; }
+function _dtIsPast(key, v){
+  const f = _dtFloor(); if (!f) return false;
+  const s = _dtState;
+  if (key === 'y') return v < f.getFullYear();
+  if (key === 'm') return s.y === f.getFullYear() && v < f.getMonth();
+  if (key === 'd') return s.y === f.getFullYear() && s.m === f.getMonth() && v < f.getDate();
+  if (_dtMode !== 'datetime') return false;
+  const sameDay = s.y === f.getFullYear() && s.m === f.getMonth() && s.d === f.getDate();
+  if (key === 'h') return sameDay && v < f.getHours();
+  if (key === 'i') return sameDay && s.h === f.getHours() && v < f.getMinutes();
+  return false;
+}
+// Nudge the whole state up to the floor — used when a scroll lands somewhere
+// that is only illegal because of what another column just became.
+function _dtLift(){
+  const f = _dtFloor(); if (!f) return false;
+  const s = _dtState;
+  const cur = new Date(s.y, s.m, s.d, _dtMode === 'datetime' ? s.h : 0, _dtMode === 'datetime' ? s.i : 0);
+  const flr = _dtMode === 'datetime'
+    ? new Date(f.getFullYear(), f.getMonth(), f.getDate(), f.getHours(), f.getMinutes())
+    : new Date(f.getFullYear(), f.getMonth(), f.getDate());
+  if (cur >= flr) return false;
+  s.y = flr.getFullYear(); s.m = flr.getMonth(); s.d = flr.getDate();
+  if (_dtMode === 'datetime'){ s.h = flr.getHours(); s.i = Math.ceil(flr.getMinutes() / 5) * 5 % 60; }
+  return true;
 }
 
 function _dtBuild(){
@@ -1361,11 +1394,14 @@ function _dtBuild(){
   for (let d = 1; d <= _dtDaysIn(st.y, st.m); d++) days.push({ v:d, t:String(d) });
   const mons = _DT_MONTHS.map((t,i) => ({ v:i, t }));
 
+  days.forEach(x => x.past = _dtIsPast('d', x.v));
+  mons.forEach(x => x.past = _dtIsPast('m', x.v));
+  yrs .forEach(x => x.past = _dtIsPast('y', x.v));
   let html = _dtColumn('d', days, st.d) + _dtColumn('m', mons, st.m) + _dtColumn('y', yrs, st.y);
   if (_dtMode === 'datetime'){
     const hrs = [], mins = [];
-    for (let h = 0; h < 24; h++) hrs.push({ v:h, t:_dtPad(h) });
-    for (let i = 0; i < 60; i += 5) mins.push({ v:i, t:_dtPad(i) });
+    for (let h = 0; h < 24; h++) hrs.push({ v:h, t:_dtPad(h), past:_dtIsPast('h', h) });
+    for (let i = 0; i < 60; i += 5) mins.push({ v:i, t:_dtPad(i), past:_dtIsPast('i', i) });
     html += '<div class="dtp-sep">:</div>' + _dtColumn('h', hrs, st.h) + _dtColumn('i', mins, st.i);
   }
   document.getElementById('dtpCols').innerHTML = html;
@@ -1407,10 +1443,16 @@ function _dtOnScroll(col){
     const key = col.dataset.key, v = Number(c.dataset.v);
     _dtState[key] = v;
     // A shorter month can strand the day (31 Jan -> Feb). Rebuild the day column.
+    let rebuild = false;
     if (key === 'm' || key === 'y'){
       const max = _dtDaysIn(_dtState.y, _dtState.m);
-      if (_dtState.d > max){ _dtState.d = max; _dtBuild(); }
+      if (_dtState.d > max){ _dtState.d = max; rebuild = true; }
     }
+    // Landing in the past — either directly, or because changing the month
+    // dragged an otherwise-fine day below the floor. Snap up to the floor.
+    if (_dtLift()) rebuild = true;
+    else if (_dtFloor()) rebuild = true;   // the greyed-out rows shift with every column
+    if (rebuild) _dtBuild();
   }, 90);
 }
 
@@ -1426,8 +1468,12 @@ function openDatePicker(inputId, mode, opts){
     y: base.getFullYear(), m: base.getMonth(), d: base.getDate(),
     h: base.getHours(), i: Math.round(base.getMinutes() / 5) * 5 % 60,
     minYear: o.minYear != null ? o.minYear : now.getFullYear() - 100,
-    maxYear: o.maxYear != null ? o.maxYear : now.getFullYear() + 5
+    maxYear: o.maxYear != null ? o.maxYear : now.getFullYear() + 5,
+    min: o.minDate || null            // nothing before this is selectable
   };
+  // Opening on a stale value (an expiry saved days ago, or simply "now" a while
+  // after the form was opened) must not present a time that has already gone.
+  _dtLift();
   if (_dtState.y < _dtState.minYear) _dtState.y = _dtState.minYear;
   if (_dtState.y > _dtState.maxYear) _dtState.y = _dtState.maxYear;
   document.getElementById('dtpTitle').textContent = o.title || (_dtMode === 'datetime' ? 'Pick a date and time' : 'Pick a date');
@@ -8493,8 +8539,7 @@ function closeShorts() {
   shortsCloseDetails();
   document.body.style.overflow = '';
   document.body.classList.remove('shorts-open');
-  const c = document.getElementById('shortsSnapContainer');
-  if (c) c.querySelectorAll('video').forEach(v => { try { v.pause(); v.removeAttribute('src'); v.load(); } catch(e){} });
+  _shortsKillVideos();
   shortsCommentsOpen = false;
 }
 
@@ -9912,9 +9957,22 @@ function _shortsRowHtml(shorts, noHdr) {
 }
 
 // #8: Render the vertical scroll-snap shorts stack
+// Stop and unload every short. Detaching a playing <video> does not silence it,
+// so this has to run BEFORE the container is rewritten, not after.
+function _shortsKillVideos(){
+  const c = document.getElementById('shortsSnapContainer');
+  if (c) c.querySelectorAll('video').forEach(v => {
+    try {
+      _vqDestroy(v);                                    // HLS keeps buffering on its own
+      v.pause(); v.removeAttribute('src'); v.srcObject = null; v.load();
+    } catch(e){}
+  });
+}
+
 function _renderShortsSnapStack() {
   const c = document.getElementById('shortsSnapContainer');
   if (!c) return;
+  _shortsKillVideos();                    // silence the outgoing stack first
   c.innerHTML = shortsFeed.map((p,i) => _shortsSlideHtml(p,i)).join('');
   // Jump STRAIGHT to the clicked short, instantly and synchronously. The container
   // has CSS scroll-behavior:smooth, so scrollIntoView (even behavior:'auto') would
