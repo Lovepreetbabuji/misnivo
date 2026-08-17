@@ -1070,7 +1070,11 @@ body.boot-skel .page{display:none !important;}
      has to clear the avatar vertically — it used to, only because the avatar was
      lifted 44px onto the banner. With the banner gone the info column carries the
      avatar's height and the row sits at the bottom of it. */
-  .profile-info{ display:flex; flex-direction:column; min-height:156px; }  /* avatar 92 + 14 gap + the 50px row */
+  /* This used to be min-height:156px — avatar 92 + 14 gap + a 50px row of Edit
+     Profile and the follower counts. That row moved into Settings and the counts
+     became hidden carriers, so the reservation was holding open 100px of empty
+     space under the handle with nothing left to put in it. */
+  .profile-info{ display:flex; flex-direction:column; }
   .profile-actions{flex-wrap:nowrap;gap:8px;margin-left:-108px;margin-top:auto;padding-top:14px;}
   .prof-edit-btn, .prof-count-box{flex:1;min-width:0;flex-direction:column;gap:1px;padding:9px 4px;min-height:50px;white-space:nowrap;}
   .prof-edit-btn{font-size:13px;}
