@@ -2226,6 +2226,36 @@ async function emailSignup() {
 // ════════════════════════════
 //  LOGOUT
 // ════════════════════════════
+// Clearing `user` does not clear the pixels. Every surface below was drawn
+// from the signed-in account and will keep showing it until something re-runs,
+// which nothing does for a page that is off screen. Both sign-out and guest
+// entry wipe them, so neither can inherit the last session's face.
+function _clearAccountUI(){
+  const set = (id, txt) => { const el = document.getElementById(id); if (el) el.textContent = txt; };
+  const html = (id, h)  => { const el = document.getElementById(id); if (el) el.innerHTML = h; };
+
+  set('profName', '—');
+  set('profHandle', '@—');
+  html('profPic', '');
+  const bio = document.getElementById('profBio');
+  if (bio) { bio.textContent = ''; bio.style.display = 'none'; }
+  set('profFollowers', '0');
+  set('profFollowing', '0');
+  html('profSocials', '');
+  html('profSocialsBar', '');
+  set('tVideos', '0');
+  set('walletBal', '0');
+  html('notifList', '');
+
+  // the toggles keep their positions too, and the next account would see the
+  // last one's choices sitting there before its own settings loaded
+  [['setNotifLikes',true],['setNotifFollow',true],['setNotifDares',true],
+   ['setPrivate',false],['setAutoplay',true],['setPageAnim',true]]
+    .forEach(([id,def]) => { const el = document.getElementById(id); if (el) el.checked = def; });
+  document.body.classList.remove('no-anim');
+  try { _applyMotionPref(); } catch(e){}
+}
+
 async function logout() {
   if (daresUnsub) { daresUnsub(); daresUnsub = null; }
   if (myProofsUnsub) { myProofsUnsub(); myProofsUnsub = null; }
@@ -2249,6 +2279,14 @@ async function logout() {
   try { _agreementHide(); } catch(e){}
   // the date wheel is its own overlay, not a .overlay — _ovCloseAllSilent misses it
   try { closeDatePicker(); } catch(e){}
+  _clearAccountUI();
+  // onAuthStateChanged is what normally swaps the screens, but it is a round
+  // trip to Firebase — for that second or two the whole signed-in app stayed on
+  // screen after the tap. Swap it here; the listener arriving later is a no-op.
+  const _app = document.getElementById('appScreen');
+  const _authS = document.getElementById('authScreen');
+  if (_app)   _app.style.display  = 'none';
+  if (_authS) _authS.style.display = 'flex';
   _isAdmin = false;
   const _ab = document.getElementById('sbAdmin'); if (_ab) _ab.classList.add('nav-hidden');
   closeDD();
@@ -2291,6 +2329,13 @@ _bootShell();
 
 function goPage(pg, _fromPop) {
   if (pg === 'wallet' && !WALLET_ENABLED) pg = 'home';   // paused: /wallet lands on home
+  // GUEST_BLOCKED_PAGES was written but never read, so the pages it names — the
+  // profile and the accepted list, both of which are about *an account* — opened
+  // for guests and showed whatever the last session had left painted there.
+  if (isGuestMode && GUEST_BLOCKED_PAGES.includes(pg)) {
+    showGuestPrompt(GUEST_ACTION_MSGS[pg] || GUEST_ACTION_MSGS.default, true);
+    return;
+  }
   _searchReturn = null;
   // Navigating to a page closes any open page-modal (its history entry gets REPLACED below)
   const _ovWasOpen = (!_fromPop && !_navBack && _ovStack.length) ? _ovCloseAllSilent() : false;
@@ -4423,7 +4468,7 @@ function shareDare(dareId, title) {
 //  PROFILE
 // ════════════════════════════
 function renderProfile() {
-  if (!user) return;
+  if (!user) { _clearAccountUI(); return; }   // blank it, don't leave the last face up
   const pic = document.getElementById('profPic');
   if (user.picture) { pic.innerHTML = `<img src="${user.picture}" alt="av"/>`; }
   else { pic.textContent = user.name[0].toUpperCase(); }
@@ -5014,6 +5059,7 @@ function showToast(msg) {
 // ════════════════════════════════════════════════════════════════════
 
 function openProfileEdit() {
+  if (typeof guestCheck === 'function' && guestCheck('profile')) return;
   if (!user) return;
 
   // Populate modal with current values
@@ -5116,6 +5162,10 @@ function onProfilePhotoSelected(e) {
 
 // ── Save profile ──────────────────────────────────────────────────────────────
 async function saveProfile() {
+  // This used to reach `user.picture` with no account and fail on the null.
+  // A thrown TypeError is not an access check — say no properly.
+  if (typeof guestCheck === 'function' && guestCheck('profile')) return;
+  if (!user) { showToast('Sign in first'); return; }
   if (!peHandleValid) { showToast('Fix username before saving'); return; }
 
   const newName    = document.getElementById('peName').value.trim();
@@ -7972,6 +8022,10 @@ function doTrendingSearch(term){document.getElementById('searchInput').value=ter
 
 function enterGuestMode() {
   isGuestMode  = true;
+  // A guest may be arriving straight off someone's sign-out, so start from a
+  // blank account rather than whatever is still painted.
+  user = null;
+  _clearAccountUI();
   const GUEST_DURATION_MS = 15 * 60 * 1000; // 15 minutes
   guestEndTime = Date.now() + GUEST_DURATION_MS;
 
