@@ -37,7 +37,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,100..400,0..1,0&icon_names=account_balance_wallet,add,arrow_back,bolt,bookmark,chat_bubble,close,expand_less,explore,home,menu,more_vert,notifications,person,reply,search,send,settings,thumb_down,thumb_up,tune&display=block" rel="stylesheet"/>
 
 <!-- App Styles -->
-<link rel="stylesheet" href="/css/styles.css?v=20260815n"/>
+<link rel="stylesheet" href="/css/styles.css?v=20260815p"/>
 
 <!-- The splash logo must be in flight before anything else competes for the pipe -->
 <link rel="preload" as="image" href="/misnivo.png?v=1" fetchpriority="high"/>
@@ -839,12 +839,16 @@
               <button class="vis-opt" id="visSched" onclick="switchVis('scheduled')" type="button"><span class="mi">schedule</span> Schedule for Later</button>
             </div>
             <div id="scheduleBox" style="display:none;margin-top:10px;">
-              <input class="f-input" id="scheduleDate" type="datetime-local" style="margin:0;"/>
+              <input class="f-input dtp-input" id="scheduleDate" type="text" readonly inputmode="none"
+                     data-dt-mode="datetime" placeholder="Pick a date and time" style="margin:0;"
+                     onclick="openDatePicker('scheduleDate','datetime',{minYear:new Date().getFullYear(),maxYear:new Date().getFullYear()+2,title:'When should it go live?'})"/>
             </div>
           </div>
           <div class="f-group">
             <label class="f-label">Mission Expiry <span class="f-opt-tag">Optional</span></label>
-            <input class="f-input" id="pExpiry" type="datetime-local" style="margin:0;"/>
+            <input class="f-input dtp-input" id="pExpiry" type="text" readonly inputmode="none"
+                   data-dt-mode="datetime" placeholder="Pick a date and time" style="margin:0;"
+                   onclick="openDatePicker('pExpiry','datetime',{minYear:new Date().getFullYear(),maxYear:new Date().getFullYear()+2,title:'When does it expire?'})"/>
             <div class="f-hint">Mission auto-closes after this time and disappears from the feed.</div>
           </div>
         </div>
@@ -1004,6 +1008,23 @@
      scrolled past the whole agreement. No separate confirm step. -->
 <!-- Blocked by the safety filter. The post form stays open behind it, so the
      only action is to go back and change the mission. -->
+<!-- Date / time wheel. The browser's own calendar is an OS widget in OS colours;
+     this one belongs to the app. -->
+<div class="dtp-overlay" id="dtPicker" style="display:none;" onclick="if(event.target===this)closeDatePicker()">
+  <div class="dtp-sheet" id="dtpSheet">
+    <div class="dtp-grip"></div>
+    <div class="dtp-title" id="dtpTitle">Pick a date</div>
+    <div class="dtp-wheel">
+      <div class="dtp-band"></div>
+      <div class="dtp-cols" id="dtpCols"></div>
+    </div>
+    <div class="dtp-acts">
+      <button class="dtp-clear" onclick="_dtClear()">Clear</button>
+      <button class="dtp-ok" onclick="_dtConfirm()">Done</button>
+    </div>
+  </div>
+</div>
+
 <div class="overlay" id="feedbackOverlay" style="display:none;" onclick="if(event.target===this)closeFeedback()">
   <div class="modal fb-modal">
     <div class="fb-title">Tell us what happened</div>
@@ -1077,7 +1098,9 @@
     <p class="age-text" id="ageText">Misnivo is only for people 18 and older. Please enter your date of birth.</p>
     <div id="ageForm">
       <label class="age-label" for="ageDob">Date of birth</label>
-      <input class="age-input" id="ageDob" type="date" autocomplete="bday"/>
+      <input class="age-input dtp-input" id="ageDob" type="text" readonly inputmode="none"
+             data-dt-mode="date" placeholder="Tap to choose"
+             onclick="openDatePicker('ageDob','date',{minYear:new Date().getFullYear()-100,maxYear:new Date().getFullYear(),defaultDate:new Date(new Date().getFullYear()-20,0,1),title:'Your date of birth'})"/>
       <div class="age-err" id="ageErr"></div>
       <button class="age-btn" id="ageBtn" onclick="_ageSubmit()">Continue</button>
     </div>
@@ -1230,7 +1253,7 @@
 <!-- App Logic -->
 <!-- defer, so it runs after the Firebase bundles above and after the DOM is
      parsed — same order as before, but nothing blocks the first paint -->
-<script defer src="/js/app.js?v=20260815n"></script>
+<script defer src="/js/app.js?v=20260815p"></script>
 
 <!-- ══ Firebase AI Logic — stage 2 of the mission safety filter ══
      A SECOND, modular Firebase app. The rest of the site runs on the compat

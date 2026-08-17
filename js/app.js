@@ -1304,6 +1304,167 @@ async function _migratePrivate(uid, pub){
 }
 
 // ══════════════════════════════════════════════════════════════════════════
+//  DATE / TIME PICKER
+//
+//  The browser's own calendar is a blue-and-grey box that belongs to the OS,
+//  not to this app — on a black UI it reads as something that fell in from
+//  somewhere else. This is a scrolling wheel in the app's own colours.
+//
+//  The machine value still lives on the input, in the exact format the rest of
+//  the code already reads (YYYY-MM-DD, or YYYY-MM-DDTHH:MM), so nothing
+//  downstream changes. The box itself shows a readable label instead.
+// ══════════════════════════════════════════════════════════════════════════
+const _DT_MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+let _dtTarget = null, _dtMode = 'date', _dtOnPick = null;
+
+const _dtPad = n => String(n).padStart(2,'0');
+const _dtDaysIn = (y,m) => new Date(y, m+1, 0).getDate();
+
+// "2026-08-15T14:30" / "2026-08-15" -> readable. Empty stays empty.
+function _dtLabel(val, mode){
+  if (!val) return '';
+  const [d,t] = String(val).split('T');
+  const [y,m,dd] = d.split('-').map(Number);
+  if (!y || !m || !dd) return val;
+  const base = dd + ' ' + _DT_MONTHS[m-1] + ' ' + y;
+  if (mode !== 'datetime' || !t) return base;
+  const [hh,mi] = t.split(':').map(Number);
+  const ap = hh >= 12 ? 'PM' : 'AM';
+  const h12 = hh % 12 === 0 ? 12 : hh % 12;
+  return base + ', ' + h12 + ':' + _dtPad(mi) + ' ' + ap;
+}
+
+// Keep the machine value on the element (dataset) and show the label in the box.
+function _dtSet(input, val){
+  input.dataset.value = val || '';
+  input.value = _dtLabel(val, input.dataset.dtMode || 'date');
+}
+// What every reader should call — the machine value, whatever the box shows.
+function _dtValue(id){
+  const el = document.getElementById(id);
+  return el ? (el.dataset.value || '') : '';
+}
+
+function _dtColumn(key, items, selected){
+  return '<div class="dtp-col" data-key="' + key + '">'
+    + '<div class="dtp-pad"></div>'
+    + items.map(it => '<div class="dtp-item" data-v="' + it.v + '"'
+        + (it.v === selected ? ' data-sel="1"' : '') + '>' + escHtml(it.t) + '</div>').join('')
+    + '<div class="dtp-pad"></div></div>';
+}
+
+function _dtBuild(){
+  const st = _dtState;
+  const yrs = [];
+  for (let y = st.minYear; y <= st.maxYear; y++) yrs.push({ v:y, t:String(y) });
+  const days = [];
+  for (let d = 1; d <= _dtDaysIn(st.y, st.m); d++) days.push({ v:d, t:String(d) });
+  const mons = _DT_MONTHS.map((t,i) => ({ v:i, t }));
+
+  let html = _dtColumn('d', days, st.d) + _dtColumn('m', mons, st.m) + _dtColumn('y', yrs, st.y);
+  if (_dtMode === 'datetime'){
+    const hrs = [], mins = [];
+    for (let h = 0; h < 24; h++) hrs.push({ v:h, t:_dtPad(h) });
+    for (let i = 0; i < 60; i += 5) mins.push({ v:i, t:_dtPad(i) });
+    html += '<div class="dtp-sep">:</div>' + _dtColumn('h', hrs, st.h) + _dtColumn('i', mins, st.i);
+  }
+  document.getElementById('dtpCols').innerHTML = html;
+  requestAnimationFrame(() => {
+    document.querySelectorAll('#dtpCols .dtp-col').forEach(col => {
+      const sel = col.querySelector('[data-sel="1"]') || col.querySelector('.dtp-item');
+      if (sel) col.scrollTop = sel.offsetTop - col.clientHeight / 2 + sel.offsetHeight / 2;
+      col.addEventListener('scroll', () => _dtOnScroll(col), { passive:true });
+    });
+    _dtMark();
+  });
+}
+
+let _dtState = { y:2026, m:0, d:1, h:12, i:0, minYear:2020, maxYear:2030 };
+let _dtScrollTO = null;
+
+// Whichever item is nearest the middle band is the value.
+function _dtCentred(col){
+  const mid = col.scrollTop + col.clientHeight / 2;
+  let best = null, bestD = Infinity;
+  col.querySelectorAll('.dtp-item').forEach(it => {
+    const c = it.offsetTop + it.offsetHeight / 2;
+    const d = Math.abs(c - mid);
+    if (d < bestD) { bestD = d; best = it; }
+  });
+  return best;
+}
+function _dtMark(){
+  document.querySelectorAll('#dtpCols .dtp-col').forEach(col => {
+    const c = _dtCentred(col);
+    col.querySelectorAll('.dtp-item').forEach(it => it.classList.toggle('on', it === c));
+  });
+}
+function _dtOnScroll(col){
+  _dtMark();
+  clearTimeout(_dtScrollTO);
+  _dtScrollTO = setTimeout(() => {
+    const c = _dtCentred(col); if (!c) return;
+    const key = col.dataset.key, v = Number(c.dataset.v);
+    _dtState[key] = v;
+    // A shorter month can strand the day (31 Jan -> Feb). Rebuild the day column.
+    if (key === 'm' || key === 'y'){
+      const max = _dtDaysIn(_dtState.y, _dtState.m);
+      if (_dtState.d > max){ _dtState.d = max; _dtBuild(); }
+    }
+  }, 90);
+}
+
+function openDatePicker(inputId, mode, opts){
+  const input = document.getElementById(inputId); if (!input) return;
+  _dtTarget = inputId;
+  _dtMode = mode || input.dataset.dtMode || 'date';
+  const o = opts || {};
+  const now = new Date();
+  const cur = input.dataset.value ? new Date(input.dataset.value.replace(' ', 'T')) : null;
+  const base = (cur && !isNaN(cur)) ? cur : (o.defaultDate || now);
+  _dtState = {
+    y: base.getFullYear(), m: base.getMonth(), d: base.getDate(),
+    h: base.getHours(), i: Math.round(base.getMinutes() / 5) * 5 % 60,
+    minYear: o.minYear != null ? o.minYear : now.getFullYear() - 100,
+    maxYear: o.maxYear != null ? o.maxYear : now.getFullYear() + 5
+  };
+  if (_dtState.y < _dtState.minYear) _dtState.y = _dtState.minYear;
+  if (_dtState.y > _dtState.maxYear) _dtState.y = _dtState.maxYear;
+  document.getElementById('dtpTitle').textContent = o.title || (_dtMode === 'datetime' ? 'Pick a date and time' : 'Pick a date');
+  document.getElementById('dtpSheet').classList.toggle('dtp-has-time', _dtMode === 'datetime');
+  _dtBuild();
+  const ov = document.getElementById('dtPicker');
+  ov.style.display = 'flex';
+  requestAnimationFrame(() => ov.classList.add('open'));
+}
+
+function closeDatePicker(){
+  const ov = document.getElementById('dtPicker');
+  ov.classList.remove('open');
+  setTimeout(() => { ov.style.display = 'none'; }, 200);
+  _dtTarget = null;
+}
+
+function _dtConfirm(){
+  const input = document.getElementById(_dtTarget); if (!input) return closeDatePicker();
+  const s = _dtState;
+  let val = s.y + '-' + _dtPad(s.m + 1) + '-' + _dtPad(s.d);
+  if (_dtMode === 'datetime') val += 'T' + _dtPad(s.h) + ':' + _dtPad(s.i);
+  input.dataset.dtMode = _dtMode;
+  _dtSet(input, val);
+  input.dispatchEvent(new Event('change', { bubbles:true }));
+  const cb = _dtOnPick; _dtOnPick = null;
+  closeDatePicker();
+  if (cb) cb(val);
+}
+
+function _dtClear(){
+  const input = document.getElementById(_dtTarget);
+  if (input) { _dtSet(input, ''); input.dispatchEvent(new Event('change', { bubbles:true })); }
+  closeDatePicker();
+}
+
+// ══════════════════════════════════════════════════════════════════════════
 //  FEEDBACK
 //
 //  The whole point of Phase 2 is hearing what breaks from the people it breaks
@@ -1744,10 +1905,7 @@ function _ageGateShow(mode){
   document.getElementById('ageErr').textContent = '';
 
   const inp = document.getElementById('ageDob');
-  if (inp && !blocked){
-    inp.max = new Date().toISOString().slice(0,10);   // no future dates
-    inp.value = '';
-  }
+  if (inp && !blocked) _dtSet(inp, '');               // the wheel cannot offer a future year
   document.getElementById('ageGate').style.display = 'flex';
   document.body.classList.add('age-gated');
 }
@@ -1762,7 +1920,7 @@ async function _ageSubmit(){
   const inp = document.getElementById('ageDob');
   const err = document.getElementById('ageErr');
   const btn = document.getElementById('ageBtn');
-  const dob = (inp.value || '').trim();
+  const dob = (_dtValue('ageDob') || '').trim();
   const say = m => { err.textContent = m; };
 
   if (!dob) return say('Please enter your date of birth.');
@@ -2945,8 +3103,11 @@ function _doOpenPost() {
   currentTakerMode = 'open'; currentExpiryDate = null;
 
   // Clear text inputs
-  ['pCaption','pReward','pDesc','tagInput','scheduleDate','pExpiry']
+  ['pCaption','pReward','pDesc','tagInput']
     .forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
+  ['scheduleDate','pExpiry'].forEach(id => {          // label AND machine value
+    const el = document.getElementById(id); if (el) _dtSet(el, '');
+  });
 
   // Reset taker mode UI
   document.getElementById('tmOpen')?.classList.add('active');
@@ -3248,7 +3409,7 @@ async function submitDare() {
 
   // Expiry
   let expiresAt = null;
-  const expiryVal = document.getElementById('pExpiry')?.value;
+  const expiryVal = _dtValue('pExpiry');
   if (expiryVal) {
     const expDate = new Date(expiryVal);
     if (expDate <= new Date()) { showToast('Expiry must be a future date/time'); return; }
@@ -3257,7 +3418,7 @@ async function submitDare() {
 
   let scheduledAt = null;
   if (currentVis === 'scheduled') {
-    const dateVal = document.getElementById('scheduleDate').value;
+    const dateVal = _dtValue('scheduleDate');
     if (!dateVal) { showToast('Please select a schedule date and time'); return; }
     scheduledAt = new Date(dateVal);
     if (scheduledAt <= new Date()) { showToast('Please select a future date and time'); return; }
@@ -5084,7 +5245,10 @@ async function openEditDare(id) {
 
   if (d.expiresAt) {
     const exp = d.expiresAt.toDate ? d.expiresAt.toDate() : new Date(d.expiresAt);
-    set('pExpiry', exp.toISOString().slice(0,16));
+    const _e = document.getElementById('pExpiry');
+    if (_e) _dtSet(_e, exp.getFullYear() + '-' + String(exp.getMonth()+1).padStart(2,'0') + '-' +
+                       String(exp.getDate()).padStart(2,'0') + 'T' +
+                       String(exp.getHours()).padStart(2,'0') + ':' + String(exp.getMinutes()).padStart(2,'0'));
   } else {
     set('pExpiry', '');
   }
