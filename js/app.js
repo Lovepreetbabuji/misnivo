@@ -2079,6 +2079,18 @@ async function logout() {
   if (typeof _updateNotifBadge === 'function') _updateNotifBadge();
   await auth.signOut();
   user = null; dares = []; wallet = { balance:100000, pending:0, transactions:[] }; acceptedDares = [];
+  // Everything the signed-in session had open has to go with it. Settings used
+  // to stay on screen over the sign-in page, and edits made there were then
+  // applied to the NEXT account that signed in.
+  try { _ovCloseAllSilent(); } catch(e){}
+  ['legalPage','adminPanel','page404'].forEach(id => {
+    const el = document.getElementById(id); if (el) el.style.display = 'none';
+  });
+  ['legal-open','admin-open','nf-open','ov-open'].forEach(c => document.body.classList.remove(c));
+  try { closeFeedback(); } catch(e){}
+  try { _agreementHide(); } catch(e){}
+  _isAdmin = false;
+  const _ab = document.getElementById('sbAdmin'); if (_ab) _ab.classList.add('nav-hidden');
   closeDD();
 }
 
@@ -2239,7 +2251,7 @@ function _activeDareCard(d, showKind){
       <div class="yt-av">${cAv}</div>
       <div class="yt-meta">
         <div class="yt-title">${escHtml(title)}</div>
-        <div class="yt-sub"><span>@${escHtml(uname)}</span><span class="yt-dot"></span><span>${accepted} accepted</span><span class="yt-dot"></span><span>${_relTimeStr(d.date)}</span></div>
+        <div class="yt-sub"><span>@${escHtml(uname)}</span><span class="yt-dot"></span><span>${accepted} accepted</span><span class="yt-dot"></span><span>${_relTimeStr(d.createdAt || d.date)}</span></div>
       </div>
       <div class="adc-menu-wrap">
         <button class="adc-dots" onclick="event.stopPropagation();_toggleAdcMenu(this)" title="More"><span class="mi">more_vert</span></button>
@@ -4360,7 +4372,7 @@ function _profileDareCard(d){
     <div class="yt-info">
       <div class="yt-av">${cAv}</div>
       <div class="yt-meta"><div class="yt-title">${escHtml(title)}</div>
-        <div class="yt-sub"><span>${d.takers||0} ${d.takerSelectionMode==='creator_picks'?'applicants':'takers'}</span><span class="yt-dot"></span><span>${proofs} proofs</span><span class="yt-dot"></span><span>${_relTimeStr(d.date)}</span></div></div>
+        <div class="yt-sub"><span>${d.takers||0} ${d.takerSelectionMode==='creator_picks'?'applicants':'takers'}</span><span class="yt-dot"></span><span>${proofs} proofs</span><span class="yt-dot"></span><span>${_relTimeStr(d.createdAt || d.date)}</span></div></div>
     </div>
   </div>`;
 }
@@ -6806,8 +6818,11 @@ document.addEventListener('click', (e) => {
   // both are optional — shows a placeholder tile instead, and that tile is
   // still the thing the person tapped. Fly a copy of it rather than skipping
   // the animation, which is why this only ever worked on older content.
+  // A short's thumbnail is 9:16 and its player is not, so flying the picture
+  // means watching it stretch on the way. A plain black box lands cleanly.
+  const plain = !!card.closest('.short-card') || card.classList.contains('short-card');
   let node = null;
-  if (!url) {
+  if (!url && !plain) {
     node = thumb.cloneNode(true);
     // the badges are absolutely positioned and would grow to full size on the
     // way up; the tile itself is what should travel
@@ -6817,10 +6832,11 @@ document.addEventListener('click', (e) => {
     node.style.cssText = 'position:absolute;inset:0;width:100%;height:100%;margin:0;border-radius:0;';
     if (!node.children.length && !node.textContent.trim()) node = null;   // truly empty
   }
-  if (!url && !node) return;
+  if (!url && !node && !plain) return;
   const r = thumb.getBoundingClientRect();
   if (!r.width || !r.height) return;
-  _heroSrc = { r, url, node, radius:getComputedStyle(thumb).borderRadius, t:Date.now() };
+  _heroSrc = { r, url: plain ? null : url, node: plain ? null : node, plain,
+               radius:getComputedStyle(thumb).borderRadius, t:Date.now() };
 }, true);
 
 function _heroFly(destEl){
@@ -6853,8 +6869,9 @@ function _heroFly(destEl){
 
   const pic = document.createElement('div');
   pic.className = 'hero-fly-pic';
-  if (s.url) pic.style.backgroundImage = 'url("' + String(s.url).replace(/"/g, '%22') + '")';
-  else       pic.appendChild(s.node);        // placeholder tile: fly the tile itself
+  if (s.plain)    pic.style.background = '#000';   // shorts: a black box, no stretching
+  else if (s.url) pic.style.backgroundImage = 'url("' + String(s.url).replace(/"/g, '%22') + '")';
+  else            pic.appendChild(s.node);         // placeholder tile: fly the tile itself
   fly.appendChild(pic);
   document.body.appendChild(fly);
 
@@ -6929,7 +6946,7 @@ function openDareDetail(dareId){
   document.getElementById('ddTags').innerHTML = (d.tags?.length ? d.tags : [cat])
     .map(t=>`<span class="dd-tag-link" onclick="searchTag('${(''+t).replace(/[\\'"<>]/g,'')}')">#${escHtml(t)}</span>`).join('');
 
-  const ddMeta = `${_relTimeStr(d.date)} · ${_fmtCount(d.viewCount||0)} views`;
+  const ddMeta = `${_relTimeStr(d.createdAt || d.date)} · ${_fmtCount(d.viewCount||0)} views`;
   const creatorPic = d.creatorPhotoURL || (d.creatorUid === user?.uid ? (user?.picture||'') : '');
   const _ddCu = d.creatorUid||'';
   // Meta gets its own line under the title; this row is just the avatar and Follow.
@@ -9473,9 +9490,16 @@ function openVideo(proofId) {
 }
 
 // Relative time for video cards: "3 days ago", "2 months ago", "1 year ago"
-function _relTimeStr(dateStr) {
-  if (!dateStr) return '';
-  const d = new Date(dateStr); if (isNaN(d)) return dateStr;
+function _relTimeStr(when) {
+  if (!when) return '';
+  // Firestore Timestamp | Date | ISO string | plain "YYYY-MM-DD".
+  // The last one has no time in it at all, which is exactly why a fresh mission
+  // used to read as several hours old: it was measured from midnight UTC.
+  let d;
+  if (when && typeof when.toDate === 'function') d = when.toDate();
+  else if (when instanceof Date)                 d = when;
+  else                                           d = new Date(when);
+  if (isNaN(d)) return String(when);
   const ms = Date.now() - d.getTime();
   const sec = Math.floor(ms/1000), min = Math.floor(sec/60), hr = Math.floor(min/60);
   const day = Math.floor(hr/24), mon = Math.floor(day/30), yr = Math.floor(day/365);
