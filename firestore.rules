@@ -209,9 +209,24 @@ service cloud.firestore {
     match /proofs/{proofId} {
       allow read: if true;
 
+      // Only someone the creator picked may send proof. This mirrors the check
+      // in openProof(), which is a button and therefore not a control.
+      // Missions posted before creator-picks became the only mode stay open, so
+      // anyone part-way through one is not locked out of finishing it.
+      // Written without a `let` binding on purpose — the same get() twice reads
+      // the document once per evaluation, and this file is published by hand,
+      // so the plainest syntax that cannot be argued with wins.
+      function mayProve(dareId) {
+        return get(/databases/$(database)/documents/dares/$(dareId))
+                 .data.get('takerSelectionMode', 'open') != 'creator_picks'
+            || uid() in get(/databases/$(database)/documents/dares/$(dareId))
+                 .data.get('approvedTakers', []);
+      }
       allow create: if signedIn() && !isBanned()
                     && request.resource.data.takerId == uid()
-                    && request.resource.data.status == 'submitted';
+                    && request.resource.data.status == 'submitted'
+                    && exists(/databases/$(database)/documents/dares/$(request.resource.data.dareId))
+                    && mayProve(request.resource.data.dareId);
 
       allow update: if
         // ONLY the mission owner may judge a proof

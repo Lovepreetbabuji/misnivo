@@ -6004,6 +6004,15 @@ body.no-anim #proofOverlay.as-page .modal{ transition:none !important; }
 .sb-legal-links a:hover{ color:#fff; }
 .sb-legal-copy{ margin-top:12px; font-size:12px; color:rgba(255,255,255,.35); }
 
+/* the one-line explanation that replaced the Takers toggle */
+.pd-note{
+  display:flex; gap:10px; align-items:flex-start;
+  padding:12px 14px; border-radius:10px;
+  background:rgba(255,255,255,.04); border:1px solid rgba(255,255,255,.10);
+  font-size:12.5px; line-height:1.5; color:var(--t2);
+}
+.pd-note .mi{ font-size:18px; color:var(--t3); flex:none; }
+
 /* ── Date / time wheel ── */
 .dtp-input{ cursor:pointer; }
 .dtp-overlay{

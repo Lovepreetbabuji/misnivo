@@ -927,7 +927,11 @@ let pinnedDares        = [];     // string[] max 3 — current user's pinned dar
 let selectTakersDareId = null;   // dare being managed in Select Takers modal
 let reportTargetInfo   = null;   // {type:'dare'|'user', id, name, extra}
 let currentApplicants  = [];     // applicant docs for select takers modal
-let currentTakerMode   = 'open'; // 'open' | 'creator_picks' for post dare
+// Missions used to offer a choice: 'open' let whoever accepted send proof
+// straight away. Every new mission is now 'creator_picks' — accepting is open to
+// all, but the creator selects who may actually submit. 'open' is still read for
+// missions posted before this, so nobody mid-mission is locked out.
+let currentTakerMode   = 'creator_picks';
 let currentExpiryDate  = null;   // Date | null for dare expiry
 const ADMIN_UID        = '';     // ← Set your Firebase UID here for admin access
 
@@ -2510,7 +2514,8 @@ function _activeDareCard(d, showKind){
   const pinned = (typeof pinnedDares!=='undefined' && pinnedDares.includes(d.id))
     ? `<div class="adc-pin"><span class="mi">push_pin</span></div>` : '';
   const menuItem = isMine
-    ? `<button onclick="event.stopPropagation();_closeAdcMenus();openEditDare('${d.id}')"><span class="mi">edit</span>Edit</button>`
+    ? `<button onclick="event.stopPropagation();_closeAdcMenus();openSelectTakersModal('${d.id}')"><span class="mi">how_to_reg</span>Choose takers</button>
+       <button onclick="event.stopPropagation();_closeAdcMenus();openEditDare('${d.id}')"><span class="mi">edit</span>Edit</button>`
     : `<button onclick="event.stopPropagation();_closeAdcMenus();openReportModal('dare','${d.id}','${safe}')"><span class="mi">flag</span>Report</button>`;
   return `<div class="active-dare-card" onclick="openDareDetail('${d.id}')">
     <div class="adc-thumb">${inner}${showKind?'<span class="adc-kind">Mission</span>':''}${pinned}${expiry}<span class="adc-bounty">$${reward.toLocaleString('en-IN')}</span></div>
@@ -3209,7 +3214,7 @@ function _doOpenPost() {
   postTags = []; postRules = []; selectedThumb = null;
   selectedPreviewVid = null; capturedFrameBlob = null;
   currentMediaTab = 'image'; currentVis = 'now';
-  currentTakerMode = 'open'; currentExpiryDate = null;
+  currentTakerMode = 'creator_picks'; currentExpiryDate = null;
 
   // Clear text inputs
   ['pCaption','pReward','pDesc','tagInput']
@@ -3218,11 +3223,6 @@ function _doOpenPost() {
     const el = document.getElementById(id); if (el) _dtSet(el, '');
   });
 
-  // Reset taker mode UI
-  document.getElementById('tmOpen')?.classList.add('active');
-  document.getElementById('tmPick')?.classList.remove('active');
-  const mhint = document.getElementById('takerModeHint');
-  if (mhint) mhint.textContent = 'Anyone who accepts can submit proof.';
 
   // Reset media panel to image tab
   switchMediaTab('image');
@@ -3735,7 +3735,8 @@ async function _doAcceptDare(id) {
     await applicantRef.set({
       uid:            user.uid,
       name:           user.name,
-      email:          user.email,
+      // No email. It moved to users/{uid}/private/main precisely so that other
+      // people's documents stop carrying it, and the creator reads this one.
       appliedAt:      firebase.firestore.FieldValue.serverTimestamp(),
       date:           todayStr(),
       completionRate, // used for "highest completion rate" random select
@@ -4628,7 +4629,11 @@ function _profileDareCard(d){
   const proofs=d.proofCount||0;
   const cAv=_avHtml(d.creatorPhotoURL||(user&&user.picture),d.creator||user?.name);
   const statusPill=d.completed?'<span class="pdc-status done">Completed</span>':'<span class="pdc-status live">Active</span>';
+  // Choosing takers had a modal but no way in — openSelectTakersModal had no
+  // call site anywhere. With every mission now creator-picks, a mission without
+  // this entry can never be finished by anyone.
   const menu=`<div class="adc-menu pdc-menu">
+    <button onclick="event.stopPropagation();_closeAdcMenus();openSelectTakersModal('${d.id}')"><span class="mi">how_to_reg</span> Choose takers${d.takers?` (${d.takers})`:''}</button>
     <button onclick="event.stopPropagation();_closeAdcMenus();openReviewModal('${d.id}')"><span class="mi">rate_review</span> Proofs${proofs?` (${proofs})`:''}</button>
     ${!d.completed?`<button onclick="event.stopPropagation();_closeAdcMenus();openEditDare('${d.id}')"><span class="mi">edit</span> Edit</button>`:''}
     <button onclick="event.stopPropagation();_closeAdcMenus();${isPinned?`unpinDare('${d.id}')`:`pinDare('${d.id}')`}"><span class="mi">push_pin</span> ${isPinned?'Unpin':'Pin'}</button>
@@ -4642,7 +4647,7 @@ function _profileDareCard(d){
     <div class="yt-info">
       <div class="yt-av">${cAv}</div>
       <div class="yt-meta"><div class="yt-title">${escHtml(title)}</div>
-        <div class="yt-sub"><span>${d.takers||0} ${d.takerSelectionMode==='creator_picks'?'applicants':'takers'}</span><span class="yt-dot"></span><span>${proofs} proofs</span><span class="yt-dot"></span><span>${_relTimeStr(d.createdAt || d.date)}</span></div></div>
+        <div class="yt-sub"><span>${d.takers||0} accepted</span><span class="yt-dot"></span><span>${proofs} proofs</span><span class="yt-dot"></span><span>${_relTimeStr(d.createdAt || d.date)}</span></div></div>
     </div>
   </div>`;
 }
@@ -5321,14 +5326,10 @@ async function saveProfile() {
 // ════════════════════════════════════════════════════════════════════
 
 // ── TAKER MODE SWITCH (in post dare modal) ──────────────────────────
+// The picker this drove is gone, but the function stays: it is the one place
+// that sets the mode, and an older mission being edited still passes through it.
 function switchTakerMode(mode) {
   currentTakerMode = mode;
-  document.getElementById('tmOpen')?.classList.toggle('active', mode==='open');
-  document.getElementById('tmPick')?.classList.toggle('active', mode==='creator_picks');
-  const hint = document.getElementById('takerModeHint');
-  if (hint) hint.textContent = mode==='open'
-    ? 'Anyone who accepts can submit proof immediately.'
-    : 'Users apply → you review applicants → you select who gets to do the mission.';
 }
 
 // ── EDIT DARE ────────────────────────────────────────────────────────
@@ -5349,6 +5350,8 @@ async function openEditDare(id) {
   capturedFrameBlob = null;
   currentMediaTab = 'image';
   currentVis = d.visibility || 'now';
+  // An older mission keeps the mode it was posted under — editing it should not
+  // quietly change the deal for someone who already accepted it.
   currentTakerMode = d.takerSelectionMode || 'open';
 
   // Fill form
@@ -7708,7 +7711,7 @@ function _ddCtaHtml(d){
       return pill('is-done', 'hourglass_empty', 'Applied', '');
     return pill('is-cta', 'video_call', 'Submit proof', `openProof('${d.id}')`);
   }
-  return pill('is-cta', 'add', d.takerSelectionMode==='creator_picks'?'Apply':'Accept', `acceptDare('${d.id}')`);
+  return pill('is-cta', 'add', 'Accept', `acceptDare('${d.id}')`);
 }
 
 // Bookmark = the existing pin, just surfaced as an icon in the top row
