@@ -2247,6 +2247,8 @@ async function logout() {
   ['legal-open','admin-open','nf-open','ov-open'].forEach(c => document.body.classList.remove(c));
   try { closeFeedback(); } catch(e){}
   try { _agreementHide(); } catch(e){}
+  // the date wheel is its own overlay, not a .overlay — _ovCloseAllSilent misses it
+  try { closeDatePicker(); } catch(e){}
   _isAdmin = false;
   const _ab = document.getElementById('sbAdmin'); if (_ab) _ab.classList.add('nav-hidden');
   closeDD();
