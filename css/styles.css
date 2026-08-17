@@ -6013,19 +6013,24 @@ body.no-anim #proofOverlay.as-page .modal{ transition:none !important; }
 }
 .dtp-overlay.open{ opacity:1; }
 .dtp-sheet{
-  width:100%; max-width:420px; background:#212121;
+  width:100%; max-width:420px; background:#0f0f0f;   /* the app's black, not a grey card */
+  border:1px solid rgba(255,255,255,.16);            /* the outline the card was missing */
   border-radius:16px; padding:16px 16px 18px;
   transform:scale(.94); opacity:0; transition:transform .2s ease, opacity .2s ease;
 }
 .dtp-overlay.open .dtp-sheet{ transform:scale(1); opacity:1; }
 .dtp-grip{ display:none; }
-.dtp-title{ font-size:16px; font-weight:600; color:#fff; text-align:center; margin-bottom:10px; }
+.dtp-title{ font-size:15px; font-weight:600; color:#fff; text-align:center;
+  letter-spacing:.2px; padding-bottom:12px; margin-bottom:6px;
+  border-bottom:1px solid rgba(255,255,255,.10); }
 
 .dtp-wheel{ position:relative; height:200px; }
 /* the band the middle row sits in — the only "selected" affordance needed */
 .dtp-band{
   position:absolute; left:0; right:0; top:50%; height:40px; transform:translateY(-50%);
-  background:rgba(255,255,255,.07); border-radius:10px; pointer-events:none;
+  background:rgba(255,255,255,.06);
+  border:1px solid rgba(255,255,255,.18);            /* outlined, so the row reads as chosen */
+  border-radius:10px; pointer-events:none;
 }
 .dtp-cols{ display:flex; gap:4px; height:100%; }
 .dtp-col{
@@ -6048,12 +6053,13 @@ body.no-anim #proofOverlay.as-page .modal{ transition:none !important; }
 /* five columns is tight on a phone — let the numbers shrink rather than wrap */
 .dtp-has-time .dtp-item{ font-size:15px; }
 
-.dtp-acts{ display:flex; gap:10px; margin-top:14px; }
+.dtp-acts{ display:flex; gap:10px; margin-top:16px;
+  padding-top:14px; border-top:1px solid rgba(255,255,255,.10); }
 .dtp-clear,.dtp-ok{
   flex:1; padding:13px; border:none; border-radius:24px; cursor:pointer;
   font-size:15px; font-weight:600; font-family:inherit;
 }
-.dtp-clear{ background:rgba(255,255,255,.1); color:#fff; }
+.dtp-clear{ background:transparent; color:#fff; border:1px solid rgba(255,255,255,.22); }
 .dtp-ok{ background:#fff; color:#0f0f0f; }
 
 /* ── Feedback ── */

@@ -1435,6 +1435,20 @@ function _dtMark(){
     col.querySelectorAll('.dtp-item').forEach(it => it.classList.toggle('on', it === c));
   });
 }
+// Re-mark which rows are in the past without touching innerHTML, so the columns
+// keep their scroll positions and nothing flashes.
+function _dtRepaintPast(){
+  if (!_dtFloor()) return;
+  document.querySelectorAll('#dtpCols .dtp-col').forEach(col => {
+    const key = col.dataset.key;
+    col.querySelectorAll('.dtp-item').forEach(it => {
+      const past = _dtIsPast(key, Number(it.dataset.v));
+      it.classList.toggle('past', past);
+      if (past) it.dataset.past = '1'; else delete it.dataset.past;
+    });
+  });
+}
+
 function _dtOnScroll(col){
   _dtMark();
   clearTimeout(_dtScrollTO);
@@ -1451,8 +1465,10 @@ function _dtOnScroll(col){
     // Landing in the past — either directly, or because changing the month
     // dragged an otherwise-fine day below the floor. Snap up to the floor.
     if (_dtLift()) rebuild = true;
-    else if (_dtFloor()) rebuild = true;   // the greyed-out rows shift with every column
-    if (rebuild) _dtBuild();
+    // Which rows count as past shifts with every column, but repainting that is
+    // a class change, not a reason to rewrite all five columns — doing the full
+    // rebuild here reset every scroll position and read as a blink on each nudge.
+    if (rebuild) _dtBuild(); else _dtRepaintPast();
   }, 90);
 }
 
