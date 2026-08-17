@@ -4310,6 +4310,9 @@ body.sb-dragging .sb-overlay{ transition:none !important; }
 /* Drawer rows — same on every width now that the drawer is always an overlay.
    The .sidebar prefix is what beats the ≤900px tablet rules further up. */
 .sidebar .sb-top{ padding:0 8px !important; }
+/* Anything hidden by JS has to out-rank the !important below, which an inline
+   style cannot do — this is why the Admin entry showed to every account. */
+.sidebar .nav-item.nav-hidden{ display:none !important; }
 .sidebar .nav-item{
   display:flex !important; flex-direction:row !important;
   justify-content:flex-start !important; align-items:center !important;

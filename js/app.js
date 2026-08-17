@@ -770,7 +770,6 @@ function showAgreementModal(mode, onAgree) {
   btn.innerHTML = '<span class="mi">check</span>' + doc.btn;
 
   document.getElementById('agreementPoints').innerHTML = _agreementRenderHtml(doc.text());
-  document.getElementById('agreementBody').scrollTop = 0;
 
   const cbIcon = document.getElementById('agreementCheckIcon');
   cbIcon.textContent = 'check_box_outline_blank';
@@ -781,6 +780,10 @@ function showAgreementModal(mode, onAgree) {
   const ov = document.getElementById('agreementOverlay');
   ov.style.display = 'flex';
   ov.classList.add('open');   // .overlay gates opacity/pointer-events on .open, not display
+  // AFTER display, not before: a display:none element has no scroll box, so
+  // setting scrollTop on it does nothing and the old position survives. This is
+  // why reopening showed the agreement exactly where it was left.
+  requestAnimationFrame(() => { document.getElementById('agreementBody').scrollTop = 0; });
 }
 
 // "1. Title\nBody text..." blocks, separated by a blank line, become a
@@ -1699,7 +1702,10 @@ function _bootApp(){
   startMyProofsListener();     // keeps my own proof statuses in step
   // Admin is a token claim, so it has to be read from the token, not guessed
   // from a uid. The sidebar entry stays hidden for everyone else.
-  _resolveAdmin().then(ok => { const b = document.getElementById('sbAdmin'); if (b) b.style.display = ok ? '' : 'none'; });
+  _resolveAdmin().then(ok => {
+    const b = document.getElementById('sbAdmin');
+    if (b) b.classList.toggle('nav-hidden', !ok);
+  });
   AdManager.initScrollAds();   // start scroll ad tracker
   _bootRoute();                // open the page/modal the URL points to (deep-link / refresh)
 }
@@ -5042,7 +5048,12 @@ function switchTakerMode(mode) {
 async function openEditDare(id) {
   const _d = dares.find(x=>x.id===id); if(_d && _d.completed){ showToast('Completed missions cannot be edited'); return; }
   const d = dares.find(x => x.id === id);
-  if (!d) return;
+  // Silent return was the worst part of this: the edit form never opened, and
+  // then Save posted a NEW mission because editingDareId was still null. Say
+  // what happened instead. The list is the newest 60, so an older mission or a
+  // half-loaded session both land here.
+  if (!d) { showToast(_daresLoaded ? 'Could not open that mission for editing'
+                                   : 'Still loading — try again in a moment'); return; }
 
   editingDareId = id;
   postTags = d.tags ? [...d.tags] : [];
@@ -7965,8 +7976,36 @@ async function renderExplorer() {
   }
 }
 
+// The cache paint and the server paint both rewrote the container, so every
+// image was destroyed and re-created a second time — which is the double blink.
+// If the second paint would draw exactly the same thing, don't draw it.
+let _expSig = '', _expSearchSig = '';
+// The trending rows on their own, so the second fetch can refresh just them
+// instead of rewriting the container and rebuilding every thumbnail with it.
+function _expSearchRows(){
+  const t = _expSearches || [];
+  if (!t.length) return '<div class="exp-empty">Search for something to start tracking!</div>';
+  return t.map((s,i)=>`<div class="trending-search-row" onclick="doTrendingSearch('${escHtml(s.term||'')}')"><span class="trending-rank">${i<3?['🥇','🥈','🥉'][i]:'#'+(i+1)}</span><span class="trending-term">${escHtml(s.term||'')}</span><span class="trending-count">${(s.count||0).toLocaleString('en-IN')} searches</span><span class="mi" style="color:var(--t4);margin-left:auto;font-size:14px;">arrow_forward_ios</span></div>`).join('');
+}
 function _explorerPaint(){
     const container=document.getElementById('explorerContent'); if(!container) return;
+    // Two signatures on purpose. The trending list arrives on a SECOND fetch, so
+    // it is normally the only thing that differs between the cache paint and the
+    // server paint — and rewriting the whole container for it threw away and
+    // rebuilt every thumbnail, which is the double blink. Swap just that list.
+    const contentSig = activeExpTab
+      + '|' + (allProofs||[]).map(p=>p.id+':'+(p.viewCount||0)+':'+(p.likeCount||0)).join(',')
+      + '|' + (dares||[]).filter(d=>!d.completed).map(d=>d.id+':'+(d.takers||0)).join(',');
+    const searchSig = (_expSearches||[]).map(s=>s.term+':'+s.count).join(',');
+    if (contentSig === _expSig && container.children.length) {
+      if (searchSig !== _expSearchSig) {
+        _expSearchSig = searchSig;
+        const list = document.getElementById('expSearchList');
+        if (list) list.innerHTML = _expSearchRows();
+      }
+      return;                                   // images stay exactly where they are
+    }
+    _expSig = contentSig; _expSearchSig = searchSig;
     const topSearches = _expSearches;
     const mostViewed  =[...allProofs].sort((a,b)=>(b.viewCount||0)-(a.viewCount||0)).slice(0,12);
     const mostAccepted=[...dares].filter(d=>!d.completed).sort((a,b)=>(b.takers||0)-(a.takers||0)).slice(0,6);
@@ -7976,7 +8015,7 @@ function _explorerPaint(){
       ${showAll||activeExpTab==='viewed'?`<div class="exp-section"><div class="exp-sec-hdr"><span class="exp-fire"></span><div><div class="exp-sec-title">Most Viewed Today</div><div class="exp-sec-sub">Top taker videos</div></div></div>${_mixedVideoFeedHtml(mostViewed,'Complete missions to see videos here!')}</div>`:''}
       ${showAll||activeExpTab==='accepted'?`<div class="exp-section"><div class="exp-sec-hdr"><span class="exp-fire"></span><div><div class="exp-sec-title">Most Accepted Missions</div><div class="exp-sec-sub">Missions everyone wants to try</div></div></div>${mostAccepted.length?`<div class="active-dare-grid">${mostAccepted.map(d=>_explorerDareCard(d)).join('')}</div>`:`<div class="exp-empty">No active missions!</div>`}</div>`:''}
       ${showAll||activeExpTab==='liked'?`<div class="exp-section"><div class="exp-sec-hdr"><span class="exp-fire"></span><div><div class="exp-sec-title">Most Liked Videos</div><div class="exp-sec-sub">Community favorites</div></div></div>${_mixedVideoFeedHtml(mostLiked.filter(p=>(p.likeCount||0)>0),'Like videos to see them here!')}</div>`:''}
-      ${showAll||activeExpTab==='searched'?`<div class="exp-section"><div class="exp-sec-hdr"><span class="exp-fire"></span><div><div class="exp-sec-title">Trending Searches</div><div class="exp-sec-sub">What people are looking for</div></div></div>${topSearches.length?`<div class="trending-searches-list">${topSearches.map((s,i)=>`<div class="trending-search-row" onclick="doTrendingSearch('${escHtml(s.term||'')}')"><span class="trending-rank">${i<3?['🥇','🥈','🥉'][i]:'#'+(i+1)}</span><span class="trending-term">${escHtml(s.term||'')}</span><span class="trending-count">${(s.count||0).toLocaleString('en-IN')} searches</span><span class="mi" style="color:var(--t4);margin-left:auto;font-size:14px;">arrow_forward_ios</span></div>`).join('')}</div>`:`<div class="exp-empty">Search for something to start tracking!</div>`}</div>`:''}`;
+      ${showAll||activeExpTab==='searched'?`<div class="exp-section"><div class="exp-sec-hdr"><span class="exp-fire"></span><div><div class="exp-sec-title">Trending Searches</div><div class="exp-sec-sub">What people are looking for</div></div></div><div class="trending-searches-list" id="expSearchList">${_expSearchRows()}</div></div>`:''}`;
 }
 
 function setSearchType(type) {
@@ -8719,7 +8758,7 @@ function _shortsSetSpeed(s){
   _shortsSpeedIdx = Math.max(0, _SHORTS_SPEEDS.indexOf(s));
   const v = _shortsCurrentVideo(); if (v) v.playbackRate = s;
   _shortsMenuRoot();
-  showToast(s === 1 ? 'Speed: Normal' : 'Speed: ' + s + '×');
+  // no toast: the menu already shows the tick against what you picked
 }
 function _shortsMenuQuality(){
   const body = document.getElementById('shortsMenuBody'); if (!body) return;
@@ -10292,7 +10331,7 @@ function _vqChoose(val){
   if(_vqTarget) _vqApply(_vqTarget);
   const l = document.getElementById('shortsQLbl'); if(l) l.textContent = _vqLabel();
   closeQualityMenu();
-  showToast(_vqPref==='auto' ? 'Quality: Auto (Adaptive)' : 'Quality: '+_vqPref+'p');
+  // no toast: the menu already shows the tick against what you picked
 }
 
 // ── Buffering spinner: any long/short player that stalls on the network shows
@@ -10503,7 +10542,7 @@ function _vpMenuSpeed(){
 function _vpSetSpeed(s){
   const {v} = _vpEls(); if (v) v.playbackRate = s;
   _vpMenuRoot(); _vpShow(true);
-  showToast(s === 1 ? 'Speed: Normal' : 'Speed: ' + s + '×');
+  // no toast: the menu already shows the tick against what you picked
 }
 // The old route opened a separate centred/bottom sheet, which on a phone landed
 // nowhere near the button. Same list, rendered in place.

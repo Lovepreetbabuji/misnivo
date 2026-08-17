@@ -90,12 +90,15 @@ service cloud.firestore {
     match /users/{userId} {
       allow read: if true;
 
-      // The uid is what matters. The email is only checked when the provider
-      // actually issued one — some sign-in methods don't, and a hard check
-      // would block those accounts from ever being created.
-      allow create: if isSelf(userId)
-                    && (!('email' in request.auth.token)
-                        || request.resource.data.get('email', '') == request.auth.token.email);
+      // The uid is what matters, and now it is the ONLY thing checked.
+      //
+      // This used to also require the document's email to match the token's.
+      // That was fine until email moved into private/main — after which the app
+      // stopped writing email here at all, the condition could never be true,
+      // and every new sign-up was refused its public document. The account
+      // existed in Auth with no profile behind it. Caught by a fresh sign-up
+      // failing with permission-denied inside initUser.
+      allow create: if isSelf(userId);
 
       // Only the account owner, and only the fields the UI actually edits.
       // email, dateOfBirth, ageVerifiedAt, underageBlocked, blockedAt and wallet
