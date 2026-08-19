@@ -3394,6 +3394,13 @@ html{scroll-behavior:smooth;}
   box-shadow: 0 8px 28px rgba(0,0,0,0.5) !important;
   background: #1f1f1f !important;
 }
+/* ...except the sign in / sign up box, which is the reference for this app's
+   black-and-white surfaces. The grey above was making it the odd one out. */
+#authScreen .auth-box{
+  background:#000 !important;
+  border:1px solid #fff !important;
+  box-shadow:none !important;
+}
 /* Full-screen detail overlays = near-black page bg (rows/cards stay lighter) */
 .video-detail-overlay { background: var(--page-grad) !important; box-shadow: none !important; }
 
@@ -5172,6 +5179,9 @@ body::after{
        scrolls inside itself. --dd-top is measured when the drawer opens. */
     top:var(--dd-top, 56px) !important;
     bottom:0 !important;
+    /* .dd-bar sets margin-bottom:16px; on a fixed panel that lifts it off the
+       bottom edge and the drawer stopped short of the screen. */
+    margin:0 !important;
     overflow-y:auto !important;
     -webkit-overflow-scrolling:touch;
   }
