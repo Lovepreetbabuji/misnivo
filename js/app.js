@@ -2312,8 +2312,6 @@ function _clearAccountUI(){
   html('profPic', '');
   const bio = document.getElementById('profBio');
   if (bio) { bio.textContent = ''; bio.style.display = 'none'; }
-  set('profFollowers', '0');
-  set('profFollowing', '0');
   html('profSocials', '');
   html('profSocialsBar', '');
   set('tVideos', '0');
@@ -4548,10 +4546,10 @@ function renderProfile() {
   document.getElementById('profName').textContent     = user.name;
   document.getElementById('profHandle').textContent   = '@' + (user.username || '—');
   _ppUid = null;   // own-profile context for follow lists
-  _profileFollowCounts(user.uid).then(({followers,following})=>{
-    const a=document.getElementById('profFollowers'); if(a)a.textContent=_fmtCount(followers);
-    const b=document.getElementById('profFollowing'); if(b)b.textContent=_fmtCount(following);
-  });
+  // The two follows queries that used to run here filled #profFollowers and
+  // #profFollowing — spans marked hidden, that nothing read. The stat grid does
+  // its own lookup and actually shows the numbers, so this was the same pair of
+  // reads twice per profile visit for a result nobody could see.
 
   const bioEl = document.getElementById('profBio');
   if (user.bio && user.bio.trim()) {
