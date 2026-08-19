@@ -126,8 +126,7 @@ body{
 ═══════════════════════════════════════════════════════ */
 #authScreen{display:none;min-height:100vh;align-items:center;justify-content:center;padding:24px;}
 .auth-box{
-  background:rgba(10,6,6,0.92);
-  backdrop-filter:var(--blur);-webkit-backdrop-filter:var(--blur);
+  background:#000;
   border:1px solid #fff;border-radius:28px;
   padding:40px 36px;width:100%;max-width:420px;text-align:center;
   animation:scaleIn .4s cubic-bezier(.34,1.56,.64,1) both;
