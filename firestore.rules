@@ -32,8 +32,12 @@ rules_version = '2';
 //     need name, username, photo and bio from it, and Firestore has no
 //     field-level read control. DONE: email, dateOfBirth, ageVerifiedAt,
 //     underageBlocked, blockedAt, wallet and the ban now live in
-//     users/{uid}/private/main. STILL PUBLIC and worth moving next:
-//     settings, acceptedDares, pinnedDares, likedProofs.
+//     users/{uid}/private/main — and so do settings, acceptedDares,
+//     pinnedDares and likedProofs, which were the last four to move. A stranger
+//     now reads only name, username, photoURL, bio, website, socials.
+//     NOTE: those key names must STAY in the users update rule below. Deleting
+//     a field counts as touching it, so removing them from that list would stop
+//     an un-migrated account from ever clearing its old public copy.
 //
 //  The wallet one is not a rules bug and needs a server before real money moves.
 // ═══════════════════════════════════════════════════════════════════════════
@@ -175,9 +179,34 @@ service cloud.firestore {
                     && request.resource.data.creatorUid == uid()
                     && request.resource.data.completed == false;
 
+      // Once anyone has accepted, the deal is struck. A creator dropping the
+      // reward from 500 to 1 after a taker has already filmed is a scam, not an
+      // edit, and the rules were letting the owner rewrite anything at any time.
+      // Running a live mission still needs a few keys, so those stay open.
+      function dareTaken() {
+        return resource.data.get('takers', 0) > 0
+            || resource.data.get('approvedTakers', []).size() > 0;
+      }
+      // Checked against every dare write the app actually makes:
+      // choosing takers, the accept counter, the proof counter, closing the
+      // mission, the expiry refund flag, and likes. 'refunded' is bookkeeping,
+      // not a term of the deal, so it stays open.
+      function whileRunning() {
+        return ['approvedTakers','takers','proofCount','completed','refunded',
+                'likedBy','likeCount','dislikedBy','dislikeCount','viewCount'];
+      }
       allow update: if
-        // the owner may edit their own mission
-        (signedIn() && resource.data.creatorUid == uid())
+        // the owner may edit their own mission — freely until it is taken,
+        // and after that only the keys that running it requires
+        (signedIn() && resource.data.creatorUid == uid()
+                    && (!dareTaken() || onlyTouches(whileRunning())))
+        // A creator clearing the legacy creatorEmail off an old mission. It is
+        // removal only — the field may not survive the write — so this can never
+        // put an address back, and a taken mission must not be exempt from a
+        // privacy cleanup.
+        || (signedIn() && resource.data.creatorUid == uid()
+                       && onlyTouches(['creatorEmail'])
+                       && !('creatorEmail' in request.resource.data))
         // everyone else may only move engagement counters, one step at a time
         || (signedIn() && onlyTouches([
               'likedBy','likeCount','dislikedBy','dislikeCount',
@@ -229,9 +258,14 @@ service cloud.firestore {
                     && mayProve(request.resource.data.dareId);
 
       allow update: if
-        // ONLY the mission owner may judge a proof
+        // ONLY the mission owner may judge a proof, and ONLY once. Without the
+        // check on the previous status the owner could flip approved → rejected
+        // → approved without limit, firing a notification and (later) a payout
+        // every time. A rejected taker submits a NEW proof document, so nothing
+        // legitimate needs to reopen this one.
         (signedIn() && resource.data.posterId == uid()
                     && onlyTouches(['status','rejectionReason'])
+                    && resource.data.status == 'submitted'
                     && request.resource.data.status in ['approved','rejected'])
         // anyone signed in may like / dislike / recount comments
         // (commentCount is a full recount from a query, so it is not step-checked)

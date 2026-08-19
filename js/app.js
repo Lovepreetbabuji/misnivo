@@ -4403,6 +4403,7 @@ function proofItemHTML(p) {
 async function approveProof(proofId) {
   const proof = currentProofs.find(p => p.id === proofId);
   if (!proof) return;
+  if (proof.status !== 'submitted') { showToast('This proof has already been ' + proof.status); return; }
   if (!confirm(WALLET_ENABLED
       ? `Approve and transfer Rs.${(proof.dareBounty||0).toLocaleString('en-IN')} to ${proof.takerName}?`
       : `Approve ${proof.takerName}'s proof?`)) return;
@@ -4449,6 +4450,7 @@ async function confirmReject() {
   if (!reason) { showToast('Please provide a rejection reason'); return; }
   const proof  = currentProofs.find(p => p.id === rejectProofId);
   if (!proof) return;
+  if (proof.status !== 'submitted') { showToast('This proof has already been ' + proof.status); return; }
 
   try {
     // Same shape as approve: one batch, and nothing written to the taker's
@@ -5342,6 +5344,12 @@ function switchTakerMode(mode) {
 // ── EDIT DARE ────────────────────────────────────────────────────────
 async function openEditDare(id) {
   const _d = dares.find(x=>x.id===id); if(_d && _d.completed){ showToast('Completed missions cannot be edited'); return; }
+  // The rules freeze the terms once anyone has accepted. Say so here rather
+  // than opening a form whose Save will be refused.
+  if (_d && ((_d.takers||0) > 0 || (_d.approvedTakers||[]).length > 0)) {
+    showToast('Someone has already accepted this mission — the reward and details are locked now');
+    return;
+  }
   const d = dares.find(x => x.id === id);
   // Silent return was the worst part of this: the edit form never opened, and
   // then Save posted a NEW mission because editingDareId was still null. Say
