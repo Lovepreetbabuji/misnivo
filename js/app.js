@@ -1263,7 +1263,12 @@ auth.onAuthStateChanged(async (fbUser) => {
 //  settings/acceptedDares/pinnedDares/likedProofs, which are next but touch far
 //  more code than this change should.
 // ══════════════════════════════════════════════════════════════════════════
-const PRIVATE_FIELDS = ['email','dateOfBirth','ageVerifiedAt','underageBlocked','blockedAt','wallet'];
+// What someone accepted, pinned and liked says a great deal about them, and
+// users/{uid} is world-readable. These four were left behind when email and
+// wallet moved down; they belong here too. _migratePrivate copies each one into
+// private/main and deletes the public copy on the owner's next sign-in.
+const PRIVATE_FIELDS = ['email','dateOfBirth','ageVerifiedAt','underageBlocked','blockedAt','wallet',
+                        'settings','acceptedDares','pinnedDares','likedProofs'];
 const _privRef = uid => db.collection('users').doc(uid || user.uid).collection('private').doc('main');
 
 // Existing accounts still carry these at the top level. Copy them down, then
@@ -2073,11 +2078,11 @@ async function initUser(fbUser) {
         name: user.name,
         photoURL: user.picture || '',
         username: handle, bio: '', website: '',
-        acceptedDares, pinnedDares: [],
         createdAt: firebase.firestore.FieldValue.serverTimestamp()
       });
       // private half — owner only
-      batch.set(_privRef(user.uid), { email: user.email, wallet });
+      batch.set(_privRef(user.uid), { email: user.email, wallet,
+        acceptedDares, pinnedDares: [], likedProofs: [], settings: {} });
       batch.set(db.collection('usernames').doc(handle), { uid: user.uid });
       await batch.commit();
     } else {
@@ -2091,15 +2096,17 @@ async function initUser(fbUser) {
 
       user.email    = priv.email || user.email;   // falls back to the auth record
       wallet        = priv.wallet     || { balance:100000, pending:0, transactions:[] };
-      acceptedDares = d.acceptedDares || [];
+      // priv first, public second: the public copy is gone once this account has
+      // migrated, and still there on the sign-in that migrates it.
+      acceptedDares = priv.acceptedDares || d.acceptedDares || [];
       _reconcileTakerApprovals();   // in case dares already loaded
-      pinnedDares   = d.pinnedDares   || [];
+      pinnedDares   = priv.pinnedDares   || d.pinnedDares   || [];
       user.username = d.username || (user.name||'user').toLowerCase().replace(/[^a-z0-9_.]/g,'').slice(0,20);
       user.bio      = d.bio      || '';
-      userLikes = d.likedProofs || [];
+      userLikes = priv.likedProofs || d.likedProofs || [];
       user.website  = d.website  || '';
       user.socials  = d.socials  || {};   // persist Instagram/X/YouTube links across reloads
-      user.settings = d.settings || {};   // persist notif/privacy/autoplay settings across reloads
+      user.settings = priv.settings || d.settings || {};   // persist notif/privacy/autoplay across reloads
       user.dateOfBirth     = priv.dateOfBirth || null;   // set once, by the age gate
       user.underageBlocked = priv.underageBlocked === true;
       user.banned          = priv.banned === true;
@@ -2192,7 +2199,7 @@ function _reconcileMyProofs(proofs){
       changed = true;
     }
   });
-  if (changed) db.collection('users').doc(user.uid).update({ acceptedDares }).catch(()=>{});
+  if (changed) _privRef(user.uid).set({ acceptedDares }, { merge:true }).catch(()=>{});
   return changed;
 }
 
@@ -3760,7 +3767,7 @@ async function _doAcceptDare(id) {
       proofNote:       '',
       proofFilename:   ''
     });
-    await db.collection('users').doc(user.uid).update({ acceptedDares });
+    await _privRef(user.uid).set({ acceptedDares }, { merge:true });
 
     if (isCreatorPicks) {
       showToast('Applied! Creator will review and select takers.');
@@ -4263,7 +4270,7 @@ async function _doSubmitProof() {
       entry.proofDate     = todayStr();
       entry.proofNote     = note;
     }
-    await db.collection('users').doc(user.uid).update({ acceptedDares });
+    await _privRef(user.uid).set({ acceptedDares }, { merge:true });
 
     btn.innerHTML = '<span class="mi">check_circle</span>Submitted!';
     showToast('Proof submitted! The creator will review it.');
@@ -4994,7 +5001,7 @@ function _saveSettings(){
     pageAnim:    _pa ? _pa.checked : (user.settings?.pageAnim !== false)
   };
   _applyMotionPref();
-  db.collection('users').doc(user.uid).update({ settings:user.settings }).catch(()=>{});
+  _privRef(user.uid).set({ settings:user.settings }, { merge:true }).catch(()=>{});
 }
 
 // One switch, one body class. The Accessibility toggle used to govern only the
@@ -5433,7 +5440,7 @@ async function pinDare(id) {
   if (pinnedDares.length >= 3)  { showToast('Maximum 3 missions can be pinned. Unpin one first.'); return; }
   pinnedDares.push(id);
   try {
-    await db.collection('users').doc(user.uid).update({ pinnedDares });
+    await _privRef(user.uid).set({ pinnedDares }, { merge:true });
     showToast('Mission pinned!  It will appear at top of the feed.');
     renderProfile();
   } catch(e) {
@@ -5445,7 +5452,7 @@ async function pinDare(id) {
 async function unpinDare(id) {
   pinnedDares = pinnedDares.filter(x => x !== id);
   try {
-    await db.collection('users').doc(user.uid).update({ pinnedDares });
+    await _privRef(user.uid).set({ pinnedDares }, { merge:true });
     showToast('Mission unpinned.');
     renderProfile();
   } catch(e) {
@@ -5652,7 +5659,7 @@ function _reconcileTakerApprovals(){
       if (d && (d.approvedTakers||[]).includes(user.uid)) { a.applicantStatus = 'accepted'; changed = true; }
     }
   });
-  if (changed) db.collection('users').doc(user.uid).update({ acceptedDares }).catch(()=>{});
+  if (changed) _privRef(user.uid).set({ acceptedDares }, { merge:true }).catch(()=>{});
 }
 
 async function revokeTaker(dareId, takerUid) {
@@ -6814,7 +6821,7 @@ async function dislikeProof(){
     userLikes=userLikes.filter(id=>id!==p.id);
     const _wasL=p.likeCount||0; p.likeCount=Math.max(0,_wasL-1);
     db.collection('proofs').doc(p.id).update({likeCount:_decCount(_wasL)}).catch(()=>{});
-    db.collection('users').doc(user.uid).update({likedProofs:userLikes}).catch(()=>{});
+    _privRef(user.uid).set({likedProofs:userLikes}, { merge:true }).catch(()=>{});
     _updateLikeBtn(p.id, p.likeCount);
   }
 }
@@ -8492,7 +8499,7 @@ async function toggleLike(proofId) {
       if(activeProof && activeProof.id===proofId) _vdUpdateDislikeUI(p);
     }
   }
-  db.collection('users').doc(user.uid).update({likedProofs:userLikes}).catch(()=>{});
+  _privRef(user.uid).set({likedProofs:userLikes}, { merge:true }).catch(()=>{});
   _updateLikeBtn(proofId,newCount);
 }
 
@@ -8896,7 +8903,7 @@ async function shortsDislikeSlide(proofId, btn){
     userLikes = userLikes.filter(id => id !== proofId);
     const _wasL = p.likeCount||0; p.likeCount = Math.max(0,_wasL-1);
     db.collection('proofs').doc(proofId).update({ likeCount: _decCount(_wasL) }).catch(()=>{});
-    db.collection('users').doc(user.uid).update({ likedProofs:userLikes }).catch(()=>{});
+    _privRef(user.uid).set({ likedProofs:userLikes }, { merge:true }).catch(()=>{});
   }
   _shortsSyncVote(btn.closest('.shorts-snap-item'), p);
 }
