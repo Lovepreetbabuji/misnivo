@@ -126,7 +126,8 @@ body{
 ═══════════════════════════════════════════════════════ */
 #authScreen{display:none;min-height:100vh;align-items:center;justify-content:center;padding:24px;}
 .auth-box{
-  background:#000;
+  background:rgba(10,6,6,0.92);
+  backdrop-filter:var(--blur);-webkit-backdrop-filter:var(--blur);
   border:1px solid #fff;border-radius:28px;
   padding:40px 36px;width:100%;max-width:420px;text-align:center;
   animation:scaleIn .4s cubic-bezier(.34,1.56,.64,1) both;
@@ -143,7 +144,6 @@ body{
 .auth-tagline{color:var(--t3);font-size:13px;margin-bottom:28px;line-height:1.7;}
 .auth-tabs{
   display:flex;background:transparent;border-radius:12px;
-  border:1px solid #fff;
   padding:4px;margin-bottom:24px;gap:4px;
 }
 .auth-tab{
