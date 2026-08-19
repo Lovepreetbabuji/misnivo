@@ -4954,6 +4954,9 @@ function openSettings(){
 //    Desktop switches in place; mobile opens the tapped section as its OWN page. ──
 function _tpSec(btn){
   const secId = btn.dataset.sec; const sec = document.getElementById(secId); if(!sec) return;
+  // Phone and desktop both come through here, so this is the one place that can
+  // guarantee the Edit Profile form is never put in front of anyone empty.
+  if (secId === 'secEdit' && typeof _fillProfileEdit === 'function') _fillProfileEdit();
   if (window.innerWidth <= 768){ _openSecPage(secId, btn.dataset.title || 'Settings', btn.dataset.url || ''); return; }
   const layout = btn.closest('.set-layout'); if(!layout) return;
   layout.querySelectorAll('.set-nav-item').forEach(b=>b.classList.toggle('active', b===btn));
@@ -5135,6 +5138,20 @@ function showToast(msg) {
 function openProfileEdit() {
   if (typeof guestCheck === 'function' && guestCheck('profile')) return;
   if (!user) return;
+  _fillProfileEdit();
+  openSettings();
+  _tpSecById('secEdit');           // desktop: right pane · mobile: its own page
+}
+
+// Putting the account's current details into the form. This used to be the body
+// of openProfileEdit — which nothing calls any more, because Edit Profile became
+// a section of Settings and people reach it by tapping that section, not through
+// the old opener. So the form came up completely blank: no name, no handle, no
+// bio, no avatar. Worse than looking wrong — saveProfile writes whatever the
+// fields hold, so saving that blank form would have erased the bio, website and
+// social links of anyone who used it.
+function _fillProfileEdit() {
+  if (!user) return;
 
   // Populate modal with current values
   const peAv = document.getElementById('peAvatar');
@@ -5160,9 +5177,6 @@ function openProfileEdit() {
   document.getElementById('peSaveBtn').innerHTML = '<span class="mi">check</span> Save Changes';  // clear a stale "Saving..."
   // "Private profile" lives on the Privacy section — the duplicate toggle on the
   // old visibility page is gone with it
-
-  openSettings();
-  _tpSecById('secEdit');           // desktop: right pane · mobile: its own page
 }
 function cancelProfileEdit() {
   // The form is a settings section now: on mobile that is a page to close, on
