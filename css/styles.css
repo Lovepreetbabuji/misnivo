@@ -126,13 +126,9 @@ body{
 ═══════════════════════════════════════════════════════ */
 #authScreen{display:none;min-height:100vh;align-items:center;justify-content:center;padding:24px;}
 .auth-box{
-  /* Glass */
-  background:var(--glass);
-  backdrop-filter:var(--blur);-webkit-backdrop-filter:var(--blur);
-  border:1px solid var(--border2);border-radius:28px;
+  background:#000;
+  border:1px solid #fff;border-radius:28px;
   padding:40px 36px;width:100%;max-width:420px;text-align:center;
-  /* Neu raise */
-  box-shadow:10px 10px 32px var(--neu-dark),-4px -4px 14px var(--neu-light),inset 0 1px 0 rgba(255,255,255,0.07);
   animation:scaleIn .4s cubic-bezier(.34,1.56,.64,1) both;
   position:relative;z-index:2;
 }
@@ -146,9 +142,9 @@ body{
 .auth-logo-icon .mi{font-size:26px;color:#fff;}
 .auth-tagline{color:var(--t3);font-size:13px;margin-bottom:28px;line-height:1.7;}
 .auth-tabs{
-  display:flex;background:rgba(255,255,255,0.04);border-radius:12px;
+  display:flex;background:transparent;border-radius:12px;
+  border:1px solid #fff;
   padding:4px;margin-bottom:24px;gap:4px;
-  box-shadow:inset 3px 3px 8px var(--neu-dark),inset -2px -2px 5px var(--neu-light);
 }
 .auth-tab{
   flex:1;padding:9px;font-size:13px;font-weight:600;
