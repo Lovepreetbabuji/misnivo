@@ -5154,18 +5154,26 @@ body::after{
    The rule directly above strips background and border from every .dd-bar so
    the detail page reads as one surface. The mobile drawer also carries
    .dd-bar, so it was being flattened too — sliding in fully transparent, with
-   the page showing straight through it and no edge to say where it began.
-   It is a panel over the page, so it gets the same treatment as the hamburger
-   drawer: the app's glass, and a white edge. */
+   the page showing straight through it.
+   It is a panel over the page, so it gets the SAME look as the sign-in box:
+   flat black, a white edge, rounded corners. No glass, no blur, no tint —
+   those were taken out of this app on purpose. */
 @media(max-width:768px){
   #dareDetailOverlay .dd-col2,
   #videoDetailOverlay .dd-col2{
-    background:rgba(10,6,6,0.92) !important;      /* same as .sidebar */
-    backdrop-filter:var(--blur) !important;
-    -webkit-backdrop-filter:var(--blur) !important;
-    border:1px solid rgba(255,255,255,.40) !important;
+    background:#000 !important;                    /* same as .auth-box */
+    backdrop-filter:none !important;
+    -webkit-backdrop-filter:none !important;
+    border:1px solid #fff !important;
     border-right:none !important;                  /* it sits against the edge */
-    box-shadow:-8px 0 28px rgba(0,0,0,.6) !important;
+    border-radius:18px 0 0 18px !important;
+    box-shadow:none !important;
+    /* starts under the thumbnail, runs to the bottom of the screen, and
+       scrolls inside itself. --dd-top is measured when the drawer opens. */
+    top:var(--dd-top, 56px) !important;
+    bottom:0 !important;
+    overflow-y:auto !important;
+    -webkit-overflow-scrolling:touch;
   }
   /* DESCRIPTION and RULES were 11px — the same weight as a caption, so the two
      blocks ran together and neither looked like a heading. */
@@ -6303,11 +6311,12 @@ body.age-gated{ overflow:hidden; }
 .age-err{ min-height:18px; margin:8px 0 0; font-size:13px; color:#FF6B6B; text-align:left; }
 .age-btn{
   width:100%; margin-top:16px; padding:14px; border:none; border-radius:24px;
-  background:#FF0033; color:#fff; font-size:15px; font-weight:600; font-family:inherit;
+  /* was #FF0033 — the one red button left on a black-and-white screen */
+  background:#fff; color:#0f0f0f; font-size:15px; font-weight:600; font-family:inherit;
   cursor:pointer; display:flex; align-items:center; justify-content:center; gap:8px;
 }
 .age-btn:disabled{ opacity:.6; cursor:default; }
-.age-btn-out{ background:rgba(255,255,255,.1); }
+.age-btn-out{ background:transparent; color:#fff; border:1px solid rgba(255,255,255,.30); }
 /* full-screen on a phone: a card floating in the middle of a blocked app reads
    as something you could dismiss, and this one cannot be */
 @media(max-width:600px){

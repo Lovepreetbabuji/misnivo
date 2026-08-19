@@ -4765,10 +4765,7 @@ function _renderProfileVideos(){
   const _vt = p => p.createdAtMs || (p.createdAt?.toDate?.()?.getTime()) || (p.submittedAt ? new Date(p.submittedAt).getTime() : 0) || 0;
   const mine = (pool||[]).filter(p => p.takerId === user.uid).sort((a,b)=>_vt(b)-_vt(a));  // latest first
   if (!mine.length){
-    el.innerHTML = `<div class="empty" style="padding:32px;"><span class="mi">video_library</span>
-      <div class="empty-title" style="font-size:18px;">No Videos Yet</div>
-      <p class="empty-desc" style="margin-bottom:16px;">Complete a mission and submit video proof — it shows up here.</p>
-      <button class="btn-empty" onclick="goPage('dares')"><span class="mi">bolt</span>Browse Missions</button></div>`;
+    el.innerHTML = '';                 // blank, not a pitch
     return;
   }
   const longs  = mine.filter(p => !_isShortVideo(p));
@@ -6875,9 +6872,25 @@ function _vdTogglePlay(){
   _vdSyncPaused();
 }
 
+// The drawer should begin just under the thumbnail rather than under the topbar,
+// so it never covers the picture. The thumbnail moves with the page, so its
+// position is measured at the moment the drawer opens rather than guessed.
+function _ddDrawerTop(scope){
+  const hero = document.querySelector(scope + ' .dd-hero');
+  const col  = document.querySelector(scope + ' .dd-col2');
+  if (!col) return;
+  let top = 56;                                       // fallback: under the topbar
+  if (hero){
+    const b = hero.getBoundingClientRect();
+    if (b.height > 0) top = Math.max(0, Math.round(b.bottom));
+  }
+  col.style.setProperty('--dd-top', top + 'px');
+}
+
 // Description/rules toggle — desktop reveals the middle column (3 cols); mobile = drawer
 function openVideoDesc(){
   if (window.innerWidth > 768) return;                 // desktop keeps the box open permanently
+  _ddDrawerTop('#videoDetailOverlay');
   document.querySelector('#videoDetailOverlay .dd-col2')?.classList.add('open');
   _subOpen('vdDetailsDrawer');
 }
@@ -7304,6 +7317,7 @@ function closeDareDetail(){
 // Mobile: description/rules/tags live in a drawer revealed by a left-swipe
 function openDareDetails(){
   if (window.innerWidth > 768) return;                 // desktop keeps the box open permanently
+  _ddDrawerTop('#dareDetailOverlay');
   document.querySelector('#dareDetailOverlay .dd-col2')?.classList.add('open');
   _subOpen('ddDetailsDrawer');
 }
@@ -9902,11 +9916,10 @@ function _renderInterleavedFeed(longVids, shorts) {
       <span class="home-sec-title">Videos</span>
     </div>`;
   if (!_feedLong.length && !_feedShorts.length) {
-    container.innerHTML = _homeDaresHtml();                        // live dares on top
-    container.insertAdjacentHTML('beforeend', `<div class="empty"><span class="mi">play_circle</span>
-      <div class="empty-title">No Videos Yet</div>
-      <p class="empty-desc">Complete a mission and submit video proof — it will appear here!</p>
-      <button class="btn-empty" onclick="goPage('dares')"><span class="mi">bolt</span>Browse Missions</button></div>`);
+    // Live missions only. The 'No Videos Yet' pitch that used to sit under them
+    // filled the screen with an apology for something nobody had asked for yet;
+    // an empty space says the same thing without taking up the page.
+    container.innerHTML = _homeDaresHtml();
     return;
   }
   container.innerHTML = _homeDaresHtml() + _videosHdr;             // live dares → videos header
