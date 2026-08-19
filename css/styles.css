@@ -5149,6 +5149,41 @@ body::after{
   background:transparent !important; border:none !important; box-shadow:none !important;
   backdrop-filter:none !important; -webkit-backdrop-filter:none !important;
 }
+
+/* ── The Description & rules drawer is not one of those flat cards ──────────
+   The rule directly above strips background and border from every .dd-bar so
+   the detail page reads as one surface. The mobile drawer also carries
+   .dd-bar, so it was being flattened too — sliding in fully transparent, with
+   the page showing straight through it and no edge to say where it began.
+   It is a panel over the page, so it gets the same treatment as the hamburger
+   drawer: the app's glass, and a white edge. */
+@media(max-width:768px){
+  #dareDetailOverlay .dd-col2,
+  #videoDetailOverlay .dd-col2{
+    background:rgba(10,6,6,0.92) !important;      /* same as .sidebar */
+    backdrop-filter:var(--blur) !important;
+    -webkit-backdrop-filter:var(--blur) !important;
+    border:1px solid rgba(255,255,255,.40) !important;
+    border-right:none !important;                  /* it sits against the edge */
+    box-shadow:-8px 0 28px rgba(0,0,0,.6) !important;
+  }
+  /* DESCRIPTION and RULES were 11px — the same weight as a caption, so the two
+     blocks ran together and neither looked like a heading. */
+  #dareDetailOverlay .dd-col2 .dd-sec-label,
+  #videoDetailOverlay .dd-col2 .dd-sec-label{
+    font-size:15px; font-weight:800; color:#fff;
+    letter-spacing:.4px; margin-bottom:10px;
+  }
+  /* and room between the two, with a hairline so the split is unmistakable */
+  #dareDetailOverlay .dd-col2 #ddRulesBar,
+  #videoDetailOverlay .dd-col2 #vdRulesBar{
+    margin-top:26px; padding-top:22px;
+    border-top:1px solid rgba(255,255,255,.16);
+  }
+  #dareDetailOverlay .dd-col2 #ddRulesBar .dd-sec-label,
+  #videoDetailOverlay .dd-col2 #vdRulesBar .dd-sec-label{ margin-top:0; }
+}
+
 /* the sticky bar is gone at every width now — back is the device gesture, and
    Save / Share / Report all live in the ••• on the actions row */
 #dareDetailOverlay .dd-topbar{ display:none !important; }
