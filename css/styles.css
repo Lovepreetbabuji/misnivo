@@ -5935,7 +5935,9 @@ body.no-anim #setSecOverlay.as-page .modal{ transition:none !important; }
    out top to bottom instead of switched between.
    ═══════════════════════════════════════════════════════════════════════ */
 #postOverlay.as-page{ background:#000 !important; backdrop-filter:none !important; -webkit-backdrop-filter:none !important; }
-#postOverlay .modal{ background:#000 !important; border:none !important; }
+/* the edge the post form asked for — this line used to strip it */
+#postOverlay .modal{ background:#000 !important;
+  border:1px solid rgba(255,255,255,.30) !important; border-radius:16px !important; }
 #postOverlay .modal-hdr.set-hdr .modal-title{ text-align:center; }
 
 .pd-form{ display:flex; flex-direction:column; gap:28px; padding-top:4px; }
