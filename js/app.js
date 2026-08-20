@@ -1195,6 +1195,9 @@ const _splashStart = Date.now();
 let   _splashHidden = false;
 let   _shellShown   = false;
 let   _bootSkelTO   = null;    // declared with the other boot state: _bootShell()
+let   _bootSkelArm  = null;    // the 'is this slow enough to explain?' timer
+let   _bootDone     = false;   // set the moment real content is up
+const _BOOT_SKEL_AFTER = 700;  // under this, a loader is noise, not information
                                // runs long before the skeleton module's own lines do
 
 function _splashDone(){
@@ -1220,7 +1223,13 @@ function _bootShell(){
   _shellShown = true;
   const app = document.getElementById('appScreen');
   if (app) app.style.display = 'block';
-  _bootSkelShow(_bootSkelKind());                   // the shape of THIS page, not home's
+  // Only if the wait is long enough to be worth explaining. This used to paint
+  // immediately, so a fast connection still got ~2.8s of skeleton on every open
+  // — the loader itself was most of the wait the user saw. Below the threshold
+  // the app simply appears, which is what a quick load should look like.
+  clearTimeout(_bootSkelArm);
+  const kind = _bootSkelKind();
+  _bootSkelArm = setTimeout(() => { if (!_bootDone) _bootSkelShow(kind); }, _BOOT_SKEL_AFTER);
   _splashDone();
 }
 setTimeout(_splashDone, _SPLASH_MAX);               // safety net either way
@@ -2782,6 +2791,8 @@ function _bootSkelShow(kind){
 }
 
 function _bootSkelHide(){
+  _bootDone = true;                       // and disarm the not-yet-shown one
+  clearTimeout(_bootSkelArm); _bootSkelArm = null;
   clearTimeout(_bootSkelTO); _bootSkelTO = null;
   [...document.body.classList].filter(c => c.indexOf('boot-skel') === 0)
     .forEach(c => document.body.classList.remove(c));
@@ -3198,20 +3209,23 @@ function _handleSearchNow() {
 function openPost() {
   if (typeof guestCheck === 'function' && guestCheck('post')) return;
   if (bannedCheck()) return;
-  showAgreementModal('create', async () => {
-    try {
-      _postAgreementId = await _recordAgreement('mission_create', null);
-    } catch (e) {
-      console.error('creator agreement save failed:', e);
-      showToast('Could not record your agreement — please check your connection and try again');
-      return;                                  // form does NOT open
-    }
+  showAgreementModal('create', () => {
+    // The form used to wait for the agreement to finish saving before it would
+    // open — a database round trip with nothing on screen, which is the three
+    // seconds of dead air after tapping Agree. The record still has to exist,
+    // but not before the person can start typing: it is written in parallel and
+    // collected at submit, by which time it has long since landed.
+    _postAgreementId = null;
+    _postAgreementP  = _recordAgreement('mission_create', null)
+      .then(id => { _postAgreementId = id; return id; })
+      .catch(e => { console.error('creator agreement save failed:', e); return null; });
     _doOpenPost();
   });
 }
 // openEditDare fills the same form itself and does not come through here, so
 // editing an existing mission is not re-gated.
 let _postAgreementId = null;
+let _postAgreementP  = null;   // the in-flight save; submitDare waits on this
 function _doOpenPost() {
   // Post modal (z9500) opens ON TOP of the current page — don't close/leave it
   editingDareId = null;
@@ -3641,6 +3655,21 @@ async function submitDare() {
       editingDareId = null;
     } else {
       // ── CREATE MODE: new dare ─────────────────────────────────────────────
+      // The agreement was sent off when the form opened rather than blocking it.
+      // Collect it here — by now it has almost always landed, and if it has not,
+      // this is the moment to wait, because the mission must carry the record.
+      if (_postAgreementP && !_postAgreementId) {
+        try { _postAgreementId = await _postAgreementP; } catch(e){ _postAgreementId = null; }
+      }
+      if (!_postAgreementId) {                      // the save genuinely failed
+        try { _postAgreementId = await _recordAgreement('mission_create', null); }
+        catch(e){
+          showToast('Could not record your agreement — check your connection and try again');
+          const _b = document.getElementById('submitDareBtn');
+          if (_b) { _b.disabled = false; _b.innerHTML = '<span class="mi">bolt</span> Post Mission'; }
+          return;                                   // no mission without the record
+        }
+      }
       const _newDare = await db.collection('dares').add({
         ...dareData,
         creatorAgreementId: _postAgreementId || null,
@@ -3663,6 +3692,7 @@ async function submitDare() {
           .update({ missionId: _newDare.id }).catch(()=>{});
         _postAgreementId = null;
       }
+      _postAgreementP = null;      // this mission's record is closed out
 
       if (WALLET_ENABLED && reward > 0) {
         wallet.balance -= reward;
@@ -10749,6 +10779,37 @@ window.addEventListener('online', ()=>{
 // keeps whatever worker it started with. Ask for an update whenever it comes
 // back to the foreground, and reload once if a newer one takes over — otherwise
 // a resumed app can keep serving the build it was opened with.
+// A build older than the one on the server is the 'my old UI came back' bug:
+// a chat page and a post form that were deleted days ago cannot come from code
+// that no longer contains them, so they can only come from something cached.
+// Asking the worker to update relies on the worker; this does not. It reads the
+// version this page is actually running, asks the server what it should be, and
+// if they disagree it empties every cache, drops the worker and reloads once.
+const _MY_VER = (() => {
+  const s = [...document.querySelectorAll('script[src*="app.js"]')].pop();
+  const m = s && s.src.match(/[?&]v=([^&]+)/);
+  return m ? m[1] : null;
+})();
+let _verFixing = false;
+async function _checkBuildFresh(){
+  if (!_MY_VER || _verFixing || !navigator.onLine) return;
+  let live = null;
+  try {
+    const r = await fetch('/?v=' + Date.now(), { cache:'no-store' });
+    if (!r.ok) return;
+    const m = (await r.text()).match(/app.js?v=([^"'&]+)/);
+    live = m ? m[1] : null;
+  } catch(e){ return; }                       // offline or blocked: leave it alone
+  if (!live || live === _MY_VER) return;
+  _verFixing = true;
+  try { for (const k of await caches.keys()) await caches.delete(k); } catch(e){}
+  try {
+    const regs = await navigator.serviceWorker.getRegistrations();
+    await Promise.all(regs.map(r => r.unregister()));
+  } catch(e){}
+  location.reload();
+}
+
 if ('serviceWorker' in navigator) {
   try {
     const _swHadController = !!navigator.serviceWorker.controller;
@@ -10759,10 +10820,11 @@ if ('serviceWorker' in navigator) {
       location.reload();
     });
     navigator.serviceWorker.register('/sw.js').then(reg => {
-      const check = () => { try { reg.update(); } catch(e){} };
+      const check = () => { try { reg.update(); } catch(e){} _checkBuildFresh(); };
       document.addEventListener('visibilitychange', () => { if (!document.hidden) check(); });
       window.addEventListener('online', check);
       window.addEventListener('pageshow', e => { if (e.persisted) check(); });
+      setTimeout(_checkBuildFresh, 4000);        // and once shortly after this open
     }).catch(()=>{});
   } catch(e){}
 }
