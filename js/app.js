@@ -7695,6 +7695,13 @@ window.addEventListener('popstate', function(e){
   if(_adminOpen()){ closeAdmin(true); return; }          // topmost layer goes first
   if(_legalOpen){ closeLegal(true); return; }
   if(_ovInPop){ _ovInPop = false; return; }              // our own _ovSync rewind — already handled
+  // The notification panel sits at z-index 9650, above every tracked modal at
+  // 9500, and it is opened from the topbar — which stays reachable while one of
+  // those modals is up. So when it is open it is the newest and topmost thing on
+  // screen and must close first. Checked below the stack, back closed the page
+  // UNDER it instead: open Post, open notifications, press back, and the post
+  // form vanished while the notifications stayed.
+  if(document.getElementById('notifPanel')?.classList.contains('open')){ _notifCloseNow(); return; }
   if(_ovStack.length){                                    // a tracked modal is open → close topmost
     const id = _ovStack[_ovStack.length-1];
     _ovInPop = true; _ovCloseById(id); _ovInPop = false;
@@ -7712,7 +7719,7 @@ window.addEventListener('popstate', function(e){
   if (isOpen('vdDetailsDrawer')){ closeVideoDesc(); return; }
   if (isOpen('shortsDetailsDrawer')){ shortsCloseDetails(); return; }
   if (isOpen('collabModal')){ closeCollabModal(); return; }
-  if (isOpen('notifPanel')){ _notifCloseNow(); return; }
+  // (notifPanel is handled above the stack check — it is always the topmost layer)
   if (typeof _sidebarOpen!=='undefined' && _sidebarOpen){ closeSidebar(); return; }
   if (e && e.state && e.state._page){ goPage(e.state._page, true); return; }   // back between main pages
   _dmRouteFromUrl();   // the URL is the source of truth — open/close to match it

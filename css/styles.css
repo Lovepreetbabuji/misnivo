@@ -846,7 +846,8 @@ body{
 .profile-pic{
   width:148px;height:148px;border-radius:50%;
   background:#373737;
-  border:4px solid var(--bg);
+  /* was a 4px ring in the page colour, which is invisible on the page */
+  border:2px solid #fff;
   display:flex;align-items:center;justify-content:center;
   font-size:56px;font-weight:700;color:#fff;overflow:hidden;
   box-shadow:0 8px 24px rgba(0,0,0,0.6),4px 4px 12px var(--neu-dark);
@@ -1563,7 +1564,9 @@ textarea.f-input{resize:vertical;min-height:84px;}
 .mtype-tab{display:flex;align-items:center;gap:5px;padding:6px 14px;background:rgba(255,255,255,.04);border:1px solid var(--border);border-radius:20px;color:var(--t3);font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;transition:all .18s;box-shadow:2px 2px 6px var(--neu-dark),-1px -1px 4px var(--neu-light);}
 .mtype-tab .mi{font-size:15px;}
 .mtype-tab.active{background:rgba(255,255,255,0.08);border-color:rgba(255,255,255,0.08);color:var(--blue);}
-.dare-media-dz{width:100%;height:130px;border:2px dashed var(--border);border-radius:12px;display:flex;align-items:center;justify-content:center;cursor:pointer;position:relative;overflow:hidden;background:rgba(255,255,255,.02);transition:border-color .2s,background .2s;}
+/* 16:9 — the shape the thumbnail is actually shown in everywhere else. A flat
+   130px strip made the box look far wider than the picture it stands for. */
+.dare-media-dz{width:100%;aspect-ratio:16/9;height:auto;border:2px dashed var(--border);border-radius:12px;display:flex;align-items:center;justify-content:center;cursor:pointer;position:relative;overflow:hidden;background:rgba(255,255,255,.02);transition:border-color .2s,background .2s;}
 .dare-media-dz:hover{border-color:rgba(255,255,255,0.08);background:rgba(255,255,255,0.08);}
 .dare-media-dz.has-media{border-style:solid;border-color:rgba(255,255,255,0.08);}
 .dz-inner{display:flex;flex-direction:column;align-items:center;gap:6px;text-align:center;padding:20px;pointer-events:none;}
@@ -3669,11 +3672,13 @@ html{scroll-behavior:smooth;}
   align-items:flex-start;justify-content:center;padding:0;overflow-y:auto;z-index:9500;
 }
 .overlay.as-page .modal{
-  background:transparent !important;
+  background:#000 !important;
   backdrop-filter:none !important;-webkit-backdrop-filter:none !important;
-  border:none;border-radius:0;box-shadow:none;
+  /* an edge, so the form reads as its own surface rather than text floating on
+     the page behind it — the same black-and-white treatment as .auth-box */
+  border:1px solid rgba(255,255,255,.30);border-radius:16px;box-shadow:none;
   width:100%;max-width:600px;max-height:none;overflow:visible;
-  padding:22px 18px 90px;margin:0 auto;transform:none;
+  padding:22px 18px 90px;margin:12px auto;transform:none;
   /* beat the mobile bottom-sheet rule (.modal{position:fixed;bottom:0}) — always start from the TOP */
   position:static;bottom:auto;left:auto;right:auto;
 }
