@@ -2693,8 +2693,9 @@ function _skelAfter(el, html){
 
 function _bootSkelKind(){
   const path = (location.pathname || '/').replace(/\/+$/,'') || '/';
-  const m = path.match(/^\/(watch|shorts|dare|u)\//);
-  if (m) return m[1]==='shorts' ? 'shorts' : m[1]==='u' ? 'profile' : 'detail';
+  const m = path.match(_DEEP_RE);
+  if (m){ const v = _SEG_VIEW[m[1]] || m[1];
+    return v==='shorts' ? 'shorts' : v==='u' ? 'profile' : 'detail'; }
   if (_URL_PAGE[path]) return (_URL_PAGE[path] === 'wallet' && !WALLET_ENABLED) ? 'home' : _URL_PAGE[path];
   // a modal URL (/wallet/deposit, /settings) restores onto its base page
   if (_URL_MODAL[path]) return (path.startsWith('/wallet') && WALLET_ENABLED) ? 'wallet'
@@ -7489,23 +7490,34 @@ function _closeCurrentView(){
   const dov=document.getElementById('dareDetailOverlay');   if (dov && dov.classList.contains('open')){ closeDareDetail(); return; }
 }
 // Called at the START of openShorts / openVideoDetail / openDareDetail.
+// The player is called shorts everywhere inside this file — the function, the
+// overlay id, the CSS, the Firestore fields. Only the address bar changed, so
+// the translation lives here instead of being spread through the code.
+const _VIEW_SEG = { shorts:'clips' };                    // view type -> URL segment
+const _SEG_VIEW = { clips:'shorts', shorts:'shorts' };    // URL segment -> view type
+// clips first, shorts still accepted: every /shorts/<id> link ever shared keeps
+// working, and lands on exactly the same screen.
+const _DEEP_RE    = /^\/(watch|clips|shorts|dare|u)\//;
+const _DEEP_RE_ID = /^\/(watch|clips|shorts|dare|u)\/([^/?#]+)/;
+
 function _enterView(type, id){
   if (typeof closePublicProfile==='function') closePublicProfile();   // leaving for a video/dare → close public profile
   _pauseBackgroundMedia();
   _closeCurrentView();                              // close whatever's open (stops its video)
   if (!_navBack && id){
-    try{ history.pushState({ dm:type, id }, '', '/'+type+'/'+encodeURIComponent(id)); }catch(e){}
+    try{ history.pushState({ dm:type, id }, '', '/'+(_VIEW_SEG[type]||type)+'/'+encodeURIComponent(id)); }catch(e){}
   }
 }
 // Open whatever view the current URL points to (back/forward + deep links)
 function _dmRouteFromUrl(){
   _navBack = true;
-  const m = (location.pathname||'').match(/^\/(watch|shorts|dare|u)\/([^/?#]+)/);
+  const m = (location.pathname||'').match(_DEEP_RE_ID);
   if (m){
     const id = decodeURIComponent(m[2]);
-    if (m[1]==='watch')       openVideoDetail(id);
-    else if (m[1]==='shorts') openShorts(id);
-    else if (m[1]==='u')      openPublicProfile(id);
+    const v  = _SEG_VIEW[m[1]] || m[1];
+    if (v==='watch')       openVideoDetail(id);
+    else if (v==='shorts') openShorts(id);
+    else if (v==='u')      openPublicProfile(id);
     else                      openDareDetail(id);
   } else {
     if (typeof closePublicProfile==='function') closePublicProfile();
@@ -7520,7 +7532,7 @@ function _maybeInitialRoute(){
   if (_routedInitial) return;
   // boot rewrote the URL to '/' (goPage home) — route from the SAVED deep link
   const src = _deepLinkPath || (location.pathname||'');
-  const m = src.match(/^\/(watch|shorts|dare|u)\/([^/?#]+)/);
+  const m = src.match(_DEEP_RE_ID);
   if (!m){ _routedInitial = true; _bootSkelHide(); return; }
   const id = decodeURIComponent(m[2]);
   const ready = (m[1]==='u') ? true                 // public profile fetches its own user doc
@@ -7630,7 +7642,7 @@ document.addEventListener('click', (e)=>{
 // looks like the link worked and hides broken links from everyone.
 function _isKnownPath(path){
   if (path === '/' || path === '/admin' || path === '/following') return true;
-  if (/^\/(watch|shorts|dare|u)\//.test(path)) return true;
+  if (_DEEP_RE.test(path)) return true;
   if (_URL_PAGE[path] || _URL_MODAL[path] || _URL_LEGAL[path]) return true;
   return false;
 }
@@ -7648,8 +7660,15 @@ function close404(goHome){
 }
 
 function _bootRoute(){
-  const path=(location.pathname||'/').replace(/\/+$/,'')||'/';
-  if(/^\/(watch|shorts|dare|u)\//.test(path)){
+  let path=(location.pathname||'/').replace(/\/+$/,'')||'/';   // let: an old /shorts/ link is rewritten below
+  if(_DEEP_RE.test(path)){
+    // An old /shorts/<id> link still opens the same screen, and the bar is
+    // corrected to /clips/ on the way in — so the old name is never handed back
+    // out again from someone re-sharing what they see.
+    if (path.indexOf('/shorts/') === 0){
+      path = '/clips/' + path.slice(8);
+      try{ history.replaceState(history.state, '', path); }catch(e){}
+    }
     _deepLinkPath = path;          // goPage('home') replaces the URL with '/' — save it first
     goPage('home'); return;        // → _maybeInitialRoute opens it once the data loads
   }
@@ -8742,7 +8761,7 @@ async function renderShort() {
   ov.dataset.creatorId = d.creatorUid || p.posterId || '';
   ov.dataset.takerId = p.takerId || '';
   // keep the URL in sync with the current short as the feed scrolls (shareable)
-  try{ history.replaceState({ dm:'shorts', id:p.id }, '', '/shorts/'+encodeURIComponent(p.id)); }catch(e){}
+  try{ history.replaceState({ dm:'shorts', id:p.id }, '', '/clips/'+encodeURIComponent(p.id)); }catch(e){}
 
   const up = document.getElementById('shortsNavUp'), dn = document.getElementById('shortsNavDown');
   if (up) up.classList.toggle('disabled', shortsIndex === 0);

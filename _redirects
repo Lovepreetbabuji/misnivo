@@ -1,3 +1,5 @@
-# SPA fallback — serve index.html for client-side routes (/watch/:id, /shorts/:id,
+# SPA fallback — serve index.html for client-side routes (/watch/:id, /clips/:id,
 # /dare/:id, etc.). Existing static files (css/js/assets) are served first.
+# /shorts/:id is still routed here too: the app accepts it and rewrites the bar
+# to /clips/:id, so links shared before the rename keep working.
 /*    /index.html   200
