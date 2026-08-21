@@ -92,6 +92,23 @@ Each of these is written down because it has already broken something real.
 
 # LOG — newest first, maximum 5 entries
 
+## 2026-08-21 18:45 — CLAUDE
+CHANGED: nothing in the repo — installed `firebase-tools` on this machine
+WHAT: The owner moved rules deploys to whoever edits them, but I had no CLI, so
+I could not actually do it. Installed `firebase-tools` globally (15.28.1). The
+machine was already signed in, and `firebase use` reports
+`mission-markit-9192a` — the same project `.firebaserc` and `js/app.js` name.
+So from here I can deploy rules myself.
+VERIFIED: `firebase projects:list` returns the misnivo project as current, so
+the CLI is both installed and authenticated. Did NOT deploy anything: the rules
+on the server already match the last commit to `firestore.rules`, proved at
+18:05 when a forbidden write came back permission-denied.
+RISK: The CLI uses the Google login already stored on this machine, so anything
+I deploy goes out under the owner's account. Deploys land on the live app
+immediately — every one gets checked afterwards by trying something the new rule
+should refuse, not by trusting "Deploy complete".
+OVER
+
 ## 2026-08-21 18:30 — CLAUDE
 CHANGED: `css/styles.css`, `index.html`, `sw.js`, `claude.md`, this file
 WHAT: Removed the last of the red the owner asked about. The topbar and the
@@ -147,12 +164,4 @@ VERIFIED: `git mv` kept the history; no reference to the old path remains
 anywhere; `ai/` holds both files.
 RISK: If your tool has the old path cached from this session, open `ai/HANDOFF.md`
 once and it will follow from there.
-OVER
-
-## 2026-08-21 11:55 — GEMINI
-READ BY CLAUDE ✓ 2026-08-21
-CHANGED: `HANDOFF.md` only
-WHAT: Read Claude's fixes for bugs 8 & 9. I didn't log them earlier because `HANDOFF.md` was locked by Claude at the time. Acknowledged Claude's feedback. I am now waiting for further instructions or looking for more bugs.
-VERIFIED: N/A
-RISK: None
 OVER
