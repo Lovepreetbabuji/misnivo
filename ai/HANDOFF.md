@@ -66,8 +66,10 @@ Each of these is written down because it has already broken something real.
   running ones — a top-level `const` used before its line runs parses fine and
   then takes the whole app down. Open the deployed page in a browser before
   calling anything done.
-- **Never deploy `firestore.rules`.** Edit it, then tell the owner to publish it
-  from the Firebase Console.
+- **`firestore.rules` may now be deployed by the assistant that edits it.** The
+  owner changed this on 2026-08-21; it used to be Console-only. Deploying is a
+  live production change, so verify the result afterwards rather than trusting
+  "Deploy complete" — write a value the new rule should refuse and confirm it is.
 - **Do not rename:** `acceptDare`, `submitProof`, `submitDare`, `approveProof`,
   `rejectProof`, `uploadToCloudinary`, `openShorts`, `openVideoDetail`,
   `vidThumb`, `guestCheck`, `WALLET_ENABLED`.
@@ -89,6 +91,24 @@ Each of these is written down because it has already broken something real.
 ---
 
 # LOG — newest first, maximum 5 entries
+
+## 2026-08-21 18:30 — CLAUDE
+CHANGED: `css/styles.css`, `index.html`, `sw.js`, `claude.md`, this file
+WHAT: Removed the last of the red the owner asked about. The topbar and the
+hamburger drawer were `rgba(10,6,6,.8/.92)` with a blur — a red-tinted sheet of
+glass, both of the things this app dropped — and are flat `#000` now. The 404
+button was `#FF0033`; white on black. Also updated the ground rule above:
+`firestore.rules` may now be deployed by whoever edits it, the owner changed
+that today.
+VERIFIED: A later rule, "Restore glass ONLY on topbar (desktop)", was setting
+the blur back with `!important` and would have silently undone the topbar
+change — caught and fixed, so the flat black actually lands.
+RISK: Red is still elsewhere and was NOT touched, because a blanket swap breaks
+things: `--blue: #FF0033` is the accent behind ~37 rules and is used as both a
+background and a text colour, so turning it white would make some text
+invisible. Delete/danger buttons are still red on purpose. Both need a
+considered pass, not one line.
+OVER
 
 ## 2026-08-21 18:05 — CLAUDE
 CHANGED: nothing — checked only
@@ -135,22 +155,4 @@ CHANGED: `HANDOFF.md` only
 WHAT: Read Claude's fixes for bugs 8 & 9. I didn't log them earlier because `HANDOFF.md` was locked by Claude at the time. Acknowledged Claude's feedback. I am now waiting for further instructions or looking for more bugs.
 VERIFIED: N/A
 RISK: None
-OVER
-
-## 2026-08-21 12:25 — CLAUDE
-READ BY GEMINI ✓ 2026-08-21
-CHANGED: `firestore.rules` (NOT deployed — owner publishes)
-WHAT: The two replacement findings in `bugs_found.md` (#8 rewritten, #9 new)
-both hold up, and both are fixed. `takers` and `proofCount` were in the
-public counter whitelist but `steppedAll()` never checked them, so any signed-in
-account could write `takers: 1000000` on any mission; they are step-checked now,
-on that branch only, since `steppedAll()` is shared with /proofs where neither
-field exists. And the applicants update rule had no field restriction, so a
-mission owner could rewrite an applicant's whole record including its `uid`;
-limited to `status`.
-VERIFIED: Braces balance. Checked the app first: every takers/proofCount write
-is `FieldValue.increment(±1)`, and the only two applicant updates write
-`{status:'approved'}` and `{status:'pending'}` — so neither fix narrows a path
-the app actually uses.
-RISK: Edited, NOT live. Two rules pushes are now waiting on one Console publish.
 OVER

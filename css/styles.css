@@ -214,9 +214,10 @@ body{
   /* Always above EVERY page overlay (detail z150, shorts z400, …) so the
      hamburger/search/profile menus open ON TOP of any page, never behind it */
   position:fixed;top:0;left:0;right:0;z-index:9000;height:56px;
-  /* Glass */
-  background:rgba(10,6,6,0.80);
-  backdrop-filter:var(--blur);-webkit-backdrop-filter:var(--blur);
+  /* Flat black. This was rgba(10,6,6,.80) with a blur — a red-tinted sheet of
+     glass, which is both of the things this app dropped. */
+  background:#000;
+  backdrop-filter:none;-webkit-backdrop-filter:none;
   border-bottom:1px solid var(--border);
   display:flex;align-items:center;padding:0 16px;gap:14px;
   /* Subtle neu shadow */
@@ -319,8 +320,9 @@ body{
 ═══════════════════════════════════════════════════════ */
 .sidebar{
   position:fixed;top:56px;left:0;bottom:0;width:var(--sw);
-  background:rgba(10,6,6,0.92);
-  backdrop-filter:var(--blur);
+  /* Same as the topbar above, and the same reason. */
+  background:#000;
+  backdrop-filter:none;-webkit-backdrop-filter:none;
   border-right:1px solid var(--border);
   display:flex;flex-direction:column;justify-content:space-between;padding:8px 0;
   z-index:90;
@@ -3339,11 +3341,13 @@ html{scroll-behavior:smooth;}
   -webkit-backdrop-filter: none !important;
 }
 
-/* Restore glass ONLY on topbar (desktop) */
+/* This used to put the glass BACK on the topbar, with !important, which quietly
+   undid the flat black set further up — the bar stayed translucent and blurred
+   no matter what that rule said. The app has no glass any more. */
 .topbar {
-  background: rgba(15,15,15,0.85) !important;
-  backdrop-filter: var(--blur) !important;
-  -webkit-backdrop-filter: var(--blur) !important;
+  background: #000 !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
   box-shadow: 0 1px 0 rgba(255,255,255,0.05) !important;
   border-bottom: none !important;
 }
@@ -6168,7 +6172,8 @@ body.nf-open{ overflow:hidden; }
 .nf-btn{
   display:inline-flex; align-items:center; justify-content:center; gap:8px;
   padding:13px 26px; border:none; border-radius:24px; cursor:pointer;
-  background:#FF0033; color:#fff; font-size:15px; font-weight:600; font-family:inherit;
+  /* was #FF0033 — the last red button on the 404 screen */
+  background:#fff; color:#0f0f0f; font-size:15px; font-weight:600; font-family:inherit;
 }
 .nf-btn .mi{ font-size:19px; }
 

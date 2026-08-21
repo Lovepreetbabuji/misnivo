@@ -53,3 +53,9 @@ Below is the list of architectural and logic bugs found in the current codebase.
 - **Issue**: The `applicants` subcollection has an `allow update: if isDareOwner();` rule but lacks an `onlyTouches()` constraint.
 - **Risk**: The mission creator can modify ANY field on the applicant's document, including changing the `uid` of the applicant, which would lock the applicant out of their own application data.
 - **Fix**: Enforce `onlyTouches(['status'])` on the applicant update rule for mission owners.
+
+### 10. Missing `type="button"` on Interactive Elements (LOW/UI)
+- **File**: `index.html`
+- **Issue**: There are over 150 `<button>` tags without a `type="button"` attribute defined. 
+- **Risk**: While currently safe, if any of these sections are ever wrapped in a `<form>` element (e.g., for accessibility or autocomplete features in the future), these buttons will default to `type="submit"`. Clicking them would unexpectedly trigger a full page reload, destroying the Single Page App (SPA) state and causing a terrible UX.
+- **Fix**: Add `type="button"` to all buttons that act as JS triggers, keeping `type="submit"` only for actual form submissions.

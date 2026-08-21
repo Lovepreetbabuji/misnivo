@@ -49,3 +49,11 @@ doosre ne abhi kya kiya.
 
 Agar `TURN: GEMINI` likha ho, to ruk jao aur user ko batao — Gemini ka kaam
 adhoora hai, beech mein file chhedne se dono ka kaam mit sakta hai.
+
+
+## Firestore rules
+
+Rules ab main khud deploy kar sakta hoon (user ne 21 Aug 2026 ko ye badla —
+pehle wo khud Console se karte the). Par deploy ka matlab hai **live app par
+turant asar**, isliye deploy ke baad hamesha khud jaanch karo: koi aisa kaam
+karke dekho jo naye rule ko rokna chahiye, aur pakka karo ki wo ruka.
