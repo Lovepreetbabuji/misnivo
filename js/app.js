@@ -9831,7 +9831,9 @@ function exportWalletCSV(){
     rows.push([t.date||'', credit?'Credit':'Debit', meta.label, t.title||'', (credit?'+':'-')+(t.amount||0), t.status||'completed', t.ref||'']); });
   const csv=rows.map(r=>r.map(esc).join(',')).join('\r\n');
   const blob=new Blob([csv],{type:'text/csv;charset=utf-8;'}), url=URL.createObjectURL(blob);
-  const a=document.createElement('a'); a.href=url; a.download='daremarket-statement-'+todayStr().replace(/\s+/g,'-')+'.csv';
+  // The saved file carries the app's name onto the person's own device, so it
+  // was the last place the old one was still being handed out.
+  const a=document.createElement('a'); a.href=url; a.download='misnivo-statement-'+todayStr().replace(/\s+/g,'-')+'.csv';
   document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
   showToast('Statement downloaded');
 }

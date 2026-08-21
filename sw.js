@@ -1,4 +1,4 @@
-// DareMarket service worker — offline app shell.
+// Misnivo service worker — offline app shell.
 // Purpose: offline/refresh must never break the UI (icon font, css, js, page).
 // Data comes from Firestore's own offline cache; videos are never cached here.
 //
@@ -6,7 +6,7 @@
 // the activate step deletes nothing, so every version of css/js ever fetched
 // stays in the cache — and the offline fallback can then pair an old cached
 // index.html with the old assets it points at, rendering a UI from months ago.
-const VER = 'dm-shell-20260821a';
+const VER = 'dm-shell-20260821b';
 
 self.addEventListener('install', e => { self.skipWaiting(); });
 self.addEventListener('activate', e => {
