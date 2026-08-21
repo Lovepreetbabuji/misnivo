@@ -1226,7 +1226,7 @@ body.boot-skel .page{display:none !important;}
 .pe-field{margin-bottom:18px;}
 .pe-label{display:flex;justify-content:space-between;align-items:center;font-size:12px;font-weight:600;color:var(--t2);margin-bottom:8px;font-family:'Roboto',sans-serif;letter-spacing:.3px;text-transform:uppercase;}
 .pe-label span{font-size:11px;color:var(--t3);font-weight:400;text-transform:none;letter-spacing:0;}
-.pe-input{width:100%;background:rgba(255,255,255,0.05);border:1px solid #ffffff;border-radius:10px;padding:11px 14px;font-size:14px;color:var(--t1);font-family:inherit;outline:none;transition:border-color .2s;backdrop-filter:var(--blur);}
+.pe-input{width:100%;background:rgba(255,255,255,0.05);border:1px solid var(--border);border-radius:10px;padding:11px 14px;font-size:14px;color:var(--t1);font-family:inherit;outline:none;transition:border-color .2s;backdrop-filter:var(--blur);}
 .pe-input:focus{border-color:var(--blue);}
 .pe-input.error{border-color:var(--red);}
 .pe-textarea{resize:vertical;min-height:70px;line-height:1.5;}
