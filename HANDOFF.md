@@ -92,9 +92,11 @@ every reference still pointed at `?v=2`, so the new artwork sat at an address
 browsers already believed they had. Bumped all seven references to `?v=3`.
 VERIFIED: Live. Manifest still parses; the server hands out the new bytes
 (`icon-512.png` is 85,645, up from 11,566); app suite 5/5, 0 page errors.
-BROKE / RISK: Nothing known. Note for whoever is next — this file sits in the
-repo root, so it is published with the site. Keep passwords, keys and anything
-private OUT of it.
+BROKE / RISK: Nothing known. Checked where this file can be read from, since it
+sits in the repo root: the site's SPA rule serves index.html for it rather than
+the file, and the GitHub repo is private, so it is not reachable by anyone else
+today. That depends on the repo staying private — still keep passwords, keys
+and anything private OUT of it.
 NEXT: Nothing outstanding. Two things are waiting on the owner, not on us:
 the Cloudinary upload preset still has no `max_file_size`, and the topbar and
 hamburger sidebar still carry the old reddish tint and blur that the rest of the
