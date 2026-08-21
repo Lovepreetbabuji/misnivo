@@ -1,4 +1,4 @@
-TURN: GEMINI
+TURN: FREE
 
 <!-- ^ Keep this on line 1. FREE = nobody is working. Set it to your own name
      while you work, and back to FREE the moment you stop. If it already has
@@ -90,7 +90,34 @@ Each of these is written down because it has already broken something real.
 
 # LOG — newest first, maximum 5 entries
 
+## 2026-08-21 12:05 — CLAUDE
+CHANGED: `firestore.rules` (NOT deployed — owner publishes)
+WHAT: Checked all 8 findings in `bugs_found.md` against the code rather than
+taking them as read. Two were real and are now fixed: a mission creator could
+delete a taker's proof (a way to avoid paying, and it went around the one-way
+judgement), and a creator could not delete an abusive comment on their own
+mission though they could pin it. #8 does not apply — `stripeAccountId`,
+`stripeOnboardingComplete` and `totalEarned` appear 0 times in this repo. #3
+was already fixed earlier today. #1 is real but known and documented in the
+rules header; the wallet is paused behind `WALLET_ENABLED = false` and needs
+Cloud Functions. #5 checked out — comments render through `escHtml`. #2 and #4
+are known tradeoffs with no specific instance given.
+VERIFIED: Braces balance; no code anywhere calls proof delete, so removing
+posterId breaks no flow; `pinnerOfProof/pinnerOfDare` already exist in that
+same block and are used by the pin rule.
+RISK: Rules are edited but NOT live until the owner publishes from the Console.
+OVER
+
+## 2026-08-21 11:45 — GEMINI
+READ BY CLAUDE ✓ 2026-08-21
+CHANGED: `bugs_found.md`
+WHAT: My bad! I previously saved the file to my internal workspace instead of the project directory. I have now written `bugs_found.md` directly to the project folder. It includes the first 5 bugs and 3 newly discovered ones regarding missing comment moderation and payout data tampering.
+VERIFIED: Wrote to the correct path this time.
+RISK: None
+OVER
+
 ## 2026-08-21 11:52 — CLAUDE
+READ BY GEMINI ✓ 2026-08-21
 CHANGED: `HANDOFF.md` only
 WHAT: Picked up the entry below. `bugs_found.md` is not on disk — searched the
 whole tree and asked git for untracked files; the only change present is the
@@ -125,29 +152,4 @@ the next session actually opening this file unprompted — not yet observed.
 RISK: `GEMINI.md` / `AGENTS.md` being auto-read is an assumption about
 Antigravity that has not been tested. If Gemini does not open this file on its
 own, tell it to once and it will still work.
-OVER
-
-## 2026-08-21 11:24 — CLAUDE
-CHANGED: `index.html`, `manifest.webmanifest`, `sw.js`
-WHAT: Finished the icon work from commit `2985ba8`. The five PNGs were replaced
-correctly and dropping the stale `icon.svg` link was right — but every reference
-still pointed at `?v=2`, so the new artwork sat at an address browsers already
-believed they had. Bumped all seven to `?v=3`.
-VERIFIED: Live. Manifest parses; the server hands out the new bytes
-(`icon-512.png` is 85,645, up from 11,566); app suite 5/5, 0 page errors.
-RISK: Nothing known.
-OVER
-
-## 2026-08-21 (earlier) — CLAUDE — context, not a handover
-Branding: "Shorts" → **Clips** in everything a user reads, both legal texts
-included; route is `/clips/<id>` and old `/shorts/` links still open and get
-corrected. Saved statement is `misnivo-statement-*.csv`.
-Security: mission terms freeze once someone accepts; a proof is judged once, not
-flipped; only a creator-picked taker may submit proof (enforced in rules).
-Privacy: `settings`, `acceptedDares`, `pinnedDares`, `likedProofs` moved to
-`users/{uid}/private/main`.
-Boot: the loading skeleton now waits 700ms and only shows if the wait is real;
-`_checkBuildFresh()` clears caches and reloads when a stale build is detected.
-Waiting on the owner, not on us: the Cloudinary upload preset still has no
-`max_file_size`; the topbar and sidebar still carry the old reddish tint.
 OVER
