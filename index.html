@@ -651,16 +651,16 @@
     <div class="set-layout">
       <div class="set-nav">
         <div class="set-nav-group">Account</div>
-        <button class="set-nav-item active" data-sec="secEdit" data-title="Edit Profile" data-url="/settings/edit" onclick="_tpSec(this)"><span class="mi">person</span><span class="smr-t">Edit Profile</span></button>
-        <button class="set-nav-item" data-sec="secNotif" data-title="Notifications" data-url="/settings/notifications" onclick="_tpSec(this)"><span class="mi">notifications</span><span class="smr-t">Notifications</span></button>
-        <button class="set-nav-item" data-sec="secPrivacy" data-title="Privacy" data-url="/settings/privacy" onclick="_tpSec(this)"><span class="mi">lock</span><span class="smr-t">Privacy</span></button>
+        <button class="set-nav-item active" data-sec="secEdit" data-title="Edit Profile" data-url="/settings/edit" onclick="_tpSec(this)"><span class="smr-t">Edit Profile</span></button>
+        <button class="set-nav-item" data-sec="secNotif" data-title="Notifications" data-url="/settings/notifications" onclick="_tpSec(this)"><span class="smr-t">Notifications</span></button>
+        <button class="set-nav-item" data-sec="secPrivacy" data-title="Privacy" data-url="/settings/privacy" onclick="_tpSec(this)"><span class="smr-t">Privacy</span></button>
 
         <div class="set-nav-group">Video and app preference</div>
-        <button class="set-nav-item" data-sec="secMore" data-title="Additional settings" data-url="/settings/more" onclick="_tpSec(this)"><span class="mi">tune</span><span class="smr-t">Additional settings</span></button>
+        <button class="set-nav-item" data-sec="secMore" data-title="Additional settings" data-url="/settings/more" onclick="_tpSec(this)"><span class="smr-t">Additional settings</span></button>
 
         <div class="set-nav-foot">
-          <button class="set-btn" onclick="logout()"><span class="mi">logout</span> Log out</button>
-          <button class="set-btn danger" onclick="deleteAccount()"><span class="mi">delete_forever</span> Delete account</button>
+          <button class="set-btn" onclick="logout()">Log out</button>
+          <button class="set-btn danger" onclick="deleteAccount()">Delete account</button>
         </div>
       </div>
       <div class="set-content">
@@ -677,30 +677,30 @@
           </div>
           <div class="pe-field">
             <div class="pe-label">Display Name</div>
-            <input class="pe-input" id="peName" type="text" placeholder="Your full name" maxlength="60"/>
+            <input class="pe-input" id="peName" type="text" maxlength="60"/>
           </div>
           <div class="pe-field">
             <div class="pe-label">Username (handle)</div>
             <div class="pe-handle-wrap">
               <span class="pe-handle-prefix">@</span>
-              <input class="pe-input" id="peHandle" type="text" placeholder="yourhandle" maxlength="30" oninput="onHandleInput()" style="padding-left:28px;"/>
+              <input class="pe-input" id="peHandle" type="text" maxlength="30" oninput="onHandleInput()" style="padding-left:28px;"/>
             </div>
             <div class="pe-status" id="peHandleStatus"></div>
           </div>
           <div class="pe-field">
             <div class="pe-label">Bio <span id="peBioCount">0 / 160</span></div>
-            <textarea class="pe-input pe-textarea" id="peBio" placeholder="Tell the community about yourself..." maxlength="160"
+            <textarea class="pe-input pe-textarea" id="peBio" maxlength="160"
                       oninput="document.getElementById('peBioCount').textContent=this.value.length+' / 160'"></textarea>
           </div>
           <div class="pe-field">
             <div class="pe-label">Website / Contact Link</div>
-            <input class="pe-input" id="peWebsite" type="url" placeholder="https://yourwebsite.com"/>
+            <input class="pe-input" id="peWebsite" type="url"/>
           </div>
           <div class="pe-field">
             <div class="pe-label">Social links</div>
-            <div class="pe-social-row"><input class="pe-input" id="peInsta" type="text" placeholder="Instagram username" maxlength="40"/></div>
-            <div class="pe-social-row"><input class="pe-input" id="peX" type="text" placeholder="X (Twitter) username" maxlength="40"/></div>
-            <div class="pe-social-row"><input class="pe-input" id="peYt" type="text" placeholder="YouTube @handle" maxlength="40"/></div>
+            <div class="pe-social-row"><span class="mi">photo_camera</span><input class="pe-input" id="peInsta" type="text" maxlength="40"/></div>
+            <div class="pe-social-row"><span class="pe-x-logo">X</span><input class="pe-input" id="peX" type="text" maxlength="40"/></div>
+            <div class="pe-social-row"><span class="mi">smart_display</span><input class="pe-input" id="peYt" type="text" maxlength="40"/></div>
           </div>          <button class="pe-btn-save" id="peSaveBtn" onclick="saveProfile()"><span class="mi">check</span> Save Changes</button>
         </div>
         <div class="set-sec" id="secNotif" style="display:none;">
