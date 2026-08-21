@@ -42,8 +42,14 @@ Below is the list of architectural and logic bugs found in the current codebase.
 - **Risk**: Creators cannot delete abusive or spam comments posted on their own missions or video proofs. 
 - **Fix**: Add a condition to `allow delete` checking if `pinnerOfProof()` or `pinnerOfDare()` is true (which means the user owns the content being commented on).
 
-### 8. Payout / Private Data Tampering (CRITICAL)
-- **File**: `firestore.rules` (Line 108 - `users` update rule)
-- **Issue**: Users are explicitly allowed to update `totalEarned`, `stripeAccountId`, `stripeAccountStatus`, and `stripeOnboardingComplete` on their own user document.
-- **Risk**: A user can falsely flag their Stripe account as completely onboarded, inject a malicious or different Stripe account ID, or manually manipulate their `totalEarned` stat on the leaderboard.
-- **Fix**: Stripe status fields and lifetime earnings should strictly be managed by secure backend Webhooks (Cloud Functions), not written directly from the client. Remove these fields from the `onlyTouches` whitelist.
+### 8. Counters Exploit: takers and proofCount (HIGH)
+- **File**: `firestore.rules` (Line 211)
+- **Issue**: The `update` rule for `dares` allows updating `takers` and `proofCount` while checking `steppedAll()`. However, `steppedAll()` only checks `likeCount`, `dislikeCount`, and `viewCount`—it doesn't validate `takers` or `proofCount`.
+- **Risk**: Any user can artificially inflate or deflate the `takers` and `proofCount` fields on any mission by an arbitrary amount (e.g., setting it to 1000000).
+- **Fix**: Add `&& stepped('takers') && stepped('proofCount')` to the `steppedAll()` function or to the update condition.
+
+### 9. Hijacking Applicant Documents (MODERATE)
+- **File**: `firestore.rules` (Line 232)
+- **Issue**: The `applicants` subcollection has an `allow update: if isDareOwner();` rule but lacks an `onlyTouches()` constraint.
+- **Risk**: The mission creator can modify ANY field on the applicant's document, including changing the `uid` of the applicant, which would lock the applicant out of their own application data.
+- **Fix**: Enforce `onlyTouches(['status'])` on the applicant update rule for mission owners.

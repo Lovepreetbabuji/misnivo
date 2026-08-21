@@ -207,11 +207,17 @@ service cloud.firestore {
         || (signedIn() && resource.data.creatorUid == uid()
                        && onlyTouches(['creatorEmail'])
                        && !('creatorEmail' in request.resource.data))
-        // everyone else may only move engagement counters, one step at a time
+        // everyone else may only move engagement counters, one step at a time.
+        // takers and proofCount are in this list but steppedAll() never checked
+        // them — it only covers the three like/view counters — so anyone signed
+        // in could write takers: 1000000 on any mission and make it look wildly
+        // popular. Checked explicitly here rather than inside steppedAll(),
+        // which is also used by /proofs where neither field exists.
         || (signedIn() && onlyTouches([
               'likedBy','likeCount','dislikedBy','dislikeCount',
               'viewCount','takers','proofCount'
-            ]) && steppedAll())
+            ]) && steppedAll()
+              && stepped('takers') && stepped('proofCount'))
         // guests still count a view
         || (onlyTouches(['viewCount']) && stepped('viewCount'));
 
@@ -229,7 +235,11 @@ service cloud.firestore {
         allow create: if isSelf(applicantId) && !isBanned()
                       && request.resource.data.uid == uid()
                       && request.resource.data.status in ['pending','accepted'];
-        allow update: if isDareOwner();                       // approve / reject
+        // Approve / reject — and ONLY that. Without the field restriction the
+        // mission owner could rewrite the whole applicant record, including the
+        // uid it belongs to, which would quietly detach someone from their own
+        // application. The app writes nothing here but status.
+        allow update: if isDareOwner() && onlyTouches(['status']);
         allow delete: if isSelf(applicantId) || isDareOwner();
       }
     }

@@ -90,6 +90,23 @@ Each of these is written down because it has already broken something real.
 
 # LOG — newest first, maximum 5 entries
 
+## 2026-08-21 12:25 — CLAUDE
+CHANGED: `firestore.rules` (NOT deployed — owner publishes)
+WHAT: The two replacement findings in `bugs_found.md` (#8 rewritten, #9 new)
+both hold up, and both are fixed. `takers` and `proofCount` were in the
+public counter whitelist but `steppedAll()` never checked them, so any signed-in
+account could write `takers: 1000000` on any mission; they are step-checked now,
+on that branch only, since `steppedAll()` is shared with /proofs where neither
+field exists. And the applicants update rule had no field restriction, so a
+mission owner could rewrite an applicant's whole record including its `uid`;
+limited to `status`.
+VERIFIED: Braces balance. Checked the app first: every takers/proofCount write
+is `FieldValue.increment(±1)`, and the only two applicant updates write
+`{status:'approved'}` and `{status:'pending'}` — so neither fix narrows a path
+the app actually uses.
+RISK: Edited, NOT live. Two rules pushes are now waiting on one Console publish.
+OVER
+
 ## 2026-08-21 12:05 — CLAUDE
 CHANGED: `firestore.rules` (NOT deployed — owner publishes)
 WHAT: Checked all 8 findings in `bugs_found.md` against the code rather than
@@ -135,21 +152,4 @@ CHANGED: `bugs_found.md` (new)
 WHAT: Created a new markdown file documenting structural issues and bugs (wallet client updates, race conditions, etc) found during code review.
 VERIFIED: N/A - only recorded findings.
 RISK: nothing known
-OVER
-
-## 2026-08-21 11:40 — CLAUDE
-READ BY GEMINI ✓ 2026-08-21
-CHANGED: `HANDOFF.md`, `CLAUDE.md`, `GEMINI.md` (new), `AGENTS.md` (new)
-WHAT: Gemini reviewed this system and raised four fair problems. Fixed all four
-in the setup rather than leaving them as warnings. Nobody has to remember to
-read this file now — `CLAUDE.md` and `GEMINI.md` are loaded automatically by
-each tool and both say to open it first. The `TURN:` line on line 1 is a real
-lock against simultaneous edits. Rule 5 caps the log at 5 entries so it cannot
-grow into a reading cost. Rule 4 forbids either assistant assigning work to the
-other, which is what would otherwise loop.
-VERIFIED: Files exist and are committed. The auto-load itself is only proved by
-the next session actually opening this file unprompted — not yet observed.
-RISK: `GEMINI.md` / `AGENTS.md` being auto-read is an assumption about
-Antigravity that has not been tested. If Gemini does not open this file on its
-own, tell it to once and it will still work.
 OVER
