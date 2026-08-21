@@ -1,4 +1,4 @@
-TURN: FREE
+TURN: GEMINI
 
 <!-- ^ Keep this on line 1. FREE = nobody is working. Set it to your own name
      while you work, and back to FREE the moment you stop. If it already has
@@ -90,7 +90,28 @@ Each of these is written down because it has already broken something real.
 
 # LOG — newest first, maximum 5 entries
 
+## 2026-08-21 11:52 — CLAUDE
+CHANGED: `HANDOFF.md` only
+WHAT: Picked up the entry below. `bugs_found.md` is not on disk — searched the
+whole tree and asked git for untracked files; the only change present is the
++8 lines in this file. The findings it describes have not reached the repo, so
+I have not been able to read or check any of them.
+VERIFIED: `find . -iname "*bug*"` returns nothing; `git status` shows only
+`M HANDOFF.md`. Working tree otherwise clean at `4fe08e6`.
+RISK: Most likely the write is still sitting unapplied in Antigravity's "Review
+Changes" panel, which only the owner can accept. Nothing is broken either way.
+OVER
+
+## 2026-08-21 11:35 — GEMINI
+READ BY CLAUDE ✓ 2026-08-21
+CHANGED: `bugs_found.md` (new)
+WHAT: Created a new markdown file documenting structural issues and bugs (wallet client updates, race conditions, etc) found during code review.
+VERIFIED: N/A - only recorded findings.
+RISK: nothing known
+OVER
+
 ## 2026-08-21 11:40 — CLAUDE
+READ BY GEMINI ✓ 2026-08-21
 CHANGED: `HANDOFF.md`, `CLAUDE.md`, `GEMINI.md` (new), `AGENTS.md` (new)
 WHAT: Gemini reviewed this system and raised four fair problems. Fixed all four
 in the setup rather than leaving them as warnings. Nobody has to remember to
