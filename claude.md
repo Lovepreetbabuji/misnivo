@@ -37,3 +37,15 @@ Har jawab ka dhaancha:
 
 Yaad rakho: agar mujhe tumhara jawab kisi aur se samjhwana pade, to tumne 
 theek se nahi samjhaya.
+## Kaam shuru karne se pehle — HAR BAAR
+
+Is project par Claude aur Gemini dono kaam karte hain. Dono ek doosre ki screen
+nahi dekh sakte, isliye `HANDOFF.md` hi ek jagah hai jahan kaam ek doosre ko
+saunpa jaata hai.
+
+**Har session ke shuru mein `HANDOFF.md` padho — bina kahe.** Uske `TURN:` line
+se pata chalega ki baari kiski hai, aur sabse upar wali entry se pata chalega ki
+doosre ne abhi kya kiya.
+
+Agar `TURN: GEMINI` likha ho, to ruk jao aur user ko batao — Gemini ka kaam
+adhoora hai, beech mein file chhedne se dono ka kaam mit sakta hai.

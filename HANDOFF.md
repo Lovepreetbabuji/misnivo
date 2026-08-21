@@ -1,131 +1,132 @@
-# HANDOFF — shared log between Claude Code and Gemini
+TURN: FREE
+
+<!-- ^ Keep this on line 1. FREE = nobody is working. Set it to your own name
+     while you work, and back to FREE the moment you stop. If it already has
+     someone else's name on it, do not edit any file — say so to the owner. -->
+
+# HANDOFF — shared log between Claude and Gemini
 
 Two assistants work on this repo, one at a time. Neither can see the other's
-screen, so this file is the only place they hand work over. The owner
-(Lovepreet) switches between them.
+screen, so this file is the only place work is handed over. The owner switches
+between them.
 
 ---
 
-## RULES — read this before you touch anything
+## RULES
 
-**1. Read the newest entry first.** It is at the top of the LOG, directly below
-this section. It tells you what the other assistant just did and whether it is
-your turn.
+**1. The `TURN:` line on line 1 is the lock.** Read it before anything else.
 
-**2. Turn markers.**
-
-| Marker | Meaning |
+| Value | Meaning |
 |---|---|
-| `OVER` | the writer has finished; the other side may now work |
-| `READ BY <NAME> ✓ <date>` | you have read that entry — add this line under it |
-| `HOLD` | the writer is still mid-task — **do not edit any file** |
+| `TURN: FREE` | nobody is working — you may start |
+| `TURN: CLAUDE` / `TURN: GEMINI` | that one is mid-task — **edit nothing**, tell the owner |
 
-**3. When you start**, find the newest entry that has no `READ BY` line from
-you. Read it, then add your `READ BY` line under it. That is how the other side
-knows its message arrived.
+Set it to your own name when you start, and back to `FREE` when you stop. This
+is what stops two assistants writing to `js/app.js` at the same moment.
 
-**4. When you finish**, add a NEW entry at the top of the LOG using the template
-below, ending with `OVER`. Then stop.
+**2. Read the newest LOG entry** (top of the list) and add
+`READ BY <YOUR NAME> ✓ <date>` under it, so the other side knows it arrived.
 
-**5. One at a time.** If the newest entry says `HOLD`, stop and tell the owner
-the other assistant has not finished. Two assistants editing `js/app.js`
-together will overwrite each other's work.
+**3. `OVER` ends an entry.** It means the writer has finished and stopped.
 
-**6. Say what actually happened.** If something failed, or you could not verify
-it, write that. A log that only records successes is worse than no log.
+**4. Never hand work to the other assistant.** Do not write "Claude, please
+check line 45". Only the **owner** decides what gets done. This file records
+what happened; it is not a to-do list passed back and forth. Without this rule
+the two of us give each other tasks in circles and nothing gets finished.
+
+**5. Keep it short — this file is read in full, every session.**
+- Six lines per entry is plenty.
+- **Maximum 5 entries in the LOG.** Writing the 6th? Delete the oldest.
+- Long explanations belong in the git commit message, not here.
+
+**6. Report honestly.** What failed, what you could not verify, what is a
+workaround — write it. A log with only successes is worse than no log.
 
 ### Entry template
 
 ```
 ## <YYYY-MM-DD HH:MM> — <CLAUDE | GEMINI>
 CHANGED: <files touched>
-WHAT: <what you did, in plain sentences>
-VERIFIED: <how you checked, and the result — or "not verified" and why>
-BROKE / RISK: <anything you are unsure about, or "nothing known">
-NEXT: <what still needs doing, if anything>
+WHAT: <what you did, plainly>
+VERIFIED: <how you checked and the result — or "not verified" and why>
+RISK: <anything you are unsure about, or "nothing known">
 OVER
 ```
 
 ---
 
-## GROUND RULES for this project — both assistants
+## GROUND RULES — both assistants, no exceptions
 
-Neither assistant may break these. They were each fixed after a real bug.
+Each of these is written down because it has already broken something real.
 
 - **Three cache stamps move together** on every deploy: `styles.css?v=` and
   `app.js?v=` in `index.html`, and `VER` in `sw.js`. Miss one and users get a
   half-old app.
 - **`node --check js/app.js` is not enough.** It catches typing mistakes, not
-  running ones. A top-level `const` used before its line runs parses fine and
+  running ones — a top-level `const` used before its line runs parses fine and
   then takes the whole app down. Open the deployed page in a browser before
   calling anything done.
-- **`firestore.rules` is never deployed by an assistant.** Edit it, then tell
-  the owner to publish it from the Firebase Console.
-- **Do not rename these:** `acceptDare`, `submitProof`, `submitDare`,
-  `approveProof`, `rejectProof`, `uploadToCloudinary`, `openShorts`,
-  `openVideoDetail`, `vidThumb`, `guestCheck`, `WALLET_ENABLED`.
+- **Never deploy `firestore.rules`.** Edit it, then tell the owner to publish it
+  from the Firebase Console.
+- **Do not rename:** `acceptDare`, `submitProof`, `submitDare`, `approveProof`,
+  `rejectProof`, `uploadToCloudinary`, `openShorts`, `openVideoDetail`,
+  `vidThumb`, `guestCheck`, `WALLET_ENABLED`.
 - **Do not bring back** features removed in v16: dual profile tabs, follow
   system, ratings.
-- **Design is flat black and white.** No glass, no `backdrop-filter`, no red
+- **Design is flat black and white.** No glass, no `backdrop-filter`, no
   `#FF0033` on anything new. `.auth-box` (`#000` + 1px white border) is the
   reference surface.
-- **"Shorts" is not used in anything a user reads** — the word is **Clips**.
-  The code still says shorts internally (`openShorts`, `#shortsOverlay`, the
-  CSS, the Firestore fields) and that is deliberate; only the visible text and
-  the URL changed.
-- **Never write the words** bet, stake, win, game, jackpot, lottery, contest
-  into user-facing text. This app is a task marketplace, not a game of chance.
+- **"Shorts" appears in no text a user reads** — the word is **Clips**. The code
+  still says shorts internally (`openShorts`, `#shortsOverlay`, the CSS, the
+  Firestore fields) and that is deliberate.
+- **Never write** bet, stake, win, game, jackpot, lottery or contest into
+  user-facing text. This is a task marketplace, not a game of chance.
 - **New personal fields go in `PRIVATE_FIELDS`** (`js/app.js`), never on the
   public `users/{uid}` document, which anyone can read.
+- **Keep secrets out of this file.** It is safe today only because the repo is
+  private and the site's SPA rule hides it — both could change.
 
 ---
 
-# LOG — newest at the top
+# LOG — newest first, maximum 5 entries
 
-## 2026-08-21 11:24 — CLAUDE
-CHANGED: `HANDOFF.md` (new), `index.html`, `manifest.webmanifest`, `sw.js`
-WHAT: Created this file at the owner's request, so the two of us can hand work
-over instead of guessing what the other did.
-Also finished the icon work Gemini started in commit `2985ba8`. The five PNGs
-were replaced correctly and the stale `icon.svg` link was rightly removed — but
-every reference still pointed at `?v=2`, so the new artwork sat at an address
-browsers already believed they had. Bumped all seven references to `?v=3`.
-VERIFIED: Live. Manifest still parses; the server hands out the new bytes
-(`icon-512.png` is 85,645, up from 11,566); app suite 5/5, 0 page errors.
-BROKE / RISK: Nothing known. Checked where this file can be read from, since it
-sits in the repo root: the site's SPA rule serves index.html for it rather than
-the file, and the GitHub repo is private, so it is not reachable by anyone else
-today. That depends on the repo staying private — still keep passwords, keys
-and anything private OUT of it.
-NEXT: Nothing outstanding. Two things are waiting on the owner, not on us:
-the Cloudinary upload preset still has no `max_file_size`, and the topbar and
-hamburger sidebar still carry the old reddish tint and blur that the rest of the
-app has dropped.
+## 2026-08-21 11:40 — CLAUDE
+CHANGED: `HANDOFF.md`, `CLAUDE.md`, `GEMINI.md` (new), `AGENTS.md` (new)
+WHAT: Gemini reviewed this system and raised four fair problems. Fixed all four
+in the setup rather than leaving them as warnings. Nobody has to remember to
+read this file now — `CLAUDE.md` and `GEMINI.md` are loaded automatically by
+each tool and both say to open it first. The `TURN:` line on line 1 is a real
+lock against simultaneous edits. Rule 5 caps the log at 5 entries so it cannot
+grow into a reading cost. Rule 4 forbids either assistant assigning work to the
+other, which is what would otherwise loop.
+VERIFIED: Files exist and are committed. The auto-load itself is only proved by
+the next session actually opening this file unprompted — not yet observed.
+RISK: `GEMINI.md` / `AGENTS.md` being auto-read is an assumption about
+Antigravity that has not been tested. If Gemini does not open this file on its
+own, tell it to once and it will still work.
 OVER
 
----
+## 2026-08-21 11:24 — CLAUDE
+CHANGED: `index.html`, `manifest.webmanifest`, `sw.js`
+WHAT: Finished the icon work from commit `2985ba8`. The five PNGs were replaced
+correctly and dropping the stale `icon.svg` link was right — but every reference
+still pointed at `?v=2`, so the new artwork sat at an address browsers already
+believed they had. Bumped all seven to `?v=3`.
+VERIFIED: Live. Manifest parses; the server hands out the new bytes
+(`icon-512.png` is 85,645, up from 11,566); app suite 5/5, 0 page errors.
+RISK: Nothing known.
+OVER
 
-## 2026-08-21 (earlier) — CLAUDE — summary of the day, for context
-Not a handover; background so the next assistant is not working blind.
-
-- **Branding.** "Shorts" → **Clips** everywhere a user reads, including both
-  legal texts. The route is now `/clips/<id>`; old `/shorts/<id>` links still
-  open and the address bar is corrected on the way in. The saved wallet
-  statement is `misnivo-statement-*.csv`, not the old name. "MiTube" does not
-  appear anywhere in the repo.
-- **Security.** A mission's terms freeze once anyone accepts it, so a creator
-  cannot drop the reward after a taker has filmed. A proof can be judged once,
-  not flipped between approved and rejected. Only a taker the creator picked
-  may submit proof — enforced in `firestore.rules`, not just in the UI.
-- **Privacy.** `settings`, `acceptedDares`, `pinnedDares` and `likedProofs`
-  moved into `users/{uid}/private/main`. A stranger now sees only name,
-  username, photoURL, bio, website, socials.
-- **Boot.** The loading skeleton was showing for ~2.8s on every open even on a
-  fast connection; it now waits 700ms and only appears if the wait is real.
-  Tapping Agree on the creator agreement no longer waits on a database write
-  before opening the form.
-- **Stale builds.** `_checkBuildFresh()` compares the running version against
-  the server on resume and reload; on a mismatch it clears every cache,
-  unregisters the service worker and reloads once. This was fixing "my old UI
-  came back after backgrounding the app".
+## 2026-08-21 (earlier) — CLAUDE — context, not a handover
+Branding: "Shorts" → **Clips** in everything a user reads, both legal texts
+included; route is `/clips/<id>` and old `/shorts/` links still open and get
+corrected. Saved statement is `misnivo-statement-*.csv`.
+Security: mission terms freeze once someone accepts; a proof is judged once, not
+flipped; only a creator-picked taker may submit proof (enforced in rules).
+Privacy: `settings`, `acceptedDares`, `pinnedDares`, `likedProofs` moved to
+`users/{uid}/private/main`.
+Boot: the loading skeleton now waits 700ms and only shows if the wait is real;
+`_checkBuildFresh()` clears caches and reloads when a stale build is detected.
+Waiting on the owner, not on us: the Cloudinary upload preset still has no
+`max_file_size`; the topbar and sidebar still carry the old reddish tint.
 OVER
