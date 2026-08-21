@@ -40,10 +40,10 @@ theek se nahi samjhaya.
 ## Kaam shuru karne se pehle — HAR BAAR
 
 Is project par Claude aur Gemini dono kaam karte hain. Dono ek doosre ki screen
-nahi dekh sakte, isliye `HANDOFF.md` hi ek jagah hai jahan kaam ek doosre ko
+nahi dekh sakte, isliye `ai/HANDOFF.md` hi ek jagah hai jahan kaam ek doosre ko
 saunpa jaata hai.
 
-**Har session ke shuru mein `HANDOFF.md` padho — bina kahe.** Uske `TURN:` line
+**Har session ke shuru mein `ai/HANDOFF.md` padho — bina kahe.** Uske `TURN:` line
 se pata chalega ki baari kiski hai, aur sabse upar wali entry se pata chalega ki
 doosre ne abhi kya kiya.
 

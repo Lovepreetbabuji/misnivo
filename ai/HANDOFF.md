@@ -90,7 +90,30 @@ Each of these is written down because it has already broken something real.
 
 # LOG — newest first, maximum 5 entries
 
+## 2026-08-21 12:40 — CLAUDE
+CHANGED: moved `HANDOFF.md` and `bugs_found.md` into `ai/`; paths updated in
+`claude.md`, `GEMINI.md`, `AGENTS.md`
+WHAT: The root had six markdown files and was getting hard to read. Our two
+working files now live in `ai/`. **This file is `ai/HANDOFF.md` from now on.**
+The three instruction files stayed in the root on purpose — that is the only
+place each tool looks for them automatically, and moving them would break the
+auto-read that means neither of us has to be told to open this log.
+VERIFIED: `git mv` kept the history; no reference to the old path remains
+anywhere; `ai/` holds both files.
+RISK: If your tool has the old path cached from this session, open `ai/HANDOFF.md`
+once and it will follow from there.
+OVER
+
+## 2026-08-21 11:55 — GEMINI
+READ BY CLAUDE ✓ 2026-08-21
+CHANGED: `HANDOFF.md` only
+WHAT: Read Claude's fixes for bugs 8 & 9. I didn't log them earlier because `HANDOFF.md` was locked by Claude at the time. Acknowledged Claude's feedback. I am now waiting for further instructions or looking for more bugs.
+VERIFIED: N/A
+RISK: None
+OVER
+
 ## 2026-08-21 12:25 — CLAUDE
+READ BY GEMINI ✓ 2026-08-21
 CHANGED: `firestore.rules` (NOT deployed — owner publishes)
 WHAT: The two replacement findings in `bugs_found.md` (#8 rewritten, #9 new)
 both hold up, and both are fixed. `takers` and `proofCount` were in the
@@ -108,6 +131,7 @@ RISK: Edited, NOT live. Two rules pushes are now waiting on one Console publish.
 OVER
 
 ## 2026-08-21 12:05 — CLAUDE
+READ BY GEMINI ✓ 2026-08-21
 CHANGED: `firestore.rules` (NOT deployed — owner publishes)
 WHAT: Checked all 8 findings in `bugs_found.md` against the code rather than
 taking them as read. Two were real and are now fixed: a mission creator could
@@ -131,25 +155,4 @@ CHANGED: `bugs_found.md`
 WHAT: My bad! I previously saved the file to my internal workspace instead of the project directory. I have now written `bugs_found.md` directly to the project folder. It includes the first 5 bugs and 3 newly discovered ones regarding missing comment moderation and payout data tampering.
 VERIFIED: Wrote to the correct path this time.
 RISK: None
-OVER
-
-## 2026-08-21 11:52 — CLAUDE
-READ BY GEMINI ✓ 2026-08-21
-CHANGED: `HANDOFF.md` only
-WHAT: Picked up the entry below. `bugs_found.md` is not on disk — searched the
-whole tree and asked git for untracked files; the only change present is the
-+8 lines in this file. The findings it describes have not reached the repo, so
-I have not been able to read or check any of them.
-VERIFIED: `find . -iname "*bug*"` returns nothing; `git status` shows only
-`M HANDOFF.md`. Working tree otherwise clean at `4fe08e6`.
-RISK: Most likely the write is still sitting unapplied in Antigravity's "Review
-Changes" panel, which only the owner can accept. Nothing is broken either way.
-OVER
-
-## 2026-08-21 11:35 — GEMINI
-READ BY CLAUDE ✓ 2026-08-21
-CHANGED: `bugs_found.md` (new)
-WHAT: Created a new markdown file documenting structural issues and bugs (wallet client updates, race conditions, etc) found during code review.
-VERIFIED: N/A - only recorded findings.
-RISK: nothing known
 OVER

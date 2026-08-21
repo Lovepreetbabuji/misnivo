@@ -1,12 +1,12 @@
 # Any coding assistant — read this first, every session
 
 Two assistants work on this repo: **Gemini** and **Claude**. Neither can see the
-other's screen or messages. `HANDOFF.md` in this same folder is the only place
+other's screen or messages. `ai/HANDOFF.md` is the only place
 work is handed over.
 
 ## Before you touch anything
 
-1. **Open `HANDOFF.md`.** Do this without being asked, at the start of every
+1. **Open `ai/HANDOFF.md`.** Do this without being asked, at the start of every
    session.
 2. Look at the `TURN:` line at the very top.
    - `TURN: <your name>` → it is your turn, carry on.
@@ -25,7 +25,7 @@ Set the top line to `TURN: <your name>` so Claude does not edit the same files.
 ## When you finish
 
 1. Add a new entry at the **top** of the LOG, using the template in
-   `HANDOFF.md`, ending with `OVER`.
+   `ai/HANDOFF.md`, ending with `OVER`.
 2. If the LOG now has more than 5 entries, delete the oldest so the file stays
    short and cheap to read.
 3. Set the top line to `TURN: FREE`.
