@@ -1198,6 +1198,19 @@ let   _bootSkelTO   = null;    // declared with the other boot state: _bootShell
 let   _bootSkelArm  = null;    // the 'is this slow enough to explain?' timer
 let   _bootDone     = false;   // set the moment real content is up
 const _BOOT_SKEL_AFTER = 700;  // under this, a loader is noise, not information
+
+// The player is called shorts everywhere inside this file — the function, the
+// overlay id, the CSS, the Firestore fields. Only the address bar says clips,
+// so the translation lives in one place instead of being spread through the
+// code. Declared UP HERE, with the boot state, because _bootSkelKind reads
+// _DEEP_RE while the page is still booting: a const further down the file is
+// hoisted but not yet initialised at that point, and reading it throws.
+const _VIEW_SEG = { shorts:'clips' };                   // view type -> URL segment
+const _SEG_VIEW = { clips:'shorts', shorts:'shorts' };  // URL segment -> view type
+// clips first, shorts still accepted: every /shorts/<id> link ever shared keeps
+// working, and lands on exactly the same screen.
+const _DEEP_RE    = /^\/(watch|clips|shorts|dare|u)\//;
+const _DEEP_RE_ID = /^\/(watch|clips|shorts|dare|u)\/([^/?#]+)/;
                                // runs long before the skeleton module's own lines do
 
 function _splashDone(){
@@ -7490,16 +7503,6 @@ function _closeCurrentView(){
   const dov=document.getElementById('dareDetailOverlay');   if (dov && dov.classList.contains('open')){ closeDareDetail(); return; }
 }
 // Called at the START of openShorts / openVideoDetail / openDareDetail.
-// The player is called shorts everywhere inside this file — the function, the
-// overlay id, the CSS, the Firestore fields. Only the address bar changed, so
-// the translation lives here instead of being spread through the code.
-const _VIEW_SEG = { shorts:'clips' };                    // view type -> URL segment
-const _SEG_VIEW = { clips:'shorts', shorts:'shorts' };    // URL segment -> view type
-// clips first, shorts still accepted: every /shorts/<id> link ever shared keeps
-// working, and lands on exactly the same screen.
-const _DEEP_RE    = /^\/(watch|clips|shorts|dare|u)\//;
-const _DEEP_RE_ID = /^\/(watch|clips|shorts|dare|u)\/([^/?#]+)/;
-
 function _enterView(type, id){
   if (typeof closePublicProfile==='function') closePublicProfile();   // leaving for a video/dare → close public profile
   _pauseBackgroundMedia();
