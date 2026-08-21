@@ -2774,7 +2774,7 @@ body.detail-open .topbar{ background:#000 !important; backdrop-filter:none !impo
 }
 
 /* ═══════════════════════════════════════════════════════════
-   YOUTUBE SHORTS PLAYER
+   VERTICAL CLIP PLAYER
    ═══════════════════════════════════════════════════════════ */
 .shorts-overlay{
   position:fixed;inset:0;z-index:400;background:#050505;
@@ -3028,7 +3028,7 @@ body.detail-open .topbar{ background:#000 !important; backdrop-filter:none !impo
   background:#FF0033;color:#fff;display:flex;align-items:center;justify-content:center;
 }
 
-/* ─── MOBILE: full-screen YouTube Shorts style ─── */
+/* ─── MOBILE: full-screen vertical clip player ─── */
 @media(max-width:768px){
   /* height:100% (of the fixed overlay = real viewport) avoids the 100vh mobile
      URL-bar overshoot that pushed slides/overlay off-screen */
@@ -3103,7 +3103,7 @@ html{scroll-behavior:smooth;}
    can't override aspect-ratio and shrink the long card to half width */
 #homeVideoGrid .yt-thumb{aspect-ratio:16/9 !important;background:#000;width:100% !important;height:auto !important;}
 .feed-longs .yt-thumb{aspect-ratio:16/9 !important;background:#000;width:100% !important;height:auto !important;}
-.short-thumb{aspect-ratio:11/16 !important;background:#000;}  /* slightly wider than 9:16, like YouTube shorts shelf */
+.short-thumb{aspect-ratio:11/16 !important;background:#000;}  /* slightly wider than 9:16 */
 /* card height = 9:16 thumb + caption + meta; don't force the whole card to 9:16
    (that clipped/pushed the title & views out of view) */
 .shorts-row .short-card{aspect-ratio:auto;}
@@ -3187,7 +3187,7 @@ html{scroll-behavior:smooth;}
 .feed-longs .yt-card{max-width:100%;}
 .feed-longs .yt-thumb{aspect-ratio:16/9;}
 
-/* #8: YouTube Shorts vertical scroll-snap container (fills the .shorts-video-col box) */
+/* #8: vertical scroll-snap container for clips (fills the .shorts-video-col box) */
 .shorts-snap-container{
   position:absolute;inset:0;border-radius:12px;
   overflow-y:scroll;scroll-snap-type:y mandatory;

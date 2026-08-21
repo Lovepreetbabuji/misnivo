@@ -109,7 +109,7 @@ const LEGAL_DOCS = {
 
     { h:'Content and ownership', body:
       'You keep ownership of the videos you create. Nothing here transfers copyright to Misnivo or to a creator.\n' +
-      'By submitting proof you give Misnivo permission to store your video and show it on the platform — to the creator for review, and, if it is approved, to other users in feeds, Shorts and search. This permission continues for content that is already published even if you later delete your account, though you may ask us to remove it and we will consider the request.\n' +
+      'By submitting proof you give Misnivo permission to store your video and show it on the platform — to the creator for review, and, if it is approved, to other users in feeds, Clips and search. This permission continues for content that is already published even if you later delete your account, though you may ask us to remove it and we will consider the request.\n' +
       'A creator who funds a mission gets the right to view the proof submitted to them and to share the published video using the sharing built into Misnivo. They do not get commercial rights, and may not download, republish, sell or advertise with the video without the taker’s separate written permission.\n' +
       'If anyone else appears in your video you must have their permission, and if anyone under 18 appears you must have their parent’s or guardian’s permission.' },
 
@@ -601,7 +601,7 @@ Missions are free to accept. You confirm you have not paid, offered or promised 
 Any proof video you submit must be genuinely your own attempt — unedited, and not staged with someone standing in for you. Recording and sharing it must not break any law, damage property you don't own, or use a location you weren't allowed to use. If anyone else appears in it, you must have their permission — and if anyone under 18 appears, their parent's or guardian's permission.
 
 7. Misnivo can host and show your proof
-By submitting proof, you give Misnivo permission to store your video and show it on the platform — to the mission creator for review, and, if approved, to other users (including in feeds, Shorts or search). This permission continues for content already published even if you later delete your account, though you may request removal at any time and we will consider it.
+By submitting proof, you give Misnivo permission to store your video and show it on the platform — to the mission creator for review, and, if approved, to other users (including in feeds, Clips or search). This permission continues for content already published even if you later delete your account, though you may request removal at any time and we will consider it.
 
 8. Misnivo can remove content
 Misnivo may remove any mission or video that breaks its Community Guidelines or the law, or that appears unsafe — at any time, including after a mission creator has approved it. If content is removed for a rules breach after payment, Misnivo may reverse or withhold the reward.
@@ -2966,7 +2966,7 @@ function _renderShortsSection(shorts) {
         ${dur ? `<div class="short-dur-tag">${dur}</div>` : ''}
       </div>
       <div class="short-info">
-        <div class="short-title">${p.dareTitle||'Mission Short'}</div>
+        <div class="short-title">${p.dareTitle||'Mission Clip'}</div>
         <div class="short-meta">${p.takerName||'—'}</div>
       </div>
     </div>`;
@@ -8599,7 +8599,7 @@ function toggleNotifPanel() {
 }
 
 // ═══════════════════════════════════════════════════════════════════
-// YOUTUBE SHORTS-STYLE VERTICAL VIDEO PLAYER
+// VERTICAL CLIP PLAYER
 // ═══════════════════════════════════════════════════════════════════
 let shortsFeed = [];
 let shortsIndex = 0;
@@ -10035,10 +10035,10 @@ function _longCardHtml(p) {
 
 function _shortsRowHtml(shorts, noHdr) {
   return `<div class="home-section shorts-home-sec">
-    ${noHdr ? '' : `<div class="home-sec-hdr"><span class="mi" style="color:#fff;font-size:22px;">play_circle</span><span class="home-sec-title">Shorts</span></div>`}
+    ${noHdr ? '' : `<div class="home-sec-hdr"><span class="mi" style="color:#fff;font-size:22px;">play_circle</span><span class="home-sec-title">Clips</span></div>`}
     <div class="shorts-row">${shorts.map(p=>{
       const t = vidThumb(p, 360);
-      const _w = (p.dareTitle||'Short').trim().split(/\s+/);
+      const _w = (p.dareTitle||'Clip').trim().split(/\s+/);
       const _cap = _w.length > 5 ? _w.slice(0,5).join(' ') + '...' : _w.join(' ');
       return `
       <div class="short-card" onclick="openShorts('${p.id}')" data-vurl="${p.videoURL||''}" data-dur="${p.videoDuration||0}">

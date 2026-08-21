@@ -37,7 +37,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,100..400,0..1,0&icon_names=account_balance_wallet,add,arrow_back,bolt,bookmark,chat_bubble,close,expand_less,explore,home,menu,more_vert,notifications,person,reply,search,send,settings,thumb_down,thumb_up,tune&display=block" rel="stylesheet"/>
 
 <!-- App Styles -->
-<link rel="stylesheet" href="/css/styles.css?v=20260816f"/>
+<link rel="stylesheet" href="/css/styles.css?v=20260821a"/>
 
 <!-- The splash logo must be in flight before anything else competes for the pipe -->
 <link rel="preload" as="image" href="/misnivo.png?v=1" fetchpriority="high"/>
@@ -347,7 +347,7 @@
       <div class="home-section" id="homeShortsSection" style="display:none;">
         <div class="home-sec-hdr">
           <span class="mi" style="color:#FF453A;font-size:20px;">play_circle</span>
-          <span class="home-sec-title">Mission Shorts</span>
+          <span class="home-sec-title">Mission Clips</span>
           <span class="home-sec-sub">Under 1 minute</span>
           <span class="home-sec-viewall" onclick="goPage('dares')">View All →</span>
         </div>
@@ -1253,7 +1253,7 @@
 <!-- App Logic -->
 <!-- defer, so it runs after the Firebase bundles above and after the DOM is
      parsed — same order as before, but nothing blocks the first paint -->
-<script defer src="/js/app.js?v=20260816f"></script>
+<script defer src="/js/app.js?v=20260821a"></script>
 
 <!-- ══ Firebase AI Logic — stage 2 of the mission safety filter ══
      A SECOND, modular Firebase app. The rest of the site runs on the compat
@@ -1590,7 +1590,7 @@
   <div class="notif-list" id="notifList"></div>
 </div>
 
-<!-- ═══ YOUTUBE SHORTS PLAYER OVERLAY ═══ -->
+<!-- ═══ VERTICAL CLIP PLAYER OVERLAY ═══ -->
 <div class="shorts-overlay" id="shortsOverlay">
   <button class="shorts-close" onclick="history.back()"><span class="mi">arrow_back</span></button>
 
