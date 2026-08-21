@@ -36,7 +36,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,100..400,0..1,0&icon_names=account_balance_wallet,add,arrow_back,bolt,bookmark,chat_bubble,close,expand_less,explore,home,menu,more_vert,notifications,person,reply,search,send,settings,thumb_down,thumb_up,tune&display=block" rel="stylesheet"/>
 
 <!-- App Styles -->
-<link rel="stylesheet" href="/css/styles.css?v=20260821f"/>
+<link rel="stylesheet" href="/css/styles.css?v=20260821g"/>
 
 <!-- The splash logo must be in flight before anything else competes for the pipe -->
 <link rel="preload" as="image" href="/misnivo.png?v=1" fetchpriority="high"/>
@@ -680,7 +680,7 @@
             <input class="pe-input" id="peName" type="text" placeholder="Your full name" maxlength="60"/>
           </div>
           <div class="pe-field">
-            <div class="pe-label">Username (handle) <span>Only letters, numbers, _ and . — unique</span></div>
+            <div class="pe-label">Username (handle)</div>
             <div class="pe-handle-wrap">
               <span class="pe-handle-prefix">@</span>
               <input class="pe-input" id="peHandle" type="text" placeholder="yourhandle" maxlength="30" oninput="onHandleInput()" style="padding-left:28px;"/>
@@ -693,14 +693,14 @@
                       oninput="document.getElementById('peBioCount').textContent=this.value.length+' / 160'"></textarea>
           </div>
           <div class="pe-field">
-            <div class="pe-label">Website / Contact Link <span>Website, email or contact info</span></div>
+            <div class="pe-label">Website / Contact Link</div>
             <input class="pe-input" id="peWebsite" type="url" placeholder="https://yourwebsite.com"/>
           </div>
           <div class="pe-field">
-            <div class="pe-label">Social links <span>Optional — handles only</span></div>
-            <div class="pe-social-row"><span class="mi">photo_camera</span><input class="pe-input" id="peInsta" type="text" placeholder="Instagram username" maxlength="40"/></div>
-            <div class="pe-social-row"><span class="pe-x-logo">X</span><input class="pe-input" id="peX" type="text" placeholder="X (Twitter) username" maxlength="40"/></div>
-            <div class="pe-social-row"><span class="mi">smart_display</span><input class="pe-input" id="peYt" type="text" placeholder="YouTube @handle" maxlength="40"/></div>
+            <div class="pe-label">Social links</div>
+            <div class="pe-social-row"><input class="pe-input" id="peInsta" type="text" placeholder="Instagram username" maxlength="40"/></div>
+            <div class="pe-social-row"><input class="pe-input" id="peX" type="text" placeholder="X (Twitter) username" maxlength="40"/></div>
+            <div class="pe-social-row"><input class="pe-input" id="peYt" type="text" placeholder="YouTube @handle" maxlength="40"/></div>
           </div>          <button class="pe-btn-save" id="peSaveBtn" onclick="saveProfile()"><span class="mi">check</span> Save Changes</button>
         </div>
         <div class="set-sec" id="secNotif" style="display:none;">
@@ -1252,7 +1252,7 @@
 <!-- App Logic -->
 <!-- defer, so it runs after the Firebase bundles above and after the DOM is
      parsed — same order as before, but nothing blocks the first paint -->
-<script defer src="/js/app.js?v=20260821f"></script>
+<script defer src="/js/app.js?v=20260821g"></script>
 
 <!-- ══ Firebase AI Logic — stage 2 of the mission safety filter ══
      A SECOND, modular Firebase app. The rest of the site runs on the compat

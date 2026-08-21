@@ -66,10 +66,15 @@ Each of these is written down because it has already broken something real.
   running ones — a top-level `const` used before its line runs parses fine and
   then takes the whole app down. Open the deployed page in a browser before
   calling anything done.
-- **`firestore.rules` may now be deployed by the assistant that edits it.** The
-  owner changed this on 2026-08-21; it used to be Console-only. Deploying is a
-  live production change, so verify the result afterwards rather than trusting
-  "Deploy complete" — write a value the new rule should refuse and confirm it is.
+- **`firestore.rules` in this repo is the ONLY source of truth for rules.**
+  Never change a rule in the Firebase Console: the file would then no longer
+  match what is live, and the next deploy from the file would silently undo it.
+  Every rule change is written into the file first — with a comment saying why —
+  and deployed from there.
+- **The assistant that edits the rules deploys them.** The owner changed this on
+  2026-08-21; it used to be Console-only. A deploy is a live production change,
+  so check the result rather than trusting "Deploy complete": write a value the
+  new rule should refuse, and confirm it is refused.
 - **Do not rename:** `acceptDare`, `submitProof`, `submitDare`, `approveProof`,
   `rejectProof`, `uploadToCloudinary`, `openShorts`, `openVideoDetail`,
   `vidThumb`, `guestCheck`, `WALLET_ENABLED`.
@@ -91,6 +96,24 @@ Each of these is written down because it has already broken something real.
 ---
 
 # LOG — newest first, maximum 5 entries
+
+## 2026-08-21 19:05 — CLAUDE
+CHANGED: `css/styles.css`, `index.html`, `sw.js`, `claude.md`, this file
+WHAT: Took the red out of the rest of the app. `--blue` was `#FF0033` and drove
+~37 rules, so it is white now and `--blue2` a light grey, which handles every
+place it was a text, icon or border colour. The 14 rules where it was a
+BACKGROUND had `color:#fff` on them — white on white — so each of those got
+dark text instead. The hard-coded reds left over (avatar gradients, video
+sliders, the liked heart, the 404 number, the safety icon, two Save buttons)
+went white too. Delete / ban stays red, as asked, with the reason written beside
+it so nobody "tidies" it later. Also recorded that `firestore.rules` in the repo
+is the only source of truth — never edit rules in the Console.
+VERIFIED: Braces balance. Every remaining `#FF0033` in the stylesheet is either
+that one danger button or a comment.
+RISK: The 14 background rules were found by matching red-background against
+white-text; anything using the accent in a way that pattern missed would look
+wrong rather than break. Checking the live pages next.
+OVER
 
 ## 2026-08-21 18:45 — CLAUDE
 CHANGED: nothing in the repo — installed `firebase-tools` on this machine
@@ -149,19 +172,4 @@ CHANGED: `firestore.rules` (Deployed)
 WHAT: Successfully deployed the updated Firestore rules to Firebase (`mission-markit-9192a`) using the CLI. The 4 bug fixes are now live in production.
 VERIFIED: `firebase deploy` succeeded with `Deploy complete!`.
 RISK: None
-OVER
-
-## 2026-08-21 12:40 — CLAUDE
-READ BY GEMINI ✓ 2026-08-21
-CHANGED: moved `HANDOFF.md` and `bugs_found.md` into `ai/`; paths updated in
-`claude.md`, `GEMINI.md`, `AGENTS.md`
-WHAT: The root had six markdown files and was getting hard to read. Our two
-working files now live in `ai/`. **This file is `ai/HANDOFF.md` from now on.**
-The three instruction files stayed in the root on purpose — that is the only
-place each tool looks for them automatically, and moving them would break the
-auto-read that means neither of us has to be told to open this log.
-VERIFIED: `git mv` kept the history; no reference to the old path remains
-anywhere; `ai/` holds both files.
-RISK: If your tool has the old path cached from this session, open `ai/HANDOFF.md`
-once and it will follow from there.
 OVER

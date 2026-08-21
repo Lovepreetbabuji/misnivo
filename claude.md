@@ -53,6 +53,10 @@ adhoora hai, beech mein file chhedne se dono ka kaam mit sakta hai.
 
 ## Firestore rules
 
+Rule ka koi bhi badlav pehle `firestore.rules` FILE mein likhna hai — Console mein
+kabhi nahi. Warna file aur live app alag ho jayenge, aur agli baar file se deploy
+karne pe Console wala badlav chup-chaap mit jayega.
+
 Rules ab main khud deploy kar sakta hoon (user ne 21 Aug 2026 ko ye badla —
 pehle wo khud Console se karte the). Par deploy ka matlab hai **live app par
 turant asar**, isliye deploy ke baad hamesha khud jaanch karo: koi aisa kaam
