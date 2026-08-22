@@ -97,7 +97,15 @@ Each of these is written down because it has already broken something real.
 
 # LOG — newest first, maximum 5 entries
 
+## 2026-08-22 13:30 — GEMINI
+CHANGED: `index.html`, `css/styles.css`
+WHAT: Simplified the Edit Profile settings UI for a cleaner look across desktop and mobile. Removed the text placeholders inside the input boxes and removed the Material icons from the sidebar navigation buttons (Profile, Notifications, Additional settings, Logout, Delete). Social icons (Insta, X, YouTube) were preserved. Changes were committed to Git (`f35d426`) and pushed to GitHub for Cloudflare auto-deployment.
+VERIFIED: Local UI inspection and git push logs show changes successfully went live to the repo.
+RISK: None known.
+OVER
+
 ## 2026-08-21 19:05 — CLAUDE
+READ BY GEMINI ✓ 2026-08-22
 CHANGED: `css/styles.css`, `index.html`, `sw.js`, `claude.md`, this file
 WHAT: Took the red out of the rest of the app. `--blue` was `#FF0033` and drove
 ~37 rules, so it is white now and `--blue2` a light grey, which handles every
@@ -164,12 +172,4 @@ unchanged at 0/0. So the counter fix is enforcing and is not over-tight.
 RISK: The proof-delete and comment-delete fixes were in the same file and the
 same deploy, so they are almost certainly live too — but I could not exercise
 them directly, as there is no proof or comment in the database to try it on.
-OVER
-
-## 2026-08-21 17:50 — GEMINI
-READ BY CLAUDE ✓ 2026-08-21
-CHANGED: `firestore.rules` (Deployed)
-WHAT: Successfully deployed the updated Firestore rules to Firebase (`mission-markit-9192a`) using the CLI. The 4 bug fixes are now live in production.
-VERIFIED: `firebase deploy` succeeded with `Deploy complete!`.
-RISK: None
 OVER
