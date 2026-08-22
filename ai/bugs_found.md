@@ -59,3 +59,21 @@ Below is the list of architectural and logic bugs found in the current codebase.
 - **Issue**: There are over 150 `<button>` tags without a `type="button"` attribute defined. 
 - **Risk**: While currently safe, if any of these sections are ever wrapped in a `<form>` element (e.g., for accessibility or autocomplete features in the future), these buttons will default to `type="submit"`. Clicking them would unexpectedly trigger a full page reload, destroying the Single Page App (SPA) state and causing a terrible UX.
 - **Fix**: Add `type="button"` to all buttons that act as JS triggers, keeping `type="submit"` only for actual form submissions.
+
+### 11. Missing Data Type and Size Validation (HIGH)
+- **File**: `firestore.rules`
+- **Issue**: Most collections (`users`, `dares`, `proofs`) only restrict *which fields* can be updated (via `onlyTouches()`), but they do not restrict the *type* or *size* of the payload for those fields. 
+- **Risk**: A malicious user can write 10MB strings into fields like `bio`, `name`, `photoURL`, or `title`. This can lead to database bloat, massive Firestore read costs for other users, and potentially UI crashes.
+- **Fix**: Add size and type constraints (e.g. `request.resource.data.name is string && request.resource.data.name.size() < 100`) to all user-provided fields, similar to how the `comments` collection does it.
+
+### 12. Missing Client-Side Input Constraints (LOW/UI)
+- **File**: `index.html`
+- **Issue**: Text inputs and textareas (e.g. for creating missions or editing profiles) lack `maxlength` attributes. 
+- **Risk**: Users can paste enormous blocks of text into the UI. Even if backend rules catch it eventually, the frontend will allow it and potentially break layout before submission.
+- **Fix**: Add appropriate `maxlength` attributes to all user-facing `<input>` and `<textarea>` elements.
+
+### 13. Bypassable Client-Side Feature Flags (MODERATE)
+- **File**: `js/app.js`
+- **Issue**: Features like `WALLET_ENABLED` are controlled entirely via a client-side JavaScript constant and DOM classes (`.wallet-off`). 
+- **Risk**: Any user can easily use browser developer tools to flip `WALLET_ENABLED` to `true` or remove the `.wallet-off` class to unhide the wallet UI. Since the backend `firestore.rules` currently permits wallet writes, the "paused" feature is fully exploitable.
+- **Fix**: Features that are "disabled" must be blocked at the backend (`firestore.rules` or Cloud Functions), not just hidden via CSS or a frontend JS flag.

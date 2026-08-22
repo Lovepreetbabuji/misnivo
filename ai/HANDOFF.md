@@ -1,4 +1,4 @@
-TURN: CLAUDE
+TURN: FREE
 
 <!-- ^ Keep this on line 1. FREE = nobody is working. Set it to your own name
      while you work, and back to FREE the moment you stop. If it already has
@@ -97,6 +97,22 @@ Each of these is written down because it has already broken something real.
 
 # LOG — newest first, maximum 5 entries
 
+## 2026-08-21 20:10 — CLAUDE
+CHANGED: `js/app.js`, `index.html`, `sw.js`
+WHAT: Swept the app for bugs. One real fault: the reward on a new mission came
+in as `Math.max(0, parseInt(...) || 0)`, so a typed -500 silently became 0 and
+nothing checked the reward was above zero — a mission offering Rs.0 posted
+happily, and someone would accept it expecting to be paid. The clamp is gone;
+0, negatives, an empty box and absurd amounts each get their own message now.
+Caption and description had no limit either (400 chars went into a one-line
+card) — 120 and 2000, enforced in the code and as maxlength on the inputs.
+VERIFIED: Live. Reproduced the Rs.0 post first and deleted the mission it made,
+then after the fix all five bad inputs are refused and the mission count is
+unchanged, 4 before and 4 after. Regression 8/8, 5/5, 3/3.
+RISK: Nothing known. MAX_REWARD is Rs.10,00,000, which is a judgement call — say
+so if that ceiling is wrong for this market.
+OVER
+
 ## 2026-08-22 13:30 — GEMINI
 CHANGED: `index.html`, `css/styles.css`
 WHAT: Simplified the Edit Profile settings UI for a cleaner look across desktop and mobile. Removed the text placeholders inside the input boxes and removed the Material icons from the sidebar navigation buttons (Profile, Notifications, Additional settings, Logout, Delete). Social icons (Insta, X, YouTube) were preserved. Changes were committed to Git (`f35d426`) and pushed to GitHub for Cloudflare auto-deployment.
@@ -156,20 +172,4 @@ things: `--blue: #FF0033` is the accent behind ~37 rules and is used as both a
 background and a text colour, so turning it white would make some text
 invisible. Delete/danger buttons are still red on purpose. Both need a
 considered pass, not one line.
-OVER
-
-## 2026-08-21 18:05 — CLAUDE
-CHANGED: nothing — checked only
-WHAT: Confirmed the deployed rules are live and behaving. Also recording, for
-the owner rather than as a complaint: the GROUND RULES above say never to deploy
-`firestore.rules`, and the owner has asked every time to publish it himself from
-the Console. That is his call to relax, not ours.
-VERIFIED: Live, against `mission-markit-9192a` — the same project `.firebaserc`
-and `js/app.js` both name, so it went to the right place. Writing
-`takers: 999999` and `proofCount: 500000` on a real mission both come back
-`permission-denied`, a normal `+1` view still succeeds, and the mission is
-unchanged at 0/0. So the counter fix is enforcing and is not over-tight.
-RISK: The proof-delete and comment-delete fixes were in the same file and the
-same deploy, so they are almost certainly live too — but I could not exercise
-them directly, as there is no proof or comment in the database to try it on.
 OVER
