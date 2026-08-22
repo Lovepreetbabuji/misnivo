@@ -3238,6 +3238,13 @@ function openPost() {
 }
 // openEditDare fills the same form itself and does not come through here, so
 // editing an existing mission is not re-gated.
+// What the post form will accept. A reward of 0 used to post happily, and a
+// caption had no limit at all, so 600 characters went into a card built for one
+// line.
+const MIN_REWARD  = 1;
+const MAX_REWARD  = 1000000;
+const MAX_CAPTION = 120;
+const MAX_DESC    = 2000;
 let _postAgreementId = null;
 let _postAgreementP  = null;   // the in-flight save; submitDare waits on this
 function _doOpenPost() {
@@ -3518,13 +3525,24 @@ async function submitDare() {
   if (!user) { showToast('Please sign in first'); return; }
 
   const caption = document.getElementById('pCaption').value.trim();
-  const reward  = Math.max(0, parseInt(document.getElementById('pReward').value) || 0);
+  // Math.max(0, ...) used to sit here, which turned -500 into 0 without a word
+  // and let a mission be posted offering nothing. Read it as typed and judge it
+  // below instead of quietly rewriting what the person entered.
+  const rewardRaw = document.getElementById('pReward').value.trim();
+  const reward    = parseInt(rewardRaw, 10);
   const desc    = document.getElementById('pDesc').value.trim();
   const rules   = postRules.map(r => r.trim()).filter(Boolean);
   const tags    = postTags.length ? [...postTags] : ['general'];
 
   if (!caption) { showToast('Please add a caption'); return; }
+  if (caption.length > MAX_CAPTION) { showToast('Caption is too long — keep it under ' + MAX_CAPTION + ' characters'); return; }
   if (!desc)    { showToast('Please add a description'); return; }
+  if (desc.length > MAX_DESC) { showToast('Description is too long — keep it under ' + MAX_DESC + ' characters'); return; }
+  // A mission with no reward is not a mission, and one with a made-up number is
+  // not either. Both used to go straight through.
+  if (!rewardRaw || !Number.isFinite(reward)) { showToast('Please enter a reward amount'); return; }
+  if (reward < MIN_REWARD) { showToast('Reward must be at least Rs.' + MIN_REWARD); return; }
+  if (reward > MAX_REWARD) { showToast('Reward cannot be more than Rs.' + MAX_REWARD.toLocaleString('en-IN')); return; }
 
   // SAFETY GATE — before anything uploads, and before the mission is written.
   // submitDare handles BOTH posting and editing, so this covers the "post
