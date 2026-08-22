@@ -62,6 +62,12 @@ service cloud.firestore {
           && get(/databases/$(database)/documents/users/$(uid())/private/main).data.get('banned', false) == true;
     }
 
+    // A text field a person types into, kept to a sane length. users/{uid} and
+    // dares are world-readable, so an unbounded string is not just this account's
+    // problem: a 1 MB bio is downloaded by everyone who opens that profile, and
+    // billed to the project every time. Absent is fine — these are all optional.
+    function textOk(v, max) { return v == null || (v is string && v.size() <= max); }
+
     // keys this update is trying to change
     function touched()    { return request.resource.data.diff(resource.data).affectedKeys(); }
     // the update touches nothing outside `allowed`
@@ -113,7 +119,15 @@ service cloud.firestore {
                              'name','username','bio','website','socials','photoURL',
                              'settings','acceptedDares','pinnedDares',
                              'likedProofs','fcmUpdatedAt'
-                           ]))
+                           ])
+                        // and nothing enormous in any of them — the form caps
+                        // these at 60/30/160/40, so the ceilings here are well
+                        // clear of anything the app itself writes
+                        && textOk(request.resource.data.get('name', null), 100)
+                        && textOk(request.resource.data.get('username', null), 40)
+                        && textOk(request.resource.data.get('bio', null), 300)
+                        && textOk(request.resource.data.get('website', null), 300)
+                        && textOk(request.resource.data.get('photoURL', null), 800))
                     // One-way migration: an existing account may REMOVE the old
                     // top-level copies once they have been written to private/.
                     // Removal only — none of them may survive the write, so this
@@ -175,9 +189,17 @@ service cloud.firestore {
     match /dares/{dareId} {
       allow read: if true;
 
+      // The caption and description are shown on a card built for one line and a
+      // short paragraph. The post form caps them at 120 and 2000.
+      function dareTextOk() {
+        return textOk(request.resource.data.get('caption', null), 200)
+            && textOk(request.resource.data.get('title', null), 200)
+            && textOk(request.resource.data.get('description', null), 4000);
+      }
       allow create: if signedIn() && !isBanned()
                     && request.resource.data.creatorUid == uid()
-                    && request.resource.data.completed == false;
+                    && request.resource.data.completed == false
+                    && dareTextOk();
 
       // Once anyone has accepted, the deal is struck. A creator dropping the
       // reward from 500 to 1 after a taker has already filmed is a scam, not an
@@ -199,6 +221,7 @@ service cloud.firestore {
         // the owner may edit their own mission — freely until it is taken,
         // and after that only the keys that running it requires
         (signedIn() && resource.data.creatorUid == uid()
+                    && dareTextOk()
                     && (!dareTaken() || onlyTouches(whileRunning())))
         // A creator clearing the legacy creatorEmail off an old mission. It is
         // removal only — the field may not survive the write — so this can never

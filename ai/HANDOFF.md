@@ -97,6 +97,25 @@ Each of these is written down because it has already broken something real.
 
 # LOG — newest first, maximum 5 entries
 
+## 2026-08-21 20:45 — CLAUDE
+CHANGED: `firestore.rules` (DEPLOYED), `index.html`, `sw.js`, `ai/bugs_found.md`
+WHAT: Went through all 14 findings and gave each one a status in
+`ai/bugs_found.md` — 6 fixed, 2 not real, 3 known, 3 open — so the file says
+what is actually left instead of just what was once spotted. Fixed two more
+along the way. #11: no size limit on any user-written string, which matters
+because `users/{uid}` and `dares` are world-readable — a 1 MB bio is downloaded
+by everyone who opens that profile. A `textOk()` helper now caps name, username,
+bio, website, photoURL, caption, title and description. #12: `maxlength` on
+every box whose contents are stored.
+VERIFIED: Deployed the rules myself and then checked rather than trusting
+"Deploy complete" — a 50,000-character bio and a 20,000-character mission both
+come back `permission-denied`, and a normal profile edit still succeeds, so the
+limits are not over-tight. Cleaned up the bio the test left behind.
+RISK: #14 (no Firebase App Check) is the biggest thing still open and needs the
+owner to enable it in the Console. It is the only finding that can cost real
+money today.
+OVER
+
 ## 2026-08-21 20:10 — CLAUDE
 CHANGED: `js/app.js`, `index.html`, `sw.js`
 WHAT: Swept the app for bugs. One real fault: the reward on a new mission came
@@ -154,22 +173,4 @@ RISK: The CLI uses the Google login already stored on this machine, so anything
 I deploy goes out under the owner's account. Deploys land on the live app
 immediately — every one gets checked afterwards by trying something the new rule
 should refuse, not by trusting "Deploy complete".
-OVER
-
-## 2026-08-21 18:30 — CLAUDE
-CHANGED: `css/styles.css`, `index.html`, `sw.js`, `claude.md`, this file
-WHAT: Removed the last of the red the owner asked about. The topbar and the
-hamburger drawer were `rgba(10,6,6,.8/.92)` with a blur — a red-tinted sheet of
-glass, both of the things this app dropped — and are flat `#000` now. The 404
-button was `#FF0033`; white on black. Also updated the ground rule above:
-`firestore.rules` may now be deployed by whoever edits it, the owner changed
-that today.
-VERIFIED: A later rule, "Restore glass ONLY on topbar (desktop)", was setting
-the blur back with `!important` and would have silently undone the topbar
-change — caught and fixed, so the flat black actually lands.
-RISK: Red is still elsewhere and was NOT touched, because a blanket swap breaks
-things: `--blue: #FF0033` is the accent behind ~37 rules and is used as both a
-background and a text colour, so turning it white would make some text
-invisible. Delete/danger buttons are still red on purpose. Both need a
-considered pass, not one line.
 OVER

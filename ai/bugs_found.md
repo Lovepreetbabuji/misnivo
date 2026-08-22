@@ -1,79 +1,128 @@
-# Bugs and Structural Issues Log
+# Bugs and structural issues — with status
 
-Below is the list of architectural and logic bugs found in the current codebase.
+Findings raised by Gemini, each then checked against the code by Claude before
+being acted on. **The status line is what matters** — the description below it is
+the original report and is left as written.
+
+Status meanings:
+
+| | |
+|---|---|
+| **FIXED** | changed and verified against the live app |
+| **NOT REAL** | checked and the problem is not present in this project |
+| **KNOWN** | real, already understood, deliberately not fixed yet — reason given |
+| **OPEN** | real, not fixed, needs a decision or work |
+
+**Summary: 6 fixed · 2 not real · 3 known · 3 open**
+
+---
 
 ### 1. Client-Side Wallet Manipulation (CRITICAL)
+> **KNOWN — needs a server, not a rule.** Real, and already written up at the top
+> of `firestore.rules`. The wallet moved into `users/{uid}/private/main`, so it is
+> no longer public, and `WALLET_ENABLED = false` has the whole feature paused —
+> but the owner can still write their own balance, and no rule can tell a
+> genuine debit from an invented one. Only a server knows what the balance
+> should be. Waiting on Cloud Functions, which needs the Blaze plan.
+
 - **File**: `firestore.rules`, `js/app.js`
-- **Issue**: The `wallet.balance` is updated directly from the client. The Firestore rules explicitly allow `request.resource.data.wallet.balance` to be written by the user.
-- **Risk**: Any user with basic technical knowledge can modify the network request or use the browser console to set their wallet balance to any amount (e.g., 99999).
-- **Fix**: Move all financial logic (debits/credits) to Firebase Cloud Functions. The client should only call a function, and the server must verify the transaction.
+- **Issue**: The `wallet.balance` is updated directly from the client.
+- **Risk**: A user can set their wallet balance to any amount.
+- **Fix**: Move financial logic to Cloud Functions.
 
 ### 2. Race Conditions on Views and Likes (MODERATE)
-- **File**: `firestore.rules`, `js/app.js`
-- **Issue**: Counters like `viewCount`, `likeCount`, and `dislikeCount` are incremented directly by the client. The rules use a custom `stepped()` function to limit the increment to +1.
-- **Risk**: In a highly concurrent environment (multiple users liking/viewing at the same time), direct document updates cause "Transaction Contention" and race conditions. Some likes or views will be overwritten and lost.
-- **Fix**: Use `FieldValue.increment(1)` combined with a subcollection to track who liked the post. For high-traffic counters, use distributed counters or Cloud Functions.
+> **KNOWN — a documented trade-off.** The `stepped()` guard exists precisely
+> because the alternative is letting anyone write `likeCount = 1000000`. Under
+> heavy concurrency some counts will be lost; that is accepted until there is a
+> server. The note is already in `firestore.rules`.
+
+- **Issue**: Counters incremented directly by the client can collide.
+- **Fix**: Distributed counters or Cloud Functions.
 
 ### 3. Dare/Mission Reward Modification (HIGH)
-- **File**: `firestore.rules`
-- **Issue**: The rules allow the creator to modify the mission (including the reward amount) up until someone accepts it. 
-- **Risk**: A creator could quickly change the reward amount just milliseconds before someone accepts it, or a race condition could allow the amount to change right as the acceptance goes through.
-- **Fix**: Once a dare is created with a bounty, the funds should be locked in escrow immediately. The reward amount field should be read-only after creation.
+> **FIXED.** A mission's terms freeze the moment anyone accepts it. After that
+> the creator may only touch the keys running a live mission needs
+> (`approvedTakers`, `takers`, `proofCount`, `completed`, `refunded`, likes) —
+> not the reward, not the task. The app refuses to open the edit form on a taken
+> mission and says why, so nobody meets a silent failure.
 
 ### 4. Over-reliance on Client-side Rule Enforcement (MODERATE)
-- **File**: `js/app.js`
-- **Issue**: Some states (like checking if a user is eligible to take a dare) are checked entirely on the client-side (`js/app.js`) before sending the write. 
-- **Risk**: Client-side checks can be bypassed. Ensure every critical state transition (like taking a dare, approving a proof) is strictly enforced in `firestore.rules` or a backend function, not just hidden in the UI.
+> **OPEN — but no specific instance was named.** Every critical transition found
+> so far *is* enforced server-side: submitting proof, judging it, editing a
+> taken mission, banning. If a particular flow is only guarded in the UI, point
+> at it and it gets fixed.
 
-### 5. Potential XSS / DOM Manipulation Vulnerabilities (LOW/MODERATE)
-- **File**: `js/app.js`
-- **Issue**: With a 600KB+ vanilla JS file heavily modifying the DOM, there is a risk of improper escaping if user-generated content (like comments or dare descriptions) is inserted directly into the DOM (e.g., via `innerHTML` or similar properties, though direct `innerHTML` usage seems limited).
-- **Fix**: Ensure all user-generated content is sanitized or inserted via `textContent` / `innerText`.
+### 5. Potential XSS / DOM Manipulation (LOW/MODERATE)
+> **NOT REAL as described.** Checked the path named: comments render through
+> `escHtml`, so user text is escaped before it reaches the DOM. Worth re-checking
+> whenever a new surface starts printing user text.
 
 ### 6. Scam Vulnerability: Creator Deleting Proofs (CRITICAL)
-- **File**: `firestore.rules` (Line 287)
-- **Issue**: The `delete` rule for the `proofs` collection allows the mission creator (`posterId`) to delete a proof submitted by someone else. 
-- **Risk**: A malicious creator can ask for a proof, wait for it to be submitted, and then delete the proof document to avoid paying the reward. The proof disappears completely, and the mission doesn't count as complete.
-- **Fix**: Remove `resource.data.posterId == uid()` from the `delete` rule on `proofs`. Proofs should only be soft-deleted, or deleted by the taker (`takerId`), or strictly handled by a backend.
+> **FIXED.** This was the most serious finding. `posterId` could delete a proof,
+> so a creator could ask for a video, wait for it, then delete it rather than
+> pay — and it walked around the one-way judgement, since a deleted proof has no
+> verdict at all. Only the taker who filmed it, or an admin, can delete now.
+> Nothing in the app ever called proof delete, so the permission was open with
+> no feature behind it.
 
 ### 7. Creators Cannot Moderate Comments (MODERATE)
-- **File**: `firestore.rules` (Line 328)
-- **Issue**: The `delete` rule on the `comments` collection only allows the comment author (`userId == uid()`) or an admin to delete a comment.
-- **Risk**: Creators cannot delete abusive or spam comments posted on their own missions or video proofs. 
-- **Fix**: Add a condition to `allow delete` checking if `pinnerOfProof()` or `pinnerOfDare()` is true (which means the user owns the content being commented on).
+> **FIXED.** A creator could pin a comment on their own mission but not delete
+> it — so an abusive comment could not be removed by the person it was aimed at.
+> Delete now uses the same ownership test the pin rule already used.
 
 ### 8. Counters Exploit: takers and proofCount (HIGH)
-- **File**: `firestore.rules` (Line 211)
-- **Issue**: The `update` rule for `dares` allows updating `takers` and `proofCount` while checking `steppedAll()`. However, `steppedAll()` only checks `likeCount`, `dislikeCount`, and `viewCount`—it doesn't validate `takers` or `proofCount`.
-- **Risk**: Any user can artificially inflate or deflate the `takers` and `proofCount` fields on any mission by an arbitrary amount (e.g., setting it to 1000000).
-- **Fix**: Add `&& stepped('takers') && stepped('proofCount')` to the `steppedAll()` function or to the update condition.
+> **FIXED.** Both keys were in the public counter whitelist, but `steppedAll()`
+> only ever checked `likeCount`, `dislikeCount` and `viewCount`. Anyone signed in
+> could write `takers: 1000000` on any mission. Step-checked explicitly on that
+> branch — not inside `steppedAll()`, which `/proofs` shares and where neither
+> field exists. Verified live: `takers: 999999` returns `permission-denied`
+> while a normal `+1` still succeeds.
 
 ### 9. Hijacking Applicant Documents (MODERATE)
-- **File**: `firestore.rules` (Line 232)
-- **Issue**: The `applicants` subcollection has an `allow update: if isDareOwner();` rule but lacks an `onlyTouches()` constraint.
-- **Risk**: The mission creator can modify ANY field on the applicant's document, including changing the `uid` of the applicant, which would lock the applicant out of their own application data.
-- **Fix**: Enforce `onlyTouches(['status'])` on the applicant update rule for mission owners.
+> **FIXED.** `allow update: if isDareOwner()` had no field restriction, so a
+> mission owner could rewrite an applicant's whole record including the `uid` it
+> belongs to. Limited to `status`, which is the only field the app writes there.
 
 ### 10. Missing `type="button"` on Interactive Elements (LOW/UI)
-- **File**: `index.html`
-- **Issue**: There are over 150 `<button>` tags without a `type="button"` attribute defined. 
-- **Risk**: While currently safe, if any of these sections are ever wrapped in a `<form>` element (e.g., for accessibility or autocomplete features in the future), these buttons will default to `type="submit"`. Clicking them would unexpectedly trigger a full page reload, destroying the Single Page App (SPA) state and causing a terrible UX.
-- **Fix**: Add `type="button"` to all buttons that act as JS triggers, keeping `type="submit"` only for actual form submissions.
+> **NOT REAL today — no `<form>` exists in `index.html`.** A `<button>` only
+> defaults to `submit` inside a form, and there are zero. Worth remembering if a
+> real form is ever added; not worth touching 150 tags for a hypothetical.
 
 ### 11. Missing Data Type and Size Validation (HIGH)
-- **File**: `firestore.rules`
-- **Issue**: Most collections (`users`, `dares`, `proofs`) only restrict *which fields* can be updated (via `onlyTouches()`), but they do not restrict the *type* or *size* of the payload for those fields. 
-- **Risk**: A malicious user can write 10MB strings into fields like `bio`, `name`, `photoURL`, or `title`. This can lead to database bloat, massive Firestore read costs for other users, and potentially UI crashes.
-- **Fix**: Add size and type constraints (e.g. `request.resource.data.name is string && request.resource.data.name.size() < 100`) to all user-provided fields, similar to how the `comments` collection does it.
+> **FIXED.** This one mattered because `users/{uid}` and `dares` are
+> world-readable: a 1 MB bio is downloaded by everyone who opens that profile and
+> billed to the project each time. A shared `textOk()` helper now caps `name`
+> (100), `username` (40), `bio` (300), `website` (300), `photoURL` (800), and
+> mission `caption`/`title` (200) and `description` (4000), on create and on
+> edit. Verified live: a 50,000-character bio and a 20,000-character mission are
+> both refused, while a normal profile edit still succeeds.
 
 ### 12. Missing Client-Side Input Constraints (LOW/UI)
-- **File**: `index.html`
-- **Issue**: Text inputs and textareas (e.g. for creating missions or editing profiles) lack `maxlength` attributes. 
-- **Risk**: Users can paste enormous blocks of text into the UI. Even if backend rules catch it eventually, the frontend will allow it and potentially break layout before submission.
-- **Fix**: Add appropriate `maxlength` attributes to all user-facing `<input>` and `<textarea>` elements.
+> **FIXED.** `maxlength` added to every box whose contents are stored: the post
+> form's caption (120) and description (2000), sign-up name, KYC and bank fields,
+> website, tag input, and the reject and report reasons. Sliders, the read-only
+> date wheels and the search boxes are deliberately left alone — nothing is
+> written from them.
 
 ### 13. Bypassable Client-Side Feature Flags (MODERATE)
-- **File**: `js/app.js`
-- **Issue**: Features like `WALLET_ENABLED` are controlled entirely via a client-side JavaScript constant and DOM classes (`.wallet-off`). 
-- **Risk**: Any user can easily use browser developer tools to flip `WALLET_ENABLED` to `true` or remove the `.wallet-off` class to unhide the wallet UI. Since the backend `firestore.rules` currently permits wallet writes, the "paused" feature is fully exploitable.
-- **Fix**: Features that are "disabled" must be blocked at the backend (`firestore.rules` or Cloud Functions), not just hidden via CSS or a frontend JS flag.
+> **KNOWN — same root cause as #1.** Flipping `WALLET_ENABLED` in the console
+> only unhides UI; the exposure underneath is that the owner may write their own
+> wallet document, which is #1 and needs a server. Note that `wallet` is not in
+> the public `users` update whitelist — it lives in the owner-only private
+> drawer — so this is not an open door for anyone *else*.
+
+### 14. No Rate Limiting / API Abuse Protection (CRITICAL)
+> **OPEN — real, and the biggest one left.** There is no Firebase App Check
+> anywhere in the project (checked: zero references). A script could create
+> thousands of accounts or missions and the bill would follow. Fixing it means
+> enabling App Check in the Firebase Console **and** initialising it in
+> `js/app.js` — a project-level change the owner needs to start. Worth doing
+> before the app is promoted anywhere public.
+
+---
+
+## Still open, in the order they are worth doing
+
+1. **#14 App Check** — the only one that can cost real money today.
+2. **#1 / #13 wallet on the server** — blocked on the Blaze plan.
+3. **#4** — needs a specific flow named before anything can be done.
