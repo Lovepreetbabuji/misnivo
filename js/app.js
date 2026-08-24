@@ -63,7 +63,10 @@ firebase.initializeApp(firebaseConfig);
 // rest of this file from running — the whole app, over a hardening measure.
 // Enforcement is off in the Console for now, so a missing token changes
 // nothing yet; when it is switched on, this is what keeps real people in.
+// Published for the AI Logic module in index.html, which builds a SECOND
+// Firebase app and needs the same key to activate App Check on it.
 const APPCHECK_SITE_KEY = '6LdMt5UtAAAAANQlYLej4_9VKQoNX87n_WmNWWmU';
+window.__appCheckKey = APPCHECK_SITE_KEY;
 try {
   if (firebase.appCheck) {
     firebase.appCheck().activate(
