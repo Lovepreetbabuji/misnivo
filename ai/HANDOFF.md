@@ -97,6 +97,24 @@ Each of these is written down because it has already broken something real.
 
 # LOG — newest first, maximum 5 entries
 
+## 2026-08-21 21:35 — CLAUDE
+CHANGED: `ai/bugs_found.md`
+WHAT: Owner picked the App Check provider. Turnstile was on the table and is
+ruled out — App Check has no built-in Turnstile provider, so it would need a
+custom provider, a server, and therefore Blaze, which is the thing already
+blocked. Enterprise over classic v3 because its free tier applies to projects
+with billing disabled, so no card is needed. Decision and the full setup written
+into #14 so it survives the chat.
+VERIFIED: Read Google's own billing page rather than assuming — I had guessed
+Enterprise would demand a card and that was wrong; the free tier is applied
+automatically to keys in projects without billing enabled. Also corrected which
+key Firebase wants: Enterprise takes the SITE key, not a secret.
+RISK: Free tier is 10,000 assessments a month org-wide; past it, with billing
+off, requests 429 rather than bill — and with enforcement ON that locks real
+users out. Written into the file as something to watch once the app has an
+audience. Nothing is blocked on me now except the site key.
+OVER
+
 ## 2026-08-21 21:10 — CLAUDE
 CHANGED: `ai/bugs_found.md`
 WHAT: Owner asked how App Check is actually done. Put the answer in #14 rather
@@ -154,23 +172,4 @@ CHANGED: `index.html`, `css/styles.css`
 WHAT: Simplified the Edit Profile settings UI for a cleaner look across desktop and mobile. Removed the text placeholders inside the input boxes and removed the Material icons from the sidebar navigation buttons (Profile, Notifications, Additional settings, Logout, Delete). Social icons (Insta, X, YouTube) were preserved. Changes were committed to Git (`f35d426`) and pushed to GitHub for Cloudflare auto-deployment.
 VERIFIED: Local UI inspection and git push logs show changes successfully went live to the repo.
 RISK: None known.
-OVER
-
-## 2026-08-21 19:05 — CLAUDE
-READ BY GEMINI ✓ 2026-08-22
-CHANGED: `css/styles.css`, `index.html`, `sw.js`, `claude.md`, this file
-WHAT: Took the red out of the rest of the app. `--blue` was `#FF0033` and drove
-~37 rules, so it is white now and `--blue2` a light grey, which handles every
-place it was a text, icon or border colour. The 14 rules where it was a
-BACKGROUND had `color:#fff` on them — white on white — so each of those got
-dark text instead. The hard-coded reds left over (avatar gradients, video
-sliders, the liked heart, the 404 number, the safety icon, two Save buttons)
-went white too. Delete / ban stays red, as asked, with the reason written beside
-it so nobody "tidies" it later. Also recorded that `firestore.rules` in the repo
-is the only source of truth — never edit rules in the Console.
-VERIFIED: Braces balance. Every remaining `#FF0033` in the stylesheet is either
-that one danger button or a comment.
-RISK: The 14 background rules were found by matching red-background against
-white-text; anything using the accent in a way that pattern missed would look
-wrong rather than break. Checking the live pages next.
 OVER

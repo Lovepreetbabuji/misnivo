@@ -128,32 +128,49 @@ Status meanings:
 - **Fix**: Implement App Check (reCAPTCHA v3) and enforce it in the Console.
   Move high-volume writes into Cloud Functions for per-user limits.
 
-**How to actually do it** — checked against Firebase's own docs, and against this
-project rather than in general:
+**DECIDED 2026-08-21: reCAPTCHA Enterprise.** Cloudflare Turnstile was
+considered and ruled out — App Check has no built-in Turnstile provider, so it
+would need a custom provider, which needs a server, which needs Blaze, which is
+the very thing blocked. Enterprise over classic v3 because its free tier applies
+to projects **without billing enabled**, so no card is needed, and Firebase
+recommends it for new integrations.
 
-*Only the owner can do steps 1–3; they need a Google account, not code.*
+**Setup — steps 1-3 are the owner's, step 4 is code**
 
-1. **reCAPTCHA v3 site** — register the domain at the reCAPTCHA admin console.
-   It hands back a **site key** (public, goes in the code) and a **secret key**
-   (private, goes in the Firebase Console and nowhere else).
-2. **Firebase Console → Security → App Check → Apps** — register the web app and
-   paste the **secret** key there.
-3. **Leave enforcement OFF at first.** The Console shows how many requests are
-   arriving with and without a valid token. Turning enforcement on before the
-   new code has reached everyone would lock out real people mid-session.
-4. **The code** — this project is on the Firebase **compat** SDK 9.22.2, not the
-   modular one, so the documented `initializeAppCheck` import does not apply.
-   It needs `firebase-app-check-compat.js` added beside the other three script
-   tags in `index.html`, and then, straight after `firebase.initializeApp`:
-   `firebase.appCheck().activate(new firebase.appCheck.ReCaptchaV3Provider(SITE_KEY), true)`.
-   Roughly ten lines. Waiting on the site key from step 1 — nothing can be
-   written before it exists.
-5. **Then enforce**, once the Console shows almost all traffic carrying a token.
+1. **Create the key** at the Google Cloud reCAPTCHA page
+   (`console.cloud.google.com/security/recaptcha`). Enable the API if asked.
+   Create a **Web** key. Leave **"Use checkbox challenge" UNSELECTED** — the
+   score-based kind is invisible, and a checkbox in front of every visitor is
+   not what this is for.
+   Domains: `daremarket.pages.dev`. Add any custom domain later, when there is
+   one. **Do not add localhost to this key** — that is what the separate debug
+   token is for.
+   The page then shows a **site key**. That is public and belongs in the code.
+2. **Firebase Console → Security → App Check → Apps** → register the web app
+   with the reCAPTCHA Enterprise provider → paste **that same site key**.
+   Enterprise needs only the site key here. (Classic v3 is the one that wants a
+   secret key — different provider, different flow.)
+3. **Leave enforcement OFF.** The Console shows how much traffic arrives with a
+   valid token. Enforcing before the new client has reached everyone logs real
+   people out mid-session.
+4. **Code** — this project is on the Firebase **compat** SDK 9.22.2, so the
+   documented `initializeAppCheck` import does not apply. It needs
+   `firebase-app-check-compat.js` beside the other script tags in
+   `index.html`, then after `firebase.initializeApp`:
+   `firebase.appCheck().activate(new firebase.appCheck.ReCaptchaEnterpriseProvider(SITE_KEY), true)`.
+   About ten lines. Blocked only on the site key from step 1.
+5. **Then enforce**, once almost all traffic carries a token.
 
-Per-user rate limits on top of that need Cloud Functions, which needs the Blaze
-plan — the same thing blocking #1. App Check alone stops the scripted-abuse case
-and is worth doing on its own.
+**Watch this later:** the free tier is 10,000 assessments a calendar month
+across the whole organisation. Past that, with billing still off, requests come
+back 429 rather than being charged — and with enforcement ON that means real
+users are locked out. Roughly one assessment per person per day, so ~330 daily
+users. Miles away today; worth a look at the Console once the app has an
+audience.
 
+Per-user rate limits on top of this still need Cloud Functions, and so still
+need Blaze. App Check alone stops the scripted-abuse case and is worth doing on
+its own.
 
 ---
 
