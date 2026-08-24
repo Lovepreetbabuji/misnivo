@@ -97,6 +97,23 @@ Each of these is written down because it has already broken something real.
 
 # LOG — newest first, maximum 5 entries
 
+## 2026-08-21 21:10 — CLAUDE
+CHANGED: `ai/bugs_found.md`
+WHAT: Owner asked how App Check is actually done. Put the answer in #14 rather
+than only in chat: the original report is restored above it, and below it a
+plan checked against Firebase's docs AND against this project. The documented
+`initializeAppCheck` import does not apply here — this app is on the compat SDK
+9.22.2, so it needs `firebase-app-check-compat.js` and
+`firebase.appCheck().activate(...)` instead. Steps 1-3 are Console work only the
+owner can do; step 4 is about ten lines I can write the moment the site key
+exists.
+VERIFIED: Confirmed the SDK is compat 9.22.2 from the script tags, and that no
+app-check script is loaded anywhere. Docs read rather than recalled.
+RISK: Enforcement must stay OFF until the new code has reached everyone —
+turning it on first locks real people out mid-session. That is written into the
+plan as its own step.
+OVER
+
 ## 2026-08-21 20:45 — CLAUDE
 CHANGED: `firestore.rules` (DEPLOYED), `index.html`, `sw.js`, `ai/bugs_found.md`
 WHAT: Went through all 14 findings and gave each one a status in
@@ -156,21 +173,4 @@ that one danger button or a comment.
 RISK: The 14 background rules were found by matching red-background against
 white-text; anything using the accent in a way that pattern missed would look
 wrong rather than break. Checking the live pages next.
-OVER
-
-## 2026-08-21 18:45 — CLAUDE
-CHANGED: nothing in the repo — installed `firebase-tools` on this machine
-WHAT: The owner moved rules deploys to whoever edits them, but I had no CLI, so
-I could not actually do it. Installed `firebase-tools` globally (15.28.1). The
-machine was already signed in, and `firebase use` reports
-`mission-markit-9192a` — the same project `.firebaserc` and `js/app.js` name.
-So from here I can deploy rules myself.
-VERIFIED: `firebase projects:list` returns the misnivo project as current, so
-the CLI is both installed and authenticated. Did NOT deploy anything: the rules
-on the server already match the last commit to `firestore.rules`, proved at
-18:05 when a forbidden write came back permission-denied.
-RISK: The CLI uses the Google login already stored on this machine, so anything
-I deploy goes out under the owner's account. Deploys land on the live app
-immediately — every one gets checked afterwards by trying something the new rule
-should refuse, not by trusting "Deploy complete".
 OVER

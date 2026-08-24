@@ -112,12 +112,48 @@ Status meanings:
 > drawer — so this is not an open door for anyone *else*.
 
 ### 14. No Rate Limiting / API Abuse Protection (CRITICAL)
-> **OPEN — real, and the biggest one left.** There is no Firebase App Check
-> anywhere in the project (checked: zero references). A script could create
-> thousands of accounts or missions and the bill would follow. Fixing it means
-> enabling App Check in the Firebase Console **and** initialising it in
-> `js/app.js` — a project-level change the owner needs to start. Worth doing
-> before the app is promoted anywhere public.
+> **OPEN — real, and the biggest one left.** Confirmed: zero App Check
+> references anywhere in the project. Nothing throttles account creation or
+> writes, so a script could make thousands of either and the bill would follow.
+> This is the only finding that can cost real money today.
+
+**As reported:**
+- **File**: `js/app.js`, Firebase project config
+- **Issue**: The app lacks Firebase App Check. Because it talks to Firestore and
+  Auth directly from the browser, there is no rate limiting on document creation
+  or sign-ups.
+- **Risk**: A script can spam 10,000 sign-ups, or 10,000 missions/comments.
+  Firebase will not fall over — it scales — but every write and every auth email
+  is billed. Scraping the data is trivial too.
+- **Fix**: Implement App Check (reCAPTCHA v3) and enforce it in the Console.
+  Move high-volume writes into Cloud Functions for per-user limits.
+
+**How to actually do it** — checked against Firebase's own docs, and against this
+project rather than in general:
+
+*Only the owner can do steps 1–3; they need a Google account, not code.*
+
+1. **reCAPTCHA v3 site** — register the domain at the reCAPTCHA admin console.
+   It hands back a **site key** (public, goes in the code) and a **secret key**
+   (private, goes in the Firebase Console and nowhere else).
+2. **Firebase Console → Security → App Check → Apps** — register the web app and
+   paste the **secret** key there.
+3. **Leave enforcement OFF at first.** The Console shows how many requests are
+   arriving with and without a valid token. Turning enforcement on before the
+   new code has reached everyone would lock out real people mid-session.
+4. **The code** — this project is on the Firebase **compat** SDK 9.22.2, not the
+   modular one, so the documented `initializeAppCheck` import does not apply.
+   It needs `firebase-app-check-compat.js` added beside the other three script
+   tags in `index.html`, and then, straight after `firebase.initializeApp`:
+   `firebase.appCheck().activate(new firebase.appCheck.ReCaptchaV3Provider(SITE_KEY), true)`.
+   Roughly ten lines. Waiting on the site key from step 1 — nothing can be
+   written before it exists.
+5. **Then enforce**, once the Console shows almost all traffic carrying a token.
+
+Per-user rate limits on top of that need Cloud Functions, which needs the Blaze
+plan — the same thing blocking #1. App Check alone stops the scripted-abuse case
+and is worth doing on its own.
+
 
 ---
 
