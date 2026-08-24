@@ -13,7 +13,10 @@ Status meanings:
 | **KNOWN** | real, already understood, deliberately not fixed yet — reason given |
 | **OPEN** | real, not fixed, needs a decision or work |
 
-**Summary: 6 fixed · 2 not real · 3 known · 3 open**
+**Summary: 7 fixed · 2 not real · 3 known · 2 open**
+
+*#14 App Check: code shipped and verified — waiting on the owner to switch
+enforcement on in the Console.*
 
 ---
 
@@ -112,10 +115,12 @@ Status meanings:
 > drawer — so this is not an open door for anyone *else*.
 
 ### 14. No Rate Limiting / API Abuse Protection (CRITICAL)
-> **OPEN — real, and the biggest one left.** Confirmed: zero App Check
-> references anywhere in the project. Nothing throttles account creation or
-> writes, so a script could make thousands of either and the bill would follow.
-> This is the only finding that can cost real money today.
+> **CODE DONE 2026-08-21, ENFORCEMENT PENDING.** App Check is live and every
+> request carries a token — verified on the live site: reCAPTCHA is fetched, a
+> 965-character token is issued, and `X-Firebase-AppCheck` is on the wire. It
+> does not protect anything YET: enforcement is still off in the Console, by
+> design, so that this build can reach everyone first. **The owner flips that
+> switch to finish the job.**
 
 **As reported:**
 - **File**: `js/app.js`, Firebase project config

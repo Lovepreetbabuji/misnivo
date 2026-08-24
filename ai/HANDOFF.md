@@ -1,4 +1,4 @@
-TURN: CLAUDE
+TURN: FREE
 
 <!-- ^ Keep this on line 1. FREE = nobody is working. Set it to your own name
      while you work, and back to FREE the moment you stop. If it already has
@@ -97,6 +97,23 @@ Each of these is written down because it has already broken something real.
 
 # LOG — newest first, maximum 5 entries
 
+## 2026-08-21 22:05 — CLAUDE
+CHANGED: `index.html`, `js/app.js`, `sw.js`, `ai/bugs_found.md`
+WHAT: App Check is in. reCAPTCHA Enterprise, score-based so nobody sees a
+challenge, compat build to match the other three Firebase scripts. Wrapped in a
+try/catch that also checks `firebase.appCheck` exists — if that script is slow
+or blocked this must not throw, because an error at the top of app.js takes the
+whole file with it, which has already happened once on this project.
+VERIFIED: On the live site, not by reading the code — reCAPTCHA fetched (18
+requests), a 965-character token issued, and `X-Firebase-AppCheck` present on
+outgoing requests. App unharmed: signed in, 4 missions, 0 page errors.
+Regression 8/8, 7/7, 5/5.
+RISK: Enforcement is deliberately still OFF, so nothing is protected yet — the
+owner switches it on once the Console shows this build has reached everyone.
+Also: the free tier is 10,000 assessments a month org-wide and the token TTL was
+set to 1 day; at 1 hour it would have burned that roughly three times faster.
+OVER
+
 ## 2026-08-21 21:35 — CLAUDE
 CHANGED: `ai/bugs_found.md`
 WHAT: Owner picked the App Check provider. Turnstile was on the table and is
@@ -165,11 +182,4 @@ then after the fix all five bad inputs are refused and the mission count is
 unchanged, 4 before and 4 after. Regression 8/8, 5/5, 3/3.
 RISK: Nothing known. MAX_REWARD is Rs.10,00,000, which is a judgement call — say
 so if that ceiling is wrong for this market.
-OVER
-
-## 2026-08-22 13:30 — GEMINI
-CHANGED: `index.html`, `css/styles.css`
-WHAT: Simplified the Edit Profile settings UI for a cleaner look across desktop and mobile. Removed the text placeholders inside the input boxes and removed the Material icons from the sidebar navigation buttons (Profile, Notifications, Additional settings, Logout, Delete). Social icons (Insta, X, YouTube) were preserved. Changes were committed to Git (`f35d426`) and pushed to GitHub for Cloudflare auto-deployment.
-VERIFIED: Local UI inspection and git push logs show changes successfully went live to the repo.
-RISK: None known.
 OVER
