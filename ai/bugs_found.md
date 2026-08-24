@@ -13,10 +13,10 @@ Status meanings:
 | **KNOWN** | real, already understood, deliberately not fixed yet — reason given |
 | **OPEN** | real, not fixed, needs a decision or work |
 
-**Summary: 7 fixed · 2 not real · 3 known · 2 open**
+**Summary: 8 fixed · 2 not real · 3 known · 4 open**
 
-*#14 App Check: code shipped and verified — waiting on the owner to switch
-enforcement on in the Console.*
+*#14 App Check is DONE — enforced on Firestore and Authentication 24 Aug 2026,
+and verified against the live site afterwards. AI Logic is the last switch.*
 
 ---
 
@@ -115,12 +115,19 @@ enforcement on in the Console.*
 > drawer — so this is not an open door for anyone *else*.
 
 ### 14. No Rate Limiting / API Abuse Protection (CRITICAL)
-> **CODE DONE 2026-08-21, ENFORCEMENT PENDING.** App Check is live and every
-> request carries a token — verified on the live site: reCAPTCHA is fetched, a
-> 965-character token is issued, and `X-Firebase-AppCheck` is on the wire. It
-> does not protect anything YET: enforcement is still off in the Console, by
-> design, so that this build can reach everyone first. **The owner flips that
-> switch to finish the job.**
+> **FIXED — enforced 24 Aug 2026.** Cloud Firestore and Authentication are both
+> Enforced in the Console, and the live site was re-tested afterwards in a real
+> browser window on a brand-new profile: a signed-out visitor still reads the
+> feed, a brand-new person still signs up, a signed-in person still writes, the
+> AI safety filter still blocks, 0 page errors.
+>
+> **A headless browser is now refused, and that is the feature working.** The
+> test harness started getting `403` on the App Check token exchange and
+> `auth/firebase-app-check-token-is-invalid` on sign-up the moment enforcement
+> went on — reCAPTCHA Enterprise scores an automated browser as a bot and will
+> not mint it a token. Any future test that needs to write must run with
+> `headless:false`. Do not read that 403 as the app being broken; check a real
+> window before concluding anything.
 
 **As reported:**
 - **File**: `js/app.js`, Firebase project config
@@ -173,6 +180,13 @@ Firebase makes App Check enforcement REQUIRED for AI Logic on **2 November
 2026** — without this the filter would have started failing that day, and it
 fails closed, so every mission would have been refused. Done and verified.
 
+**AI Logic is safe to enforce.** Watched on the wire in a real browser, 24 Aug
+2026: both `generateContent` POSTs carry a 965-character `X-Firebase-AppCheck`
+header. The third request in the trace is the CORS `OPTIONS` preflight, which by
+specification never carries custom headers and is not what enforcement checks —
+it is not a gap. The Console shows no percentage for AI Logic because that row
+had received no traffic yet, so the wire is the evidence, not the table.
+
 **Watch this later:** the free tier is 10,000 assessments a calendar month
 across the whole organisation. Past that, with billing still off, requests come
 back 429 rather than being charged — and with enforcement ON that means real
@@ -183,6 +197,30 @@ audience.
 Per-user rate limits on top of this still need Cloud Functions, and so still
 need Blaze. App Check alone stops the scripted-abuse case and is worth doing on
 its own.
+
+### 15. Unbounded Queries in Admin Dashboard (HIGH)
+> **OPEN — new finding.**
+
+- **File**: `js/app.js` (Lines 1721, 1872)
+- **Issue**: Admin panels fetch entire collections into memory (`db.collection('dares').get()`, `users`, `proofs`, etc. without a `limit()` or pagination).
+- **Risk**: As the platform scales, downloading 100,000 users or dares at once will crash the browser tab (OOM), cause massive Firestore read billing spikes, and take a long time to load.
+- **Fix**: Implement pagination for admin views or use server-side aggregation for stats.
+
+### 16. Missing Feed Pagination (MODERATE)
+> **OPEN — new finding.**
+
+- **File**: `js/app.js` (Line 2276)
+- **Issue**: The main feed for dares hardcodes a `limit(60)`: `db.collection('dares').orderBy('createdAt', 'desc').limit(60)`. There is no "Load More" button or infinite scrolling logic.
+- **Risk**: If there are 1,000 dares on the platform, 940 of them are permanently inaccessible from the main feed. Users can only see the 60 newest ones.
+- **Fix**: Implement Firestore cursor pagination (`startAfter(lastVisible)`) combined with a "Load More" button or Intersection Observer.
+
+### 17. Unauthenticated Cloudinary Uploads (HIGH)
+> **OPEN — new finding.**
+
+- **File**: `js/app.js` (Line 886)
+- **Issue**: Image and video uploads use Cloudinary's unsigned uploads via a public upload preset (`missionbook`) and cloud name.
+- **Risk**: Any malicious user who inspects the frontend code can extract the cloud name and upload preset. They can then write a script to upload thousands of junk files directly to Cloudinary, exhausting your storage limits and running up your Cloudinary bill.
+- **Fix**: Use signed uploads. Move the upload signing logic to a Firebase Cloud Function, so the client must authenticate with Firebase before receiving a temporary signature to upload.
 
 ---
 

@@ -97,6 +97,26 @@ Each of these is written down because it has already broken something real.
 
 # LOG — newest first, maximum 5 entries
 
+## 2026-08-24 23:10 — CLAUDE
+CHANGED: `ai/bugs_found.md` only (no app code)
+WHAT: The owner switched App Check enforcement ON for Cloud Firestore and
+Authentication. Re-tested the live site afterwards and recorded what enforcement
+actually changes.
+VERIFIED: Real browser window, brand-new profile — signed-out visitor reads the
+feed, brand-new person signs up, signed-in person writes, AI safety filter
+blocks, 0 page errors. Test account cleaned up after itself.
+RISK: **A headless browser is now refused, and that is correct.** The harness
+began returning `403` on the App Check token exchange and
+`auth/firebase-app-check-token-is-invalid` on sign-up — reCAPTCHA Enterprise
+scores an automated browser as a bot and will not issue it a token. Any test
+that signs in or writes must now run with `headless:false`. A 403 there is not
+the app being broken; check a real window before concluding anything.
+AI Logic is still Unenforced and is safe to turn on: watched on the wire, both
+`generateContent` POSTs carry a 965-character App Check header. The third line
+in the trace is the CORS `OPTIONS` preflight, which never carries custom headers
+by specification and is not what enforcement inspects.
+OVER
+
 ## 2026-08-21 22:35 — CLAUDE
 CHANGED: `index.html`, `js/app.js`, `sw.js`, `ai/bugs_found.md`
 WHAT: The safety filter runs on a SECOND Firebase app — `initializeApp(config,
@@ -165,23 +185,4 @@ app-check script is loaded anywhere. Docs read rather than recalled.
 RISK: Enforcement must stay OFF until the new code has reached everyone —
 turning it on first locks real people out mid-session. That is written into the
 plan as its own step.
-OVER
-
-## 2026-08-21 20:45 — CLAUDE
-CHANGED: `firestore.rules` (DEPLOYED), `index.html`, `sw.js`, `ai/bugs_found.md`
-WHAT: Went through all 14 findings and gave each one a status in
-`ai/bugs_found.md` — 6 fixed, 2 not real, 3 known, 3 open — so the file says
-what is actually left instead of just what was once spotted. Fixed two more
-along the way. #11: no size limit on any user-written string, which matters
-because `users/{uid}` and `dares` are world-readable — a 1 MB bio is downloaded
-by everyone who opens that profile. A `textOk()` helper now caps name, username,
-bio, website, photoURL, caption, title and description. #12: `maxlength` on
-every box whose contents are stored.
-VERIFIED: Deployed the rules myself and then checked rather than trusting
-"Deploy complete" — a 50,000-character bio and a 20,000-character mission both
-come back `permission-denied`, and a normal profile edit still succeeds, so the
-limits are not over-tight. Cleaned up the bio the test left behind.
-RISK: #14 (no Firebase App Check) is the biggest thing still open and needs the
-owner to enable it in the Console. It is the only finding that can cost real
-money today.
 OVER
