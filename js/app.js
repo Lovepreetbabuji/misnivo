@@ -48,6 +48,35 @@ window.__fbConfig = firebaseConfig;
 // would stop every post on the site.
 window.AI_SAFETY_MODEL = 'gemini-flash-lite-latest';
 firebase.initializeApp(firebaseConfig);
+
+// ── App Check ──────────────────────────────────────────────────────────────
+// Every request now carries a token saying it came from this app in a real
+// browser. Without it there is nothing between a script and the database: ten
+// thousand sign-ups or ten thousand missions cost an attacker nothing and get
+// billed to this project.
+//
+// The site key is PUBLIC by design — it is handed to every visitor's browser.
+// It is useless on its own; the private half never leaves Google.
+//
+// Wrapped, and deliberately: if the App Check script is slow, blocked or fails,
+// this must not take the app down with it. A thrown error here would stop the
+// rest of this file from running — the whole app, over a hardening measure.
+// Enforcement is off in the Console for now, so a missing token changes
+// nothing yet; when it is switched on, this is what keeps real people in.
+const APPCHECK_SITE_KEY = '6LdMt5UtAAAAANQlYLej4_9VKQoNX87n_WmNWWmU';
+try {
+  if (firebase.appCheck) {
+    firebase.appCheck().activate(
+      new firebase.appCheck.ReCaptchaEnterpriseProvider(APPCHECK_SITE_KEY),
+      true      // keep the token refreshed on its own
+    );
+  } else {
+    console.warn('App Check script did not load — running without it');
+  }
+} catch (e) {
+  console.warn('App Check could not start:', e && e.message);
+}
+
 const auth = firebase.auth();
 const db   = firebase.firestore();
 // Offline cache: repeat reads (page switches, re-opens) are served instantly from
