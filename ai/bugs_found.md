@@ -166,6 +166,13 @@ recommends it for new integrations.
    About ten lines. Blocked only on the site key from step 1.
 5. **Then enforce**, once almost all traffic carries a token.
 
+**Two Firebase apps, two App Checks.** The safety filter runs on a SECOND
+Firebase app (`initializeApp(config, 'ai')`, modular 12.10.0). App Check is per
+app instance, so the compat activation does not cover it and it needed its own.
+Firebase makes App Check enforcement REQUIRED for AI Logic on **2 November
+2026** — without this the filter would have started failing that day, and it
+fails closed, so every mission would have been refused. Done and verified.
+
 **Watch this later:** the free tier is 10,000 assessments a calendar month
 across the whole organisation. Past that, with billing still off, requests come
 back 429 rather than being charged — and with enforcement ON that means real

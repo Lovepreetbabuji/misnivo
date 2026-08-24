@@ -97,6 +97,24 @@ Each of these is written down because it has already broken something real.
 
 # LOG — newest first, maximum 5 entries
 
+## 2026-08-21 22:35 — CLAUDE
+CHANGED: `index.html`, `js/app.js`, `sw.js`, `ai/bugs_found.md`
+WHAT: The safety filter runs on a SECOND Firebase app — `initializeApp(config,
+'ai')` on the modular SDK — and App Check is per app instance, so yesterday's
+activation covered Firestore and Auth and left the AI calls unverified. Surfaced
+by the Console banner: Firebase makes App Check enforcement REQUIRED for AI
+Logic on 2 Nov 2026, and this filter fails CLOSED, so on that date every mission
+would have been refused rather than let through. Given its own App Check now,
+with the key shared via `window.__appCheckKey` so the two cannot drift.
+VERIFIED: Live. AI model still starts, keyword filter still blocks, the AI stage
+still reaches Google and returns "blocked", and 2 of the 4 tokened requests are
+the AI ones. 0 page errors.
+RISK: Console currently reads 100% verified / 0% unverified for both Firestore
+and Authentication, so enforcing those is safe. AI Logic has no metrics yet —
+its row says it is waiting for traffic — so that one is worth leaving until its
+number shows too. Deadline for it is 2 Nov 2026.
+OVER
+
 ## 2026-08-21 22:05 — CLAUDE
 CHANGED: `index.html`, `js/app.js`, `sw.js`, `ai/bugs_found.md`
 WHAT: App Check is in. reCAPTCHA Enterprise, score-based so nobody sees a
@@ -166,20 +184,4 @@ limits are not over-tight. Cleaned up the bio the test left behind.
 RISK: #14 (no Firebase App Check) is the biggest thing still open and needs the
 owner to enable it in the Console. It is the only finding that can cost real
 money today.
-OVER
-
-## 2026-08-21 20:10 — CLAUDE
-CHANGED: `js/app.js`, `index.html`, `sw.js`
-WHAT: Swept the app for bugs. One real fault: the reward on a new mission came
-in as `Math.max(0, parseInt(...) || 0)`, so a typed -500 silently became 0 and
-nothing checked the reward was above zero — a mission offering Rs.0 posted
-happily, and someone would accept it expecting to be paid. The clamp is gone;
-0, negatives, an empty box and absurd amounts each get their own message now.
-Caption and description had no limit either (400 chars went into a one-line
-card) — 120 and 2000, enforced in the code and as maxlength on the inputs.
-VERIFIED: Live. Reproduced the Rs.0 post first and deleted the mission it made,
-then after the fix all five bad inputs are refused and the mission count is
-unchanged, 4 before and 4 after. Regression 8/8, 5/5, 3/3.
-RISK: Nothing known. MAX_REWARD is Rs.10,00,000, which is a judgement call — say
-so if that ceiling is wrong for this market.
 OVER
