@@ -13,7 +13,7 @@ Status meanings:
 | **KNOWN** | real, already understood, deliberately not fixed yet — reason given |
 | **OPEN** | real, not fixed, needs a decision or work |
 
-**Summary: 16 fixed · 2 not real · 3 known · 4 open**
+**Summary: 18 fixed · 2 not real · 3 known · 4 open**
 
 *#14 App Check is DONE — Firestore, Authentication and AI Logic all enforced
 and verified live, 24-25 Aug 2026. The 2 Nov 2026 deadline is met early.*
@@ -605,6 +605,44 @@ real applicant, header exact at "1 applicant" and "1+ applicant" when capped.
 > **What is still on the table and was not done:** `js/app.js` is 598KB raw
 > (165KB over the wire) and is parsed on every load; the three separate Google
 > Fonts requests cost ~300ms each; and Inter is pulled in five weights.
+
+### 26. Home stuck on a loading skeleton (HIGH) — owner reported
+> **FIXED 25 Aug 2026, build `20260825j`.** Described as: leave the app in the
+> background and come back, or tap Missions and immediately tap Home, and the
+> home page shows nothing but skeleton loading while every other page is fine.
+>
+> **Reproduced before fixing**, by holding Firestore at 6s latency on a 412px
+> viewport: tap Missions, tap Home, and the grid was skeleton at 320ms and still
+> skeleton twelve seconds later, with the mission cards wiped out underneath it.
+> After the fix, same test: no skeleton at all, cards intact throughout.
+>
+> `renderHome()` had nowhere to record that the feed had already been fetched,
+> so it read "no approved videos" as "not loaded yet". Every visit to Home
+> therefore re-armed the loading skeleton, which 320ms later replaced the whole
+> grid — mission cards included — and left it replaced for as long as the network
+> took. Forever if the connection had gone stale in the background, because that
+> read never returns and so never repaints. `_homeLoadedOnce` makes the loader a
+> first-load-only thing: after that there is always something honest to show,
+> even when that something is "no videos yet".
+>
+> Two more fell out of the same function: it re-read up to 300 documents from the
+> server on every tab switch (now once per 45s at most), and a failed refresh
+> could wipe a feed that was already on screen (now it leaves it alone).
+
+### 27. Somebody else's profile left on screen (MODERATE) — owner reported
+> **FIXED 25 Aug 2026, build `20260825m`.** Described as: reload, open the
+> profile page, and another account's profile is sitting there.
+>
+> `_closeDetailOverlays()` — which `goPage()` calls on every navigation — closed
+> the mission view, the video view and the shorts player, and never the public
+> profile overlay. So tapping Profile brought your own page up underneath while
+> their profile stayed on top of it. Worst after a reload on `/u/<someone>`,
+> because `_bootRoute` reopens that view first and the next tap left it there.
+> `_enterView` already closed it when a video or a mission opened, so the pattern
+> existed; page navigation had simply never been given the same line.
+>
+> Verified live: opened a real stranger's profile, tapped Home — closed; same
+> from any other tab. 4/4.
 
 ---
 

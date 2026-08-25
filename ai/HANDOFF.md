@@ -97,6 +97,33 @@ Each of these is written down because it has already broken something real.
 
 # LOG — newest first, maximum 5 entries
 
+## 2026-08-25 23:40 — CLAUDE
+CHANGED: js/app.js, css/styles.css, index.html, sw.js, ai/bugs_found.md,
+PROJECT_CONTEXT.md — stamp 20260825m
+WHAT: Seven things off the owner list. Two were real bugs. HOME STUCK ON A
+SKELETON (#26): renderHome had nowhere to record that the feed was already
+fetched, so it read "no approved videos" as "not loaded yet" and re-armed the
+loader on every visit — 320ms later it wiped the grid, mission cards included,
+and left it wiped for as long as the network took. SOMEBODY ELSE’S PROFILE
+(#27): _closeDetailOverlays closed the mission, video and shorts views and
+never the public profile overlay. Plus: bounty badge said $0 (now Rs.), the
+per-page legal footer is gone and those links are drawer rows with icons,
+desktop Settings has a real white edge, and the brand mark is hidden in the
+phone topbar.
+VERIFIED: The skeleton bug was REPRODUCED first — Firestore held at 6s on a
+412px viewport, skeleton at 320ms and still skeleton at 12s — then re-run after
+the fix: no skeleton, 4 cards intact throughout. Profile overlay 4/4. UI checks
+8/9 on both viewports, the one failure being my own selector. 0 page errors
+anywhere.
+RISK: The desktop Settings edge took three attempts and the reason is worth
+knowing: a blanket rule sets border:1px solid rgba(255,255,255,.28) !important
+on .modal and fifteen other panel classes, so nothing weaker than !important
+can give any panel a different edge.
+Gemini’s #23 (unbounded likedBy arrays) and #24 (unverified email signup) are
+still UNCHECKED — #23 reads like the most serious thing open if it holds.
+The AI safety filter was NOT re-tested this round; last verified on 20260825i.
+OVER
+
 ## 2026-08-25 21:15 — CLAUDE
 CHANGED: `js/app.js`, `index.html`, `sw.js`, `misnivo-sm.webp/.png` (new),
 `ai/bugs_found.md`, `PROJECT_CONTEXT.md` — stamp `20260825i`
@@ -214,31 +241,4 @@ out of results entirely.
 Also fixed a numbering drift in bugs_found.md: there were two #18s, so
 everything after was one behind. Now 18-22, with the two references in the
 "Still open" list corrected to match.
-OVER
-
-## 2026-08-25 11:20 — CLAUDE
-CHANGED: `js/app.js`, `index.html`, `sw.js`, `ai/bugs_found.md` — stamp
-`20260825d`
-WHAT: Profile photo now goes through a canvas and uploads as `image/jpeg`, long
-edge capped at 512px. Both thumbnails already did this; the profile photo was
-the one path still uploading the raw file, which mattered the moment the owner
-put an allowed-formats list on the Cloudinary preset — an Android `.webp` would
-have been refused, blocking a real person from setting their picture. Also
-checked Gemini's two new findings, #19 and #20, and wrote verdicts.
-VERIFIED: Live on `20260825d`, real browser, 6/6 then 11/12 (the one failure
-was my harness calling a function that does not exist, not the app). Driving
-the real `#pePhotoInput`: `.webp`, `.png` and `.jpg` all come out `image/jpeg`;
-a 3000×2000 PNG went 119KB → 2KB at 512×341; an undecodable file is refused
-with a message. Missions page, home, 0 page errors.
-RISK: #19 is real but low — the orphan documents it allows are invisible, not a
-way into anyone's data, and the `exists()` fix costs a billed read per comment
-and per follow. Left for the next rules deploy. #20 is real, but the report's
-"dynamic tags" fix cannot work: link previewers never run JavaScript and this
-is an SPA, so per-mission cards need HTML rendered per URL (a Pages Function).
-The static version is waiting on the owner's words and picture.
-NOTE — not a complaint, a fact worth recording: commit `e2463a7` at 09:46
-capped two more queries and deployed a Firestore index while `TURN` was FREE,
-from a second session. No conflict — my work is intact, and I confirmed the
-`takerId + createdAtMs` index really is deployed. It left no LOG entry, so this
-line is the only record of it.
 OVER
