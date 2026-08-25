@@ -2238,10 +2238,10 @@ textarea.f-input{resize:vertical;min-height:84px;}
   box-shadow: none !important;
 }
 .guest-modal-icon {
-  font-size: 48px;
   margin-bottom: 14px;
   line-height: 1;
 }
+.guest-modal-icon .mi { font-size: 44px; color: #fff; }
 .guest-modal-title {
   font-size: 20px;
   font-weight: 700;

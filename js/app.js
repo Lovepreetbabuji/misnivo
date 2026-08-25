@@ -1628,7 +1628,7 @@ function _dtClear(){
 //  complaints.
 // ══════════════════════════════════════════════════════════════════════════
 function openFeedback(){
-  if (typeof guestCheck === 'function' && guestCheck()) return;
+  if (typeof guestCheck === 'function' && guestCheck('feedback')) return;
   const t = document.getElementById('fbText'); if (t) t.value = '';
   const e = document.getElementById('fbErr');  if (e) e.textContent = '';
   const b = document.getElementById('fbSend'); if (b){ b.disabled = false; b.textContent = 'Send'; }
@@ -4354,6 +4354,7 @@ async function _recordAgreement(type, missionId) {
 }
 
 function submitProof() {
+  if (typeof guestCheck === 'function' && guestCheck('proof')) return;
   if (bannedCheck()) return;
   if (!selectedVideo || !proofDareId) return;
 
@@ -6662,14 +6663,19 @@ let shortsReplyingTo    = null;   // shorts: comment being replied to
 let searchType      = 'all';   // 'all' | 'dares' | 'videos' — set from the ⋮ menu
 let searchDebounceTimer = null;
 let activeExpTab    = 'all';
+// icon = a Material Symbols name, not an emoji: the theme is black and white,
+// and three of these were blank strings anyway, so the slot jumped about.
 const GUEST_ACTION_MSGS = {
-  post:        { icon:'⚡', title:'Post Missions', msg:'Create a free account to set bounties and challenge others.' },
-  accept:      { icon:'', title:'Accept Missions', msg:'Sign up to accept missions and earn real money.' },
-  proof:       { icon:'', title:'Submit Proof', msg:'Create an account to submit video proof and claim your reward.' },
-  profile:     { icon:'👤', title:'Your Profile', msg:'Sign up to build your profile, track earnings, and manage your wallet.' },
-  accepted:    { icon:'✅', title:'Accepted Missions', msg:'Create an account to track and manage the missions you have accepted.' },
-  leaderboard: { icon:'', title:'Leaderboard', msg:'Join to see top earners and compete for the highest rewards.' },
-  default:     { icon:'🔐', title:'Create a free account', msg:'Sign up to unlock all features — post missions, accept challenges, and earn money.' },
+  post:        { icon:'bolt',         title:'Post Missions', msg:'Create a free account to set bounties and challenge others.' },
+  accept:      { icon:'task_alt',     title:'Accept Missions', msg:'Sign up to accept missions and earn real money.' },
+  proof:       { icon:'videocam',     title:'Submit Proof', msg:'Create an account to submit video proof and claim your reward.' },
+  profile:     { icon:'person',       title:'Your Profile', msg:'Sign up to build your profile, track earnings, and manage your wallet.' },
+  accepted:    { icon:'checklist',    title:'Accepted Missions', msg:'Create an account to track and manage the missions you have accepted.' },
+  leaderboard: { icon:'leaderboard',  title:'Leaderboard', msg:'Join to see top earners and compete for the highest rewards.' },
+  comment:     { icon:'chat_bubble',  title:'Join the conversation', msg:'Create a free account to comment and reply.' },
+  feedback:    { icon:'feedback',     title:'Send feedback', msg:'Create a free account so we can reply to you about it.' },
+  like:        { icon:'thumb_up',     title:'Like this', msg:'Sign up to like missions and proofs, and keep what you like.' },
+  default:     { icon:'lock',         title:'Create a free account', msg:'Sign up to unlock all features — post missions, accept challenges, and earn money.' },
 };
 const GUEST_BLOCKED_PAGES = ['profile', 'accepted'];
 const COMMENT_MILESTONES = [1,5,10,100,1000,10000,100000];
@@ -6905,6 +6911,7 @@ function _patchCmtLike(commentId, c){
 }
 
 async function likeComment(commentId) {
+  if (typeof guestCheck === 'function' && guestCheck('like')) return;
   if (!user) { showToast('Sign in to like'); return; }
   const lists = [commentsCache[commentsProofId], _shortsComments];
   let c = null;
@@ -7068,6 +7075,7 @@ function _vdRepairCounts(p){
   if(Object.keys(fix).length) db.collection('proofs').doc(p.id).update(fix).catch(()=>{});
 }
 async function dislikeProof(){
+  if (typeof guestCheck === 'function' && guestCheck('like')) return;
   if(!user){ showToast('Sign in to dislike'); return; }
   const p=activeProof; if(!p) return;
   p.dislikedBy=p.dislikedBy||[]; const d=p.dislikedBy.includes(user.uid);
@@ -7296,6 +7304,7 @@ function _videoCardSearch(p) {
 function applySuggestion(text) { document.getElementById('searchInput').value=text.replace(/^#/,''); _hideSuggestions(); handleSearchImmediate(); }
 
 function closeGuestPrompt() {
+  _ovSync('guestPrompt');
   const _gp = document.getElementById('guestPrompt');
   _gp.style.display = 'none';
   _gp.classList.remove('open');
@@ -7797,6 +7806,7 @@ const _OV_CLOSERS = {
   reviewOverlay:        () => closeReview(),
   rejectOverlay:        () => closeRejectModal(),
   reportOverlay:        () => closeReportModal2(),
+  guestPrompt:          () => closeGuestPrompt(),
   selectTakersOverlay:  () => closeSelectTakersModal(),
   followListOverlay:    () => closeWalletModal('followListOverlay'),
   kycOverlay:           () => closeWalletModal('kycOverlay'),
@@ -8037,6 +8047,7 @@ function _decCount(current){
   return current > 0 ? firebase.firestore.FieldValue.increment(-1) : 0;
 }
 async function likeDare(){
+  if (typeof guestCheck === 'function' && guestCheck('like')) return;
   if (!user) { showToast('Sign in to like'); return; }
   const d = dares.find(x=>x.id===_ddCurrentId); if (!d) return;
   d.likedBy = d.likedBy||[]; d.dislikedBy = d.dislikedBy||[];
@@ -8058,6 +8069,7 @@ async function likeDare(){
   db.collection('dares').doc(d.id).update(upd).catch(()=>{});
 }
 async function dislikeDare(){
+  if (typeof guestCheck === 'function' && guestCheck('like')) return;
   if (!user) { showToast('Sign in to dislike'); return; }
   const d = dares.find(x=>x.id===_ddCurrentId); if (!d) return;
   d.likedBy = d.likedBy||[]; d.dislikedBy = d.dislikedBy||[];
@@ -8300,6 +8312,7 @@ function _ddToggleCmtMenu(btn){
   if (!open) menu.classList.add('open');
 }
 async function likeDareComment(commentId){
+  if (typeof guestCheck === 'function' && guestCheck('like')) return;
   if (!user){ showToast('Sign in to like'); return; }
   const c = (_ddComments||[]).find(x=>x.id===commentId); if (!c) return;
   c.likedBy = c.likedBy || [];
@@ -8331,6 +8344,7 @@ function reportComment(commentId, userName){
   openReportModal('comment', commentId, userName||'comment');
 }
 async function submitDareComment(){
+  if (typeof guestCheck === 'function' && guestCheck('comment')) return;
   if (!user) { showToast('Sign in to comment'); return; }
   const inp = document.getElementById('ddCommentInput'); let text = (inp.value||'').trim();
   if (!text) return; if (text.length>500){ showToast('Too long (max 500 chars)'); return; }
@@ -8411,9 +8425,7 @@ function leaveGuestMode(tab) {
   _clearGuestSession();
   isGuestMode = false;
   _wantsAuthScreen = true;   // asked for this screen — do not bounce back to guest
-  const _gp2 = document.getElementById('guestPrompt');
-  _gp2.style.display = 'none';
-  _gp2.classList.remove('open');
+  closeGuestPrompt();
   document.getElementById('appScreen').style.filter     = '';
   document.getElementById('appScreen').style.pointerEvents = '';
   document.getElementById('appScreen').style.display    = 'none';
@@ -8627,14 +8639,19 @@ document.addEventListener('click', e => {
 });
 
 function showGuestPrompt(info, dismissible) {
-  document.getElementById('guestPromptIcon').textContent  = info.icon;
+  // info.icon is one of our own constants above, never user text
+  document.getElementById('guestPromptIcon').innerHTML =
+    '<span class="mi">' + String(info.icon || 'lock').replace(/[^a-z_]/g,'') + '</span>';
   document.getElementById('guestPromptTitle').textContent = info.title;
   document.getElementById('guestPromptMsg').textContent   = info.msg;
   const dismissBtn = document.getElementById('guestPromptDismiss');
   dismissBtn.style.display = dismissible ? 'block' : 'none';
   const _gp = document.getElementById('guestPrompt');
   _gp.style.display = 'flex';
-  _gp.classList.add('open');   // .overlay is opacity/pointer-events gated on .open, not display
+  // Tracked, so the phone back button dismisses it instead of navigating away.
+  // No URL of its own — it is a nudge, not a place — so _ovOpen keeps the
+  // current path and only pushes the entry that back needs.
+  _ovOpen('guestPrompt');
 }
 
 const NOTIF_PAGE = 30;
@@ -8720,6 +8737,7 @@ async function _registerPushToken(){
 }
 
 async function submitComment() {
+  if (typeof guestCheck === 'function' && guestCheck('comment')) return;
   if(!user){showToast('Please sign in to comment');return;}
   const input=document.getElementById('vdCommentInput'); const text=(input.value||'').trim();
   if(!text) return; if(text.length>500){showToast('Too long (max 500 chars)');return;}
@@ -8751,6 +8769,7 @@ function switchExpTab(el,tab) {
 }
 
 async function toggleLike(proofId) {
+  if (typeof guestCheck === 'function' && guestCheck('like')) return;
   if(!proofId) return;
   if(!user){showToast('Please sign in to like');return;}
   const isLiked=userLikes.includes(proofId);
@@ -9083,7 +9102,7 @@ function _shortsFillFixed(p, d){
 }
 async function shortsFxLike(){
   const p = shortsFeed[shortsIndex]; if (!p) return;
-  if (typeof guestCheck==='function' && guestCheck()) return;
+  if (typeof guestCheck==='function' && guestCheck('like')) return;
   if (typeof toggleLike==='function') await toggleLike(p.id);
   const liked = userLikes.includes(p.id);
   const lb = document.getElementById('shortsFxLikeBtn'); if (lb) lb.classList.toggle('liked', liked);
@@ -9146,7 +9165,7 @@ function shortsCapToggleSlide(span){
   }
 }
 async function shortsLikeSlide(proofId, btn){
-  if (typeof guestCheck === 'function' && guestCheck()) return;
+  if (typeof guestCheck === 'function' && guestCheck('like')) return;
   if (typeof toggleLike === 'function') await toggleLike(proofId);
   const p = (allProofs.find(x=>x.id===proofId)) || (homeProofs.find(x=>x.id===proofId));
   btn.classList.toggle('liked', (typeof userLikes!=='undefined') && userLikes.includes(proofId));
@@ -9160,7 +9179,7 @@ async function shortsLikeSlide(proofId, btn){
 // wrote anything anywhere. Real toggle now, and the two are mutually exclusive in
 // BOTH directions (toggleLike already dropped a dislike; nothing dropped a like).
 async function shortsDislikeSlide(proofId, btn){
-  if (typeof guestCheck === 'function' && guestCheck()) return;
+  if (typeof guestCheck === 'function' && guestCheck('like')) return;
   if (!user){ showToast('Sign in to dislike'); return; }
   const p = (allProofs.find(x=>x.id===proofId)) || (homeProofs.find(x=>x.id===proofId));
   if (!p) return;
@@ -9378,7 +9397,7 @@ async function shortsPiP() {
 async function shortsLike() {
   const ov = document.getElementById('shortsOverlay');
   const pid = ov.dataset.proofId;
-  if (guestCheck()) return;
+  if (guestCheck('like')) return;
   if (typeof toggleLike === 'function') { await toggleLike(pid); }
   // Update local feed
   const p = shortsFeed[shortsIndex];
@@ -9511,7 +9530,7 @@ function cancelShortsReply() {
 }
 
 async function submitShortsComment() {
-  if (guestCheck()) return;
+  if (guestCheck('comment')) return;
   const ov = document.getElementById('shortsOverlay');
   const pid = ov.dataset.proofId;
   const rowInp = document.getElementById('rowinp-'+pid);
