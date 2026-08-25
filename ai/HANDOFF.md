@@ -1,4 +1,4 @@
-TURN: CLAUDE
+TURN: FREE
 
 <!-- ^ Keep this on line 1. FREE = nobody is working. Set it to your own name
      while you work, and back to FREE the moment you stop. If it already has
@@ -97,6 +97,62 @@ Each of these is written down because it has already broken something real.
 
 # LOG — newest first, maximum 5 entries
 
+## 2026-08-25 03:05 — CLAUDE
+CHANGED: `js/app.js`, `index.html`, `sw.js`, `firestore.indexes.json`,
+`ai/bugs_found.md`, `PROJECT_CONTEXT.md` — stamp `20260825c`
+WHAT: Checked the previous session's read sweep against the live site rather
+than against its own report. Its claims hold — including the honest one, that
+`count()` is genuinely absent from the compat SDK this app loads (confirmed by
+diffing the two 9.22.2 builds: modular has `getCountFromServer`, compat has no
+aggregation at all). The "Load older missions" button is wired and works
+(60 -> 120); it correctly does nothing while there is nothing older.
+Two reads of the same shape were still uncapped, now #22: **applicants** on one
+mission (capped 200, oldest first, fetch cap+1 so the header can say "200+")
+and **startMyProofsListener** (capped 500, newest first).
+VERIFIED: Live on `20260825c`. Both caps present, the sorted query runs, all
+six pages open, no index complaints, 0 page errors — plus end to end with a real
+mission and a real applicant: header exact at "1 applicant", and "1+ applicant"
+when capped. Test data deleted.
+RISK: 🔴 The proofs sort needs a composite index (`takerId` + `createdAtMs`),
+now in `firestore.indexes.json` and deployed. **Deploy an index BEFORE the code
+that sorts** — and do not assume an empty collection builds instantly. I
+deployed first and the live site still returned `failed-precondition` on the
+first check because it was mid-build. The CLI reports no state field, so it
+always looks fine; poll the real query in a browser instead. Safe to sort here
+only because `proofs` was empty — `orderBy` drops documents missing the field
+out of results entirely.
+Also fixed a numbering drift in bugs_found.md: there were two #18s, so
+everything after was one behind. Now 18-22, with the two references in the
+"Still open" list corrected to match.
+OVER
+
+## 2026-08-25 11:20 — CLAUDE
+CHANGED: `js/app.js`, `index.html`, `sw.js`, `ai/bugs_found.md` — stamp
+`20260825d`
+WHAT: Profile photo now goes through a canvas and uploads as `image/jpeg`, long
+edge capped at 512px. Both thumbnails already did this; the profile photo was
+the one path still uploading the raw file, which mattered the moment the owner
+put an allowed-formats list on the Cloudinary preset — an Android `.webp` would
+have been refused, blocking a real person from setting their picture. Also
+checked Gemini's two new findings, #19 and #20, and wrote verdicts.
+VERIFIED: Live on `20260825d`, real browser, 6/6 then 11/12 (the one failure
+was my harness calling a function that does not exist, not the app). Driving
+the real `#pePhotoInput`: `.webp`, `.png` and `.jpg` all come out `image/jpeg`;
+a 3000×2000 PNG went 119KB → 2KB at 512×341; an undecodable file is refused
+with a message. Missions page, home, 0 page errors.
+RISK: #19 is real but low — the orphan documents it allows are invisible, not a
+way into anyone's data, and the `exists()` fix costs a billed read per comment
+and per follow. Left for the next rules deploy. #20 is real, but the report's
+"dynamic tags" fix cannot work: link previewers never run JavaScript and this
+is an SPA, so per-mission cards need HTML rendered per URL (a Pages Function).
+The static version is waiting on the owner's words and picture.
+NOTE — not a complaint, a fact worth recording: commit `e2463a7` at 09:46
+capped two more queries and deployed a Firestore index while `TURN` was FREE,
+from a second session. No conflict — my work is intact, and I confirmed the
+`takerId + createdAtMs` index really is deployed. It left no LOG entry, so this
+line is the only record of it.
+OVER
+
 ## 2026-08-25 10:30 — CLAUDE
 CHANGED: `js/app.js`, `index.html`, `sw.js`, `ai/bugs_found.md`,
 `PROJECT_CONTEXT.md` — stamp `20260825b`
@@ -173,42 +229,4 @@ LEFTOVER: four throwaway profiles from earlier age-gate tests are still in
 `users` — `dmtest.ag2290`, `dmtest.ag334721`, `dmtest.ag325606`,
 `dmtest.ag57348`. Harmless, but only an admin can remove them. Missions and
 proofs are clean.
-OVER
-
-## 2026-08-24 23:10 — CLAUDE
-CHANGED: `ai/bugs_found.md` only (no app code)
-WHAT: The owner switched App Check enforcement ON for Cloud Firestore and
-Authentication. Re-tested the live site afterwards and recorded what enforcement
-actually changes.
-VERIFIED: Real browser window, brand-new profile — signed-out visitor reads the
-feed, brand-new person signs up, signed-in person writes, AI safety filter
-blocks, 0 page errors. Test account cleaned up after itself.
-RISK: **A headless browser is now refused, and that is correct.** The harness
-began returning `403` on the App Check token exchange and
-`auth/firebase-app-check-token-is-invalid` on sign-up — reCAPTCHA Enterprise
-scores an automated browser as a bot and will not issue it a token. Any test
-that signs in or writes must now run with `headless:false`. A 403 there is not
-the app being broken; check a real window before concluding anything.
-AI Logic is still Unenforced and is safe to turn on: watched on the wire, both
-`generateContent` POSTs carry a 965-character App Check header. The third line
-in the trace is the CORS `OPTIONS` preflight, which never carries custom headers
-by specification and is not what enforcement inspects.
-OVER
-
-## 2026-08-21 22:35 — CLAUDE
-CHANGED: `index.html`, `js/app.js`, `sw.js`, `ai/bugs_found.md`
-WHAT: The safety filter runs on a SECOND Firebase app — `initializeApp(config,
-'ai')` on the modular SDK — and App Check is per app instance, so yesterday's
-activation covered Firestore and Auth and left the AI calls unverified. Surfaced
-by the Console banner: Firebase makes App Check enforcement REQUIRED for AI
-Logic on 2 Nov 2026, and this filter fails CLOSED, so on that date every mission
-would have been refused rather than let through. Given its own App Check now,
-with the key shared via `window.__appCheckKey` so the two cannot drift.
-VERIFIED: Live. AI model still starts, keyword filter still blocks, the AI stage
-still reaches Google and returns "blocked", and 2 of the 4 tokened requests are
-the AI ones. 0 page errors.
-RISK: Console currently reads 100% verified / 0% unverified for both Firestore
-and Authentication, so enforcing those is safe. AI Logic has no metrics yet —
-its row says it is waiting for traffic — so that one is worth leaving until its
-number shows too. Deadline for it is 2 Nov 2026.
 OVER

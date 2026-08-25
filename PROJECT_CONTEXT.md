@@ -188,8 +188,8 @@ nahi dekh sakte — `ai/HANDOFF.md` hi ek jagah hai jahan baari saunpi jaati hai
 
 | | |
 |---|---|
-| Stamp | `20260825b` (teeno jagah — css, js, sw) |
-| Aakhri commit | `fix(reads): count() is not in this SDK — cap the reads instead` |
+| Stamp | `20260825c` (teeno jagah — css, js, sw) |
+| Aakhri commit | `perf(reads): cap the last two unbounded queries` |
 | Live site | `daremarket.pages.dev` — deploy verify ho chuka, 19/19 browser test pass |
 
 ## 12.2 App Check — POORA KHATAM ✅
@@ -288,5 +288,25 @@ tareeke se hoti hai. Agli baar `count()` likhne se pehle ye yaad karo.
 
 1. `ai/HANDOFF.md` padho — `TURN:` line dekho. `TURN: GEMINI` ho to **ruk jao**.
 2. Ye file (`PROJECT_CONTEXT.md`) padho.
-3. Live build `20260825b` hai — local file badalne se live site nahi badalti,
+3. Live build `20260825c` hai — local file badalne se live site nahi badalti,
    push + teeno stamp ke bina kuch nahi hota.
+
+## 12.7 Firestore index — naya jaal (25 Aug)
+
+Agar kisi query me `where(...)` ke saath **doosre field** par `orderBy(...)`
+lagaya, to Firestore ko ek **composite index** chahiye. Wo
+`firestore.indexes.json` me likho aur `firebase deploy --only
+firestore:indexes` chalao — **code push karne se PEHLE**. Bina index ke query
+`failed-precondition` deti hai aur us page ka data ruk jaata hai.
+
+🔴 **Khaali collection par bhi index turant nahi banta.** Maine yahi maan liya
+tha; index pehle deploy kiya phir bhi live site par thodi der error aaya. Deploy
+ke baad **asli browser me query chalakar** dekho — CLI `state` batata hi nahi,
+usme hamesha theek lagta hai.
+
+Aur: `orderBy` un documents ko **poori tarah chhod deta hai** jinme wo field
+hai hi nahi. Kisi purane collection par naya `orderBy` lagane se pehle pakka
+karo ki har document me wo field ho.
+
+Firebase CLI yahan chalu aur logged-in hai (project `mission-markit-9192a`), to
+rules aur indexes dono deploy ho sakte hain.

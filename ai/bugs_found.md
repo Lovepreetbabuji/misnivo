@@ -13,7 +13,7 @@ Status meanings:
 | **KNOWN** | real, already understood, deliberately not fixed yet — reason given |
 | **OPEN** | real, not fixed, needs a decision or work |
 
-**Summary: 11 fixed · 2 not real · 3 known · 2 open**
+**Summary: 12 fixed · 2 not real · 3 known · 4 open**
 
 *#14 App Check is DONE — Firestore, Authentication and AI Logic all enforced
 and verified live, 24-25 Aug 2026. The 2 Nov 2026 deadline is met early.*
@@ -292,14 +292,18 @@ its own.
 > Each one is bounded, the storage is not. That is the part only a signed
 > upload closes.
 >
-> ⚠️ **Watch the format list against real phones.** The mission thumbnail and
-> the proof thumbnail both go through a canvas and come out jpg/png, so they
-> are safe whatever the person picked. The **profile photo is uploaded exactly
-> as picked** (`onProfilePhotoSelected` stores the raw File), so an Android
-> `.webp` or an `.heic` that reaches the browser un-converted would now be
-> refused by Cloudinary — a real user hitting a wall, not an attacker.
-> `webp,heic,heif` are worth adding to the list, or the profile photo needs the
-> same canvas conversion the thumbnails already get.
+> ✅ **The format list no longer depends on which phone someone owns.** It did
+> for a few hours: both thumbnails already came out of a canvas as jpg/png, but
+> the **profile photo was uploaded exactly as picked**, so an Android `.webp`
+> or an un-converted `.heic` would have been refused by Cloudinary — a real
+> person unable to set their own picture, not an attacker. Fixed 25 Aug:
+> `onProfilePhotoSelected` now runs the file through a canvas and hands over
+> `image/jpeg`, long edge capped at 512px. Cloudinary only ever sees jpeg from
+> this path, so the tight list is safe to keep.
+> Verified live on `20260825d`: a 1400px `.webp`, a 2400px `.png` and a normal
+> `.jpg` all arrive as `image/jpeg`; a 3000×2000 PNG came down from 119KB to
+> 2KB at 512×341; a file the browser cannot decode is refused with a message
+> instead of failing later at the upload.
 
 - **File**: `js/app.js` (Line 886)
 - **Issue**: Image and video uploads use Cloudinary's unsigned uploads via a public upload preset (`missionbook`) and cloud name.
@@ -346,7 +350,7 @@ holds **0 approved proofs**, so the video paths were exercised with an empty
 pool — the queries ran and returned cleanly, but no video was rendered through
 them.
 
-### 18. Proof Submission on Completed Missions (HIGH)
+### 19. Proof Submission on Completed Missions (HIGH)
 > **OPEN — new finding.**
 
 - **File**: `firestore.rules` (Line 287)
@@ -354,30 +358,129 @@ them.
 - **Risk**: An approved taker can submit a proof even after the creator has already accepted someone else's proof and marked the mission as completed. This breaks the business logic where a mission should only have one winning proof.
 - **Fix**: Add a condition in `firestore.rules` to check `get(/databases/$(database)/documents/dares/$(request.resource.data.dareId)).data.completed == false`.
 
-### 19. Missing Referential Integrity Checks (MODERATE)
-> **OPEN — new finding.**
+### 20. Missing Referential Integrity Checks (MODERATE)
+> **OPEN — real, checked, but smaller than it reads.** Confirmed in
+> `firestore.rules`: `comments` create tests the author, the text and
+> `likeCount`, and never asks whether `proofId` points at anything; `follows`
+> create tests the follower, self-follow and the document id shape, and never
+> asks whether `targetUid` is a real account.
+>
+> What it is **not**: a way to reach or corrupt anyone else's data. A comment
+> carrying `proofId: "fake123"` is invisible — no screen ever queries that id,
+> so it is junk sitting in storage, not a UI glitch. A follow pointing at a
+> non-existent uid only inflates the *follower's own* "following" number; it
+> cannot add a follower to a real person, because the rule already pins
+> `followerUid` to the signed-in user and the document id to
+> `uid_targetUid_type`.
+>
+> The fix is `exists()` in both rules, and it is not free: every `exists()` in
+> a rule is a billed document read on **every** comment posted and every follow
+> made — up to two for comments, which have to try `proofs` and then `dares`,
+> since one collection serves both surfaces (see `pinnerOfProof`/`pinnerOfDare`
+> already in the file). At this volume that is nothing. It is worth doing the
+> next time the rules are opened; it does not deserve a deploy of its own,
+> because a rules deploy is an immediate live change and this buys tidiness
+> rather than safety.
+
 
 - **File**: `firestore.rules` (Comments, Follows)
 - **Issue**: When creating a comment or following a user, the security rules do not verify if the target `proofId`, `dareId`, or `targetUid` actually exists.
 - **Risk**: A user can create a comment pointing to `proofId: "fake123"` or follow a user `targetUid: "fake456"`. This creates orphaned data in the database which consumes storage and can cause UI glitches.
 - **Fix**: Use `exists()` in `firestore.rules` for comments and follows to ensure the parent entity is real.
 
-### 20. Missing Social Sharing Meta Tags (LOW/UX)
-> **OPEN — new finding.**
+### 21. Missing Social Sharing Meta Tags (LOW/UX)
+> **OPEN — real, and the growth argument is right.** Confirmed: the `<head>` of
+> `index.html` has `charset`, `viewport`, `theme-color`, the Apple PWA tags and
+> a plain `<title>Misnivo</title>` — there is not one `og:` or `twitter:` tag.
+> Every link shared to WhatsApp today is a bare URL with no picture.
+>
+> **The report's own suggested fix, "dynamic" tags, cannot work here and this
+> is the thing to understand before anyone spends time on it.** WhatsApp,
+> iMessage, Twitter and Facebook fetch the raw HTML and **never run
+> JavaScript**. This is a single-page app: every URL serves the same
+> `index.html`, and anything `app.js` writes into the head afterwards is
+> invisible to them. So there are two different jobs wearing one number:
+>
+> - **Static tags — small, safe, `index.html` only.** One title, one
+>   description, one image for every link. Turns a bare URL into a branded
+>   card. It cannot show *this* mission's thumbnail, because the server sends
+>   the same file whatever the path.
+> - **Per-mission previews — a build change.** The HTML has to be rendered per
+>   URL before it is sent, which on Cloudflare Pages means a Pages Function
+>   reading `/dare/:id` and writing that mission's title and thumbnail into the
+>   head. Real work, and it touches how the site is served.
+>
+> Not started: the static version still needs the owner's words and picture —
+> what the card should say and which image it shows are product decisions, not
+> code ones.
+
 
 - **File**: `index.html`
 - **Issue**: The `head` section lacks Open Graph (`og:title`, `og:image`, `og:url`) and Twitter Card (`twitter:card`) meta tags.
 - **Risk**: When users share their missions or profiles on WhatsApp, iMessage, Twitter, or Facebook, the link will just show a generic "Misnivo" title with no image or description. This severely limits organic growth and social virality.
 - **Fix**: Add dynamic or default `og:` and `twitter:` meta tags in the `<head>` of the `index.html`.
 
+
+### 22. Two reads the sweep missed (MODERATE)
+> **FIXED 25 Aug 2026, build `20260825c`.** Found while checking #15/#16 —
+> same shape, two places the pass did not reach.
+>
+> **Applicants.** Opening the taker picker fetched every applicant on the
+> mission with no ceiling. This is the one most exposed to a mission catching
+> on, because the creator opens that sheet at exactly the moment it is popular.
+> Capped at 200, oldest first — first to apply is who the creator should be
+> choosing between. One extra document is fetched so the header can read "200+"
+> instead of quietly presenting 200 as the whole list.
+>
+> **Own proofs.** `startMyProofsListener` held every proof by the signed-in
+> person. Bounded by how much one person does, so it was never heading for the
+> size of an open collection — but it had no ceiling at all, and "small because
+> of how people behave" is not a limit. Capped at 500, newest first.
+>
+> 🔴 **That sort needs a composite index** (`takerId` + `createdAtMs`), now in
+> `firestore.indexes.json` and deployed. Deploy the index BEFORE shipping code
+> that sorts — without it the listener throws `failed-precondition` and the
+> Accepted page stops updating proof statuses. **An empty collection does not
+> mean an instant build:** the index was deployed first and still came back
+> "currently building" on the first live check, so poll the real query in a
+> browser rather than trusting the CLI, which reports no state field at all.
+>
+> Sorting is safe here only because `proofs` was empty when this went in —
+> Firestore drops documents that lack the `orderBy` field out of the results
+> entirely, so an older proof without `createdAtMs` would have silently
+> vanished from someone's Accepted page. Worth remembering if that field is
+> ever renamed.
+>
+> Verified live: both caps present, the sorted query runs, all six pages open,
+> no index complaints, 0 page errors — and end to end with a real mission and a
+> real applicant, header exact at "1 applicant" and "1+ applicant" when capped.
+
 ---
 
-## Still open, in the order they are worth doing
+## Still open — split by whether anything can be done today
 
-1. **#17 Cloudinary signed uploads** — the only one that can cost real money
-   today. Needs a Cloud Function, so needs Blaze.
-2. **#1 / #13 wallet on the server** — blocked on the Blaze plan, same door.
-3. **#4** — needs a specific flow named before anything can be done.
+**Waiting on the Blaze plan.** These three are one decision, not three; none of
+them can move until it is made.
 
-Everything above them is closed. Three separate things now wait on the same
-Blaze plan; that is one decision, not three.
+1. **#17 Cloudinary signed uploads** — the only open finding that can cost real
+   money today. Narrowed a long way by the preset's format list and the plan's
+   own file-size caps, but bulk upload of valid media is still possible and only
+   a Cloud Function handing out a signature closes it.
+2. **#1 / #13 wallet on the server** — same door, same plan.
+
+**Can be done now, no plan needed.**
+
+3. **#21 social sharing tags** — the static version is `index.html` only and
+   turns every shared link from a bare URL into a branded card. Waiting on the
+   owner for two things a machine should not choose: the words on the card and
+   the picture. Per-mission previews are a separate, larger job (a Cloudflare
+   Pages Function) — see the entry.
+4. **#20 referential integrity** — `exists()` on the comments and follows create
+   rules. Real but low: the orphans it allows are invisible junk, not a way in.
+   Worth folding into the next rules deploy rather than deploying on its own.
+
+**Needs the owner to point at something.**
+
+5. **#4** — no specific flow was ever named; nothing can be checked until one is.
+
+Everything else on this list is closed.
