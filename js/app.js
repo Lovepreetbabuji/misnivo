@@ -1730,38 +1730,46 @@ const _admAge = ts => {
   } catch(e){ return { h:0, txt:'unknown' }; }
 };
 
-// Ask Firestore for a COUNT instead of downloading the documents to count them
-// yourself. Billed as one read per 1000 documents, and the answer stays right
-// no matter how big the collection gets. Returns null — never throws — if the
-// count cannot be had (no permission, or an SDK without the aggregation API),
-// so one missing number never takes a whole screen down.
-// Shared by the admin panel, follower counts and the comment recount.
-function _countOf(q){
-  try { return q.count().get().then(s => s.data().count).catch(() => null); }
-  catch(e){ return Promise.resolve(null); }
+// Count with a ceiling on it.
+// Firestore's count() aggregation would be the right tool — one read per 1000
+// documents and exact at any size — but it is NOT in the compat SDK this app
+// loads. Checked in a real browser on the live site: on 9.22.2 `Query.count`
+// is undefined, so an aggregation call is a TypeError, not a slow path.
+// Counting therefore still means reading documents, and the fix is to stop it
+// running away: at most `cap` are read, and the answer comes back as "1000+"
+// once it reaches that ceiling rather than pretending to be exact.
+// Honest about what this is not: it does not give a true total past the cap.
+// It replaces code that had NO ceiling at all — one visit to the admin panel
+// downloaded every user, mission and proof in the database into the browser.
+// An exact count at scale needs a newer Firebase SDK or a server keeping
+// running totals, and both of those are the owner's call, not this function's.
+// Returns a number, a "<cap>+" string, or null if the read failed.
+async function _countUpTo(q, cap){
+  const c = cap || 1000;
+  try { const s = await q.limit(c + 1).get(); return s.size > c ? (c + '+') : s.size; }
+  catch(e){ return null; }
 }
 
 // ── 1. STATS ──────────────────────────────────────────────────────────────
-// Every number here comes from Firestore's count() aggregation, NOT from
-// downloading the collection. The old version pulled EVERY user, mission,
-// proof, block and report into this tab just to read .size off them — fine at
-// fifty documents, a dead tab and a billing spike at fifty thousand. count() is
-// billed as one read per 1000 documents and stays correct at any size.
-// A number shows as "—" if its count could not be read (no permission, or an
-// SDK without the aggregation API) — one missing number no longer takes the
-// whole panel down with it.
+// Every number here is now capped. The old version pulled EVERY user, mission,
+// proof, block and report into this tab just to read .size off each snapshot —
+// fine at fifty documents, a dead tab and a billing spike at fifty thousand.
+// Past a thousand a number reads "1000+", which is the honest answer this SDK
+// can give; see _countUpTo for why an exact one is not available.
+// A number shows "—" if its read failed (no permission) — one missing number
+// no longer takes the whole panel down with it.
 async function _adminStats(){
   const body = document.getElementById('adminBody');
   try {
     const day = new Date(); day.setHours(0,0,0,0);
     const [u, d, p, sb, mr, newU, newD, openSnap] = await Promise.all([
-      _countOf(db.collection('users')),
-      _countOf(db.collection('dares')),
-      _countOf(db.collection('proofs')),
-      _countOf(db.collection('safety_blocks')),
-      _countOf(db.collection('manual_review')),
-      _countOf(db.collection('users').where('createdAt','>=',day)),
-      _countOf(db.collection('dares').where('createdAt','>=',day)),
+      _countUpTo(db.collection('users'), 1000),
+      _countUpTo(db.collection('dares'), 1000),
+      _countUpTo(db.collection('proofs'), 1000),
+      _countUpTo(db.collection('safety_blocks'), 1000),
+      _countUpTo(db.collection('manual_review'), 1000),
+      _countUpTo(db.collection('users').where('createdAt','>=',day), 1000),
+      _countUpTo(db.collection('dares').where('createdAt','>=',day), 1000),
       // Pending reports are the one thing still read as documents: "past 24h"
       // needs each report's own age, and asking Firestore for status + age in
       // one query would need a composite index. Capped at 300 — if that many
@@ -1950,13 +1958,13 @@ async function _adminUserDetail(uid){
   el.dataset.open='1';
   el.innerHTML = '<div class="adm-load">Loading…</div>';
   try {
-    // Counted, not downloaded — one aggregation each instead of two whole
-    // collections for the list. "—" if the count is unavailable.
+    // Counted here, for ONE person, instead of downloading two whole
+    // collections to caption every row of the list.
     const [ps, ags, nDares, nProofs] = await Promise.all([
       db.collection('users').doc(uid).collection('private').doc('main').get(),
       db.collection('agreements').where('userId','==',uid).limit(20).get(),
-      _countOf(db.collection('dares').where('creatorUid','==',uid)),
-      _countOf(db.collection('proofs').where('takerId','==',uid))
+      _countUpTo(db.collection('dares').where('creatorUid','==',uid), 500),
+      _countUpTo(db.collection('proofs').where('takerId','==',uid), 500)
     ]);
     const p = ps.exists ? ps.data() : {};
     const ag = ags.docs.map(d=>d.data())
@@ -3919,13 +3927,12 @@ async function _doAcceptDare(id) {
     // Always write to applicants subcollection (for creator to see)
     const applicantRef = db.collection('dares').doc(id)
       .collection('applicants').doc(user.uid);
-    // How many missions this applicant has already completed. It is one number,
-    // so ask for the number — the documents behind it were never used.
-    const _q = db.collection('proofs')
+    // How many missions this applicant has already completed. Bounded: the
+    // documents behind the number were never read, only counted.
+    const compSnap = await db.collection('proofs')
       .where('takerId','==', user.uid)
-      .where('status','==','approved');
-    let completionRate = await _countOf(_q);
-    if (completionRate === null) completionRate = (await _q.limit(500).get()).size;
+      .where('status','==','approved').limit(500).get();
+    const completionRate = compSnap.size; // number of approved proofs
 
     await applicantRef.set({
       uid:            user.uid,
@@ -4947,15 +4954,11 @@ function _renderProfileStats(myPosted){
 }
 async function _profileFollowCounts(uid){
   try{
-    // Two numbers on a profile header used to cost every follow row of that
-    // account, downloaded. Counted server-side now.
-    const [fr, fg] = await Promise.all([
-      _countOf(db.collection('follows').where('targetUid','==',uid)),
-      _countOf(db.collection('follows').where('followerUid','==',uid))
-    ]);
-    if (fr !== null && fg !== null) return { followers: fr, following: fg };
-    // No aggregation available — count the rows the old way, but bounded, so a
-    // well-followed account cannot pull ten thousand of them into a phone.
+    // Two numbers on a profile header used to cost every single follow row of
+    // that account, downloaded. Bounded now — a well-followed account cannot
+    // pull ten thousand rows into a phone to print "10K". The trade is that
+    // both numbers stop being exact past 1000, which is the same limit the
+    // SDK's missing count() would have removed.
     const [a, b] = await Promise.all([
       db.collection('follows').where('targetUid','==',uid).limit(1000).get(),
       db.collection('follows').where('followerUid','==',uid).limit(1000).get()
@@ -8656,12 +8659,13 @@ async function submitComment() {
     commentsCache[commentsProofId]=[{...newComment,id:'tmp_'+Date.now()},...cached];
     _renderComments(commentsCache[commentsProofId]);
     const cntEl=document.getElementById('vdCommentCount'); if(cntEl) cntEl.textContent=`(${commentsCache[commentsProofId].length})`;
-    // Recount for the badge. This used to download every comment on the video
+    // Recount for the badge. This used to download EVERY comment on the video
     // after each new one — on a video with a thousand comments, a thousand
-    // documents fetched to learn a single number.
-    let total = await _countOf(db.collection('comments').where('proofId','==',commentsProofId));
-    if (total === null)
-      total = (await db.collection('comments').where('proofId','==',commentsProofId).limit(500).get()).size;
+    // documents fetched to learn a single number, once per comment posted.
+    // Bounded; past 500 the badge stops climbing, which is a badge being
+    // slightly wrong rather than a page pulling the collection down.
+    const snap=await db.collection('comments').where('proofId','==',commentsProofId).limit(500).get();
+    const total = snap.size;
     db.collection('proofs').doc(commentsProofId).update({commentCount:total}).catch(()=>{});
     const p=homeProofs.find(x=>x.id===commentsProofId)||allProofs.find(x=>x.id===commentsProofId);
     if(p) await _checkCommentMilestone(commentsProofId,total,p.takerId,p.dareTitle);
