@@ -2969,6 +2969,23 @@ function _bootSkelHide(){
 }
 
 let _homeCancelSkel = () => {};
+// Has a server answer for the feed ever arrived? This is the flag whose absence
+// caused "home is stuck on a skeleton while every other page is fine".
+//
+// An EMPTY feed is an answer, not a state of still-loading. Without somewhere to
+// record that, every single visit to Home re-armed the loading skeleton, and
+// 320ms later that skeleton replaced the whole grid — mission cards included —
+// and stayed there for as long as the network took. On a phone on poor mobile
+// data that is seconds; on a connection that has stalled (the app was in the
+// background, the socket is dead) it is forever, because the read never returns
+// and so never repaints.
+// Reproduced with Firestore held at 6s latency: tap Missions, tap Home, and the
+// grid was skeleton at 320ms and still skeleton twelve seconds later.
+let _homeLoadedOnce = false;
+let _homeFetchedAt  = 0;
+let _homeFetching   = false;
+const HOME_FRESH_MS = 45000;   // don't re-read the feed on every tab switch
+
 async function renderHome(cat) {
   if (cat) homeFilterCat = cat;
   const grid = document.getElementById('homeVideoGrid');
@@ -2976,7 +2993,9 @@ async function renderHome(cat) {
 
   // 1) INSTANT paint from what we already have (memory this session, else the local
   //    IndexedDB cache) — no waiting on the network for repeat opens.
-  if (homeProofs && homeProofs.length) {
+  //    The loader is for the FIRST load only. After that there is always
+  //    something honest to show, even if that something is "no videos yet".
+  if (_homeLoadedOnce || (homeProofs && homeProofs.length)) {
     _homeRenderFeed();
   } else {
     _homeCancelSkel = _skelAfter(grid, _skelFeed('home'));
@@ -2988,19 +3007,37 @@ async function renderHome(cat) {
     } catch(e){}
   }
 
-  // 2) REFRESH from the server in the background (stale-while-revalidate)
+  // 2) REFRESH from the server in the background (stale-while-revalidate).
+  //    Not on every visit: goPage('home') calls this, so tapping between tabs
+  //    was re-reading up to PROOF_POOL_LIMIT documents each time, for a feed
+  //    that had not changed. One in flight at a time, and at most one every
+  //    HOME_FRESH_MS once we have a real answer.
+  if (_homeFetching) return;
+  if (_homeLoadedOnce && (Date.now() - _homeFetchedAt) < HOME_FRESH_MS) return;
+  _homeFetching = true;
   try {
     const snap = await db.collection('proofs').where('status','==','approved').limit(PROOF_POOL_LIMIT).get();
     homeProofs = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
     allProofs = homeProofs; // sync for explorer/search/related
+    _homeLoadedOnce = true;
+    _homeFetchedAt  = Date.now();
     _homeCancelSkel();
     if (typeof _maybeInitialRoute === 'function') _maybeInitialRoute();   // deep-link /watch|/shorts
     _homeRenderFeed();
   } catch(e) {
-    if (grid && !(homeProofs && homeProofs.length)) grid.innerHTML = `<div class="empty">
+    _homeCancelSkel();
+    // A failed refresh must not wipe a feed that is already on screen. Only say
+    // something when there is nothing there to keep.
+    if (grid && !_homeLoadedOnce && !(homeProofs && homeProofs.length)) {
+      grid.innerHTML = `<div class="empty">
       <span class="mi">error_outline</span>
       <div class="empty-title">Load Error</div>
-      <p class="empty-desc">${e.message}</p></div>`;
+      <p class="empty-desc">${escHtml(e.message || 'Could not load')}</p></div>`;
+    } else {
+      _homeRenderFeed(true);   // repaint over any skeleton left behind
+    }
+  } finally {
+    _homeFetching = false;
   }
 }
 // ── Why the thumbnails used to blink ──
@@ -7039,8 +7076,9 @@ async function _renderVideoDetail(p) {
   document.getElementById('vdTitle').textContent = p.dareTitle||'Mission Video';
   const _vdCap=document.getElementById('vdDescCap'); if(_vdCap) _vdCap.textContent = p.dareTitle||'Mission Video';
   document.getElementById('vdMeta').textContent  = `${_relTime(p)} • ${(p.viewCount||0).toLocaleString('en-IN')} views`;
-  // Bounty badge on the video (top-right) — $ prefixed, no expiry
-  const bb=document.getElementById('vdBountyBadge'); if(bb) bb.textContent='$'+(p.dareBounty||0).toLocaleString('en-IN');
+  // Bounty badge on the video (top-right), no expiry. Rs. — not a dollar sign:
+  // the reward is in rupees and every other place in the app already says so.
+  const bb=document.getElementById('vdBountyBadge'); if(bb) bb.textContent='Rs.'+(p.dareBounty||0).toLocaleString('en-IN');
   // Creator + Taker dual profiles
   const _dare = (typeof dares!=='undefined') ? dares.find(x=>x.id===p.dareId) : null;
   const creatorName = (_dare?.creator || p.posterName || 'creator');

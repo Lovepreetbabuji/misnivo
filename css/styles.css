@@ -3966,6 +3966,44 @@ body.ov-open{overflow:hidden;}
 .set-content .set-sec-label{margin-top:0;}
 .set-content .set-sec .set-sec-label + .set-row{border-top:none;}
 .set-content .set-sec .set-sec-label:not(:first-child){margin-top:22px;}
+
+/* ── Settings on desktop: outlined, not filled ──
+   The panel inherited .modal — a translucent reddish surface with a blur behind
+   it and a neumorphic shadow — which is the look this app moved away from. On
+   desktop it now takes the same treatment as .auth-box, the reference surface:
+   flat black, one white hairline, nothing behind it. The fields and the side
+   menu follow, so the page reads as outlines instead of a stack of grey boxes.
+   Dropping backdrop-filter here also removes one live blur layer from the
+   screen, which is what cost this app its frame rate once before.
+   Desktop only, as asked; the phone keeps the full-screen treatment it has. */
+@media(min-width:769px){
+  #settingsOverlay .modal.set-modal{
+    background:#000;
+    backdrop-filter:none; -webkit-backdrop-filter:none;
+    border:1px solid #fff; border-radius:20px;
+    box-shadow:none;
+  }
+  #settingsOverlay .set-modal .f-input{
+    background:transparent; backdrop-filter:none; -webkit-backdrop-filter:none;
+    border:1px solid rgba(255,255,255,.45);
+  }
+  #settingsOverlay .set-modal .f-input:focus{
+    border-color:#fff; background:transparent; box-shadow:none;
+  }
+  #settingsOverlay .set-modal .set-nav-item{
+    border:1px solid transparent; background:transparent;
+  }
+  #settingsOverlay .set-modal .set-nav-item:hover{
+    border-color:rgba(255,255,255,.35); background:transparent; color:#fff;
+  }
+  #settingsOverlay .set-modal .set-nav-item.active{
+    border-color:#fff; background:transparent; color:#fff;
+  }
+  #settingsOverlay .set-modal .set-btn{
+    background:transparent; border-color:rgba(255,255,255,.45);
+  }
+  #settingsOverlay .set-modal .set-btn:hover{ background:rgba(255,255,255,.08); }
+}
 /* Mobile: Settings = plain button list (old menu); a tap opens the section's OWN page */
 @media(max-width:768px){
   .set-layout{flex-direction:column;gap:0;}
@@ -4389,6 +4427,13 @@ body.sb-dragging .sb-overlay{ transition:none !important; }
 .logo-icon, .auth-logo-icon{ display:none !important; }
 .logo{ height:40px; overflow:hidden; }
 .logo-img{ height:78px; width:auto; display:block; flex-shrink:0; }
+/* On a phone the topbar carries the menu button, the search field and the
+   account — the brand mark on top of that is the one thing there that is not a
+   control, and it was pushing the search box narrower on a 412px screen.
+   Hidden below 769px; "send to desktop" crosses that line and brings it back.
+   Be honest about the speed part of this: the logo is 5KB now, so the saving is
+   the request, not the bytes. This is a look change more than a fast one. */
+@media(max-width:768px){ .topbar-left .logo{ display:none; } }
 .auth-logo{ height:64px; overflow:hidden; display:flex; align-items:center; justify-content:center; }
 .auth-logo .logo-img{ height:124px; }
 @media(max-width:768px){
@@ -6027,15 +6072,14 @@ body.no-anim #proofOverlay.as-page .modal{ transition:none !important; }
   #tMyDares .pfilter-row, #tAccepted .pfilter-row{ margin-bottom:4px !important; }
 }
 
-/* ── Sidebar legal links (YouTube's drawer does the same) ── */
-.sb-legal{ margin:18px 16px 24px; padding-top:16px; border-top:1px solid rgba(255,255,255,.08); }
-.sb-legal-links{ display:flex; flex-wrap:wrap; gap:8px 14px; }
-.sb-legal-links a{
-  font-size:12.5px; line-height:1.5; color:rgba(255,255,255,.55);
-  cursor:pointer; text-decoration:none;
-}
-.sb-legal-links a:hover{ color:#fff; }
-.sb-legal-copy{ margin-top:12px; font-size:12px; color:rgba(255,255,255,.35); }
+/* ── Sidebar legal entries ──
+   These were four small links crowded onto one line, which made them read as
+   fine print rather than as places you can go. They are ordinary .nav-item rows
+   now, the same as Settings and Send feedback, so the drawer has one kind of
+   thing in it instead of two. Only the separator above them and the copyright
+   under them need their own rules. */
+.sb-sep{ margin:10px 16px; border-top:1px solid rgba(255,255,255,.08); }
+.sb-legal-copy{ margin:14px 16px 24px; font-size:12px; color:rgba(255,255,255,.35); }
 
 /* the one-line explanation that replaced the Takers toggle */
 .pd-note{
@@ -6248,26 +6292,17 @@ body.legal-open{ overflow:hidden; }
   border-top:1px solid rgba(255,255,255,.08);
   font-size:13px !important; color:rgba(255,255,255,.45) !important;
 }
-.legal-foot-links, .site-foot-links{
+.legal-foot-links{
   display:flex; flex-wrap:wrap; justify-content:center; gap:8px 20px; margin-top:34px;
 }
-.legal-foot-links a, .site-foot-links a{
+.legal-foot-links a{
   font-size:13px; color:rgba(255,255,255,.55); cursor:pointer; text-decoration:none;
 }
-.legal-foot-links a:hover, .site-foot-links a:hover{ color:#fff; }
-.legal-copy, .site-foot-copy{
+.legal-foot-links a:hover{ color:#fff; }
+.legal-copy{
   text-align:center; margin-top:14px; font-size:12px; color:rgba(255,255,255,.35);
 }
 
-/* ── Site footer ── */
-.site-foot{
-  max-width:700px; margin:48px auto 0; padding:26px 0 10px;
-  border-top:1px solid rgba(255,255,255,.08);
-}
-/* the mobile bottom nav floats over the page, so the footer needs to clear it */
-@media(max-width:768px){ .site-foot{ margin-top:34px; padding-bottom:24px; } }
-/* nothing to sit under while the boot skeleton owns the screen */
-body.boot-skel .site-foot{ display:none; }
 
 /* sign-in screen legal line */
 .auth-legal{

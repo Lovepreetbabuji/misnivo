@@ -62,7 +62,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,100..400,0..1,0&icon_names=account_balance_wallet,add,arrow_back,bolt,bookmark,chat_bubble,close,expand_less,explore,home,menu,more_vert,notifications,person,reply,search,send,settings,thumb_down,thumb_up,tune&display=block" rel="stylesheet"/>
 
 <!-- App Styles -->
-<link rel="stylesheet" href="/css/styles.css?v=20260825i"/>
+<link rel="stylesheet" href="/css/styles.css?v=20260825j"/>
 
 <!-- The splash logo must be in flight before anything else competes for the pipe -->
 <!-- The logo is the first pixel anyone sees, so it is preloaded — which made its
@@ -72,7 +72,7 @@
      this preload rather than waste the fetch; the img tags below fall back to a
      PNG on their own. og:image still points at the full-size original, which is
      what link scrapers want. -->
-<link rel="preload" as="image" href="/misnivo-sm.webp?v=1" type="image/webp" fetchpriority="high"/>
+<link rel="preload" as="image" href="/misnivo-sm.webp?v=1" type="image/webp" media="(min-width:769px)" fetchpriority="high"/>
 <link rel="preconnect" href="https://www.gstatic.com" crossorigin/>
 
 <!-- Firebase CDN — DEFERRED ON PURPOSE.
@@ -344,15 +344,20 @@
 
       <!-- The legal links live down here too, the way YouTube's drawer carries
            them: reachable from anywhere without hunting for the page footer. -->
-      <div class="sb-legal">
-        <div class="sb-legal-links">
-          <a onclick="closeSidebar();openLegal('terms')">Terms</a>
-          <a onclick="closeSidebar();openLegal('privacy')">Privacy</a>
-          <a onclick="closeSidebar();openLegal('guidelines')">Community Guidelines</a>
-          <a onclick="closeSidebar();openLegal('contact')">Contact &amp; Grievance</a>
-        </div>
-        <div class="sb-legal-copy">&copy; 2026 Misnivo</div>
+      <div class="sb-sep"></div>
+      <div class="nav-item" onclick="closeSidebar();openLegal('terms')">
+        <span class="mi">description</span><span class="nav-lbl">Terms</span>
       </div>
+      <div class="nav-item" onclick="closeSidebar();openLegal('privacy')">
+        <span class="mi">lock</span><span class="nav-lbl">Privacy</span>
+      </div>
+      <div class="nav-item" onclick="closeSidebar();openLegal('guidelines')">
+        <span class="mi">rule</span><span class="nav-lbl">Community Guidelines</span>
+      </div>
+      <div class="nav-item" onclick="closeSidebar();openLegal('contact')">
+        <span class="mi">mail</span><span class="nav-lbl">Contact &amp; Grievance</span>
+      </div>
+      <div class="sb-legal-copy">&copy; 2026 Misnivo</div>
     </div>
   </aside>
 
@@ -590,16 +595,10 @@
       </div>
     </div>
 
-    <!-- Site footer — inside main, so it sits under whichever page is showing -->
-    <footer class="site-foot">
-      <div class="site-foot-links">
-        <a onclick="openLegal('terms')">Terms</a>
-        <a onclick="openLegal('privacy')">Privacy</a>
-        <a onclick="openLegal('guidelines')">Guidelines</a>
-        <a onclick="openLegal('contact')">Contact</a>
-      </div>
-      <div class="site-foot-copy">&copy; 2026 Misnivo</div>
-    </footer>
+    <!-- The site footer used to sit here, inside main, so every page carried a
+         row of legal links under it. They are menu entries in the drawer now —
+         one place, reachable from anywhere, instead of repeated under all seven
+         pages. -->
 
   </main>
 </div>
@@ -1289,7 +1288,7 @@
 <!-- App Logic -->
 <!-- defer, so it runs after the Firebase bundles above and after the DOM is
      parsed — same order as before, but nothing blocks the first paint -->
-<script defer src="/js/app.js?v=20260825i"></script>
+<script defer src="/js/app.js?v=20260825j"></script>
 
 <!-- ══ Firebase AI Logic — stage 2 of the mission safety filter ══
      A SECOND, modular Firebase app. The rest of the site runs on the compat
@@ -1558,7 +1557,7 @@
           <div class="vp-skip back"><span class="mi">fast_rewind</span>10s</div>
           <div class="vp-skip fwd"><span class="mi">fast_forward</span>10s</div>
           <button class="vd-center-play" onclick="_vdTogglePlay()" aria-label="Play"><span class="mi">play_arrow</span></button>
-          <span class="dd-bounty-badge" id="vdBountyBadge">$0</span>
+          <span class="dd-bounty-badge" id="vdBountyBadge">Rs.0</span>
           <div class="vp-menu" id="vpMenu"></div>
           <div class="vp-bar">
             <div class="vp-seek" id="vpSeek">
