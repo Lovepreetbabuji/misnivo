@@ -88,6 +88,47 @@ service cloud.firestore {
     function steppedAll() {
       return stepped('likeCount') && stepped('dislikeCount') && stepped('viewCount');
     }
+
+    // A "who liked this" list may only ever gain or lose the CALLER'S OWN uid.
+    //
+    // stepped() guards the counter beside these lists and nothing guarded the
+    // lists themselves — not their type, not their size, not what went into
+    // them. Any signed-in account could therefore write
+    //   likedBy: ['<900KB of text>'], likeCount: <current + 1>
+    // on any mission and pass every check. Firestore caps a document at 1MB, so
+    // that bloats the document until no further update fits — nobody can like,
+    // view or count it again — and because /dares and /proofs are world-readable
+    // and the feed pulls them, EVERY visitor then downloads that payload. Broken
+    // for everyone and billed to the project: the "economic denial of service"
+    // in finding #23, and it was real.
+    //
+    // Written as a set difference in both directions rather than a size cap,
+    // because a popular mission legitimately has a long list and a cap would
+    // eventually refuse honest likes:
+    //   next minus prev = what this write ADDS    → only my own uid, or nothing
+    //   prev minus next = what this write REMOVES → only my own uid, or nothing
+    // The size check on top of that is not redundant: hasOnly() is happy with
+    // [uid, uid, uid, …], so without it the same bloat could be built out of
+    // fifty thousand copies of one legitimate value.
+    //
+    // It closes a smaller hole in passing: until now anyone could delete other
+    // people's uids out of these lists, or add somebody else's.
+    // prev()/next() default a missing field to 0, which is right for a counter
+    // and wrong for a list: on a mission that has never been liked, likedBy does
+    // not exist yet, and .size() on the number 0 would throw and refuse the very
+    // first like. These two default to an empty list instead.
+    function prevList(field) { return resource.data.get(field, []); }
+    function nextList(field) { return request.resource.data.get(field, []); }
+    function selfOnlyList(field) {
+      return !touched().hasAny([field])
+          || (nextList(field) is list
+              && nextList(field).size() <= prevList(field).size() + 1
+              && nextList(field).removeAll(prevList(field)).hasOnly([uid()])
+              && prevList(field).removeAll(nextList(field)).hasOnly([uid()]));
+    }
+    function likeListsOk() {
+      return selfOnlyList('likedBy') && selfOnlyList('dislikedBy');
+    }
     // Known and accepted: the app's count-repair helpers (_ddRepairCounts,
     // _vdRepairCounts) reset a negative stored counter straight to 0, which is a
     // jump of more than one step and so is refused for anyone who is not the
@@ -220,8 +261,13 @@ service cloud.firestore {
       allow update: if
         // the owner may edit their own mission — freely until it is taken,
         // and after that only the keys that running it requires
+        // likeListsOk() applies here too. A creator has no legitimate reason to
+        // write anyone's like into their own mission, and without it the owner
+        // branch was a way straight past the guard on the public branch below —
+        // on a mission everyone downloads, which is the whole point of #23.
         (signedIn() && resource.data.creatorUid == uid()
                     && dareTextOk()
+                    && likeListsOk()
                     && (!dareTaken() || onlyTouches(whileRunning())))
         // A creator clearing the legacy creatorEmail off an old mission. It is
         // removal only — the field may not survive the write — so this can never
@@ -240,7 +286,8 @@ service cloud.firestore {
               'likedBy','likeCount','dislikedBy','dislikeCount',
               'viewCount','takers','proofCount'
             ]) && steppedAll()
-              && stepped('takers') && stepped('proofCount'))
+              && stepped('takers') && stepped('proofCount')
+              && likeListsOk())
         // guests still count a view
         || (onlyTouches(['viewCount']) && stepped('viewCount'));
 
@@ -323,7 +370,7 @@ service cloud.firestore {
         // (commentCount is a full recount from a query, so it is not step-checked)
         || (signedIn() && onlyTouches([
               'likeCount','likedBy','dislikeCount','dislikedBy','commentCount','viewCount'
-            ]) && steppedAll())
+            ]) && steppedAll() && likeListsOk())
         // guests still count a view
         || (onlyTouches(['viewCount']) && stepped('viewCount'))
         // One-way cleanup: proofs used to store both parties' email addresses,
@@ -389,7 +436,8 @@ service cloud.firestore {
         // the author may edit their own text
         (signedIn() && resource.data.userId == uid() && onlyTouches(['text','edited','editedAt']))
         // anyone may like it
-        || (signedIn() && onlyTouches(['likedBy','likeCount']) && stepped('likeCount'))
+        || (signedIn() && onlyTouches(['likedBy','likeCount']) && stepped('likeCount')
+            && selfOnlyList('likedBy'))
         // pin / unpin, by whoever owns the thing being commented on
         || (signedIn()
             && onlyTouches(['pinned','pinnedBy'])

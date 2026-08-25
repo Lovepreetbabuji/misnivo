@@ -188,8 +188,8 @@ nahi dekh sakte — `ai/HANDOFF.md` hi ek jagah hai jahan baari saunpi jaati hai
 
 | | |
 |---|---|
-| Stamp | `20260825m` (teeno jagah — css, js, sw) |
-| Aakhri commit | `fix(profile): navigating away now closes somebody else’s profile` |
+| Stamp | `20260825n` (teeno jagah — css, js, sw) |
+| Aakhri commit | `fix(drawer): the four new icons were not in the subsetted icon font` |
 | Live site | `daremarket.pages.dev` — deploy verify ho chuka, 19/19 browser test pass |
 
 ## 12.2 App Check — POORA KHATAM ✅
@@ -288,7 +288,7 @@ tareeke se hoti hai. Agli baar `count()` likhne se pehle ye yaad karo.
 
 1. `ai/HANDOFF.md` padho — `TURN:` line dekho. `TURN: GEMINI` ho to **ruk jao**.
 2. Ye file (`PROJECT_CONTEXT.md`) padho.
-3. Live build `20260825m` hai — local file badalne se live site nahi badalti,
+3. Live build `20260825n` hai — local file badalne se live site nahi badalti,
    push + teeno stamp ke bina kuch nahi hota.
 
 ## 12.7 Firestore index — naya jaal (25 Aug)

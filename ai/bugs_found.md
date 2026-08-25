@@ -13,7 +13,7 @@ Status meanings:
 | **KNOWN** | real, already understood, deliberately not fixed yet — reason given |
 | **OPEN** | real, not fixed, needs a decision or work |
 
-**Summary: 18 fixed · 2 not real · 3 known · 4 open**
+**Summary: 19 fixed · 2 not real · 3 known · 3 open**
 
 *#14 App Check is DONE — Firestore, Authentication and AI Logic all enforced
 and verified live, 24-25 Aug 2026. The 2 Nov 2026 deadline is met early.*
@@ -543,7 +543,44 @@ no index complaints, 0 page errors — and end to end with a real mission and a
 real applicant, header exact at "1 applicant" and "1+ applicant" when capped.
 
 ### 23. Denial of Service (DoS) via Interaction Arrays (CRITICAL)
-> **OPEN — new finding.**
+> **FIXED 25 Aug 2026, rules deployed. Gemini was right, and this was the most
+> serious thing open.** `stepped()` guarded the counter beside these lists and
+> nothing guarded the lists themselves — not their type, not their size, not
+> what went into them. Any signed-in account could write
+> `likedBy: ['<900KB of text>'], likeCount: <current+1>` on any mission and pass
+> every check. Firestore caps a document at 1MB, so that bloats it until no
+> further update fits, and because `/dares` and `/proofs` are world-readable and
+> the feed pulls them, every visitor then downloads the payload.
+>
+> `selfOnlyList()` allows a list to gain or lose **only the caller's own uid**.
+> Written as a set difference in both directions rather than a size cap, because
+> a popular mission legitimately has a long list and a cap would eventually
+> refuse honest likes. The size clause on top is not redundant: `hasOnly()` is
+> happy with fifty thousand copies of one legitimate uid. Applied to `likedBy`
+> and `dislikedBy` on dares and proofs, and `likedBy` on comments.
+>
+> **Two things the first attempt got wrong, both caught by testing rather than
+> reading:**
+> - `prev()/next()` default a missing field to `0`, which is right for a counter
+>   and wrong for a list — on a mission never liked before, `.size()` on the
+>   number 0 would have refused the very first like. `prevList()/nextList()`
+>   default to `[]`.
+> - The first test attacked a mission the test account had created, and passed
+>   the attack — because the **owner** branch let a creator write anything. That
+>   is a way straight past the public guard, on a mission everyone downloads.
+>   `likeListsOk()` is on the owner branch too now.
+>
+> Verified live against the deployed rules: a 200KB string in `likedBy` →
+> **permission-denied**; another account's uid → **permission-denied**; a normal
+> like on a mission with no `likedBy` field yet → **allowed**; unlike →
+> **allowed**. 7/8, the eighth being a stricter assertion than reality: 50,000
+> array entries came back `invalid-argument` because Firestore rejects an array
+> that size before rules are consulted at all — refused either way, and smaller
+> multi-copy variants are caught by the size clause.
+>
+> It closes a smaller hole in passing: until now anyone could delete other
+> people's uids out of these lists, or add somebody else's.
+
 
 - **File**: `firestore.rules` (dares and proofs)
 - **Issue**: The rules allow any signed-in user to update the `likedBy`, `dislikedBy`, and `approvedTakers` arrays as long as they also update the counters correctly (`steppedAll()`). There is no check on the size or contents of these arrays.
@@ -551,7 +588,33 @@ real applicant, header exact at "1 applicant" and "1+ applicant" when capped.
 - **Fix**: Use `request.resource.data.likedBy.size()` and string length validation, or better, move likes to a separate subcollection instead of arrays on the main document.
 
 ### 24. Unverified Email Signup Spam (HIGH)
-> **OPEN — new finding.**
+> **OPEN — real as described, but the severity does not hold and the fix is a
+> product decision, so it is left for the owner.** Confirmed in the code:
+> `emailSignup()` creates the account, sets the display name and drops straight
+> into the app. `sendEmailVerification` and `emailVerified` appear nowhere in
+> `js/app.js`. So yes — a fake-but-well-formed address gets a working account
+> immediately.
+>
+> **Why it is not HIGH any more:** the risk described is "attackers generate
+> thousands of fake accounts", and that is scripted abuse, which is exactly what
+> #14 closed. App Check with reCAPTCHA Enterprise is **enforced on
+> Authentication**, and an automated browser is refused a token — verified more
+> than once, it is why the test harness must run `headless:false`. What is left
+> is a person signing up by hand with an address they do not own, one at a time.
+>
+> **Why it was not just done:** gating on `emailVerified` stops a new person
+> doing anything until they find an email and click a link. On a platform with
+> few users that is friction paid by every honest sign-up to stop an attack that
+> App Check already makes expensive — and it does not stop a disposable inbox
+> either. Firebase's verification emails also have a send quota on the free plan
+> and land in spam often enough to matter.
+>
+> **The owner's call, and there are three answers, not two:** send the email but
+> gate nothing (cheap, catches typos in a real address, changes no flow); gate
+> only the actions that cost something — posting a mission, submitting proof —
+> and leave browsing open; or gate everything at sign-up. Say which and it is a
+> small change either way.
+
 
 - **File**: `app.js` (Auth flow)
 - **Issue**: The app allows users to sign up and immediately start creating missions and proofs without verifying their email address.

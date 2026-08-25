@@ -97,6 +97,35 @@ Each of these is written down because it has already broken something real.
 
 # LOG — newest first, maximum 5 entries
 
+## 2026-08-26 01:10 — CLAUDE
+CHANGED: firestore.rules (DEPLOYED), index.html, css/styles.css, sw.js,
+ai/bugs_found.md — stamp 20260825n
+WHAT: Fixed my own breakage from the last build, then took Gemini #23 and #24.
+The four drawer icons I added rendered as the WORDS description/lock/rule/mail:
+the sidebar draws in Material Symbols Outlined, which this page loads as a
+SUBSET listed in icon_names=, and I added rows without adding names. The Round
+face in the stack does not save you. Logo: what was wanted was the mark on the
+LOADING screen (the same one that becomes the home-screen icon after send-to-
+desktop, so it showed twice per launch) — removed; the phone topbar keeps its
+mark, hiding it there was my misreading and is reverted.
+#23 was real and was the most serious thing open: nothing guarded likedBy /
+dislikedBy at all, so any signed-in account could write 900KB into a mission
+everyone downloads. selfOnlyList() now allows only the caller’s own uid in or
+out, plus a size clause because hasOnly() is happy with 50,000 copies of one
+legitimate value.
+VERIFIED: Icons 4/4 as glyphs, splash bare, topbar mark back. Rules attacked
+live against the deployed version: 200KB string permission-denied, another
+account’s uid permission-denied, normal like and unlike still allowed. 7/8.
+RISK: Two things the first rules attempt got wrong, both found by testing, not
+reading. prev()/next() default a missing field to 0, so .size() on a never-liked
+mission would have refused the FIRST like — prevList()/nextList() default to [].
+And my first attack passed because the test account OWNED the mission: the owner
+branch let a creator write anything, straight past the public guard. Guarded now.
+#24 (unverified email signup) is REAL but left OPEN on purpose: the scripted
+part is what App Check already stops, and gating emailVerified is friction paid
+by every honest sign-up. Three options written up for the owner to pick.
+OVER
+
 ## 2026-08-25 23:40 — CLAUDE
 CHANGED: js/app.js, css/styles.css, index.html, sw.js, ai/bugs_found.md,
 PROJECT_CONTEXT.md — stamp 20260825m
@@ -212,33 +241,4 @@ the site boots, guest mode is on, Sign Up still reaches the auth screen,
 Also: `users/{uid}/private/main` has no delete rule, so a test account cannot
 remove its own private drawer — one orphan per throwaway account, which is
 where the leftover `dmtest.*` profiles come from.
-OVER
-
-## 2026-08-25 03:05 — CLAUDE
-CHANGED: `js/app.js`, `index.html`, `sw.js`, `firestore.indexes.json`,
-`ai/bugs_found.md`, `PROJECT_CONTEXT.md` — stamp `20260825c`
-WHAT: Checked the previous session's read sweep against the live site rather
-than against its own report. Its claims hold — including the honest one, that
-`count()` is genuinely absent from the compat SDK this app loads (confirmed by
-diffing the two 9.22.2 builds: modular has `getCountFromServer`, compat has no
-aggregation at all). The "Load older missions" button is wired and works
-(60 -> 120); it correctly does nothing while there is nothing older.
-Two reads of the same shape were still uncapped, now #22: **applicants** on one
-mission (capped 200, oldest first, fetch cap+1 so the header can say "200+")
-and **startMyProofsListener** (capped 500, newest first).
-VERIFIED: Live on `20260825c`. Both caps present, the sorted query runs, all
-six pages open, no index complaints, 0 page errors — plus end to end with a real
-mission and a real applicant: header exact at "1 applicant", and "1+ applicant"
-when capped. Test data deleted.
-RISK: 🔴 The proofs sort needs a composite index (`takerId` + `createdAtMs`),
-now in `firestore.indexes.json` and deployed. **Deploy an index BEFORE the code
-that sorts** — and do not assume an empty collection builds instantly. I
-deployed first and the live site still returned `failed-precondition` on the
-first check because it was mid-build. The CLI reports no state field, so it
-always looks fine; poll the real query in a browser instead. Safe to sort here
-only because `proofs` was empty — `orderBy` drops documents missing the field
-out of results entirely.
-Also fixed a numbering drift in bugs_found.md: there were two #18s, so
-everything after was one behind. Now 18-22, with the two references in the
-"Still open" list corrected to match.
 OVER
