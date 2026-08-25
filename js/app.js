@@ -886,11 +886,30 @@ function _agreementConfirm() {
 const CLOUDINARY_CLOUD_NAME    = 'ddam2qcpu';
 const CLOUDINARY_UPLOAD_PRESET = 'missionbook';
 
+// Last cap on what leaves this app. Every file picker already checks size and
+// type, but the check lived ONLY at the picker — a new call site that forgot
+// one could push anything up. The preset is unsigned, so Cloudinary accepts
+// whatever arrives and bills it here.
+// Honest about the limit of this: it does NOT stop someone who reads the cloud
+// name and preset out of this file and posts to Cloudinary directly. Only a
+// signed upload (a Cloud Function handing out a short-lived signature) does
+// that, and that needs the Blaze plan. This guards our own code paths.
+const CLOUDINARY_MAX_BYTES = { image: 5 * 1024 * 1024, video: 100 * 1024 * 1024 };
+
 // ── CLOUDINARY UPLOAD HELPER ──────────────────────────────────────────────
 // Returns { promise: Promise<url>, cancel: fn }
 // resourceType: 'image' | 'video' | 'auto'
 // onProgress: fn(percent 0-100) or null
 function uploadToCloudinary(file, resourceType, onProgress) {
+  const _kind = resourceType === 'image' ? 'image'
+              : resourceType === 'video' ? 'video'
+              : ((file && file.type) || '').startsWith('image/') ? 'image' : 'video';
+  const _cap  = CLOUDINARY_MAX_BYTES[_kind];
+  const _bad  = !file                                              ? 'No file selected'
+              : (file.type && !/^(image|video)\//.test(file.type))  ? 'Only image and video files can be uploaded'
+              : (file.size > _cap)                                  ? `File too large — maximum ${Math.round(_cap/1024/1024)}MB allowed`
+              : '';
+  if (_bad) return { promise: Promise.reject(new Error(_bad)), cancel: () => {} };
   const formData = new FormData();
   formData.append('file', file);
   formData.append('upload_preset', CLOUDINARY_UPLOAD_PRESET);
@@ -1711,31 +1730,57 @@ const _admAge = ts => {
   } catch(e){ return { h:0, txt:'unknown' }; }
 };
 
+// Ask Firestore for a COUNT instead of downloading the documents to count them
+// yourself. Billed as one read per 1000 documents, and the answer stays right
+// no matter how big the collection gets. Returns null — never throws — if the
+// count cannot be had (no permission, or an SDK without the aggregation API),
+// so one missing number never takes a whole screen down.
+// Shared by the admin panel, follower counts and the comment recount.
+function _countOf(q){
+  try { return q.count().get().then(s => s.data().count).catch(() => null); }
+  catch(e){ return Promise.resolve(null); }
+}
+
 // ── 1. STATS ──────────────────────────────────────────────────────────────
+// Every number here comes from Firestore's count() aggregation, NOT from
+// downloading the collection. The old version pulled EVERY user, mission,
+// proof, block and report into this tab just to read .size off them — fine at
+// fifty documents, a dead tab and a billing spike at fifty thousand. count() is
+// billed as one read per 1000 documents and stays correct at any size.
+// A number shows as "—" if its count could not be read (no permission, or an
+// SDK without the aggregation API) — one missing number no longer takes the
+// whole panel down with it.
 async function _adminStats(){
   const body = document.getElementById('adminBody');
   try {
     const day = new Date(); day.setHours(0,0,0,0);
-    const [u,d,p,sb,mr,rp] = await Promise.all([
-      db.collection('users').get(), db.collection('dares').get(),
-      db.collection('proofs').get(), db.collection('safety_blocks').get(),
-      db.collection('manual_review').get(), db.collection('reports').get()
+    const [u, d, p, sb, mr, newU, newD, openSnap] = await Promise.all([
+      _countOf(db.collection('users')),
+      _countOf(db.collection('dares')),
+      _countOf(db.collection('proofs')),
+      _countOf(db.collection('safety_blocks')),
+      _countOf(db.collection('manual_review')),
+      _countOf(db.collection('users').where('createdAt','>=',day)),
+      _countOf(db.collection('dares').where('createdAt','>=',day)),
+      // Pending reports are the one thing still read as documents: "past 24h"
+      // needs each report's own age, and asking Firestore for status + age in
+      // one query would need a composite index. Capped at 300 — if that many
+      // are ever open at once, the exact number is not the problem.
+      db.collection('reports').where('status','==','pending').limit(300).get().catch(() => null)
     ]);
-    const newToday = (snap, field) => snap.docs.filter(x => {
-      const t = x.data()[field]; try { return t && t.toDate && t.toDate() >= day; } catch(e){ return false; }
-    }).length;
-    const openReports = rp.docs.filter(x => (x.data().status||'pending') === 'pending');
-    const overdue = openReports.filter(x => _admAge(x.data().createdAt).h > 24).length;
-    const card = (v,l,warn) => `<div class="adm-stat${warn?' warn':''}"><div class="adm-stat-v">${v}</div><div class="adm-stat-l">${escHtml(l)}</div></div>`;
+    const open    = openSnap ? openSnap.size : null;
+    const overdue = openSnap ? openSnap.docs.filter(x => _admAge(x.data().createdAt).h > 24).length : null;
+    const n = v => (v === null || v === undefined) ? '—' : v;
+    const card = (v,l,warn) => `<div class="adm-stat${warn?' warn':''}"><div class="adm-stat-v">${n(v)}</div><div class="adm-stat-l">${escHtml(l)}</div></div>`;
     body.innerHTML =
       `<div class="adm-stats">
-        ${card(u.size,'Users')}${card(d.size,'Missions')}${card(p.size,'Proofs')}
-        ${card(newToday(u,'createdAt'),'New users today')}
-        ${card(newToday(d,'createdAt'),'New missions today')}
-        ${card(sb.size,'Missions blocked by the filter')}
-        ${card(mr.size,'Waiting on manual review', mr.size>0)}
-        ${card(openReports.length,'Open reports', openReports.length>0)}
-        ${card(overdue,'Reports past 24h', overdue>0)}
+        ${card(u,'Users')}${card(d,'Missions')}${card(p,'Proofs')}
+        ${card(newU,'New users today')}
+        ${card(newD,'New missions today')}
+        ${card(sb,'Missions blocked by the filter')}
+        ${card(mr,'Waiting on manual review', (mr||0)>0)}
+        ${card(open,'Open reports', (open||0)>0)}
+        ${card(overdue,'Reports past 24h', (overdue||0)>0)}
       </div>
       <p class="adm-note">The Contact page promises a reply within 24 hours and a
       resolution within 15 days. "Reports past 24h" is that promise, counted.</p>`;
@@ -1866,15 +1911,12 @@ async function _adminUsers(){
     </div>
     <div id="admUserList"><div class="adm-load">Loading…</div></div>`;
   try {
-    const [us, ds, ps] = await Promise.all([
-      db.collection('users').limit(500).get(),
-      db.collection('dares').get(), db.collection('proofs').get()
-    ]);
-    const dareBy = {}, proofBy = {};
-    ds.docs.forEach(d => { const u=d.data().creatorUid; if(u) dareBy[u]=(dareBy[u]||0)+1; });
-    ps.docs.forEach(d => { const u=d.data().takerId;    if(u) proofBy[u]=(proofBy[u]||0)+1; });
-    _adminUserCache = us.docs.map(d => ({ uid:d.id, ...d.data(),
-      _dares: dareBy[d.id]||0, _proofs: proofBy[d.id]||0 }));
+    // Only the users are listed. This used to also download EVERY mission and
+    // EVERY proof, purely to put a "3 missions · 1 proof" line under each row —
+    // two whole collections for a caption. Those two numbers are now counted
+    // per user, on demand, inside the Details panel.
+    const us = await db.collection('users').limit(500).get();
+    _adminUserCache = us.docs.map(d => ({ uid:d.id, ...d.data() }));
     _adminUserFilter('');
   } catch(e){ document.getElementById('admUserList').innerHTML =
     `<div class="adm-err">Could not load users: ${escHtml(e.message)}</div>`; }
@@ -1892,7 +1934,7 @@ function _adminUserFilter(q){
     <div class="adm-row" id="admu-${u.uid}">
       <div class="adm-row-title">${escHtml(u.name||'—')} <span class="adm-dim">@${escHtml(u.username||'')}</span></div>
       <div class="adm-row-meta">${u.uid}</div>
-      <div class="adm-row-sub">${u._dares} missions · ${u._proofs} proofs · joined ${_admFmt(u.createdAt)}</div>
+      <div class="adm-row-sub">joined ${_admFmt(u.createdAt)}</div>
       <div class="adm-acts">
         <button onclick="_adminUserDetail('${u.uid}')">Details</button>
       </div>
@@ -1908,14 +1950,21 @@ async function _adminUserDetail(uid){
   el.dataset.open='1';
   el.innerHTML = '<div class="adm-load">Loading…</div>';
   try {
-    const [ps, ags] = await Promise.all([
+    // Counted, not downloaded — one aggregation each instead of two whole
+    // collections for the list. "—" if the count is unavailable.
+    const [ps, ags, nDares, nProofs] = await Promise.all([
       db.collection('users').doc(uid).collection('private').doc('main').get(),
-      db.collection('agreements').where('userId','==',uid).limit(20).get()
+      db.collection('agreements').where('userId','==',uid).limit(20).get(),
+      _countOf(db.collection('dares').where('creatorUid','==',uid)),
+      _countOf(db.collection('proofs').where('takerId','==',uid))
     ]);
     const p = ps.exists ? ps.data() : {};
     const ag = ags.docs.map(d=>d.data())
       .sort((a,b)=>((b.acceptedAt&&b.acceptedAt.seconds)||0)-((a.acceptedAt&&a.acceptedAt.seconds)||0));
+    const _n = v => (v === null || v === undefined) ? '—' : v;
     el.innerHTML = `
+      <div class="adm-kv"><span>Missions posted</span><b>${_n(nDares)}</b></div>
+      <div class="adm-kv"><span>Proofs submitted</span><b>${_n(nProofs)}</b></div>
       <div class="adm-kv"><span>Email</span><b>${escHtml(p.email||'—')}</b></div>
       <div class="adm-kv"><span>Date of birth</span><b>${escHtml(p.dateOfBirth||'—')}</b></div>
       <div class="adm-kv"><span>Under-18 block</span><b>${p.underageBlocked?'YES':'no'}</b></div>
@@ -2270,22 +2319,48 @@ function startMyProofsListener(){
     }, err => console.error('My proofs listener error:', err));
 }
 
+// How many missions the live listener is currently holding. It starts at one
+// page and grows when "Load more missions" is pressed. Before this the limit
+// was a hard 60 with no way past it, so mission number 61 and everything older
+// was unreachable from the app — not slow to reach, unreachable.
+// Growing the SAME listener rather than adding a second paged query is
+// deliberate: everything downstream reads the one `dares` array, and a second
+// array would have to be merged, de-duplicated and kept live by hand.
+const DARES_PAGE = 60;
+let _daresLimit  = DARES_PAGE;
+let _daresMaybeMore = false;   // last snapshot came back full → older ones exist
+let _daresLoadingMore = false;
+
 function startDaresListener() {
   if (daresUnsub) daresUnsub();
   daresUnsub = db.collection('dares')
     .orderBy('createdAt', 'desc')
-    .limit(60)                       // newest 60 — cap the payload as the collection grows
+    .limit(_daresLimit)              // newest N — cap the payload as the collection grows
     .onSnapshot((snap) => {
       dares = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      _daresMaybeMore   = snap.size >= _daresLimit;   // full page → there may be more
+      _daresLoadingMore = false;
       _daresLoaded = true;
       _reconcileTakerApprovals();   // creator picked me? → unlock Submit Proof
       _scrubLegacyEmails();         // one-shot: drop email from my old dares/proofs
       if (typeof _maybeInitialRoute === 'function') _maybeInitialRoute();   // deep-link /dare/:id
       _daresRerenderDebounced();    // batch bursts of doc changes into one rebuild
     }, (err) => {
+      _daresLoadingMore = false;
       console.error('Missions listener error:', err);
       showToast('Connection issue — please refresh');
     });
+}
+
+// "Load more missions" — widen the window and re-subscribe. The already-loaded
+// missions stay on screen until the bigger snapshot lands, so nothing blinks.
+function loadMoreDares(){
+  if (_daresLoadingMore || !_daresMaybeMore) return;
+  _daresLoadingMore = true;
+  _daresLimit += DARES_PAGE;
+  const btn = document.getElementById('daresMoreBtn');
+  if (btn){ btn.disabled = true; btn.textContent = 'Loading…'; }
+  startDaresListener();
 }
 
 // ════════════════════════════
@@ -2532,6 +2607,17 @@ function closePhotoViewer(){ _ovSync('photoViewer'); document.getElementById('ph
 //  SECTION 2: Dare Shorts  — videos under 60s (horizontal)
 //  SECTION 3: Active Dares — dares available to accept
 // ════════════════════════════════════════════════════════
+// Safety cap on the shared video pool. These queries used to ask Firestore for
+// EVERY approved proof with no limit at all — and this runs for every visitor
+// on every open, not once in an admin panel. At today's size the cap changes
+// nothing; it exists so the app cannot quietly turn into a full-database
+// download the day the videos pile up.
+// Deliberately NOT ordered: proofs carry `createdAtMs`, but a few older ones
+// may pre-date that field and Firestore drops any document missing the field
+// it is told to sort by — silently hiding those videos. Once the pool is
+// genuinely near this number it needs real paging (an ordered query plus a
+// composite index), and that is the moment to backfill the field first.
+const PROOF_POOL_LIMIT = 300;
 let homeProofs    = [];
 let allProofs     = [];   // synced with homeProofs for explorer/search
 let userLikes     = [];   // proofIds current user liked
@@ -2864,7 +2950,7 @@ async function renderHome(cat) {
   } else {
     _homeCancelSkel = _skelAfter(grid, _skelFeed('home'));
     try {
-      const c = await db.collection('proofs').where('status','==','approved').get({ source:'cache' });
+      const c = await db.collection('proofs').where('status','==','approved').limit(PROOF_POOL_LIMIT).get({ source:'cache' });
       if (!c.empty) { homeProofs = c.docs.map(d=>({id:d.id,...d.data()})); allProofs = homeProofs;
         _homeCancelSkel();
         if (typeof _maybeInitialRoute === 'function') _maybeInitialRoute(); _homeRenderFeed(); }
@@ -2873,7 +2959,7 @@ async function renderHome(cat) {
 
   // 2) REFRESH from the server in the background (stale-while-revalidate)
   try {
-    const snap = await db.collection('proofs').where('status','==','approved').get();
+    const snap = await db.collection('proofs').where('status','==','approved').limit(PROOF_POOL_LIMIT).get();
     homeProofs = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
     allProofs = homeProofs; // sync for explorer/search/related
     _homeCancelSkel();
@@ -3152,6 +3238,14 @@ function renderDaresPage() {
     return true;
   });
 
+  // The button is built once and used by BOTH branches below. The empty branch
+  // needs it too: if every one of the newest 60 missions happens to be finished
+  // or expired, this page says "No Active Missions" while live ones sit just
+  // outside the window — without the button there is no way to reach them.
+  const moreBtn = _daresMaybeMore
+    ? `<button class="notif-more" id="daresMoreBtn" onclick="loadMoreDares()">Load older missions</button>`
+    : '';
+
   if (!active.length) {
     feed.innerHTML = `
       <div class="empty">
@@ -3159,7 +3253,7 @@ function renderDaresPage() {
         <div class="empty-title">No Active Missions</div>
         <p class="empty-desc">No active missions yet. Post the first mission!</p>
         <button class="btn-empty" onclick="openPost()"><span class="mi">add_circle</span>Post a Mission</button>
-      </div>`;
+      </div>` + moreBtn;
     return;
   }
 
@@ -3171,7 +3265,7 @@ function renderDaresPage() {
     return 0; // already sorted by createdAt desc from listener
   });
 
-  feed.innerHTML = `<div class="active-dare-grid">${active.map(d => _activeDareCard(d, false)).join('')}</div>`;
+  feed.innerHTML = `<div class="active-dare-grid">${active.map(d => _activeDareCard(d, false)).join('')}</div>` + moreBtn;
 }
 
 // ════════════════════════════
@@ -3825,10 +3919,13 @@ async function _doAcceptDare(id) {
     // Always write to applicants subcollection (for creator to see)
     const applicantRef = db.collection('dares').doc(id)
       .collection('applicants').doc(user.uid);
-    const compSnap = await db.collection('proofs')
+    // How many missions this applicant has already completed. It is one number,
+    // so ask for the number — the documents behind it were never used.
+    const _q = db.collection('proofs')
       .where('takerId','==', user.uid)
-      .where('status','==','approved').get();
-    const completionRate = compSnap.size; // number of approved proofs
+      .where('status','==','approved');
+    let completionRate = await _countOf(_q);
+    if (completionRate === null) completionRate = (await _q.limit(500).get()).size;
 
     await applicantRef.set({
       uid:            user.uid,
@@ -4410,7 +4507,9 @@ async function openReviewModal(dareId) {
   _ovOpen('reviewOverlay');
 
   try {
-    const snap = await db.collection('proofs').where('dareId','==', dareId).get();
+    // One mission's proofs. Bounded already by the mission, but a popular one
+    // could still collect thousands and this list is judged by hand anyway.
+    const snap = await db.collection('proofs').where('dareId','==', dareId).limit(200).get();
     currentProofs = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
     renderProofsList();
   } catch(e) {
@@ -4578,7 +4677,12 @@ async function loadLeaderboard() {
   const el = document.getElementById('lbContent');
   const _cancel = _skelAfter(el, _skelRankRows(5));   // entries are boxed cards, not bare rows
   try {
-    const snap = await db.collection('proofs').where('status','==','approved').get();
+    // Honest about what this is: a leaderboard adds up EVERY approved proof, so
+    // a cap makes it approximate the day the platform outgrows the cap. It was
+    // unbounded before, which is worse — the whole collection downloaded into a
+    // phone every time someone opened this tab. A true all-time leaderboard has
+    // to be totalled on a server and stored, not recomputed on each client.
+    const snap = await db.collection('proofs').where('status','==','approved').limit(500).get();
     const map  = {};
     snap.docs.forEach(doc => {
       const p = doc.data();
@@ -4710,7 +4814,7 @@ async function _ensureProofsLoaded(){
   if ((typeof allProofs!=='undefined' && allProofs.length) || (typeof homeProofs!=='undefined' && homeProofs.length)) return;
   _proofsLoading = true;
   try {
-    const snap = await db.collection('proofs').where('status','==','approved').get();
+    const snap = await db.collection('proofs').where('status','==','approved').limit(PROOF_POOL_LIMIT).get();
     homeProofs = snap.docs.map(d => ({ id:d.id, ...d.data() }));
     allProofs = homeProofs;
   } catch(e){}
@@ -4843,11 +4947,20 @@ function _renderProfileStats(myPosted){
 }
 async function _profileFollowCounts(uid){
   try{
+    // Two numbers on a profile header used to cost every follow row of that
+    // account, downloaded. Counted server-side now.
     const [fr, fg] = await Promise.all([
-      db.collection('follows').where('targetUid','==',uid).get(),
-      db.collection('follows').where('followerUid','==',uid).get()
+      _countOf(db.collection('follows').where('targetUid','==',uid)),
+      _countOf(db.collection('follows').where('followerUid','==',uid))
     ]);
-    return { followers: fr.size, following: fg.size };
+    if (fr !== null && fg !== null) return { followers: fr, following: fg };
+    // No aggregation available — count the rows the old way, but bounded, so a
+    // well-followed account cannot pull ten thousand of them into a phone.
+    const [a, b] = await Promise.all([
+      db.collection('follows').where('targetUid','==',uid).limit(1000).get(),
+      db.collection('follows').where('followerUid','==',uid).limit(1000).get()
+    ]);
+    return { followers: a.size, following: b.size };
   }catch(e){ return { followers:0, following:0 }; }
 }
 
@@ -4982,7 +5095,9 @@ async function _ppFollowList(type){
     if(!uids.length){ _flUsers=[]; body.innerHTML='<div style="text-align:center;padding:24px;color:var(--t3);font-size:13px;">No '+type+' yet</div>'; return; }
     // who the current user already follows → label Follow / Following buttons
     _flFollowing=new Set();
-    if(user){ try{ const mine=await db.collection('follows').where('followerUid','==',user.uid).get();
+    // Who I already follow, so each row shows Follow or Following. Bounded —
+    // this is a lookup set, not a list anyone reads.
+    if(user){ try{ const mine=await db.collection('follows').where('followerUid','==',user.uid).limit(1000).get();
       mine.docs.forEach(d=>_flFollowing.add(d.data().targetUid)); }catch(e){} }
     _flUsers=(await Promise.all(uids.map(u=>db.collection('users').doc(u).get().then(d=>d.exists?{uid:u,...d.data()}:null).catch(()=>null)))).filter(Boolean);
     _flRender(_flUsers);
@@ -8541,10 +8656,15 @@ async function submitComment() {
     commentsCache[commentsProofId]=[{...newComment,id:'tmp_'+Date.now()},...cached];
     _renderComments(commentsCache[commentsProofId]);
     const cntEl=document.getElementById('vdCommentCount'); if(cntEl) cntEl.textContent=`(${commentsCache[commentsProofId].length})`;
-    const snap=await db.collection('comments').where('proofId','==',commentsProofId).get();
-    db.collection('proofs').doc(commentsProofId).update({commentCount:snap.size}).catch(()=>{});
+    // Recount for the badge. This used to download every comment on the video
+    // after each new one — on a video with a thousand comments, a thousand
+    // documents fetched to learn a single number.
+    let total = await _countOf(db.collection('comments').where('proofId','==',commentsProofId));
+    if (total === null)
+      total = (await db.collection('comments').where('proofId','==',commentsProofId).limit(500).get()).size;
+    db.collection('proofs').doc(commentsProofId).update({commentCount:total}).catch(()=>{});
     const p=homeProofs.find(x=>x.id===commentsProofId)||allProofs.find(x=>x.id===commentsProofId);
-    if(p) await _checkCommentMilestone(commentsProofId,snap.size,p.takerId,p.dareTitle);
+    if(p) await _checkCommentMilestone(commentsProofId,total,p.takerId,p.dareTitle);
   }catch(e){showToast('Could not post comment — try again');}
 }
 
