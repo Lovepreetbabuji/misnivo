@@ -5453,13 +5453,54 @@ function onHandleInput() {
 }
 
 // ── Profile photo selected ────────────────────────────────────────────────────
-function onProfilePhotoSelected(e) {
+// Whatever was picked becomes a small JPEG before it is uploaded. Two reasons,
+// and the second is the one that actually bites:
+//   1. A phone camera photo is several thousand pixels wide and this is shown
+//      as a small circle. Uploading the original is waste on the wire, on the
+//      storage bill and on every profile view afterwards.
+//   2. The Cloudinary preset accepts a short list of formats, and phones hand
+//      over `.webp` and `.heic`. Converting here means the format the phone
+//      happened to use never reaches Cloudinary at all — so tightening that
+//      list cannot lock a real person out of setting their own picture.
+// The mission and proof thumbnails already came out of a canvas as jpeg; the
+// profile photo was the one image path that still uploaded the raw file.
+const AVATAR_MAX_PX = 512;
+function _toJpegFile(file, maxPx, name){
+  return new Promise((resolve, reject) => {
+    const url = URL.createObjectURL(file);
+    const img = new Image();
+    img.onload = () => {
+      URL.revokeObjectURL(url);
+      const scale = Math.min(1, (maxPx || 512) / Math.max(img.width, img.height));
+      const w = Math.max(1, Math.round(img.width  * scale));
+      const h = Math.max(1, Math.round(img.height * scale));
+      const c = document.createElement('canvas'); c.width = w; c.height = h;
+      const ctx = c.getContext('2d');
+      // JPEG cannot hold transparency, so a PNG's clear pixels have to become
+      // SOMETHING. Black on purpose — avatars sit on black in this app, so the
+      // default white would show as a bright ring around the picture.
+      ctx.fillStyle = '#000'; ctx.fillRect(0, 0, w, h);
+      ctx.drawImage(img, 0, 0, w, h);
+      c.toBlob(b => b ? resolve(new File([b], name || 'photo.jpg', { type:'image/jpeg' }))
+                      : reject(new Error('encode failed')), 'image/jpeg', 0.9);
+    };
+    img.onerror = () => { URL.revokeObjectURL(url); reject(new Error('decode failed')); };
+    img.src = url;
+  });
+}
+
+async function onProfilePhotoSelected(e) {
   const file = e.target.files[0];
   if (!file) return;
+  if (!file.type.startsWith('image/')) { showToast('Please select an image'); return; }
   if (file.size > 5 * 1024 * 1024) { showToast('Photo must be under 5 MB'); return; }
 
-  peSelectedPhotoFile = file;
-  const url = URL.createObjectURL(file);
+  let photo;
+  try { photo = await _toJpegFile(file, AVATAR_MAX_PX, 'avatar.jpg'); }
+  catch(err){ showToast('Could not read that image — try a JPG or PNG'); return; }
+
+  peSelectedPhotoFile = photo;
+  const url = URL.createObjectURL(photo);
   const peAv = document.getElementById('peAvatar');
   peAv.innerHTML = `<img src="${url}" alt="preview" style="width:100%;height:100%;object-fit:cover;border-radius:50%;"/>`;
 }
