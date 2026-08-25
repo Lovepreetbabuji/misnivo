@@ -1316,8 +1316,18 @@ auth.onAuthStateChanged(async (fbUser) => {
     _splashDone();
     _ageGateHide();                        // a sign-out from the blocked screen
     _bootSkelHide();                       // signed out — no page is loading
-    document.getElementById('authScreen').style.display = 'flex';
-    document.getElementById('appScreen').style.display  = 'none';
+    // Nobody signed in used to mean a sign-up wall before a single mission had
+    // been seen. Anyone arriving on a shared link now lands in the app and
+    // browses; the account is asked for at the moment it is actually needed,
+    // by guestCheck(), which already names the action in the prompt.
+    // _wantsAuthScreen is the exception: someone who tapped Sign Up or Log in
+    // asked for that screen, and must not be dragged back out of it.
+    if (_wantsAuthScreen) {
+      document.getElementById('authScreen').style.display = 'flex';
+      document.getElementById('appScreen').style.display  = 'none';
+    } else if (!isGuestMode) {
+      enterGuestMode();
+    }
     _legalOpenIfBooted();                  // legal pages are readable without an account
   }
 });
@@ -2498,10 +2508,15 @@ async function logout() {
   // onAuthStateChanged is what normally swaps the screens, but it is a round
   // trip to Firebase — for that second or two the whole signed-in app stayed on
   // screen after the tap. Swap it here; the listener arriving later is a no-op.
+  // Signing out returns to browsing, not to a sign-up wall — the same thing a
+  // first-time visitor sees. The auth listener firing later re-enters guest
+  // mode properly (listeners, routing); this is only the instant repaint so the
+  // signed-in app is not left on screen during the round trip to Firebase.
   const _app = document.getElementById('appScreen');
   const _authS = document.getElementById('authScreen');
-  if (_app)   _app.style.display  = 'none';
-  if (_authS) _authS.style.display = 'flex';
+  if (_authS) _authS.style.display = 'none';
+  if (_app)   _app.style.display  = 'block';
+  _wantsAuthScreen = false;
   _isAdmin = false;
   const _ab = document.getElementById('sbAdmin'); if (_ab) _ab.classList.add('nav-hidden');
   closeDD();
@@ -4004,6 +4019,18 @@ function openProof(dareId) {
   const d = dares.find(x => x.id === dareId);
   if (!d) { showToast('Mission not found'); return; }
 
+  // A finished mission takes no more proof. The rule refuses it too — that is
+  // the real gate — but a `permission-denied` arriving AFTER someone has
+  // filmed, trimmed and uploaded a video is a cruel way to say no. Say it
+  // before they start.
+  // A completed mission is not in the missions feed, but it stays on the
+  // Accepted page of everyone who took it, with this button live, which is how
+  // a normal person reaches this.
+  if (d.completed) {
+    showToast('This mission is already completed — no more proof can be sent');
+    return;
+  }
+
   // v0.19: creator_picks mode — check if user is approved
   if (d.takerSelectionMode === 'creator_picks') {
     const approved = d.approvedTakers || [];
@@ -4342,6 +4369,15 @@ function submitProof() {
 
   const d = dares.find(x => x.id === proofDareId);
   if (!d) return;
+
+  // Checked again here, not only in openProof: the creator can approve someone
+  // else's proof while this modal is open, and the live listener will have
+  // updated `dares` underneath it. Without this the upload runs to completion
+  // and then the rule refuses the write.
+  if (d.completed) {
+    const _msg = 'This mission was completed while you were here — no more proof can be sent';
+    showToast(_msg); _showProofSubmitError(_msg); return;
+  }
 
   // a retry after a previous failure shouldn't carry that old error forward
   const errEl = document.getElementById('proofSubmitError');
@@ -6608,9 +6644,11 @@ document.addEventListener('keydown', e => {
 
 // ═══════ ENGAGEMENT STATE (exact from v20) ═══════
 let isGuestMode   = false;
+// Set by leaveGuestMode() when someone deliberately asks for the sign-in screen,
+// so the auth listener does not immediately put them back into guest browsing.
+let _wantsAuthScreen = false;
 let guestTimer    = null;
 let guestInterval = null;
-let guestEndTime  = 0;
 let notifications   = [];
 let notifUnread     = 0;
 let notifUnsub      = null;
@@ -6654,6 +6692,9 @@ async function _checkCommentMilestone(){ return null; }
 async function _checkLikeMilestone(){    return null; }
 async function _checkViewMilestone(){    return null; }
 
+// Guest browsing has no clock any more, so there is nothing left to tear down.
+// Kept because four call sites still tidy up through it, and because a future
+// guest-side timer should have exactly one place to be cancelled.
 function _clearGuestSession() {
   if (guestTimer)    { clearTimeout(guestTimer);    guestTimer    = null; }
   if (guestInterval) { clearInterval(guestInterval); guestInterval = null; }
@@ -6809,18 +6850,9 @@ async function _notifyDareAccepted(dare,takerName){if(!dare.creatorUid||dare.cre
 
 async function _notifyProofSubmitted(dare,takerName){if(!dare.creatorUid||dare.creatorUid===user?.uid)return;await _sendNotification(dare.creatorUid,'proof_submitted',`🎥 Proof submitted!`,`${takerName} submitted proof for "${(dare.caption||dare.title||'').slice(0,30)}".`,dare.id);}
 
-function _onGuestExpired() {
-  _clearGuestSession();
-  isGuestMode = false;
-  // Blur app content
-  document.getElementById('appScreen').style.filter = 'blur(4px) brightness(.6)';
-  document.getElementById('appScreen').style.pointerEvents = 'none';
-  showGuestPrompt({
-    icon:  '⏰',
-    title: 'Your guest session has ended',
-    msg:   'Your 15-minute preview is over. Create a free account to keep using Misnivo — it only takes 10 seconds!',
-  }, false); // false = NOT dismissible
-}
+// _onGuestExpired and _startGuestCountdown lived here. Guest browsing has no
+// time limit now, so there is no session to expire and no clock to paint. The
+// account is asked for by guestCheck() when an action actually needs one.
 
 function _renderComments(comments) {
   const el=document.getElementById('vdComments');
@@ -7211,20 +7243,6 @@ function _showSuggestions(q) {
   sugEl.style.display = 'block';
 }
 
-function _startGuestCountdown() {
-  _clearGuestSession(); // clear any existing interval
-  guestInterval = setInterval(() => {
-    const left = Math.max(0, guestEndTime - Date.now());
-    const mins = Math.floor(left / 60000);
-    const secs = Math.floor((left % 60000) / 1000);
-    const txt  = document.getElementById('guestTimerText');
-    if (txt) txt.textContent = `${mins}:${secs.toString().padStart(2, '0')}`;
-    // Warning color at < 2 min
-    const badge = document.getElementById('guestTimerBadge');
-    if (badge) badge.classList.toggle('timer-warning', left < 2 * 60 * 1000);
-    if (left === 0) clearInterval(guestInterval);
-  }, 1000);
-}
 
 function _timeAgo(date){const s=Math.floor((new Date()-date)/1000);if(s<60)return'just now';if(s<3600)return Math.floor(s/60)+'m ago';if(s<86400)return Math.floor(s/3600)+'h ago';return Math.floor(s/86400)+'d ago';}
 
@@ -8356,21 +8374,14 @@ function enterGuestMode() {
   // blank account rather than whatever is still painted.
   user = null;
   _clearAccountUI();
-  const GUEST_DURATION_MS = 15 * 60 * 1000; // 15 minutes
-  guestEndTime = Date.now() + GUEST_DURATION_MS;
+  _wantsAuthScreen = false;
 
   // Show app, hide auth
   document.getElementById('authScreen').style.display  = 'none';
   document.getElementById('appScreen').style.display   = 'block';
   _setTopbarMode('guest');
 
-  // Start countdown display (updates every second)
-  _startGuestCountdown();
-
-  // Hard expiry timer — shows forced login popup at 15 minutes
-  guestTimer = setTimeout(() => {
-    _onGuestExpired();
-  }, GUEST_DURATION_MS);
+  _clearGuestSession();   // nothing to run on a clock any more
 
   // Load dares (public read — no auth needed for Firestore read)
   startDaresListener();
@@ -8399,6 +8410,7 @@ function guestCheck(actionKey) {
 function leaveGuestMode(tab) {
   _clearGuestSession();
   isGuestMode = false;
+  _wantsAuthScreen = true;   // asked for this screen — do not bounce back to guest
   const _gp2 = document.getElementById('guestPrompt');
   _gp2.style.display = 'none';
   _gp2.classList.remove('open');

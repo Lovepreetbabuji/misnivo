@@ -4,6 +4,32 @@
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no,viewport-fit=cover"/>
 <title>Misnivo</title>
+
+<!-- Link previews (what a shared link looks like in WhatsApp / iMessage / X).
+     These scrapers fetch this HTML and NEVER run JavaScript, so anything
+     app.js writes into the head afterwards is invisible to them — which is why
+     these are static tags and not something the app sets per page.
+     This is a single-page app: every URL serves this same file, so this is ONE
+     card for the whole site. A per-mission card (that mission's own title and
+     thumbnail) needs the HTML rendered per URL before it is sent, which on
+     Cloudflare Pages means a Pages Function for /dare/:id — a separate job.
+     og:image MUST be absolute; a relative path is dropped by every scraper.
+     misnivo.png is 1080x540, near enough the 1.91:1 they ask for. -->
+<meta name="description" content="Post a mission with a reward, or complete one and get paid for your video proof."/>
+<meta property="og:type" content="website"/>
+<meta property="og:site_name" content="Misnivo"/>
+<meta property="og:title" content="Misnivo — missions with real rewards"/>
+<meta property="og:description" content="Post a mission with a reward, or complete one and get paid for your video proof."/>
+<meta property="og:url" content="https://daremarket.pages.dev/"/>
+<meta property="og:image" content="https://daremarket.pages.dev/misnivo.png"/>
+<meta property="og:image:width" content="1080"/>
+<meta property="og:image:height" content="540"/>
+<meta property="og:image:alt" content="Misnivo"/>
+<meta name="twitter:card" content="summary_large_image"/>
+<meta name="twitter:title" content="Misnivo — missions with real rewards"/>
+<meta name="twitter:description" content="Post a mission with a reward, or complete one and get paid for your video proof."/>
+<meta name="twitter:image" content="https://daremarket.pages.dev/misnivo.png"/>
+
 <!-- PNG fallbacks: an SVG favicon is ignored by older Android, older Safari and
      most feed readers, which then fall back to a blank square. -->
 <link rel="icon" type="image/png" sizes="16x16"  href="/icon-16.png?v=3"/>
@@ -36,7 +62,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,100..400,0..1,0&icon_names=account_balance_wallet,add,arrow_back,bolt,bookmark,chat_bubble,close,expand_less,explore,home,menu,more_vert,notifications,person,reply,search,send,settings,thumb_down,thumb_up,tune&display=block" rel="stylesheet"/>
 
 <!-- App Styles -->
-<link rel="stylesheet" href="/css/styles.css?v=20260825d"/>
+<link rel="stylesheet" href="/css/styles.css?v=20260825e"/>
 
 <!-- The splash logo must be in flight before anything else competes for the pipe -->
 <link rel="preload" as="image" href="/misnivo.png?v=1" fetchpriority="high"/>
@@ -216,7 +242,6 @@
       </button>
       <!-- Guest topbar -->
       <div id="guestTopbarEl" style="display:none;align-items:center;gap:8px;">
-        <div class="guest-timer-badge" id="guestTimerBadge"><span class="mi" style="font-size:13px;">schedule</span><span id="guestTimerText">15:00</span></div>
         <button class="btn-login-topbar" onclick="leaveGuestMode('login')">Login</button>
         <button class="btn-signup-topbar" onclick="leaveGuestMode('signup')">Sign Up</button>
       </div>
@@ -1256,7 +1281,7 @@
 <!-- App Logic -->
 <!-- defer, so it runs after the Firebase bundles above and after the DOM is
      parsed — same order as before, but nothing blocks the first paint -->
-<script defer src="/js/app.js?v=20260825d"></script>
+<script defer src="/js/app.js?v=20260825e"></script>
 
 <!-- ══ Firebase AI Logic — stage 2 of the mission safety filter ══
      A SECOND, modular Firebase app. The rest of the site runs on the compat

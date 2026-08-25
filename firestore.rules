@@ -284,10 +284,29 @@ service cloud.firestore {
             || uid() in get(/databases/$(database)/documents/dares/$(dareId))
                  .data.get('approvedTakers', []);
       }
+      // A finished mission takes no more proof. approveProof() writes
+      // completed:true on the mission, but nothing here used to read it, so an
+      // already-approved taker could keep submitting afterwards — and this was
+      // reachable by pressing a normal button, not only by a crafted request:
+      // a completed mission leaves the missions feed but stays on the Accepted
+      // page of everyone who took it, Submit Proof still live.
+      // It matters more than one stray document. The update rule below judges
+      // each proof on its own and cannot see that a sibling was already
+      // approved, so the creator could approve a SECOND proof and leave two
+      // people recorded as having completed one bounty. Nothing is paid today
+      // only because WALLET_ENABLED is false — which is exactly why this closes
+      // before that flag moves, not after.
+      // Defaulted with .get() so a mission written before the field existed
+      // reads as not completed rather than failing the write.
+      function missionOpen(dareId) {
+        return get(/databases/$(database)/documents/dares/$(dareId))
+                 .data.get('completed', false) == false;
+      }
       allow create: if signedIn() && !isBanned()
                     && request.resource.data.takerId == uid()
                     && request.resource.data.status == 'submitted'
                     && exists(/databases/$(database)/documents/dares/$(request.resource.data.dareId))
+                    && missionOpen(request.resource.data.dareId)
                     && mayProve(request.resource.data.dareId);
 
       allow update: if
@@ -347,12 +366,24 @@ service cloud.firestore {
 
       allow read: if true;
 
+      // The thing being commented on has to be real. Without this a comment
+      // could carry proofId:"fake123" — invisible, since no screen queries that
+      // id, but stored and billed forever. Same both-collections dance as the
+      // pin check above: one id field serves videos and missions.
+      // Costs up to two document reads per comment posted. That is the price of
+      // the check and it is worth it at this volume; it is also why this is not
+      // done on likes, which are far more frequent and carry no id of their own.
+      function commentTargetExists(id) {
+        return exists(/databases/$(database)/documents/proofs/$(id))
+            || exists(/databases/$(database)/documents/dares/$(id));
+      }
       allow create: if signedIn() && !isBanned()
                     && request.resource.data.userId == uid()
                     && request.resource.data.text is string
                     && request.resource.data.text.size() > 0
                     && request.resource.data.text.size() <= 500
-                    && request.resource.data.likeCount == 0;
+                    && request.resource.data.likeCount == 0
+                    && commentTargetExists(request.resource.data.proofId);
 
       allow update: if
         // the author may edit their own text
@@ -378,9 +409,16 @@ service cloud.firestore {
     // stop anyone forging a follow on someone else's behalf.
     match /follows/{followId} {
       allow read: if true;
+      // The person being followed has to exist. A follow pointing at a made-up
+      // uid could never add a follower to a real account — followerUid is
+      // pinned to the signed-in user and the document id is checked — so this
+      // only ever inflated the follower's OWN "following" number and left a row
+      // nobody could see. Still junk that is stored and billed; one read stops
+      // it, and following someone is a rare enough action to afford that.
       allow create: if signedIn()
                     && request.resource.data.followerUid == uid()
                     && request.resource.data.targetUid != uid()
+                    && exists(/databases/$(database)/documents/users/$(request.resource.data.targetUid))
                     && followId == uid() + '_' + request.resource.data.targetUid + '_' + request.resource.data.type;
       allow delete: if signedIn() && resource.data.followerUid == uid();
       allow update: if false;
