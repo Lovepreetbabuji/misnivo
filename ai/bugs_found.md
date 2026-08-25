@@ -13,7 +13,7 @@ Status meanings:
 | **KNOWN** | real, already understood, deliberately not fixed yet — reason given |
 | **OPEN** | real, not fixed, needs a decision or work |
 
-**Summary: 15 fixed · 2 not real · 3 known · 2 open**
+**Summary: 16 fixed · 2 not real · 3 known · 4 open**
 
 *#14 App Check is DONE — Firestore, Authentication and AI Logic all enforced
 and verified live, 24-25 Aug 2026. The 2 Nov 2026 deadline is met early.*
@@ -542,7 +542,7 @@ Verified live: both caps present, the sorted query runs, all six pages open,
 no index complaints, 0 page errors — and end to end with a real mission and a
 real applicant, header exact at "1 applicant" and "1+ applicant" when capped.
 
-### 21. Denial of Service (DoS) via Interaction Arrays (CRITICAL)
+### 23. Denial of Service (DoS) via Interaction Arrays (CRITICAL)
 > **OPEN — new finding.**
 
 - **File**: `firestore.rules` (dares and proofs)
@@ -550,7 +550,7 @@ real applicant, header exact at "1 applicant" and "1+ applicant" when capped.
 - **Risk**: A malicious user can append a massive string (e.g., 1MB of text) into the `likedBy` array of a popular mission. Since Firestore has a 1MB limit per document, this completely breaks the document. Nobody else will be able to like, view, or update that mission. Worse, every time a normal user views the feed, they will download that 1MB document, causing massive bandwidth costs (Economic DoS).
 - **Fix**: Use `request.resource.data.likedBy.size()` and string length validation, or better, move likes to a separate subcollection instead of arrays on the main document.
 
-### 22. Unverified Email Signup Spam (HIGH)
+### 24. Unverified Email Signup Spam (HIGH)
 > **OPEN — new finding.**
 
 - **File**: `app.js` (Auth flow)
@@ -558,9 +558,57 @@ real applicant, header exact at "1 applicant" and "1+ applicant" when capped.
 - **Risk**: Attackers can generate thousands of fake accounts using random/fake emails. These accounts can then spam the platform, bloating the database and ruining the user experience.
 - **Fix**: Enforce `user.emailVerified` check before allowing creation of user profiles in the database, and send an email verification link upon signup.
 
+### 25. Slow to load — reported by a real user (HIGH)
+> **MOSTLY FIXED 25 Aug 2026, build `20260825i`.** The first finding on this
+> list that came from an actual person using the app, not from a code read:
+> *"takes a lot of time in loading. i explore as a guest."* — and the owner sees
+> it signed in too.
+>
+> **Measured before touching anything**, because a load-time complaint is the
+> easiest thing in the world to guess wrong about. Cold, fresh profile: 3.34s to
+> the load event, 2.06s to the first feed content, **1100KB over 37 requests**.
+> Three things accounted for most of it, and all three were the same mistake —
+> work done for everybody that only some people need.
+>
+> 1. **Uploaded images were served at their original size.** `vidThumb` returned
+>    `proofThumbnailURL` untouched, silently ignoring the width every caller
+>    passes it, and four mission-card renderers used `d.thumbnailURL` raw. Four
+>    images on the measured feed came to ~390KB between them — one a single
+>    150KB file — to fill cards a few hundred pixels wide. The avatar path had
+>    been doing this properly for a while and its images land at 1KB; nothing
+>    else was. `_optImg` now applies `w/c_limit/q_auto/f_auto`. Those same four
+>    images now weigh 18, 11, 10 and 7KB.
+> 2. **The logo was 113KB**, preloaded at `fetchpriority="high"`, so it was the
+>    first thing fetched and among the biggest. As WebP at 540px it is 5KB.
+> 3. **A second reCAPTCHA Enterprise instance loaded for every visitor**, for
+>    the AI safety filter's separate Firebase app. The two reCAPTCHA anchor
+>    frames were the two slowest requests of the whole load at ~1.4s each, and
+>    the second one exists for a check that only runs when somebody posts a
+>    mission.
+>
+> **After: 2.59s to load, 650KB over 30 requests** — 41% fewer bytes, one
+> reCAPTCHA instead of two. On a phone on mobile data the difference is larger
+> than these desktop numbers make it look.
+>
+> 🔴 **I broke the safety filter doing this, and it is worth writing down.**
+> Making the AI app lazy moved its App Check token fetch into the moment of use.
+> That token is reCAPTCHA-backed and takes 5-6 seconds cold, which ate the 20s
+> budget in `_aiAsk`, so the check timed out — and it fails CLOSED, so **every
+> mission would have been refused**. Caught by testing the filter itself rather
+> than just reloading the page. Fixed by waking the stack in `openPost()`:
+> laziness kept, but it starts while the person is typing instead of when they
+> press Submit. Verified end to end signed in: normal mission ALLOWED in 4.3s,
+> harmful mission BLOCKED in 3.7s, page load still costs one reCAPTCHA.
+> Lesson for the next person: a warm model answers in 1.4-3s; if an AI call is
+> taking tens of seconds, suspect the App Check token, not the model.
+>
+> **What is still on the table and was not done:** `js/app.js` is 598KB raw
+> (165KB over the wire) and is parsed on every load; the three separate Google
+> Fonts requests cost ~300ms each; and Inter is pulled in five weights.
+
 ---
 
-## Still open, in the order they are worth doing can be done today
+## Still open — split by whether anything can be done today
 
 **Waiting on the Blaze plan.** These three are one decision, not three; none of
 them can move until it is made.
@@ -571,9 +619,17 @@ them can move until it is made.
    a Cloud Function handing out a signature closes it.
 2. **#1 / #13 wallet on the server** — same door, same plan.
 
+**Can be done now, no plan needed.**
+
+3. **#23 arrays with no size limit** — Gemini's, not yet checked against the
+   code. If it holds it is the most serious thing open: one oversized write
+   into a likedBy array could break a mission document for everyone and be
+   downloaded by every visitor after.
+4. **#24 unverified email signup** — Gemini's, not yet checked.
+
 **Needs the owner to point at something.**
 
-3. **#4** — no specific flow was ever named; nothing can be checked until one is.
+5. **#4** — no specific flow was ever named; nothing can be checked until one is.
 
 Everything else on this list is closed. #19, #20 and #21 were the last three
 that could be done without a plan change, and all three went live on 25 Aug —

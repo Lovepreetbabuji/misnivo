@@ -97,6 +97,33 @@ Each of these is written down because it has already broken something real.
 
 # LOG — newest first, maximum 5 entries
 
+## 2026-08-25 21:15 — CLAUDE
+CHANGED: `js/app.js`, `index.html`, `sw.js`, `misnivo-sm.webp/.png` (new),
+`ai/bugs_found.md`, `PROJECT_CONTEXT.md` — stamp `20260825i`
+WHAT: A real user reported the app is slow to load. Measured it first — cold
+3.34s / 1100KB / 37 requests — then fixed the three things that accounted for
+most of it: uploaded images were served at ORIGINAL size (four feed images =
+390KB, one of them 150KB, for cards a few hundred px wide; `_optImg` now sizes
+them), the logo was a 113KB PNG preloaded at high priority (5KB as WebP), and a
+SECOND reCAPTCHA loaded for every visitor for the AI filter's separate Firebase
+app. After: 2.59s / 650KB / 30 requests, one reCAPTCHA.
+VERIFIED: Measured before and after on the live site, same harness. Then signed
+in and drove the real flow: normal mission ALLOWED in 4.3s, harmful BLOCKED in
+3.7s, no un-sized Cloudinary image left on the page, logo renders, 0 errors.
+Throwaway account deleted.
+RISK: 🔴 **I broke the safety filter mid-way and it is worth knowing how.**
+Making the AI app lazy moved its App Check token fetch into the moment of use;
+that token is reCAPTCHA-backed, takes 5-6s cold, and ate the 20s budget in
+`_aiAsk`, so the check timed out — and it fails CLOSED, meaning every mission
+refused. Only caught because I tested the filter itself, not just the page.
+Fixed by waking it in `openPost()` instead. **A warm model answers in 1.4-3s;
+an AI call taking tens of seconds is the App Check token, not the model.**
+Also fixed in bugs_found.md: two entries had been added as a second #21 and
+#22, now #23 and #24, and a heading had been merged into nonsense. Neither is
+checked against the code yet — #23 (unbounded likedBy arrays) reads like the
+most serious thing open if it holds.
+OVER
+
 ## 2026-08-25 05:20 — CLAUDE
 CHANGED: `js/app.js`, `index.html`, `css/styles.css`, `sw.js` — stamp
 `20260825f`
@@ -214,31 +241,4 @@ capped two more queries and deployed a Firestore index while `TURN` was FREE,
 from a second session. No conflict — my work is intact, and I confirmed the
 `takerId + createdAtMs` index really is deployed. It left no LOG entry, so this
 line is the only record of it.
-OVER
-
-## 2026-08-25 10:30 — CLAUDE
-CHANGED: `js/app.js`, `index.html`, `sw.js`, `ai/bugs_found.md`,
-`PROJECT_CONTEXT.md` — stamp `20260825b`
-WHAT: Bug list #15 and #16 fixed, #17 narrowed, and one nobody had reported.
-Queries that fetched whole collections are capped: the admin Stats and Users
-tabs, and — the worse one — the home feed, leaderboard, profile videos, comment
-recount and follower counts, all of which run for every visitor on every open,
-not once in an admin panel. Missions feed grew a "Load older missions" button
-instead of stopping dead at 60. `uploadToCloudinary` now checks size and type
-itself so no call site can skip it.
-VERIFIED: Live on `20260825b`, real browser, 19/19. Paging exercised by forcing
-a 1-mission window: it reported more, showed the button, widened on press, and
-the button vanished when everything was shown. Guard refuses a 6MB image, a
-101MB video and a PDF; a valid file still reaches the request. Home, explore,
-leaderboard, mission detail all load. 0 page errors.
-RISK: 🔴 **`count()` does not exist on the compat SDK 9.22.2 this app loads** —
-`Query.count` is undefined. I wrote the aggregation version first and only
-found out by opening the live panel, where every number had become "—". Counts
-are bounded reads now ("1000+" at the ceiling), which is weaker: past the cap
-the number is not true, and the leaderboard is approximate past 500 proofs.
-The proof caps are deliberately NOT ordered — older proofs may lack
-`createdAtMs` and Firestore drops documents missing the sort field, which would
-hide videos. Not verified: the admin panel as a real admin, since nobody is
-known to hold the claim; those functions were called directly. The database
-currently holds 0 approved proofs, so the video paths ran empty.
 OVER
