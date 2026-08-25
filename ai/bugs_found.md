@@ -275,8 +275,31 @@ its own.
 > accident. Verified live: a 6MB image and a 101MB video are both refused with
 > the limit named, a PDF is refused, and a valid file still reaches the request.
 >
-> The owner has set what the Cloudinary console offers on the preset; a max
-> file size was not among the options exposed there.
+> **The owner's console screenshots (25 Aug) narrow this further than the code
+> could.** Two account-level facts, neither of them in the preset screen, which
+> is why the max-file-size setting could not be found there:
+>
+> - **Allowed formats is set on the preset**: `mp4,mov,webm,jpg,jpeg,png`.
+>   Anything else — zip, exe, svg, pdf — is refused by Cloudinary itself, not
+>   by the app, so it holds even for a script that skips the app entirely.
+> - **The plan already caps file size**, shown under *Settings → Account →
+>   Usage Limits*: image **10 MB**, video **100 MB**, raw **10 MB**. Cloudinary
+>   enforces these; no upload can exceed them by any route. The app's own caps
+>   (5 MB image, 100 MB video) sit inside them, so the two agree.
+>
+> What is left of this finding after all that: someone can still upload **many
+> valid, correctly-sized media files** using the preset name out of `app.js`.
+> Each one is bounded, the storage is not. That is the part only a signed
+> upload closes.
+>
+> ⚠️ **Watch the format list against real phones.** The mission thumbnail and
+> the proof thumbnail both go through a canvas and come out jpg/png, so they
+> are safe whatever the person picked. The **profile photo is uploaded exactly
+> as picked** (`onProfilePhotoSelected` stores the raw File), so an Android
+> `.webp` or an `.heic` that reaches the browser un-converted would now be
+> refused by Cloudinary — a real user hitting a wall, not an attacker.
+> `webp,heic,heif` are worth adding to the list, or the profile photo needs the
+> same canvas conversion the thumbnails already get.
 
 - **File**: `js/app.js` (Line 886)
 - **Issue**: Image and video uploads use Cloudinary's unsigned uploads via a public upload preset (`missionbook`) and cloud name.
