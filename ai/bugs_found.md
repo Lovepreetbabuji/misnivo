@@ -13,7 +13,7 @@ Status meanings:
 | **KNOWN** | real, already understood, deliberately not fixed yet — reason given |
 | **OPEN** | real, not fixed, needs a decision or work |
 
-**Summary: 12 fixed · 2 not real · 3 known · 5 open**
+**Summary: 15 fixed · 2 not real · 3 known · 2 open**
 
 *#14 App Check is DONE — Firestore, Authentication and AI Logic all enforced
 and verified live, 24-25 Aug 2026. The 2 Nov 2026 deadline is met early.*
@@ -351,7 +351,26 @@ pool — the queries ran and returned cleanly, but no video was rendered through
 them.
 
 ### 19. Proof Submission on Completed Missions (HIGH)
-> **OPEN — checked, and it is real. The most serious thing currently open.**
+> **FIXED 25 Aug 2026, rules deployed + build `20260825e`.** Closed in three
+> places, because each does a different job. `missionOpen()` in the proofs
+> create rule is the actual gate — it reads `completed` off the mission, with
+> `.get('completed', false)` so a mission written before the field existed
+> still passes. `openProof()` refuses before anyone films, because a
+> `permission-denied` arriving after someone has filmed, trimmed and uploaded a
+> video is a cruel way to say no. `submitProof()` checks once more, because the
+> creator can approve someone else while the modal is open and the live
+> listener updates `dares` underneath it.
+>
+> Verified on the live site in a real browser, with a throwaway account, by
+> doing the thing the rule should refuse — not by reading "Deploy complete":
+> a proof on an OPEN mission was **allowed**, the mission was then closed, and
+> the identical write came back **permission-denied**. The button was checked
+> separately and says "This mission is already completed — no more proof can be
+> sent" without opening the modal. Test mission and account deleted afterwards.
+>
+> The verdict that led here, kept because it is why this was worth doing first:
+
+
 > Confirmed in both places. The `proofs` create rule tests signed-in, not
 > banned, `takerId == uid()`, `status == 'submitted'`, that the mission exists,
 > and `mayProve()` — and `mayProve` only asks about `takerSelectionMode` and
@@ -387,7 +406,25 @@ them.
 - **Fix**: Add a condition in `firestore.rules` to check `get(/databases/$(database)/documents/dares/$(request.resource.data.dareId)).data.completed == false`.
 
 ### 20. Missing Referential Integrity Checks (MODERATE)
-> **OPEN — real, checked, but smaller than it reads.** Confirmed in
+> **FIXED 25 Aug 2026, rules deployed.** `commentTargetExists()` requires a
+> comment's `proofId` to name a real proof **or** a real mission — the same
+> both-collections dance the pin check already does, since one id field serves
+> videos and missions. `follows` create now requires the target account to
+> exist. Deliberately **not** extended to likes, which are far more frequent and
+> carry no id of their own.
+>
+> Costs up to two document reads per comment posted and one per follow. That is
+> the price of the check and it is worth it at this volume — but it is a real
+> per-write cost, so it is written down rather than buried.
+>
+> Verified live, both directions, which is the half that is easy to skip: a
+> comment on `totally_made_up_id_123` came back **permission-denied** while a
+> comment on a real mission was still **allowed**; a follow of a made-up uid was
+> **refused** while following a real account still **worked**.
+>
+> The verdict that led here:
+
+
 > `firestore.rules`: `comments` create tests the author, the text and
 > `likeCount`, and never asks whether `proofId` points at anything; `follows`
 > create tests the follower, self-follow and the document id shape, and never
@@ -417,7 +454,30 @@ them.
 - **Fix**: Use `exists()` in `firestore.rules` for comments and follows to ensure the parent entity is real.
 
 ### 21. Missing Social Sharing Meta Tags (LOW/UX)
-> **OPEN — real, and the growth argument is right.** Confirmed: the `<head>` of
+> **DONE for the static half, build `20260825e`.** Open Graph and Twitter Card
+> tags are in the `<head>`, with `og:image` absolute (a relative path is dropped
+> by every scraper) pointing at `misnivo.png`, which is 1080×540 — near enough
+> the 1.91:1 the scrapers want.
+>
+> Verified the way it actually gets consumed: `curl` on `/dare/anything` with no
+> JavaScript at all returns the tags, and the image answers 200 as `image/png`.
+> That matters more than seeing them in a browser, because the browser runs the
+> app and a scraper never does.
+>
+> 🔴 **The words and the picture are a starting point, not a decision.** They
+> say "Misnivo — missions with real rewards" and "Post a mission with a reward,
+> or complete one and get paid for your video proof." over the logo. That is
+> the owner's copy to overwrite; nothing else has to change to do it.
+>
+> **Still open underneath this: per-mission previews.** Every link shares the
+> same card, because this is an SPA and every URL serves the same file. A card
+> showing *that* mission's title and thumbnail needs the HTML rendered per URL
+> before it is sent — on Cloudflare Pages a Pages Function for `/dare/:id`. That
+> is a separate, larger job and it has not been started.
+>
+> The verdict that led here:
+
+
 > `index.html` has `charset`, `viewport`, `theme-color`, the Apple PWA tags and
 > a plain `<title>Misnivo</title>` — there is not one `og:` or `twitter:` tag.
 > Every link shared to WhatsApp today is a bare URL with no picture.
@@ -496,24 +556,23 @@ them can move until it is made.
    a Cloud Function handing out a signature closes it.
 2. **#1 / #13 wallet on the server** — same door, same plan.
 
-**Can be done now, no plan needed.**
-
-3. 🔴 **#19 proof on a completed mission** — do this one first. It is the only
-   open finding that lets the data itself go wrong: two people recorded as
-   having completed the same bounty. Two lines, one in `firestore.rules` and
-   one in `openProof()`. Close it **before** the wallet is switched on, because
-   after that the same hole is a double payout.
-4. **#21 social sharing tags** — the static version is `index.html` only and
-   turns every shared link from a bare URL into a branded card. Waiting on the
-   owner for two things a machine should not choose: the words on the card and
-   the picture. Per-mission previews are a separate, larger job (a Cloudflare
-   Pages Function) — see the entry.
-5. **#20 referential integrity** — `exists()` on the comments and follows create
-   rules. Real but low: the orphans it allows are invisible junk, not a way in.
-   Worth folding into the next rules deploy rather than deploying on its own.
-
 **Needs the owner to point at something.**
 
-6. **#4** — no specific flow was ever named; nothing can be checked until one is.
+3. **#4** — no specific flow was ever named; nothing can be checked until one is.
 
-Everything else on this list is closed.
+Everything else on this list is closed. #19, #20 and #21 were the last three
+that could be done without a plan change, and all three went live on 25 Aug —
+see their entries for what was verified and what was deliberately left.
+
+**Not findings, but the two loose ends worth carrying forward:**
+
+- **Per-mission link previews.** #21 gives every link the same card. A card
+  carrying that mission's own title and thumbnail needs a Cloudflare Pages
+  Function rendering `/dare/:id` server-side. Not started.
+- **A test account cannot delete its own private drawer.** Cleaning up after a
+  throwaway account, `users/{uid}` deleted fine but
+  `users/{uid}/private/main` came back `permission-denied` — the rules have no
+  delete for it. Harmless (nobody but that account and an admin could ever read
+  it) and it leaves one orphan document per test account, which is where the
+  leftover `dmtest.*` profiles come from. Worth a `allow delete: if isSelf(u)`
+  next time the rules are opened.
