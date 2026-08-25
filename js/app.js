@@ -2313,11 +2313,19 @@ function _reconcileMyProofs(proofs){
   return changed;
 }
 
+const MY_PROOFS_MAX = 500;   // newest own-proofs the listener holds
 function startMyProofsListener(){
   if (myProofsUnsub) myProofsUnsub();
   if (!user) return;
-  // equality on one field — no composite index needed
+  // Newest MY_PROOFS_MAX only. This is one person's own proofs, so it was never
+  // going to reach the size of an open collection — but it had no ceiling at
+  // all, and "small because of how people behave" is not a limit.
+  // orderBy needs the composite index in firestore.indexes.json (takerId +
+  // createdAtMs). Safe to sort on: the proofs collection was empty when this
+  // went in, so there is no older document lacking createdAtMs for Firestore
+  // to silently drop out of the result.
   myProofsUnsub = db.collection('proofs').where('takerId','==',user.uid)
+    .orderBy('createdAtMs','desc').limit(MY_PROOFS_MAX)
     .onSnapshot(snap => {
       const mine = snap.docs.map(d => ({ id:d.id, ...d.data() }));
       if (_reconcileMyProofs(mine)){
@@ -5762,9 +5770,15 @@ async function openSelectTakersModal(dareId) {
   document.getElementById('randomPanel')?.classList.remove('open');
 
   try {
+    // Oldest first, capped: whoever applied first is who the creator should be
+    // choosing between, and a mission that catches on should not drop several
+    // thousand documents into a sheet the moment it is opened. One extra is
+    // fetched so the count can say "200+" rather than quietly claiming 200 is
+    // all there is.
     const snap = await db.collection('dares').doc(dareId).collection('applicants')
-      .orderBy('appliedAt','asc').get();
-    currentApplicants = snap.docs.map(doc=>({id:doc.id,...doc.data()}));
+      .orderBy('appliedAt','asc').limit(APPLICANTS_MAX + 1).get();
+    _applicantsCapped = snap.size > APPLICANTS_MAX;
+    currentApplicants = snap.docs.slice(0, APPLICANTS_MAX).map(doc=>({id:doc.id,...doc.data()}));
     const approvedTakers = d.approvedTakers || [];
     renderApplicantsList(currentApplicants, approvedTakers);
   } catch(e) {
@@ -5773,9 +5787,13 @@ async function openSelectTakersModal(dareId) {
   }
 }
 
+const APPLICANTS_MAX = 200;   // how many applicants one sheet will hold
+let _applicantsCapped = false;
 function renderApplicantsList(applicants, approvedTakers) {
   const el = document.getElementById('applicantsList');
-  document.getElementById('applicantCount').textContent = `${applicants.length} applicant${applicants.length!==1?'s':''} · ${approvedTakers.length} approved`;
+  const _n = applicants.length + (_applicantsCapped ? '+' : '');
+  document.getElementById('applicantCount').textContent =
+    `${_n} applicant${applicants.length!==1?'s':''} · ${approvedTakers.length} approved`;
 
   if (!applicants.length) {
     el.innerHTML = '<div class="empty" style="padding:28px;"><span class="mi">people</span><div class="empty-title">No Applicants Yet</div><p class="empty-desc">Share your mission to get more applicants!</p></div>';

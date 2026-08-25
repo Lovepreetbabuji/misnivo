@@ -323,6 +323,30 @@ holds **0 approved proofs**, so the video paths were exercised with an empty
 pool — the queries ran and returned cleanly, but no video was rendered through
 them.
 
+### 18. Proof Submission on Completed Missions (HIGH)
+> **OPEN — new finding.**
+
+- **File**: `firestore.rules` (Line 287)
+- **Issue**: The `create` rule for `proofs` checks if the user is an `approvedTaker`, but it does NOT check if the mission is already `completed == true`.
+- **Risk**: An approved taker can submit a proof even after the creator has already accepted someone else's proof and marked the mission as completed. This breaks the business logic where a mission should only have one winning proof.
+- **Fix**: Add a condition in `firestore.rules` to check `get(/databases/$(database)/documents/dares/$(request.resource.data.dareId)).data.completed == false`.
+
+### 19. Missing Referential Integrity Checks (MODERATE)
+> **OPEN — new finding.**
+
+- **File**: `firestore.rules` (Comments, Follows)
+- **Issue**: When creating a comment or following a user, the security rules do not verify if the target `proofId`, `dareId`, or `targetUid` actually exists.
+- **Risk**: A user can create a comment pointing to `proofId: "fake123"` or follow a user `targetUid: "fake456"`. This creates orphaned data in the database which consumes storage and can cause UI glitches.
+- **Fix**: Use `exists()` in `firestore.rules` for comments and follows to ensure the parent entity is real.
+
+### 20. Missing Social Sharing Meta Tags (LOW/UX)
+> **OPEN — new finding.**
+
+- **File**: `index.html`
+- **Issue**: The `head` section lacks Open Graph (`og:title`, `og:image`, `og:url`) and Twitter Card (`twitter:card`) meta tags.
+- **Risk**: When users share their missions or profiles on WhatsApp, iMessage, Twitter, or Facebook, the link will just show a generic "Misnivo" title with no image or description. This severely limits organic growth and social virality.
+- **Fix**: Add dynamic or default `og:` and `twitter:` meta tags in the `<head>` of the `index.html`.
+
 ---
 
 ## Still open, in the order they are worth doing

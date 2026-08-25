@@ -5,8 +5,14 @@
       "collectionGroup": "notifications",
       "queryScope": "COLLECTION",
       "fields": [
-        { "fieldPath": "toUserId",  "order": "ASCENDING" },
-        { "fieldPath": "createdAt", "order": "DESCENDING" }
+        {
+          "fieldPath": "toUserId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "createdAt",
+          "order": "DESCENDING"
+        }
       ]
     },
     {
@@ -14,8 +20,14 @@
       "collectionGroup": "notifications",
       "queryScope": "COLLECTION",
       "fields": [
-        { "fieldPath": "read",      "order": "ASCENDING" },
-        { "fieldPath": "createdAt", "order": "ASCENDING" }
+        {
+          "fieldPath": "read",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "createdAt",
+          "order": "ASCENDING"
+        }
       ]
     },
     {
@@ -23,8 +35,29 @@
       "collectionGroup": "proofs",
       "queryScope": "COLLECTION",
       "fields": [
-        { "fieldPath": "takerId", "order": "ASCENDING" },
-        { "fieldPath": "status",  "order": "ASCENDING" }
+        {
+          "fieldPath": "takerId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "status",
+          "order": "ASCENDING"
+        }
+      ]
+    },
+    {
+      "_comment": "startMyProofsListener: where(takerId) + orderBy(createdAtMs desc) + limit",
+      "collectionGroup": "proofs",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "takerId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "createdAtMs",
+          "order": "DESCENDING"
+        }
       ]
     }
   ],
