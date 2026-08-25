@@ -1,4 +1,4 @@
-TURN: CLAUDE
+TURN: FREE
 
 <!-- ^ Keep this on line 1. FREE = nobody is working. Set it to your own name
      while you work, and back to FREE the moment you stop. If it already has
@@ -97,6 +97,33 @@ Each of these is written down because it has already broken something real.
 
 # LOG — newest first, maximum 5 entries
 
+## 2026-08-25 10:30 — CLAUDE
+CHANGED: `js/app.js`, `index.html`, `sw.js`, `ai/bugs_found.md`,
+`PROJECT_CONTEXT.md` — stamp `20260825b`
+WHAT: Bug list #15 and #16 fixed, #17 narrowed, and one nobody had reported.
+Queries that fetched whole collections are capped: the admin Stats and Users
+tabs, and — the worse one — the home feed, leaderboard, profile videos, comment
+recount and follower counts, all of which run for every visitor on every open,
+not once in an admin panel. Missions feed grew a "Load older missions" button
+instead of stopping dead at 60. `uploadToCloudinary` now checks size and type
+itself so no call site can skip it.
+VERIFIED: Live on `20260825b`, real browser, 19/19. Paging exercised by forcing
+a 1-mission window: it reported more, showed the button, widened on press, and
+the button vanished when everything was shown. Guard refuses a 6MB image, a
+101MB video and a PDF; a valid file still reaches the request. Home, explore,
+leaderboard, mission detail all load. 0 page errors.
+RISK: 🔴 **`count()` does not exist on the compat SDK 9.22.2 this app loads** —
+`Query.count` is undefined. I wrote the aggregation version first and only
+found out by opening the live panel, where every number had become "—". Counts
+are bounded reads now ("1000+" at the ceiling), which is weaker: past the cap
+the number is not true, and the leaderboard is approximate past 500 proofs.
+The proof caps are deliberately NOT ordered — older proofs may lack
+`createdAtMs` and Firestore drops documents missing the sort field, which would
+hide videos. Not verified: the admin panel as a real admin, since nobody is
+known to hold the claim; those functions were called directly. The database
+currently holds 0 approved proofs, so the video paths ran empty.
+OVER
+
 ## 2026-08-25 01:40 — CLAUDE
 CHANGED: `js/app.js`, `index.html`, `css/styles.css`, `sw.js`,
 `PROJECT_CONTEXT.md` — stamp `20260821m`
@@ -184,21 +211,4 @@ RISK: Console currently reads 100% verified / 0% unverified for both Firestore
 and Authentication, so enforcing those is safe. AI Logic has no metrics yet —
 its row says it is waiting for traffic — so that one is worth leaving until its
 number shows too. Deadline for it is 2 Nov 2026.
-OVER
-
-## 2026-08-21 22:05 — CLAUDE
-CHANGED: `index.html`, `js/app.js`, `sw.js`, `ai/bugs_found.md`
-WHAT: App Check is in. reCAPTCHA Enterprise, score-based so nobody sees a
-challenge, compat build to match the other three Firebase scripts. Wrapped in a
-try/catch that also checks `firebase.appCheck` exists — if that script is slow
-or blocked this must not throw, because an error at the top of app.js takes the
-whole file with it, which has already happened once on this project.
-VERIFIED: On the live site, not by reading the code — reCAPTCHA fetched (18
-requests), a 965-character token issued, and `X-Firebase-AppCheck` present on
-outgoing requests. App unharmed: signed in, 4 missions, 0 page errors.
-Regression 8/8, 7/7, 5/5.
-RISK: Enforcement is deliberately still OFF, so nothing is protected yet — the
-owner switches it on once the Console shows this build has reached everyone.
-Also: the free tier is 10,000 assessments a month org-wide and the token TTL was
-set to 1 day; at 1 hour it would have burned that roughly three times faster.
 OVER

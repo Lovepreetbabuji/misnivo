@@ -13,7 +13,7 @@ Status meanings:
 | **KNOWN** | real, already understood, deliberately not fixed yet — reason given |
 | **OPEN** | real, not fixed, needs a decision or work |
 
-**Summary: 8 fixed · 2 not real · 3 known · 4 open**
+**Summary: 11 fixed · 2 not real · 3 known · 2 open**
 
 *#14 App Check is DONE — Firestore, Authentication and AI Logic all enforced
 and verified live, 24-25 Aug 2026. The 2 Nov 2026 deadline is met early.*
@@ -209,7 +209,31 @@ need Blaze. App Check alone stops the scripted-abuse case and is worth doing on
 its own.
 
 ### 15. Unbounded Queries in Admin Dashboard (HIGH)
-> **OPEN — new finding.**
+> **FIXED, with a stated limit.** Real. The Stats tab downloaded every user,
+> mission, proof, safety block and report purely to read `.size` off each
+> snapshot, and the Users tab downloaded every mission and every proof on top
+> of that so each row could say "3 missions · 1 proof". Every one of them is
+> capped now, and the two per-user numbers moved into the Details panel where
+> they are counted for one person on demand.
+>
+> **Firestore's `count()` aggregation is not available here and that is worth
+> knowing.** It was the obvious fix and it was written first — then the live
+> site was opened in a real browser and every count came back through the error
+> path, because on the Firebase **compat** SDK 9.22.2 that `index.html` loads,
+> `Query.count` is simply undefined. The Stats tab rendered a row of em-dashes.
+> Reading the code would never have shown this; opening the panel did.
+> So counting still means reading documents, and `_countUpTo` puts a ceiling on
+> it: at most cap+1 read, and the answer shows as "1000+" at the ceiling rather
+> than a wrong exact number. Past the cap the figure is not true, and the
+> comment in the code says so. An exact count at scale needs a newer Firebase
+> SDK or a server keeping running totals.
+>
+> Verified live on `20260825b`: 8 Users · 4 Missions · 0 Proofs read correctly
+> as a guest, the admin-only collections showed "—" (guest cannot read them,
+> which is the rules working), and a deliberately tiny cap returned "1+".
+> **Not verified: the panel as a real admin.** Nobody is known to hold the
+> `admin: true` claim, so the tabs behind it were exercised by calling the
+> function directly, not by opening the panel.
 
 - **File**: `js/app.js` (Lines 1721, 1872)
 - **Issue**: Admin panels fetch entire collections into memory (`db.collection('dares').get()`, `users`, `proofs`, etc. without a `limit()` or pagination).
@@ -217,7 +241,20 @@ its own.
 - **Fix**: Implement pagination for admin views or use server-side aggregation for stats.
 
 ### 16. Missing Feed Pagination (MODERATE)
-> **OPEN — new finding.**
+> **FIXED.** Real: the `limit(60)` was a wall, not a page. The listener now
+> starts at 60 and grows a page at a time behind a **Load older missions**
+> button. The same live listener is widened rather than a second paged query
+> being added, because everything downstream reads the one `dares` array and a
+> second one would have to be merged and kept live by hand.
+>
+> The button also renders in the **empty** state, which is the case that would
+> otherwise strand people: if all 60 newest missions happen to be finished or
+> expired, the page says "No Active Missions" while live ones sit just outside
+> the window, and without a button there is no way to reach them.
+>
+> Verified live on `20260825b` in a real browser: forced down to a one-mission
+> window it reported that more existed, showed the button, and pressing it
+> brought the rest in; with everything shown the button disappears.
 
 - **File**: `js/app.js` (Line 2276)
 - **Issue**: The main feed for dares hardcodes a `limit(60)`: `db.collection('dares').orderBy('createdAt', 'desc').limit(60)`. There is no "Load More" button or infinite scrolling logic.
@@ -225,17 +262,75 @@ its own.
 - **Fix**: Implement Firestore cursor pagination (`startAfter(lastVisible)`) combined with a "Load More" button or Intersection Observer.
 
 ### 17. Unauthenticated Cloudinary Uploads (HIGH)
-> **OPEN — new finding.**
+> **STILL OPEN — narrowed, not closed.** Real, and the finding stands exactly
+> as written: the cloud name and the unsigned preset are both in `js/app.js`,
+> anyone can read them, and nothing in the browser can stop a script that skips
+> the app and posts to Cloudinary directly. **Only a signed upload closes this**
+> — a Cloud Function handing out a short-lived signature — and that needs the
+> Blaze plan, the same blocker as #1.
+>
+> What was done is smaller and should not be mistaken for the fix: size and
+> type are now checked **inside `uploadToCloudinary`**, not only at each file
+> picker, so no call site can skip them and no oversized file leaves the app by
+> accident. Verified live: a 6MB image and a 101MB video are both refused with
+> the limit named, a PDF is refused, and a valid file still reaches the request.
+>
+> The owner has set what the Cloudinary console offers on the preset; a max
+> file size was not among the options exposed there.
 
 - **File**: `js/app.js` (Line 886)
 - **Issue**: Image and video uploads use Cloudinary's unsigned uploads via a public upload preset (`missionbook`) and cloud name.
 - **Risk**: Any malicious user who inspects the frontend code can extract the cloud name and upload preset. They can then write a script to upload thousands of junk files directly to Cloudinary, exhausting your storage limits and running up your Cloudinary bill.
 - **Fix**: Use signed uploads. Move the upload signing logic to a Firebase Cloud Function, so the client must authenticate with Firebase before receiving a temporary signature to upload.
 
+### 18. The same unbounded reads on the path every visitor walks (HIGH)
+> **FIXED — found while checking #15, not reported by anyone.**
+
+#15 was written about the admin dashboard. The identical mistake was sitting in
+the code every single visitor runs, which makes it the worse of the two: an
+admin panel is opened twice a year, the home feed is opened every time anyone
+starts the app.
+
+- **File**: `js/app.js` — the home feed loader, `_ensureProofsLoaded`, the
+  leaderboard, the comment recount, the follower/following counts, and the
+  applicant's completed-mission count.
+- **Issue**: `db.collection('proofs').where('status','==','approved').get()` —
+  no `limit()`. Every approved video in the database, downloaded on every app
+  open, and again for the leaderboard and the profile Videos tab. The comment
+  recount pulled every comment on a video after each new comment posted, to
+  learn one number. Follower counts pulled every follow row of the account to
+  print two numbers.
+- **Fix applied**: capped — 300 for the shared video pool, 500 for the
+  leaderboard, 500 for the comment recount, 1000 for follows.
+
+Two things said plainly:
+
+- **The caps are deliberately NOT ordered.** Proofs carry `createdAtMs`, but
+  older ones may pre-date that field, and Firestore silently drops any document
+  missing the field it is told to sort by — ordering here would make those
+  videos vanish. At today's size the caps change nothing at all; they exist so
+  this cannot quietly become a full-database download. The day the pool is
+  genuinely near 300, it needs real paging (an ordered query plus a composite
+  index) and the field backfilled first.
+- **The leaderboard is now approximate past 500 proofs.** It adds up every
+  approved proof, so a cap makes it approximate the moment the platform passes
+  the cap. An all-time leaderboard has to be totalled on a server and stored,
+  not recomputed on every phone that opens the tab.
+
+Verified live on `20260825b`: home, explore, leaderboard, a mission detail and
+the missions page all still load, 0 page errors. Note the database currently
+holds **0 approved proofs**, so the video paths were exercised with an empty
+pool — the queries ran and returned cleanly, but no video was rendered through
+them.
+
 ---
 
 ## Still open, in the order they are worth doing
 
-1. **#14 App Check** — the only one that can cost real money today.
-2. **#1 / #13 wallet on the server** — blocked on the Blaze plan.
+1. **#17 Cloudinary signed uploads** — the only one that can cost real money
+   today. Needs a Cloud Function, so needs Blaze.
+2. **#1 / #13 wallet on the server** — blocked on the Blaze plan, same door.
 3. **#4** — needs a specific flow named before anything can be done.
+
+Everything above them is closed. Three separate things now wait on the same
+Blaze plan; that is one decision, not three.

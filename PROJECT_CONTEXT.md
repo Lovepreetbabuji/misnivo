@@ -188,9 +188,9 @@ nahi dekh sakte — `ai/HANDOFF.md` hi ek jagah hai jahan baari saunpi jaati hai
 
 | | |
 |---|---|
-| Stamp | `20260821m` (teeno jagah — css, js, sw) |
-| Aakhri commit | `refactor(admin): remove the Admin Reports panel that refused everyone` |
-| Live site | `daremarket.pages.dev` — deploy verify ho chuka |
+| Stamp | `20260825b` (teeno jagah — css, js, sw) |
+| Aakhri commit | `fix(reads): count() is not in this SDK — cap the reads instead` |
+| Live site | `daremarket.pages.dev` — deploy verify ho chuka, 19/19 browser test pass |
 
 ## 12.2 App Check — POORA KHATAM ✅
 
@@ -261,23 +261,32 @@ yahi sabse badi wajah thi hatane ki, sudhaarne ki nahi.
 > **Abhi kisi ke paas ye claim hai ya nahi — ye verify nahi hua.** Agar maalik ko
 > admin panel chahiye to pehle ye claim lagani padegi.
 
-## 12.5 Kya bacha hai
+## 12.5 Kya bacha hai (25 Aug, doosri baari ke baad)
 
 | # | Kya | Haalat |
 |---|---|---|
+| 17 | Cloudinary upload bina sign ke (preset public hai) | **Khula hai.** Ab app khud bade/galat file rok deti hai, par jo banda app chhodkar seedha Cloudinary par bhejta hai use koi nahi rok sakta — uske liye **Blaze plan** chahiye |
 | 1 / 13 | Wallet server par (koi bhi apna balance likh sakta hai) | **Blaze plan chahiye** — tab tak `WALLET_ENABLED = false` |
-| 15 | Admin panel poori collection utha leta hai (`limit()` nahi) | Abhi theek — users badhne par crash karega |
-| 16 | Feed `limit(60)` par ruk jaati hai, "Load more" nahi | 60 se purane mission dikhte hi nahi |
-| 17 | Cloudinary upload bina sign ke (preset public hai) | Koi bhi tumhare account par file daal sakta hai |
 | 4 | "Client par bharosa" — koi ek jagah batayi nahi gayi | Jagah batao to theek ho jayega |
 | — | 4 khaali test profile: `dmtest.ag2290`, `dmtest.ag334721`, `dmtest.ag325606`, `dmtest.ag57348` | Nuksaan nahi, safai baaki (admin chahiye) |
-| — | Cloudinary preset ki size limit | Set nahi — par Cloudflare/Cloudinary khud 100 MB par rok deta hai |
 
-Poori list + kis par kya kiya: `ai/bugs_found.md`.
+> **Teen cheezein ab ek hi darwaze par khadi hain — Blaze plan.** #17, #1 aur #13.
+> Ye ek faisla hai, teen nahi.
+
+**Ab theek ho chuka (25 Aug):** #15 admin panel ki bina-limit query, #16 feed ka
+60 wala wall (ab "Load older missions" button hai), aur #18 — wahi galti jo
+**har visitor** ke raste par thi (home feed saari approved video ek saath maangti
+thi). Detail `ai/bugs_found.md` me.
+
+🔴 **Ek baat jo yaad rakhni hai:** Firestore ka `count()` (bina download kiye
+ginti) is app me **kaam nahi karta** — compat SDK 9.22.2 me wo function hai hi
+nahi. Pehle wahi likha tha, live browser me khula to admin panel me numbers ki
+jagah "—" aa gaya. Isliye ab ginti "1000 tak gino, uske aage 1000+ likho" wale
+tareeke se hoti hai. Agli baar `count()` likhne se pehle ye yaad karo.
 
 ## 12.6 Naye chat ko sabse pehle kya karna hai
 
 1. `ai/HANDOFF.md` padho — `TURN:` line dekho. `TURN: GEMINI` ho to **ruk jao**.
 2. Ye file (`PROJECT_CONTEXT.md`) padho.
-3. Live build `20260821m` hai — local file badalne se live site nahi badalti,
+3. Live build `20260825b` hai — local file badalne se live site nahi badalti,
    push + teeno stamp ke bina kuch nahi hota.
