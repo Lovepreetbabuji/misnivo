@@ -4431,13 +4431,9 @@ body.sb-dragging .sb-overlay{ transition:none !important; }
 .logo-icon, .auth-logo-icon{ display:none !important; }
 .logo{ height:40px; overflow:hidden; }
 .logo-img{ height:78px; width:auto; display:block; flex-shrink:0; }
-/* On a phone the topbar carries the menu button, the search field and the
-   account — the brand mark on top of that is the one thing there that is not a
-   control, and it was pushing the search box narrower on a 412px screen.
-   Hidden below 769px; "send to desktop" crosses that line and brings it back.
-   Be honest about the speed part of this: the logo is 5KB now, so the saving is
-   the request, not the bytes. This is a look change more than a fast one. */
-@media(max-width:768px){ .topbar-left .logo{ display:none; } }
+/* The brand mark stays in the phone topbar. It was hidden here for one build
+   by a misreading — what was meant was the mark on the LOADING screen, which is
+   gone from index.html instead. */
 .auth-logo{ height:64px; overflow:hidden; display:flex; align-items:center; justify-content:center; }
 .auth-logo .logo-img{ height:124px; }
 @media(max-width:768px){
