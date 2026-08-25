@@ -2196,6 +2196,7 @@ textarea.f-input{resize:vertical;min-height:84px;}
 
 /* ── Guest topbar elements ──────────────────────────────────────── */
 .btn-login-topbar {
+  white-space: nowrap;
   padding: 6px 14px;
   background: transparent;
   border: 1px solid rgba(255,255,255,.55);
@@ -2210,6 +2211,7 @@ textarea.f-input{resize:vertical;min-height:84px;}
 .btn-login-topbar:hover { background: rgba(255,255,255,.12); border-color:#fff; }
 
 .btn-signup-topbar {
+  white-space: nowrap;
   padding: 6px 14px;
   background: #FFFFFF;
   border: 1px solid #FFFFFF;

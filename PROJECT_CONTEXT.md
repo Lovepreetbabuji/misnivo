@@ -188,8 +188,8 @@ nahi dekh sakte — `ai/HANDOFF.md` hi ek jagah hai jahan baari saunpi jaati hai
 
 | | |
 |---|---|
-| Stamp | `20260825e` (teeno jagah — css, js, sw) |
-| Aakhri commit | `fix(#19,#20,#21): close the completed-mission hole, require real targets, add link previews` |
+| Stamp | `20260825f` (teeno jagah — css, js, sw) |
+| Aakhri commit | `feat(guest): browsing is the default` |
 | Live site | `daremarket.pages.dev` — deploy verify ho chuka, 19/19 browser test pass |
 
 ## 12.2 App Check — POORA KHATAM ✅
@@ -288,7 +288,7 @@ tareeke se hoti hai. Agli baar `count()` likhne se pehle ye yaad karo.
 
 1. `ai/HANDOFF.md` padho — `TURN:` line dekho. `TURN: GEMINI` ho to **ruk jao**.
 2. Ye file (`PROJECT_CONTEXT.md`) padho.
-3. Live build `20260825e` hai — local file badalne se live site nahi badalti,
+3. Live build `20260825f` hai — local file badalne se live site nahi badalti,
    push + teeno stamp ke bina kuch nahi hota.
 
 ## 12.7 Firestore index — naya jaal (25 Aug)
@@ -310,3 +310,22 @@ karo ki har document me wo field ho.
 
 Firebase CLI yahan chalu aur logged-in hai (project `mission-markit-9192a`), to
 rules aur indexes dono deploy ho sakte hain.
+
+## 12.8 Guest mode = default (25 Aug)
+
+Bina account wala visitor ab **seedha app** dekhta hai — login/signup ki deewar
+nahi. Logout karne par bhi wahi. **Koi 15-minute timer nahi** — wo poora hata
+diya gaya (badge, timer, aur "preview khatam" wala popup).
+
+Account tab manga jaata hai jab koi aisa kaam kare jo bina account ho hi nahi
+sakta. Wo kaam `guestCheck('<key>')` karta hai, aur har key ka apna message
+`GUEST_ACTION_MSGS` me hai.
+
+🔴 **Naya koi bhi aisa button/kaam banao jo Firestore me likhta ho, to uske
+pehli line me `guestCheck('<key>')` lagao.** Warna guest ke liye wo chup-chaap
+fail hoga — rules refuse kar dengi aur use pata bhi nahi chalega. Pehle ye sirf
+12 jagah tha; 8 jagah chhoot gaya tha (like, dislike, comment) kyunki tab guest
+kam aate the. Ab har pehla visitor guest hai.
+
+Prompt overlay-stack me hai, to phone ka back button use band karta hai. Uska
+apna URL nahi hai (wo ek nudge hai, page nahi).

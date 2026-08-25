@@ -97,6 +97,40 @@ Each of these is written down because it has already broken something real.
 
 # LOG — newest first, maximum 5 entries
 
+## 2026-08-25 05:20 — CLAUDE
+CHANGED: `js/app.js`, `index.html`, `css/styles.css`, `sw.js` — stamp
+`20260825f`
+WHAT: Guest browsing is the default. Signed-out no longer shows the sign-up
+wall — it enters guest mode, and signing out returns there too, so a shared link
+finally shows what it advertises. The 15-minute clock is gone with it: countdown
+badge, expiry timer, and the non-dismissible "your preview is over" popup.
+`guestCheck` is what asks for the account, and it was only on 12 call sites —
+fine while guests were rare, not fine now that every first visit is one. Eight
+write paths would have failed silently against the rules: liking/disliking a
+mission or proof, liking a comment, and both comment boxes. All gated, each with
+its own message, plus `submitProof`, which had `bannedCheck` but no guest gate.
+The prompt is now in the overlay stack so the phone back button dismisses it
+instead of navigating away; no URL of its own, it is a nudge not a place.
+Theme: Sign Up in the topbar was #fff on #D9D9D9 — near-invisible, on the button
+a visitor most needs. Now black on white, Login a white outline beside it, both
+`nowrap` (it was breaking across two lines on a 412px phone). The prompt
+inherited `.modal`, still translucent reddish with blur — now the flat black +
+white hairline from `.auth-box`. Its icon slot took colour emoji, three of them
+empty strings, so it jumped about; now a monochrome Material glyph per action.
+VERIFIED: Live on `20260825f`, real browser, a profile that has never signed
+in. 13/13: lands in the app not on a wall, guest mode on, no badge, feed loads,
+Sign Up legible (#fff bg / #000 text), all four sampled actions name what they
+need, prompt is rgb(0,0,0) with no blur and a glyph icon, back dismisses it,
+Sign Up reaches the real screen, 0 page errors.
+RISK: 🔴 Found and fixed on the way in — `sw.js` VER had gone BACKWARDS
+(index.html on `e`, worker on `d`). Caches were still being purged so nothing
+was stuck, but a stamp that counts down will eventually match one a device
+already holds and leave the old build in place. All three moved forward together
+to `20260825f`. Worth checking all three values, not just that they changed.
+Not changed, and not mine to change unasked: mission cards show the bounty as a
+green "$1,000" — dollars on a rupee app, and a colour on a black-and-white one.
+OVER
+
 ## 2026-08-25 19:30 — CLAUDE
 CHANGED: `firestore.rules` (DEPLOYED), `js/app.js`, `index.html`, `sw.js`,
 `css/styles.css`, `ai/bugs_found.md`, `PROJECT_CONTEXT.md` — stamp `20260825e`
@@ -207,31 +241,4 @@ The proof caps are deliberately NOT ordered — older proofs may lack
 hide videos. Not verified: the admin panel as a real admin, since nobody is
 known to hold the claim; those functions were called directly. The database
 currently holds 0 approved proofs, so the video paths ran empty.
-OVER
-
-## 2026-08-25 01:40 — CLAUDE
-CHANGED: `js/app.js`, `index.html`, `css/styles.css`, `sw.js`,
-`PROJECT_CONTEXT.md` — stamp `20260821m`
-WHAT: Removed the old "Admin Reports" overlay. It was gated on `ADMIN_UID`, a
-constant left as an empty string, so it refused every account including the
-owner's and its menu item was permanently hidden — dead since it was written.
-The real admin panel's Reports tab does the same job better (100 reports not 50,
-an age badge past 24h, View/Remove/Ignore) and writes to `admin_actions` first;
-the old resolveReport/dismissReport set status with no record of who did it,
-which is why this is a removal and not a repair. Went with it: the
-`/admin-reports` URL, the overlay markup, backdrop handler, back-button and
-refresh-restore entries, `_checkAdminVisibility` and the wrapper it had put
-around `toggleDD`, and two style rules only it used (one a #9B72FF purple older
-than the black-and-white theme).
-VERIFIED: Live on `20260821m`, real browser. Account dropdown still opens and
-closes (it was wrapped by the removed code), no leftover menu item, report and
-select-takers modals still wired, the REAL admin panel still refuses a
-non-admin and keeps its hidden sidebar entry, `/admin-reports` now 404s,
-0 page errors.
-RISK: `openAdmin` and `/admin` untouched. Note that admin is a token claim set
-only by the Admin SDK — whether any account currently holds it was NOT checked.
-Also written to PROJECT_CONTEXT.md: two 404 "bugs" I reported this session were
-my own testing at fault. `_bootRoute()` runs only inside `_bootApp()` and
-`enterGuestMode()`, and the age gate holds `_bootApp()` back — so a test that
-skips the DOB never gets routing at all. The 404 page works.
 OVER

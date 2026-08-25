@@ -538,14 +538,29 @@ them.
 > entirely, so an older proof without `createdAtMs` would have silently
 > vanished from someone's Accepted page. Worth remembering if that field is
 > ever renamed.
->
-> Verified live: both caps present, the sorted query runs, all six pages open,
-> no index complaints, 0 page errors — and end to end with a real mission and a
-> real applicant, header exact at "1 applicant" and "1+ applicant" when capped.
+Verified live: both caps present, the sorted query runs, all six pages open,
+no index complaints, 0 page errors — and end to end with a real mission and a
+real applicant, header exact at "1 applicant" and "1+ applicant" when capped.
+
+### 21. Denial of Service (DoS) via Interaction Arrays (CRITICAL)
+> **OPEN — new finding.**
+
+- **File**: `firestore.rules` (dares and proofs)
+- **Issue**: The rules allow any signed-in user to update the `likedBy`, `dislikedBy`, and `approvedTakers` arrays as long as they also update the counters correctly (`steppedAll()`). There is no check on the size or contents of these arrays.
+- **Risk**: A malicious user can append a massive string (e.g., 1MB of text) into the `likedBy` array of a popular mission. Since Firestore has a 1MB limit per document, this completely breaks the document. Nobody else will be able to like, view, or update that mission. Worse, every time a normal user views the feed, they will download that 1MB document, causing massive bandwidth costs (Economic DoS).
+- **Fix**: Use `request.resource.data.likedBy.size()` and string length validation, or better, move likes to a separate subcollection instead of arrays on the main document.
+
+### 22. Unverified Email Signup Spam (HIGH)
+> **OPEN — new finding.**
+
+- **File**: `app.js` (Auth flow)
+- **Issue**: The app allows users to sign up and immediately start creating missions and proofs without verifying their email address.
+- **Risk**: Attackers can generate thousands of fake accounts using random/fake emails. These accounts can then spam the platform, bloating the database and ruining the user experience.
+- **Fix**: Enforce `user.emailVerified` check before allowing creation of user profiles in the database, and send an email verification link upon signup.
 
 ---
 
-## Still open — split by whether anything can be done today
+## Still open, in the order they are worth doing can be done today
 
 **Waiting on the Blaze plan.** These three are one decision, not three; none of
 them can move until it is made.
