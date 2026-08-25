@@ -62,10 +62,17 @@
 <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,100..400,0..1,0&icon_names=account_balance_wallet,add,arrow_back,bolt,bookmark,chat_bubble,close,expand_less,explore,home,menu,more_vert,notifications,person,reply,search,send,settings,thumb_down,thumb_up,tune&display=block" rel="stylesheet"/>
 
 <!-- App Styles -->
-<link rel="stylesheet" href="/css/styles.css?v=20260825g"/>
+<link rel="stylesheet" href="/css/styles.css?v=20260825h"/>
 
 <!-- The splash logo must be in flight before anything else competes for the pipe -->
-<link rel="preload" as="image" href="/misnivo.png?v=1" fetchpriority="high"/>
+<!-- The logo is the first pixel anyone sees, so it is preloaded — which made its
+     WEIGHT the problem: the source PNG is 1080x540 and 113KB, fetched at high
+     priority before anything else, to be drawn a few hundred pixels wide. The
+     same image as WebP at 540px is 5KB. type= lets a browser with no WebP skip
+     this preload rather than waste the fetch; the img tags below fall back to a
+     PNG on their own. og:image still points at the full-size original, which is
+     what link scrapers want. -->
+<link rel="preload" as="image" href="/misnivo-sm.webp?v=1" type="image/webp" fetchpriority="high"/>
 <link rel="preconnect" href="https://www.gstatic.com" crossorigin/>
 
 <!-- Firebase CDN — DEFERRED ON PURPOSE.
@@ -116,7 +123,8 @@
 <!-- SPLASH — cold start only. Styled inline so it paints on the very first frame,
      before styles.css has even been fetched; otherwise there's a white flash. -->
 <div id="loadScreen">
-  <img id="splashLogo" src="/misnivo.png?v=1" alt="Misnivo"/>
+  <img id="splashLogo" src="/misnivo-sm.webp?v=1" alt="Misnivo"
+       onerror="this.onerror=null;this.src='/misnivo-sm.png?v=1'"/>
 </div>
 <style>
   #loadScreen{
@@ -141,8 +149,8 @@
 <div id="authScreen">
   <div class="auth-box">
     <div class="auth-logo">
-      <img class="logo-img" src="/misnivo.png?v=1" alt="Misnivo"
-           onerror="var p=this.parentElement;this.remove();var w=p&&p.querySelector('.logo-word');if(w)w.style.display='block'"/>
+      <img class="logo-img" src="/misnivo-sm.webp?v=1" alt="Misnivo"
+           onerror="if(!this.dataset.f){this.dataset.f=1;this.src='/misnivo-sm.png?v=1';return;}var p=this.parentElement;this.remove();var w=p&&p.querySelector('.logo-word');if(w)w.style.display='block'"/>
       <span class="logo-word" style="display:none">Misnivo</span>
     </div>
     <p class="auth-tagline">Challenge yourself. Entertain others.<br>Get paid — directly.</p>
@@ -221,8 +229,8 @@
     <div class="topbar-left">
       <button class="icon-btn" id="menuBtn" onclick="toggleSidebar()" aria-label="Toggle menu"><span class="mi">menu</span></button>
       <div class="logo" onclick="goPage('home')">
-        <img class="logo-img" src="/misnivo.png?v=1" alt="Misnivo"
-             onerror="var p=this.parentElement;this.remove();var w=p&&p.querySelector('.logo-word');if(w)w.style.display='block'"/>
+        <img class="logo-img" src="/misnivo-sm.webp?v=1" alt="Misnivo"
+             onerror="if(!this.dataset.f){this.dataset.f=1;this.src='/misnivo-sm.png?v=1';return;}var p=this.parentElement;this.remove();var w=p&&p.querySelector('.logo-word');if(w)w.style.display='block'"/>
         <span class="logo-word" style="display:none">Misnivo</span>
       </div>
     </div>
@@ -1281,7 +1289,7 @@
 <!-- App Logic -->
 <!-- defer, so it runs after the Firebase bundles above and after the DOM is
      parsed — same order as before, but nothing blocks the first paint -->
-<script defer src="/js/app.js?v=20260825g"></script>
+<script defer src="/js/app.js?v=20260825h"></script>
 
 <!-- ══ Firebase AI Logic — stage 2 of the mission safety filter ══
      A SECOND, modular Firebase app. The rest of the site runs on the compat
@@ -1297,7 +1305,19 @@
      published __fbConfig by the time this body executes. If anything here
      fails, _aiReady resolves to null and the safety check FAILS CLOSED. -->
 <script type="module">
-  window._aiReady = (async () => {
+  // STARTED ON FIRST USE, not on page load. This used to be an IIFE, so every
+  // visitor paid for it before seeing anything: three more Firebase modules off
+  // gstatic AND a SECOND reCAPTCHA Enterprise instance. Measured on the live
+  // site, the two reCAPTCHA anchor frames were the two slowest requests of the
+  // whole load at ~1.4s each — and the second one exists only for a safety
+  // filter that runs when somebody posts a mission. Most people never do.
+  //
+  // Kept as a PROPERTY, not a function, so `await window._aiReady` in app.js
+  // still reads the same: the getter starts the work on first touch and hands
+  // back the one promise every time after. Nothing else reads it, so nothing
+  // else can trigger the download by accident.
+  let _aiPromise = null;
+  const _startAI = () => (async () => {
     const [{ initializeApp }, { getAI, getGenerativeModel, GoogleAIBackend }, appCheckMod] = await Promise.all([
       import('https://www.gstatic.com/firebasejs/12.10.0/firebase-app.js'),
       import('https://www.gstatic.com/firebasejs/12.10.0/firebase-ai.js'),
@@ -1330,6 +1350,11 @@
       generationConfig: { responseMimeType: 'application/json', temperature: 0 }
     });
   })().catch(e => { console.error('AI Logic init failed:', e); return null; });
+
+  Object.defineProperty(window, '_aiReady', {
+    configurable: true,
+    get() { return (_aiPromise = _aiPromise || _startAI()); }
+  });
 </script>
 
 <!-- ══ v0.19 NEW MODALS ══ -->

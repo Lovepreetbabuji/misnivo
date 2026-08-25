@@ -2674,7 +2674,7 @@ function _activeDareCard(d, showKind){
   const cat = d.tags?.[0]||d.cat||'fitness';
   const title = d.caption||d.title||'Untitled Mission';
   const reward = d.rewardAmount ?? d.bounty ?? 0;
-  const thumb = d.thumbnailURL||'';
+  const thumb = _optImg(d.thumbnailURL||'', 480);
   const color = CAT_C[cat]||'#FFFFFF', icon = CAT_I[cat]||'bolt';
   const isMine = d.creatorUid===user?.uid;
   const accepted = (typeof d.takers==='number') ? d.takers : (d.approvedTakers?.length||0);
@@ -3665,6 +3665,20 @@ function _optAv(url) {
                              : (url.includes('=') ? url : url + '=s96-c');
   }
   return url;
+}
+// Cloudinary on-the-fly image sizing — the still-image twin of _optVid.
+// Uploaded thumbnails were being rendered at their ORIGINAL size: measured on
+// the live feed, four of them came to ~390KB between them, one a single 150KB
+// file, all to fill cards a few hundred pixels wide. The avatar path (_optAv)
+// had been doing this for a while and its images land at 1KB; nothing else did.
+// c_limit, not c_fill: it only ever shrinks and never crops, so an image whose
+// shape the card did not expect is still whole — the CSS is already doing
+// object-fit:cover over the top.
+// f_auto picks WebP/AVIF where the browser takes it, q_auto picks the quality.
+function _optImg(url, w) {
+  if (!url || !url.includes('res.cloudinary.com') || !url.includes('/image/upload/')) return url;
+  if (/\/image\/upload\/[a-z]+_[^/]*\//.test(url)) return url;   // already transformed
+  return url.replace('/image/upload/', `/image/upload/w_${w || 640},c_limit,q_auto,f_auto/`);
 }
 function _avHtml(photoURL, name) {
   const letter = (String(name||'?').trim().charAt(0) || '?').toUpperCase().replace(/['"\\<>]/g,'');
@@ -4878,7 +4892,7 @@ function _profileDareCard(d){
   const cat=d.tags?.[0]||d.cat||'fitness';
   const title=d.caption||d.title||'Untitled Mission';
   const reward=d.rewardAmount ?? d.bounty ?? 0;
-  const thumb=d.thumbnailURL||'';
+  const thumb=_optImg(d.thumbnailURL||'', 480);
   const color=CAT_C[cat]||'#FFFFFF', icon=CAT_I[cat]||'bolt';
   const inner=thumb?`<img src="${thumb}" loading="lazy" decoding="async"/>`:`<div class="adc-thumb-bg" style="background:linear-gradient(135deg,${color}22,${color}55);"><span class="mi" style="color:${color};">${icon}</span></div>`;
   const isPinned=(typeof pinnedDares!=='undefined'&&pinnedDares.includes(d.id));
@@ -4912,7 +4926,7 @@ function _profileAcceptedCard(a){
   const d=(dares||[]).find(x=>x.id===a.dareId)||{};
   const title=a.dareTitle||d.caption||'Mission';
   const reward=a.bounty ?? d.rewardAmount ?? d.bounty ?? 0;
-  const thumb=d.thumbnailURL||a.thumbnailURL||'';
+  const thumb=_optImg(d.thumbnailURL||a.thumbnailURL||'', 480);
   const cat=d.tags?.[0]||d.cat||a.cat||'fitness'; const color=CAT_C[cat]||'#FFFFFF', icon=CAT_I[cat]||'bolt';
   const inner=thumb?`<img src="${thumb}" loading="lazy" decoding="async"/>`:`<div class="adc-thumb-bg" style="background:linear-gradient(135deg,${color}22,${color}55);"><span class="mi" style="color:${color};">${icon}</span></div>`;
   let badge, action='';
@@ -7475,7 +7489,7 @@ function openDareDetail(dareId){
   const cat = d.tags?.[0] || d.cat || 'fitness';
   const title = d.caption || d.title || 'Untitled Mission';
   const reward = d.rewardAmount ?? d.bounty ?? 0;
-  const thumb = d.thumbnailURL || '';
+  const thumb = _optImg(d.thumbnailURL || '', 720);
   const color = CAT_C[cat] || '#FFFFFF', icon = CAT_I[cat] || 'bolt';
 
   document.getElementById('ddTopTitle').textContent = title;
@@ -10373,7 +10387,10 @@ function _shortsPlayCurrent() {
 // https://res.cloudinary.com/X/video/upload/v1/abc.mp4 → .../video/upload/so_2,w_640,c_fill,q_auto/v1/abc.jpg
 function vidThumb(p, w) {
   w = w || 640;
-  if (p.proofThumbnailURL) return p.proofThumbnailURL;  // frame-picker choice wins
+  // The frame-picker choice wins — but it is an UPLOADED image, so it has to be
+  // sized like one. Returning it raw is what made a 240px card download a 150KB
+  // original, and it silently ignored the `w` every caller already passes in.
+  if (p.proofThumbnailURL) return _optImg(p.proofThumbnailURL, w);
   const u = p.videoURL || '';
   if (u.includes('res.cloudinary.com') && u.includes('/video/upload/')) {
     return u.replace('/video/upload/', `/video/upload/so_2,w_${w},c_fill,q_auto,f_jpg/`)
