@@ -13,7 +13,7 @@ Status meanings:
 | **KNOWN** | real, already understood, deliberately not fixed yet — reason given |
 | **OPEN** | real, not fixed, needs a decision or work |
 
-**Summary: 12 fixed · 2 not real · 3 known · 4 open**
+**Summary: 12 fixed · 2 not real · 3 known · 5 open**
 
 *#14 App Check is DONE — Firestore, Authentication and AI Logic all enforced
 and verified live, 24-25 Aug 2026. The 2 Nov 2026 deadline is met early.*
@@ -351,7 +351,35 @@ pool — the queries ran and returned cleanly, but no video was rendered through
 them.
 
 ### 19. Proof Submission on Completed Missions (HIGH)
-> **OPEN — new finding.**
+> **OPEN — checked, and it is real. The most serious thing currently open.**
+> Confirmed in both places. The `proofs` create rule tests signed-in, not
+> banned, `takerId == uid()`, `status == 'submitted'`, that the mission exists,
+> and `mayProve()` — and `mayProve` only asks about `takerSelectionMode` and
+> `approvedTakers`. The word `completed` does not appear in it. `openProof()`
+> in `js/app.js` checks the same two things and no more.
+>
+> **It is reachable by a normal person pressing a normal button, not only by a
+> crafted request.** A completed mission drops out of the missions feed, but a
+> taker who accepted it earlier still has it on their Accepted page with Submit
+> Proof live on it.
+>
+> **Why it matters more than "one extra document".** `approveProof` writes
+> `completed: true` on the mission and `status: 'approved'` on the proof. The
+> proof update rule lets the mission owner judge any proof whose status is
+> still `submitted` — it has no idea another proof on the same mission was
+> already approved. So a creator can approve a second proof on a finished
+> mission: two people recorded as having completed one bounty. Nothing is paid
+> today only because `WALLET_ENABLED` is false, which makes this exactly the
+> kind of thing to close **before** the wallet is switched on, not after.
+>
+> Fix is two lines in two places, and both are needed — the rule because it is
+> the only real gate, the button because a silent `permission-denied` after
+> someone has filmed and uploaded a video is a cruel way to say no:
+> in `firestore.rules`, `mayProve` (or the create rule) also requires
+> `get(.../dares/$(dareId)).data.get('completed', false) == false`; in
+> `openProof()`, refuse with a message when `d.completed` is true.
+> **Not done — a rules change is an immediate live change, so it is the
+> owner's call.**
 
 - **File**: `firestore.rules` (Line 287)
 - **Issue**: The `create` rule for `proofs` checks if the user is an `approvedTaker`, but it does NOT check if the mission is already `completed == true`.
@@ -470,17 +498,22 @@ them can move until it is made.
 
 **Can be done now, no plan needed.**
 
-3. **#21 social sharing tags** — the static version is `index.html` only and
+3. 🔴 **#19 proof on a completed mission** — do this one first. It is the only
+   open finding that lets the data itself go wrong: two people recorded as
+   having completed the same bounty. Two lines, one in `firestore.rules` and
+   one in `openProof()`. Close it **before** the wallet is switched on, because
+   after that the same hole is a double payout.
+4. **#21 social sharing tags** — the static version is `index.html` only and
    turns every shared link from a bare URL into a branded card. Waiting on the
    owner for two things a machine should not choose: the words on the card and
    the picture. Per-mission previews are a separate, larger job (a Cloudflare
    Pages Function) — see the entry.
-4. **#20 referential integrity** — `exists()` on the comments and follows create
+5. **#20 referential integrity** — `exists()` on the comments and follows create
    rules. Real but low: the orphans it allows are invisible junk, not a way in.
    Worth folding into the next rules deploy rather than deploying on its own.
 
 **Needs the owner to point at something.**
 
-5. **#4** — no specific flow was ever named; nothing can be checked until one is.
+6. **#4** — no specific flow was ever named; nothing can be checked until one is.
 
 Everything else on this list is closed.
