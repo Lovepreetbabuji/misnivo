@@ -7701,6 +7701,18 @@ function _closeDetailOverlays(){
     const el = document.getElementById(id);
     if (el && el.classList.contains('open')){ el.classList.remove('open'); closed = true; }
   });
+  // Somebody else's profile is a full-screen view like the others, and it was
+  // the one this function never closed. Tap a creator's name, then tap Profile:
+  // your own page came up underneath while THEIR profile stayed on top of it.
+  // Worst after a reload on /u/<someone>, because _bootRoute reopens that view
+  // and the next tap left it sitting over your own account.
+  // _enterView already does this when a video or a mission opens; page
+  // navigation simply never got the same line.
+  const pp = document.getElementById('pubProfOverlay');
+  if (pp && pp.classList.contains('open')){
+    if (typeof closePublicProfile === 'function') closePublicProfile(); else pp.classList.remove('open');
+    closed = true;
+  }
   // The shorts player is also a full page — close it on real navigation too
   const sh = document.getElementById('shortsOverlay');
   if (sh && sh.classList.contains('open')){ if (typeof closeShorts==='function') closeShorts(); closed = true; }
