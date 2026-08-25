@@ -97,11 +97,11 @@ Withdraw, KYC, Followers, etc.) — har ek ka apna URL + back-stack.
 
 1. `node -c js/app.js` — JS syntax check (error na ho).
 2. **TEEN stamps ek saath badlo** (ek bhi chhoot gaya to purana cache atak jaata hai):
-   - `index.html` me `/css/styles.css` ka `?v=YYYYMMDD<letter>` (jaise `20260821k`)
+   - `index.html` me `/css/styles.css` ka `?v=YYYYMMDD<letter>` (abhi `20260821m`)
    - `index.html` me `/js/app.js` ka `?v=` (wahi stamp)
-   - **`sw.js` me `VER`** (wahi stamp, jaise `dm-shell-20260821k`)
+   - **`sw.js` me `VER`** (wahi stamp — abhi `dm-shell-20260821m`)
 3. `git add -A && git commit` — message ke ant me:
-   `Co-Authored-By: Claude Opus 4.8 <noreply@anthropic.com>`
+   `Co-Authored-By: Claude Opus 5 <noreply@anthropic.com>`
 4. `git push origin main` → Cloudflare Pages **khud deploy** karta hai (~10-40s).
 5. Verify: deployed file ko `curl` karke check karo (edge kuch der purana build deta
    hai, isliye poll karo — ek baar dekh ke "not deployed" mat maano).
@@ -121,8 +121,10 @@ Bugs static analysis se nahi, **asli browser me chala ke** pakde jaate hain.
 (`C:/Program Files/Google/Chrome/Application/chrome.exe`, `headless:false`) chalao
 → live site kholo → guest/login → button dabao → console errors + screenshot lo.
 
-- **Test account** (signup form se banaya): `dmtest.claude1@example.com` /
-  `dmtest123456` (naam "Test Bot", handle `@dmtest.claude1`).
+- **Test account:** `dmtest.claude1@example.com` / `dmtest123456`.
+  🔴 **Ye account BANNED hai** — iske saare write fail honge, aur wo fail App Check
+  ka nahi, ban ka hoga. Likhne wale test ke liye har baar naya account banao aur
+  test ke ant me delete kar do (dekho section 12).
 - Gotchas: FRESH short `userDataDir` (`C:/Users/lovep/AppData/Local/Temp/dmfreshN`)
   warna SW purana cache deta hai; offline test se pehle login karo (guest ko net
   chahiye); har `page.evaluate` ko `.catch()` se guard karo.
@@ -136,7 +138,8 @@ Rule ka koi badlav **pehle `firestore.rules` FILE me** likho — Firebase Consol
 kabhi nahi (warna file aur live alag ho jayenge). Deploy khud kar sakte ho, par
 deploy = **live app pe turant asar**, isliye deploy ke baad khud jaancho: koi aisा
 kaam karke dekho jise naya rule rokna chahiye, aur pakka karo ki wo ruka.
-**App Check enforced hai** — headless/script requests refuse ho sakti hain.
+**App Check ab TEENO par enforced hai** (Firestore + Auth + AI Logic) — headless
+browser ko token milta hi NAHI, wo 403 khata hai. Detail neeche section 12 me.
 
 ---
 
@@ -173,3 +176,108 @@ nahi dekh sakte — `ai/HANDOFF.md` hi ek jagah hai jahan baari saunpi jaati hai
 - `deploy-workflow` — deploy steps
 - `browser-testing-via-cdp` — puppeteer testing + test account
 - `appcheck-enforced` · `firebase-backend-not-deployed` — backend status
+
+---
+
+# 12. Chat 2 ka hissa — abhi kahan khade hain (25 Aug 2026)
+
+> Upar wala part chat 1 ne likha: **project kya hai**.
+> Ye part chat 2 ne likha: **abhi haalat kya hai, kya ho chuka, kya bacha**.
+
+## 12.1 Live build
+
+| | |
+|---|---|
+| Stamp | `20260821m` (teeno jagah — css, js, sw) |
+| Aakhri commit | `refactor(admin): remove the Admin Reports panel that refused everyone` |
+| Live site | `daremarket.pages.dev` — deploy verify ho chuka |
+
+## 12.2 App Check — POORA KHATAM ✅
+
+reCAPTCHA Enterprise, site key `6LdMt5UtAAAAANQlYLej4_9VKQoNX87n_WmNWWmU`.
+**Teeno surface Enforced hain:** Cloud Firestore, Authentication, Firebase AI Logic.
+Firebase ki **2 November 2026** wali AI Logic deadline do mahine pehle nipat gayi —
+ab wo yaad rakhne ki zaroorat nahi.
+
+Do baatein jo sirf yahan likhi hain:
+
+1. **Do Firebase app hain, dono ko alag App Check chahiye tha.** Normal app compat
+   SDK par hai; safety filter ek doosre app par chalta hai
+   (`initializeApp(config, 'ai')`, modular 12.10.0). Pehle sirf pehle wale par laga
+   tha. Filter **fail-closed** hai — 2 Nov ko wo band hota to **har mission refuse**
+   hota. Ab dono par laga hai, key `window.__appCheckKey` se share hoti hai.
+2. **AI Logic ka Enforce uske `⋮` menu me NAHI hai** (baaki sab ka hai). Rasta:
+   AI Logic row kholo → graph ke neeche **Set up** → *Baseline protection* =
+   **Enforced** → *Replay protection* = **Disabled**.
+   🔴 Replay protection hamesha **Disabled** rakhna — wo aisi token maangti hai jo
+   ye app banati hi nahi, aur free quota bahut tez jalati hai.
+
+## 12.3 Testing ke naye niyam (App Check ke baad)
+
+🔴 **`headless:false` ab MAJBOORI hai** agar test kuch likhta hai. reCAPTCHA
+automatic browser ko bot maan kar token deti hi nahi. Jo dikhega:
+
+```
+403 on exchangeRecaptchaEnterpriseToken
+auth/firebase-app-check-token-is-invalid
+```
+
+**Ye app ka bug NAHI hai — yahi feature ka kaam hai.** Asli window me khol kar
+dekhe bina kabhi ye mat maano ki app tut gayi.
+
+Teen aur jaal jinme main khud phansa, taaki tum na phanso:
+
+- **`permission-denied` par pehle `firestore.rules` padho, App Check ko dosh baad
+  me do.** Mera test `creatorId` bhej raha tha jabki rule `creatorUid` maangta hai.
+- **Age gate `_bootApp()` ko rokta hai, aur `_bootRoute()` usi ke andar hai.** Jab
+  tak DOB nahi bhara, routing/404 chalta hi nahi. Maine do baar 404 ko "toota" samajh
+  liya tha — 404 bilkul theek hai. Test me age gate paar karo:
+  `_dtSet(document.getElementById('ageDob'),'1995-05-05'); await _ageSubmit();`
+- **`_bootRoute()` sirf do jagah chalta hai:** `_bootApp()` (login ke baad) aur
+  `enterGuestMode()`. Sirf auth screen par baithe visitor ke liye routing nahi chalti.
+
+Test ke ant me **apna kachra khud saaf karo** — mission, profile, account, teeno
+delete. (Ek sweep script banai thi jo `dares` + `users` me `appcheck|probe|dmtest`
+dhoondhti hai.)
+
+## 12.4 Admin panel — ek tha, ab ek hi hai
+
+Pehle **do** admin darwaze the. Purana **"Admin Reports"** hata diya gaya (25 Aug):
+wo `ADMIN_UID` par tika tha jo **khaali string** chhodi hui thi, isliye wo
+**maalik ko bhi** "Admin access required" bolta tha — kabhi kisi ke liye khula hi
+nahi. Uska menu button bhi hamesha `display:none` tha.
+
+Asli panel uska kaam behtar karta hai: 50 ki jagah 100 reports, 24 ghante se purani
+report par nishaan, aur View / Remove / Ignore — aur har kaam pehle `admin_actions`
+me likha jaata hai. Purana wala seedha status badal deta tha, **bina record ke** —
+yahi sabse badi wajah thi hatane ki, sudhaarne ki nahi.
+
+**Asli panel (`openAdmin`) ko haath nahi lagaya.** Uska apna rasta hai: sidebar ka
+"Admin" button (jo `admin: true` claim par khulta hai) aur `/admin` URL.
+`/admin-reports` ab 404 dikhata hai.
+
+> **Admin ban-na = auth token par `admin: true` claim.** Wo sirf Firebase Admin SDK
+> se lagti hai (server se), app se nahi. Rules ka `isAdmin()` bhi yahi dekhta hai.
+> **Abhi kisi ke paas ye claim hai ya nahi — ye verify nahi hua.** Agar maalik ko
+> admin panel chahiye to pehle ye claim lagani padegi.
+
+## 12.5 Kya bacha hai
+
+| # | Kya | Haalat |
+|---|---|---|
+| 1 / 13 | Wallet server par (koi bhi apna balance likh sakta hai) | **Blaze plan chahiye** — tab tak `WALLET_ENABLED = false` |
+| 15 | Admin panel poori collection utha leta hai (`limit()` nahi) | Abhi theek — users badhne par crash karega |
+| 16 | Feed `limit(60)` par ruk jaati hai, "Load more" nahi | 60 se purane mission dikhte hi nahi |
+| 17 | Cloudinary upload bina sign ke (preset public hai) | Koi bhi tumhare account par file daal sakta hai |
+| 4 | "Client par bharosa" — koi ek jagah batayi nahi gayi | Jagah batao to theek ho jayega |
+| — | 4 khaali test profile: `dmtest.ag2290`, `dmtest.ag334721`, `dmtest.ag325606`, `dmtest.ag57348` | Nuksaan nahi, safai baaki (admin chahiye) |
+| — | Cloudinary preset ki size limit | Set nahi — par Cloudflare/Cloudinary khud 100 MB par rok deta hai |
+
+Poori list + kis par kya kiya: `ai/bugs_found.md`.
+
+## 12.6 Naye chat ko sabse pehle kya karna hai
+
+1. `ai/HANDOFF.md` padho — `TURN:` line dekho. `TURN: GEMINI` ho to **ruk jao**.
+2. Ye file (`PROJECT_CONTEXT.md`) padho.
+3. Live build `20260821m` hai — local file badalne se live site nahi badalti,
+   push + teeno stamp ke bina kuch nahi hota.

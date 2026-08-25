@@ -97,6 +97,33 @@ Each of these is written down because it has already broken something real.
 
 # LOG — newest first, maximum 5 entries
 
+## 2026-08-25 01:40 — CLAUDE
+CHANGED: `js/app.js`, `index.html`, `css/styles.css`, `sw.js`,
+`PROJECT_CONTEXT.md` — stamp `20260821m`
+WHAT: Removed the old "Admin Reports" overlay. It was gated on `ADMIN_UID`, a
+constant left as an empty string, so it refused every account including the
+owner's and its menu item was permanently hidden — dead since it was written.
+The real admin panel's Reports tab does the same job better (100 reports not 50,
+an age badge past 24h, View/Remove/Ignore) and writes to `admin_actions` first;
+the old resolveReport/dismissReport set status with no record of who did it,
+which is why this is a removal and not a repair. Went with it: the
+`/admin-reports` URL, the overlay markup, backdrop handler, back-button and
+refresh-restore entries, `_checkAdminVisibility` and the wrapper it had put
+around `toggleDD`, and two style rules only it used (one a #9B72FF purple older
+than the black-and-white theme).
+VERIFIED: Live on `20260821m`, real browser. Account dropdown still opens and
+closes (it was wrapped by the removed code), no leftover menu item, report and
+select-takers modals still wired, the REAL admin panel still refuses a
+non-admin and keeps its hidden sidebar entry, `/admin-reports` now 404s,
+0 page errors.
+RISK: `openAdmin` and `/admin` untouched. Note that admin is a token claim set
+only by the Admin SDK — whether any account currently holds it was NOT checked.
+Also written to PROJECT_CONTEXT.md: two 404 "bugs" I reported this session were
+my own testing at fault. `_bootRoute()` runs only inside `_bootApp()` and
+`enterGuestMode()`, and the age gate holds `_bootApp()` back — so a test that
+skips the DOB never gets routing at all. The 404 page works.
+OVER
+
 ## 2026-08-25 00:20 — CLAUDE
 CHANGED: `ai/bugs_found.md` only (no app code)
 WHAT: The owner enforced App Check on Firebase AI Logic. All three surfaces —
@@ -174,22 +201,4 @@ RISK: Enforcement is deliberately still OFF, so nothing is protected yet — the
 owner switches it on once the Console shows this build has reached everyone.
 Also: the free tier is 10,000 assessments a month org-wide and the token TTL was
 set to 1 day; at 1 hour it would have burned that roughly three times faster.
-OVER
-
-## 2026-08-21 21:35 — CLAUDE
-CHANGED: `ai/bugs_found.md`
-WHAT: Owner picked the App Check provider. Turnstile was on the table and is
-ruled out — App Check has no built-in Turnstile provider, so it would need a
-custom provider, a server, and therefore Blaze, which is the thing already
-blocked. Enterprise over classic v3 because its free tier applies to projects
-with billing disabled, so no card is needed. Decision and the full setup written
-into #14 so it survives the chat.
-VERIFIED: Read Google's own billing page rather than assuming — I had guessed
-Enterprise would demand a card and that was wrong; the free tier is applied
-automatically to keys in projects without billing enabled. Also corrected which
-key Firebase wants: Enterprise takes the SITE key, not a secret.
-RISK: Free tier is 10,000 assessments a month org-wide; past it, with billing
-off, requests 429 rather than bill — and with enforcement ON that locks real
-users out. Written into the file as something to watch once the app has an
-audience. Nothing is blocked on me now except the site key.
 OVER
