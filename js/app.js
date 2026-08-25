@@ -3379,6 +3379,20 @@ function _handleSearchNow() {
 function openPost() {
   if (typeof guestCheck === 'function' && guestCheck('post')) return;
   if (bannedCheck()) return;
+
+  // Wake the safety filter's stack NOW, not when Submit is pressed.
+  // It lives on a second Firebase app that has to mint its own reCAPTCHA-backed
+  // App Check token before its first call, and that token alone measured 5-6
+  // seconds on the live site. Left until submit, it ate most of the 20s budget
+  // in _aiAsk and the check timed out — which fails CLOSED, so every mission
+  // got refused. Opening this form is the earliest honest signal that a mission
+  // is coming, and it buys the whole warm-up a head start of however long
+  // someone spends typing and picking a video.
+  // Fire and forget: _aiReady caches its own promise, checkMissionSafetyAI
+  // awaits the same one again, and a failure here is picked up there — so this
+  // can only ever make the wait shorter, never change the verdict.
+  try { Promise.resolve(window._aiReady).catch(() => {}); } catch (_) {}
+
   showAgreementModal('create', () => {
     // The form used to wait for the agreement to finish saving before it would
     // open — a database round trip with nothing on screen, which is the three
