@@ -97,6 +97,30 @@ Each of these is written down because it has already broken something real.
 
 # LOG — newest first, maximum 5 entries
 
+## 2026-08-25 00:20 — CLAUDE
+CHANGED: `ai/bugs_found.md` only (no app code)
+WHAT: The owner enforced App Check on Firebase AI Logic. All three surfaces —
+Firestore, Authentication, AI Logic — are now Enforced, ahead of the 2 Nov 2026
+deadline. Recorded how to reach that switch, because it is not on the `⋮` menu:
+open the AI Logic row → **Set up** under the graph → *Baseline protection* =
+**Enforced** → *Replay protection* = **Disabled** (it needs limited-use tokens
+this client does not mint, and it burns the free quota).
+VERIFIED: Real browser, all three enforced. Model starts; a NORMAL mission is
+allowed; a harmful one is blocked; Google answers 200 on every call; a real
+mission was created end to end and deleted again. The good-mission case is the
+one that matters — the filter fails closed, so a broken token refuses
+everything.
+RISK: None found in the app. Two notes for whoever tests next. Writes must run
+`headless:false` — reCAPTCHA refuses an automated browser a token. And a
+`permission-denied` on creating a dare is worth double-checking against
+`firestore.rules` before blaming App Check: mine turned out to be my own
+payload using `creatorId` where the rule requires `creatorUid`.
+LEFTOVER: four throwaway profiles from earlier age-gate tests are still in
+`users` — `dmtest.ag2290`, `dmtest.ag334721`, `dmtest.ag325606`,
+`dmtest.ag57348`. Harmless, but only an admin can remove them. Missions and
+proofs are clean.
+OVER
+
 ## 2026-08-24 23:10 — CLAUDE
 CHANGED: `ai/bugs_found.md` only (no app code)
 WHAT: The owner switched App Check enforcement ON for Cloud Firestore and
@@ -168,21 +192,4 @@ RISK: Free tier is 10,000 assessments a month org-wide; past it, with billing
 off, requests 429 rather than bill — and with enforcement ON that locks real
 users out. Written into the file as something to watch once the app has an
 audience. Nothing is blocked on me now except the site key.
-OVER
-
-## 2026-08-21 21:10 — CLAUDE
-CHANGED: `ai/bugs_found.md`
-WHAT: Owner asked how App Check is actually done. Put the answer in #14 rather
-than only in chat: the original report is restored above it, and below it a
-plan checked against Firebase's docs AND against this project. The documented
-`initializeAppCheck` import does not apply here — this app is on the compat SDK
-9.22.2, so it needs `firebase-app-check-compat.js` and
-`firebase.appCheck().activate(...)` instead. Steps 1-3 are Console work only the
-owner can do; step 4 is about ten lines I can write the moment the site key
-exists.
-VERIFIED: Confirmed the SDK is compat 9.22.2 from the script tags, and that no
-app-check script is loaded anywhere. Docs read rather than recalled.
-RISK: Enforcement must stay OFF until the new code has reached everyone —
-turning it on first locks real people out mid-session. That is written into the
-plan as its own step.
 OVER

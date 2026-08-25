@@ -15,8 +15,8 @@ Status meanings:
 
 **Summary: 8 fixed · 2 not real · 3 known · 4 open**
 
-*#14 App Check is DONE — enforced on Firestore and Authentication 24 Aug 2026,
-and verified against the live site afterwards. AI Logic is the last switch.*
+*#14 App Check is DONE — Firestore, Authentication and AI Logic all enforced
+and verified live, 24-25 Aug 2026. The 2 Nov 2026 deadline is met early.*
 
 ---
 
@@ -180,12 +180,22 @@ Firebase makes App Check enforcement REQUIRED for AI Logic on **2 November
 2026** — without this the filter would have started failing that day, and it
 fails closed, so every mission would have been refused. Done and verified.
 
-**AI Logic is safe to enforce.** Watched on the wire in a real browser, 24 Aug
-2026: both `generateContent` POSTs carry a 965-character `X-Firebase-AppCheck`
-header. The third request in the trace is the CORS `OPTIONS` preflight, which by
-specification never carries custom headers and is not what enforcement checks —
-it is not a gap. The Console shows no percentage for AI Logic because that row
-had received no traffic yet, so the wire is the evidence, not the table.
+**AI Logic is ENFORCED, 25 Aug 2026 — the 2 Nov deadline is met early.**
+Enforcing it is not on the `⋮` menu the way it is for the other rows: open the
+AI Logic row, then the **Set up** button under the graph → *Baseline protection*
+→ **Enforced** → *Replay protection* → **Disabled**. Replay protection must stay
+Disabled: it requires limited-use tokens, which this client does not mint, and
+it burns the free assessment quota far faster.
+
+Verified live in a real browser with all three enforced: the model starts, a
+NORMAL mission is allowed, a harmful one is still blocked, Google answers 200 on
+every call, and a real mission was created end to end and deleted again.
+Checking that a *good* mission still passes is the test that matters — the
+filter fails closed, so a broken token refuses everything, not nothing.
+
+Beware the Console's "invalid" percentage while testing: the 20% AI Logic showed
+before enforcement was 2 requests out of 10, and all 10 were from this project's
+own test runs — the 2 were the headless ones. No real user was ever refused.
 
 **Watch this later:** the free tier is 10,000 assessments a calendar month
 across the whole organisation. Past that, with billing still off, requests come
