@@ -965,7 +965,6 @@ let currentApplicants  = [];     // applicant docs for select takers modal
 // missions posted before this, so nobody mid-mission is locked out.
 let currentTakerMode   = 'creator_picks';
 let currentExpiryDate  = null;   // Date | null for dare expiry
-const ADMIN_UID        = '';     // ← Set your Firebase UID here for admin access
 
 const CAT_ICONS  = {fitness:'fitness_center',food:'restaurant',adventure:'terrain',comedy:'sentiment_very_satisfied',talent:'mic',socialgood:'eco'};
 const CAT_LABELS = {fitness:'Fitness',food:'Food',adventure:'Adventure',comedy:'Comedy',talent:'Talent',socialgood:'Social Good'};
@@ -2442,7 +2441,7 @@ const _MODAL_URL = { postOverlay:'/post', proofOverlay:'/submit-proof', settings
   kycOverlay:'/wallet/kyc', methodOverlay:'/wallet/account', pinOverlay:'/wallet/pin',
   txnDetailOverlay:'/wallet/transaction', followListOverlay:'/followers', photoViewer:'/profile/photo',
   reviewOverlay:'/review-proofs', rejectOverlay:'/reject-proof', reportOverlay:'/report',
-  adminReportsOverlay:'/admin-reports', selectTakersOverlay:'/select-takers', videoPlayOverlay:'/play',
+  selectTakersOverlay:'/select-takers', videoPlayOverlay:'/play',
   searchOverlay:'/search', sFilterSheet:'/search/filters' };
 const _URL_PAGE  = Object.fromEntries(Object.entries(_PAGE_URL ).map(([k,v])=>[v,k]));
 const _URL_MODAL = Object.fromEntries(Object.entries(_MODAL_URL).map(([k,v])=>[v,k]));
@@ -5620,55 +5619,13 @@ async function submitReport() {
   }
 }
 
-// ── ADMIN REPORTS PANEL ───────────────────────────────────────────────
-async function openAdminReports() {
-  if (!user || user.uid !== ADMIN_UID) {
-    showToast('Admin access required'); return;
-  }
-  _ovOpen('adminReportsOverlay');
-  document.getElementById('adminReportsList').innerHTML =
-    _skelRows(5);
-  try {
-    const snap = await db.collection('reports').orderBy('createdAt','desc').limit(50).get();
-    const reports = snap.docs.map(d=>({id:d.id,...d.data()}));
-    if (!reports.length) {
-      document.getElementById('adminReportsList').innerHTML =
-        '<div class="empty" style="padding:40px;"><span class="mi">check_circle</span><div class="empty-title">No reports yet</div></div>';
-      return;
-    }
-    document.getElementById('adminReportsList').innerHTML = reports.map(r=>`
-      <div class="report-item">
-        <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:10px;">
-          <div>
-            <div style="font-size:13px;font-weight:600;color:var(--t1);">${r.targetType==='dare'?'📋 Mission':'👤 User'}: ${escHtml(r.targetName||r.targetId)}</div>
-            <div style="font-size:11px;color:var(--t3);margin-top:2px;font-family:'IBM Plex Mono',monospace;">${r.reportType} · by ${r.reporterName} · ${r.createdAt?.toDate?.()?.toLocaleDateString('en-IN')||''}</div>
-            <div style="font-size:13px;color:var(--t2);margin-top:6px;line-height:1.5;">"${escHtml(r.reason)}"</div>
-          </div>
-          <span class="status-badge ${r.status==='resolved'?'status-approved':'status-submitted'}">${r.status}</span>
-        </div>
-        <div style="display:flex;gap:8px;margin-top:10px;">
-          ${r.status==='pending'?`
-          <button onclick="resolveReport('${r.id}')" style="background:rgba(0,230,118,.1);color:var(--green);border:1px solid rgba(0,230,118,.3);padding:5px 12px;border-radius:8px;font-size:12px;font-family:inherit;cursor:pointer;">Resolve</button>
-          <button onclick="dismissReport('${r.id}')" style="background:rgba(255,255,255,.04);color:var(--t2);border:1px solid var(--border);padding:5px 12px;border-radius:8px;font-size:12px;font-family:inherit;cursor:pointer;">Dismiss</button>`:''}
-        </div>
-      </div>`).join('');
-  } catch(e) {
-    document.getElementById('adminReportsList').innerHTML =
-      `<div class="empty" style="padding:40px;"><span class="mi">error</span><div class="empty-title">Error: ${e.message}</div></div>`;
-  }
-}
-async function resolveReport(id) {
-  await db.collection('reports').doc(id).update({status:'resolved'});
-  openAdminReports();
-}
-async function dismissReport(id) {
-  await db.collection('reports').doc(id).update({status:'dismissed'});
-  openAdminReports();
-}
-function closeAdminReports() {
-  _ovSync('adminReportsOverlay');
-  document.getElementById('adminReportsOverlay').classList.remove('open');
-}
+// The old "Admin Reports" overlay lived here. Removed 25 Aug 2026: it was
+// gated on ADMIN_UID, which was never filled in, so it refused everyone
+// including the owner. The Reports tab in the real admin panel does the same
+// job and does it better — 100 reports rather than 50, an age badge that
+// flags anything open past 24 hours, and a View / Remove / Ignore row that
+// writes to admin_actions first. The old resolveReport/dismissReport wrote
+// status straight to the document with no record of who did it.
 
 // ── SELECT TAKERS MODAL ───────────────────────────────────────────────
 async function openSelectTakersModal(dareId) {
@@ -5862,31 +5819,14 @@ async function executeRandomSelect() {
   }
 }
 
-// ── Show admin link if admin ──────────────────────────────
-function _checkAdminVisibility() {
-  const adminEl = document.getElementById('adminDDItem');
-  if (adminEl && user && ADMIN_UID && user.uid === ADMIN_UID) {
-    adminEl.style.display = 'flex';
-  }
-}
-
-// Hook into auth listener — call after initUser
-const _origToggleDD = window.toggleDD;
-window.toggleDD = function() {
-  _checkAdminVisibility();
-  if (_origToggleDD) _origToggleDD();
-  else document.getElementById('userDD')?.classList.toggle('open');
-};
-
 // ── Close new modals on overlay click ─────────────────────
-['reportOverlay','selectTakersOverlay','adminReportsOverlay'].forEach(id => {
+['reportOverlay','selectTakersOverlay'].forEach(id => {
   const el = document.getElementById(id);
   if (!el) return;
   el.addEventListener('click', function(e) {
     if (e.target === this) {
       if (id === 'reportOverlay')        closeReportModal2();
       else if (id === 'selectTakersOverlay') closeSelectTakersModal();
-      else if (id === 'adminReportsOverlay') closeAdminReports();
     }
   });
 });
@@ -7662,7 +7602,6 @@ const _OV_CLOSERS = {
   reviewOverlay:        () => closeReview(),
   rejectOverlay:        () => closeRejectModal(),
   reportOverlay:        () => closeReportModal2(),
-  adminReportsOverlay:  () => closeAdminReports(),
   selectTakersOverlay:  () => closeSelectTakersModal(),
   followListOverlay:    () => closeWalletModal('followListOverlay'),
   kycOverlay:           () => closeWalletModal('kycOverlay'),
@@ -7752,7 +7691,6 @@ function _openModalById(id){
     case 'withdrawOverlay':      openWithdrawModal(); break;
     case 'kycOverlay':           openKycModal(); break;
     case 'methodOverlay':        openMethodModal(); break;
-    case 'adminReportsOverlay':  openAdminReports(); break;
     case 'followListOverlay':    _ppFollowList('followers'); break;
     case 'photoViewer':          _viewProfilePhoto(); break;
     case 'searchOverlay':        openMobileSearch(); break;

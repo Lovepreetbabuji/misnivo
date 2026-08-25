@@ -2095,17 +2095,6 @@ textarea.f-input{resize:vertical;min-height:84px;}
   box-shadow:2px 2px 6px var(--neu-dark);
 }
 
-/* ── REPORT ITEM (in admin panel) ───────────────────────── */
-
-.report-item{
-  background:rgba(255,255,255,0.03);
-  border:1px solid var(--border);
-  border-radius:14px;padding:16px;margin-bottom:10px;
-  transition:all .2s;
-}
-
-.report-item:hover{background:rgba(255,255,255,0.05);}
-
 /* ── EXPIRY BADGE on dare cards ─────────────────────────── */
 
 .expiry-badge-critical{
@@ -2139,9 +2128,9 @@ textarea.f-input{resize:vertical;min-height:84px;}
 
 /* ── Admin link in dropdown ─────────────────────────────── */
 
-.dd-item.admin-link{ color:#9B72FF; }
 
-.dd-item.admin-link .mi{ color:#9B72FF; }
+
+
 
 @media(max-width:599px){
   /* Show bottom nav */
