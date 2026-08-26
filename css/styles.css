@@ -6009,6 +6009,33 @@ body.no-anim #shortsOverlay .shorts-comments{ transition:none !important; }
   #settingsOverlay .set-nav-item .mi{ font-size:23px; color:#fff; }
   #settingsOverlay .set-nav-item::after{ color:rgba(255,255,255,.45); }
   #settingsOverlay .set-nav-group{ padding-top:22px; }
+
+  /* Settings is the whole screen on a phone, so let it BE the whole screen.
+     The app topbar was still sitting above it — brand, search, Login, Sign Up —
+     which made a dedicated page look like a panel that had not finished
+     opening. :has() does this with no JavaScript; a browser without it simply
+     keeps the old behaviour, which is the current, working one. */
+  body:has(#settingsOverlay.open) .topbar,
+  body:has(#setSecOverlay.open)   .topbar{ display:none; }
+
+  /* The avatar and its button stack and centre, the way the reference has them.
+     Side by side, a 96px circle plus a pill leaves the pill squeezed against
+     the right edge on a 412px screen. */
+  #settingsOverlay .pe-avatar-row,
+  #setSecOverlay   .pe-avatar-row{
+    flex-direction:column; align-items:center; gap:14px;
+    margin-bottom:30px; text-align:center;
+  }
+  #settingsOverlay .pe-avatar-row .pe-av-note,
+  #setSecOverlay   .pe-avatar-row .pe-av-note{ margin-top:6px !important; }
+  #settingsOverlay .pe-av-btns,
+  #setSecOverlay   .pe-av-btns{ display:flex; justify-content:center; }
+  #settingsOverlay .pe-big-av,
+  #setSecOverlay   .pe-big-av{ width:104px; height:104px; }
+
+  /* Save spans the width down here rather than hugging the left. */
+  #settingsOverlay .pe-btn-save,
+  #setSecOverlay   .pe-btn-save{ width:100%; justify-content:center; margin-top:8px; }
 }
 @media(min-width:769px){
   /* Desktop: a panel, so the selected row is a quiet filled pill rather than
