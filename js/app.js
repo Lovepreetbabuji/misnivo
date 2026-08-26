@@ -5257,6 +5257,12 @@ function _flGoProfile(uid){
 // ════════════════════════════════════════════════════════════════════
 // Settings — YouTube-style two-pane page: left nav picks a section, right shows it
 function openSettings(){
+  // Settings is in the drawer, and the drawer is what every first-time visitor
+  // opens — so this refusal is one a lot of people will meet. It used to be a
+  // bare toast reading "Sign in first", with no explanation and nothing to tap;
+  // every other gated action in the app shows the proper prompt with a reason
+  // and a Sign Up button. Same treatment here.
+  if (typeof guestCheck === 'function' && guestCheck('settings')) return;
   if(!user){ showToast('Sign in first'); return; }
   const s=user.settings||{};
   document.getElementById('setNotifLikes').checked  = s.notifLikes  !== false;
@@ -6753,6 +6759,7 @@ const GUEST_ACTION_MSGS = {
   feedback:    { icon:'feedback',     title:'Send feedback', msg:'Create a free account so we can reply to you about it.' },
   like:        { icon:'thumb_up',     title:'Like this', msg:'Sign up to like missions and proofs, and keep what you like.' },
   report:      { icon:'flag',         title:'Report this', msg:'Create a free account so we can follow up with you about the report.' },
+  settings:    { icon:'settings',     title:'Your settings', msg:'Settings belong to an account — create a free one to set your profile, notifications and privacy.' },
   default:     { icon:'lock',         title:'Create a free account', msg:'Sign up to unlock all features — post missions, accept challenges, and earn money.' },
 };
 const GUEST_BLOCKED_PAGES = ['profile', 'accepted'];
