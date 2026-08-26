@@ -7299,6 +7299,15 @@ function _showSuggestions(q) {
 function _timeAgo(date){const s=Math.floor((new Date()-date)/1000);if(s<60)return'just now';if(s<3600)return Math.floor(s/60)+'m ago';if(s<86400)return Math.floor(s/3600)+'h ago';return Math.floor(s/86400)+'d ago';}
 
 function _trackSearch(q) {
+  // Only a signed-in account may write to /searches — the rule says so, because
+  // letting anyone write it means anyone can inflate any term. What was missing
+  // is the matching check HERE: a guest searching fired the transaction anyway,
+  // it came back 403, and .catch() swallowed it. Since the sign-up wall came
+  // down every first-time visitor is a guest, so that was a guaranteed-to-fail
+  // round trip on one of the most-used paths in the app.
+  // Nothing was broken by it — but nothing was gained either, and it is worth
+  // knowing that Trending Searches only ever counted signed-in people.
+  if (!user) return;
   clearTimeout(_searchTrackTimer);
   _searchTrackTimer=setTimeout(async()=>{
     if(!q||q.length<2) return;
