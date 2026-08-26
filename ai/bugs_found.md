@@ -13,7 +13,7 @@ Status meanings:
 | **KNOWN** | real, already understood, deliberately not fixed yet — reason given |
 | **OPEN** | real, not fixed, needs a decision or work |
 
-**Summary: 27 fixed · 2 closed by removal · 2 not real · 1 known · 4 open**
+**Summary: 28 fixed · 2 closed by removal · 3 not real · 1 known · 4 open**
 
 > ⏸️ **`ai/PARKED.md`** — everything the owner has deliberately put on hold,
 > with the reason and what unblocks it. An entry marked PARKED below is a
@@ -967,6 +967,45 @@ real applicant, header exact at "1 applicant" and "1+ applicant" when capped.
 > change that breaks every new account, so that was checked first. Then: a 50KB
 > bio at create time refused, a normal bio allowed, a 50KB rejection reason
 > refused, a normal rejection allowed, submitting a proof unaffected. 9/9.
+
+### 39. Every guest search fired a write that could only be refused (LOW)
+> **FIXED 27 Aug 2026, build `20260827d`.** `/searches` is signed-in-only in the
+> rules, and rightly so — an open counter is an open invitation to inflate any
+> term. The matching check on the client was missing, so a guest typing in the
+> search box fired the transaction anyway, got a 403, and `.catch(() => {})`
+> swallowed it.
+>
+> Nothing broke. It was simply a guaranteed-to-fail round trip on one of the
+> most-used paths in the app, on every search, for every visitor who has not
+> signed in — which since the sign-up wall came down is most of them.
+>
+> **Worth knowing rather than only fixing: Trending Searches has only ever
+> counted signed-in people.** That list fills far more slowly than it looks like
+> it should, and no amount of guest traffic will move it. Leaving it that way is
+> the right call — letting anyone write the counter is how you get a fake
+> trending list — but the owner should know the number is not "what people
+> search", it is "what signed-in people search".
+
+### 40. Search, notifications and offline — swept, and they hold up (NOT A BUG)
+> **Checked 27 Aug 2026. Recorded because "we looked and found nothing" is worth
+> knowing, and because the XSS scare in the middle of it was mine, not the
+> app's.**
+>
+> **Search** was given a plain word, an empty string, one letter, something that
+> matches nothing, 500 characters, only spaces, regex punctuation, and
+> `<img src=x onerror=…>`. Nothing threw, nothing printed `undefined` or `NaN`,
+> and the HTML payload **never executed, never became an element, and appears
+> escaped on the page**. My first probe counted `img[onerror]` and found six —
+> those are the app's own avatars, which use `onerror` for the fallback letter.
+> A crude probe producing a scary number is not a finding.
+>
+> **Notifications** open and close for a guest without throwing and say
+> "No notifications yet", which is correct — the collection is server-write-only
+> and nothing writes to it while Cloud Functions are parked.
+>
+> **Offline** is the one that impressed. With the network cut: pages still
+> switch, and a full reload still serves the app from the service worker rather
+> than a browser error page. Back online, the feed recovers on its own.
 
 ---
 

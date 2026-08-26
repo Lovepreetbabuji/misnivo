@@ -101,6 +101,30 @@ Each of these is written down because it has already broken something real.
 
 # LOG — newest first, maximum 5 entries
 
+## 2026-08-27 08:20 — CLAUDE
+CHANGED: js/app.js, index.html, sw.js, ai/bugs_found.md — stamp 20260827d
+WHAT: Swept the three areas never checked before — search, notifications,
+offline. One real find (#39): /searches is signed-in-only in the rules, but
+the client had no matching check, so every guest search fired a transaction
+that came back 403 and was swallowed. Guarded. The other two came back clean,
+recorded as #40 rather than left unmentioned.
+VERIFIED: 9/10 before, 9/10 after with the 403s gone from the search phase.
+Offline is the standout: with the network cut, pages still switch and a full
+reload still serves the app from the service worker instead of a browser
+error page; the feed recovers on its own when the network returns.
+RISK: 🔴 A finding of mine turned out to be nothing, and the reason is worth
+carrying. My first search probe counted img[onerror] after typing an XSS
+payload, found six, and reported an injection. Those six are the app’s own
+AVATARS — they use onerror for the fallback letter. A dedicated probe showed
+the payload never executed, never became an element, and is escaped on the
+page. **Count what the payload did, not what looks like it.**
+Worth telling the owner rather than only fixing: Trending Searches has only
+ever counted signed-in people, so that list fills far slower than it looks
+like it should. Opening it to guests is how you get a fake trending list, so
+it should stay this way — but the number means something narrower than its
+label says.
+OVER
+
 ## 2026-08-27 06:40 — CLAUDE
 CHANGED: firestore.rules (DEPLOYED), ai/bugs_found.md — no app code, no deploy
 WHAT: A hunt that started from Gemini’s #35 rather than from scratch. That
@@ -217,26 +241,4 @@ Worth a look, NOT changed because it may be deliberate: the bounty badge on
 every feed card is var(--green) — the loudest thing on a screen the owner keeps
 asking to be black and white. Green for money is a real convention, so this is
 their call, not mine.
-OVER
-
-## 2026-08-26 18:30 — CLAUDE
-CHANGED: ai/PARKED.md (new), ai/bugs_found.md, ai/HANDOFF.md,
-PROJECT_CONTEXT.md — no app code, no deploy
-WHAT: The owner asked for the things they have deliberately put on hold to be
-visible as decisions rather than sitting in the bug list looking unfinished.
-New file ai/PARKED.md: the four items behind the Blaze plan (#30 rate
-limiting, #17 Cloudinary, #1/#13 wallet), the two waiting on an answer from
-them (#24 email verification, #4), the loose ends that are not findings, and a
-section for things already rejected so they do not get re-proposed. Each of
-those six entries in bugs_found.md now carries a PARKED marker pointing at it,
-and it is named in the PROJECT_CONTEXT file map and in the ground rules here.
-VERIFIED: n/a — documentation only. Markers counted: 6 of 6 placed.
-RISK: The point of the file is the opposite of a queue, and the ground rule
-above says so: anything in it is a decision that was made out loud, not free
-work waiting to be picked up. Implementing a parked item because it looks open
-is the exact mistake it exists to prevent — if one becomes urgent, say so to
-the owner and wait.
-Two things they still owe an answer on and know it: which of a/b/c for #24
-(parked today, on purpose), and the Blaze cost breakdown they asked for, which
-has not been produced yet.
 OVER
