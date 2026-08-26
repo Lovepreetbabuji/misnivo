@@ -26,21 +26,21 @@ short version plus the reason it is waiting.
 
 ---
 
-## 1. Waiting on the Blaze plan — FOUR things, ONE decision
+## 1. Waiting on the Blaze plan — TWO things, ONE decision
 
-None of these can move until the owner switches Firebase from Spark to Blaze.
-They are not four problems; they are one plan change with four consequences.
+Neither can move until the owner switches Firebase from Spark to Blaze.
+This was four until 27 Aug 2026, when the wallet was removed instead of guarded.
 
 | # | What | Why it needs a server |
 |---|---|---|
 | **30** | **Rate limiting** — nothing stops one account writing without limit | Rules cannot count events over time: the client writes the timestamp, so an attacker just never updates theirs. No rules-only version exists. |
 | **17** | **Cloudinary signed uploads** | Only a Cloud Function can hand out a short-lived signature. The preset name and cloud name are in `app.js` and always will be. |
-| **1 / 13** | **Wallet on the server** | No rule can tell a real debit from an invented one; only a server knows what the balance should be. `WALLET_ENABLED = false` until then. |
+| ~~1 / 13~~ | ~~Wallet on the server~~ | **GONE — the wallet was removed on 27 Aug 2026** rather than guarded. Nothing to protect any more; real payments get built on a server when they come. |
 
-**Ranked by what actually grows:** #30 gets worse with every user the app gains.
-#17 can cost money today. #1/#13 costs nothing while the wallet is switched off.
+**So the Blaze queue is TWO now, not four.** #30 gets worse with every user the
+app gains; #17 can cost money today. The wallet left the queue by being deleted.
 
-**What unblocks all four:** the Blaze plan. The owner has asked for a cost
+**What unblocks both:** the Blaze plan. The owner has asked for a cost
 breakdown before deciding — not produced yet.
 
 ---
@@ -74,10 +74,11 @@ points at one particular screen or button.**
 - **Per-mission link previews.** #21 gave every shared link the same card.
   A card carrying *that* mission's title and thumbnail needs the HTML rendered
   per URL — a Cloudflare Pages Function for `/dare/:id`. **Not started.**
-- **Nobody holds the `admin: true` claim.** The admin panel exists and works,
-  but the claim can only be set with the Firebase Admin SDK, from a server.
-  Until then the panel refuses everyone, including the owner — which also means
-  its tabs have never been tested by a real admin.
+- **The owner HAS the `admin: true` claim** (confirmed by them, 27 Aug 2026).
+  Earlier notes in this repo said nobody did — that was wrong. It means the
+  admin panel is reachable and its tabs can finally be tested by a real admin,
+  and that the leftover `dmtest.*` profiles below can actually be removed.
+  Neither has been done yet.
 - **Four leftover test profiles** (`dmtest.ag2290`, `dmtest.ag334721`,
   `dmtest.ag325606`, `dmtest.ag57348`) plus one orphan private document per
   throwaway test account. Harmless. Removing them needs the admin claim above.

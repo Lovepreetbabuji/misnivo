@@ -101,6 +101,42 @@ Each of these is written down because it has already broken something real.
 
 # LOG — newest first, maximum 5 entries
 
+## 2026-08-27 04:15 — CLAUDE
+CHANGED: index.html, js/app.js, css/styles.css, sw.js, firestore.rules
+(DEPLOYED), ai/bugs_found.md, ai/PARKED.md, PROJECT_CONTEXT.md — stamp
+20260827c
+WHAT: THE WALLET IS REMOVED, at the owner’s request — page, six modals, three
+menu entries, ~400 lines of JS, 52 CSS rules. It closes #1 and #13 by deletion,
+which is the only thing that ever could: no rule can tell a real debit from an
+invented one. Posting charges nothing now. Also escaped thirteen spots where
+user text reached the page raw (#33), and fixed Gemini’s two new findings,
+both of which my own audit that same day had missed: comment text was capped
+on CREATE but not on UPDATE (#35 — post "hi", edit it into a megabyte), and
+counters were never required to start at zero, so a mission could be born with
+likeCount 1000000 and sit at the top of most-liked (#36).
+VERIFIED: 11/13 on the wallet removal — the two failures are my own test
+asserting on #profStats, which git shows never existed. 7/7 on Gemini’s two.
+Wallet page, modals and menu entries gone, /wallet lands on home, every page
+opens, signup and posting still work, 0 page errors.
+RISK: I BROKE THE LIVE SITE DOING THIS, and that is the part of this entry
+worth reading. One regex meant to delete a fifteen-line function used a lazy
+match that ran past its own closing brace — that function builds HTML in
+nested template literals full of braces — and took _skelFeed, _skelAfter,
+_bootSkelHide and renderHome out with it. 711 lines removed where 430 were
+intended; the home page threw a not-defined error. Fixed by restoring app.js
+from the previous commit and re-applying every cut by EXACT STRING MATCH.
+DO NOT DELETE CODE WITH A REGEX IN THIS FILE. _skelTxnRows is still there,
+unused, because removing it is what caused this and fifteen dead lines are not
+worth a second attempt on a live site.
+Two corrections to the record: the owner DOES hold the admin claim (earlier
+notes here said nobody did), and the Blaze queue is two now, not four.
+Left open on purpose — #34: _renderProfileStats and _renderProfileBadges have
+never rendered anything, because #profStats and #profBadges are not in
+index.html and never were. Either markup was lost or the feature was never
+finished, and which one it is changes the fix, so the owner should say whether
+that stats row is wanted at all.
+OVER
+
 ## 2026-08-27 00:30 — CLAUDE
 CHANGED: firestore.rules (DEPLOYED), ai/bugs_found.md — no app code
 WHAT: The owner raised maxlength on the bio box in the inspector, typed past
@@ -198,32 +234,4 @@ A UI cooldown was offered as a partial measure and the owner declined it on
 purpose, in favour of doing the real thing on Blaze. Not implemented.
 The open list was stale and is rebuilt: #23 is fixed, #24 has a verdict, and
 the Blaze queue is FOUR items now, not three.
-OVER
-
-## 2026-08-26 15:05 — CLAUDE
-CHANGED: js/app.js, index.html, sw.js, ai/bugs_found.md, PROJECT_CONTEXT.md —
-stamp 20260826a
-WHAT: Gemini had added nothing new, so this was a hunt, and it found two real
-bugs. #28: the report flow had NO account check anywhere. openReportModal is
-reachable from six guest-visible places, and submitReport then read user.uid
-off a null user — the TypeError was swallowed by that function’s own
-try/catch and shown to the reporter as a toast reading "Error: Cannot read
-properties of null". #29: the earlier currency pass fixed ONE badge and
-claimed the job; thirteen more are written inside template literals, which the
-first grep could not match, and they are the ones on every card people look at.
-VERIFIED: 8/8 live as a guest — Report now shows the "Report this" prompt, the
-form stays shut, nothing throws, no raw JavaScript text reaches the screen;
-every bounty element reads Rs., and that check fails rather than passes if it
-finds no bounties at all.
-Before hunting I re-tested yesterday’s rules change against the real buttons,
-reading the DATABASE back rather than the screen — those writes end in
-.catch(() => {}) so a refusal would be invisible. 9/9: likes, dislikes,
-like-to-dislike switches, comments and views all still land.
-RISK: The scan that found #28 named nineteen functions reading user.* with no
-guard nearby. Most are called from paths already gated, and I checked which
-were reachable by a guest — only report was. That list is a heuristic, not a
-clean bill of health: a different entry point could reach another of them.
-Routing was swept too — every page URL, a shared mission link and a shared
-profile link all open correctly. There are still ZERO approved proofs in the
-database, so nothing on the video half of the app was exercised with content.
 OVER

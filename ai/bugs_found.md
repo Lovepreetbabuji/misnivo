@@ -13,7 +13,7 @@ Status meanings:
 | **KNOWN** | real, already understood, deliberately not fixed yet — reason given |
 | **OPEN** | real, not fixed, needs a decision or work |
 
-**Summary: 23 fixed · 2 not real · 3 known · 4 open**
+**Summary: 26 fixed · 2 closed by removal · 2 not real · 1 known · 4 open**
 
 > ⏸️ **`ai/PARKED.md`** — everything the owner has deliberately put on hold,
 > with the reason and what unblocks it. An entry marked PARKED below is a
@@ -25,9 +25,21 @@ and verified live, 24-25 Aug 2026. The 2 Nov 2026 deadline is met early.*
 ---
 
 ### 1. Client-Side Wallet Manipulation (CRITICAL)
-> ⏸️ **PARKED BY THE OWNER — see `ai/PARKED.md`.** Do not pick this up on your own.
+> **CLOSED 27 Aug 2026 — the wallet was removed.** Not guarded, not gated:
+> deleted. The page, deposit, withdraw, KYC, bank methods, the transaction PIN,
+> the history and the fake Rs.1,00,000 starting balance are all gone from the
+> app. There is no balance left for anyone to write, which is the only thing
+> that actually settles this — no rule ever could, because no rule can tell a
+> real debit from an invented one.
 >
-> **KNOWN — needs a server, not a rule.** Real, and already written up at the top
+> Existing accounts may still carry a leftover `wallet` field in their private
+> drawer. Nothing writes one any more and the migration branch in the rules lets
+> an account delete its own. Real payments, when they come, get built on a
+> server first.
+>
+> The original finding, kept because it was right:
+>
+> **KNOWN — needed a server, not a rule.** Real, and already written up at the top
 > of `firestore.rules`. The wallet moved into `users/{uid}/private/main`, so it is
 > no longer public, and `WALLET_ENABLED = false` has the whole feature paused —
 > but the owner can still write their own balance, and no rule can tell a
@@ -116,7 +128,14 @@ and verified live, 24-25 Aug 2026. The 2 Nov 2026 deadline is met early.*
 > written from them.
 
 ### 13. Bypassable Client-Side Feature Flags (MODERATE)
-> ⏸️ **PARKED BY THE OWNER — see `ai/PARKED.md`.** Do not pick this up on your own.
+> **CLOSED 27 Aug 2026 — same removal as #1.** The point of this finding was
+> that flipping `WALLET_ENABLED` in the console unhid a wallet whose balance
+> the account owner could write. There is no wallet behind the flag now. The
+> constant itself stays defined and false because the project's ground rules
+> list it as do-not-rename and a stray reference should evaluate rather than
+> throw — but there is nothing left for it to switch on.
+>
+> The original finding:
 >
 > **KNOWN — same root cause as #1.** Flipping `WALLET_ENABLED` in the console
 > only unhides UI; the exposure underneath is that the owner may write their own
@@ -880,6 +899,40 @@ real applicant, header exact at "1 applicant" and "1+ applicant" when capped.
 > are not fighting you. The rules file is the only thing standing between an
 > account and the database, so any limit that matters has to exist there too.
 
+### 33. Thirteen places printed user text unescaped (LOW) — asked for after the security review
+> **FIXED 27 Aug 2026, build `20260827c`.** Three shapes: the profile photo URL
+> going straight into `src="…"`, the name's first initial going into a JS string
+> inside an `onerror="…"` attribute, and Firebase error text printed into an
+> empty state.
+>
+> **The apostrophe one is the interesting half.** `escHtml` covers `& < > "` and
+> deliberately leaves the apostrophe alone — which is exactly the character that
+> breaks out of `onerror="this.parentElement.textContent='X'"`. So reaching for
+> `escHtml` there would have looked like a fix and been none. Stripped the way
+> `_avHtml` already does it, which had solved this correctly all along.
+>
+> **Honest about severity: all thirteen carried the CURRENT user's own data into
+> their own browser.** Self-inflicted only; nobody could reach anyone else
+> through them. Worth closing because "it is only your own data" holds right up
+> until one of those lines is copied to a screen showing somebody else's.
+>
+> Found by asking where user text reaches the page without `escHtml`. The other
+> 119 sites were already correct.
+
+### 34. Two profile functions that have never rendered anything (LOW)
+> **OPEN — found while removing the wallet, not caused by it.**
+> `_renderProfileStats()` and `_renderProfileBadges()` both start with
+> `getElementById('profStats')` / `('profBadges')` and return when it is missing.
+> Neither id exists in `index.html`, and `git show` confirms neither existed
+> before the wallet removal either. So the Missions / Completed / Earned /
+> Paid out row and the whole achievements strip have been computed and thrown
+> away on every profile view for as long as the file has been in this repo.
+>
+> Left alone deliberately: it is either markup that was lost at some point, or
+> a feature that was never finished, and which one it is changes what the fix
+> should be. **The owner should say whether that stats row is wanted** — if yes
+> the container needs adding back, if no both functions should go.
+
 ---
 
 ## Still open — split by whether anything can be done today
@@ -920,19 +973,52 @@ Everything else on this list is closed.
   leftover `dmtest.*` profiles come from. Worth a `allow delete: if isSelf(u)`
   next time the rules are opened.
 
-### 31. Comment Text Size Bypass on Update (CRITICAL)
+### 35. Comment Text Size Bypass on Update (CRITICAL)
+> **FIXED 27 Aug 2026, rules deployed. Gemini's, and it was right — my own audit
+> the same day missed it.** The create rule caps comment text at 500. The update
+> rule let the author touch `text`, `edited` and `editedAt` and checked no size
+> at all. So the cap was a formality: post "hi", then edit that comment to a
+> megabyte. Comments are world-readable and fetched per video, so the bloat
+> lands on everyone who opens it afterwards.
+>
+> The same 500 is now enforced on the edit. Verified live: editing a comment to
+> 50KB comes back `permission-denied`, a normal edit still works.
+>
+> **Worth naming why I missed it.** My sweep asked "which FIELDS have no size
+> limit" and walked the create rules. This field had a limit — on the other
+> branch. Checking creates and forgetting updates is its own blind spot.
+
 - **File**: irestore.rules (Comments)
 - **Issue**: The create rule for comments enforces equest.resource.data.text.size() <= 500. However, the update rule for comments only checks onlyTouches(['text','edited','editedAt']) and completely omits the size constraint.
 - **Risk**: A user can create a valid 500-character comment, and immediately update it to contain 1MB of text. Since comments are loaded automatically on missions and proofs, this acts as a targeted Economic DoS. Every user viewing the comments will download the 1MB payload.
 - **Fix**: Apply 	extOk() or a direct size check equest.resource.data.text.size() <= 500 in the comment update rule.
 
-### 32. Forged Initial Counters on Mission/Proof Creation (HIGH)
+### 36. Forged Initial Counters on Mission/Proof Creation (HIGH)
+> **FIXED 27 Aug 2026, rules deployed. Gemini's, and also right.** `stepped()`
+> guards how a counter MOVES and says nothing about what it was born as, so a
+> mission could be created with `likeCount: 1000000` and sit at the top of "most
+> liked" without ever touching the update rule it was supposed to have to get
+> past. The comments rule already required `likeCount == 0` on create; dares and
+> proofs never did.
+>
+> `countersStartAtZero()` now covers likeCount, dislikeCount, viewCount,
+> commentCount, takers and proofCount on both. Absent reads as 0, so nothing
+> legitimate has to set them. Verified live: a mission created with
+> `likeCount: 1000000` is refused, a normal one still posts.
+
 - **File**: irestore.rules (dares and proofs)
 - **Issue**: The create rules for dares and proofs do not enforce that engagement counters (likeCount, iewCount, dislikeCount) start at 0. 
 - **Risk**: A malicious user can create a mission or proof with likeCount: 1000000 or iewCount: 1000000 right from the start, making it immediately trend or appear artificially popular without needing to bypass the stepped() update rule.
 - **Fix**: In the create rule, assert that if these fields exist, they must equal 0.
 
-### 33. Unbounded Arrays in Public User Document (HIGH)
+### 37. Unbounded Arrays in Public User Document (HIGH)
+> **ALREADY FIXED — same finding as #32, reached independently.** Gemini raised
+> this a few hours after the owner found it from the other end (the inspector)
+> and it was closed the same day: `listOk`/`mapOk` now cap socials, settings,
+> pinnedDares, likedProofs and acceptedDares. Two people finding the same hole
+> on the same day from different directions is worth noting rather than
+> deleting — it is the strongest signal on this list that the area was weak.
+
 - **File**: irestore.rules (users)
 - **Issue**: The update rule for users/{userId} allows the owner to modify socials, cceptedDares, pinnedDares, and likedProofs without any size or type validation. 
 - **Risk**: Since users/{userId} is world-readable and is frequently fetched (e.g., to display avatars and names in comments, feeds, or leaderboards), a user can store 1MB of garbage data in cceptedDares. Any visitor who sees content by this user will unknowingly download their 1MB profile, causing massive read billing spikes (Economic DoS).
