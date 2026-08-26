@@ -270,7 +270,8 @@ yahi sabse badi wajah thi hatane ki, sudhaarne ki nahi.
 | 4 | "Client par bharosa" — koi ek jagah batayi nahi gayi | Jagah batao to theek ho jayega |
 | — | 4 khaali test profile: `dmtest.ag2290`, `dmtest.ag334721`, `dmtest.ag325606`, `dmtest.ag57348` | Nuksaan nahi, safai baaki (admin chahiye) |
 
-> **Teen cheezein ab ek hi darwaze par khadi hain — Blaze plan.** #17, #1 aur #13.
+> **CHAAR cheezein ab ek hi darwaze par khadi hain — Blaze plan.** #30 (rate
+> limiting), #17, #1 aur #13.
 > Ye ek faisla hai, teen nahi.
 
 **Ab theek ho chuka (25 Aug):** #15 admin panel ki bina-limit query, #16 feed ka

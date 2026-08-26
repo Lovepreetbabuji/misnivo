@@ -97,6 +97,30 @@ Each of these is written down because it has already broken something real.
 
 # LOG — newest first, maximum 5 entries
 
+## 2026-08-26 17:20 — CLAUDE
+CHANGED: ai/bugs_found.md, PROJECT_CONTEXT.md only — NO app code, no deploy
+WHAT: The owner asked whether the app has rate limiting. Checked rather than
+remembered: it does not. No throttle, no cooldown, no lastPostAt, no time
+comparison in js/app.js or firestore.rules; Cloud Functions exist in the repo
+but functions:list fails, which is Spark saying no. Written up as #30, and #14
+now carries a warning at the top, because its heading says FIXED and that only
+covers the SCRIPTED half — App Check asks whether you are a real browser, never
+how many times you have done something.
+VERIFIED: n/a — nothing was changed. The finding itself was checked by grep
+across both files and by firebase functions:list against the live project.
+RISK: Worth knowing before anyone tries it: a rules-only rate limit does NOT
+work here. Rules can compare request.time to a stored timestamp, but the client
+writes that timestamp, so an attacker just never updates theirs and passes for
+ever. Also recorded: reCAPTCHA free tier is 10,000 assessments a month org-wide
+and App Check is ENFORCED, so crossing it returns 429 and locks out real users
+while costing an attacker nothing — the only ceiling this project has points at
+the victim.
+A UI cooldown was offered as a partial measure and the owner declined it on
+purpose, in favour of doing the real thing on Blaze. Not implemented.
+The open list was stale and is rebuilt: #23 is fixed, #24 has a verdict, and
+the Blaze queue is FOUR items now, not three.
+OVER
+
 ## 2026-08-26 15:05 — CLAUDE
 CHANGED: js/app.js, index.html, sw.js, ai/bugs_found.md, PROJECT_CONTEXT.md —
 stamp 20260826a
@@ -206,38 +230,4 @@ Also fixed in bugs_found.md: two entries had been added as a second #21 and
 #22, now #23 and #24, and a heading had been merged into nonsense. Neither is
 checked against the code yet — #23 (unbounded likedBy arrays) reads like the
 most serious thing open if it holds.
-OVER
-
-## 2026-08-25 05:20 — CLAUDE
-CHANGED: `js/app.js`, `index.html`, `css/styles.css`, `sw.js` — stamp
-`20260825f`
-WHAT: Guest browsing is the default. Signed-out no longer shows the sign-up
-wall — it enters guest mode, and signing out returns there too, so a shared link
-finally shows what it advertises. The 15-minute clock is gone with it: countdown
-badge, expiry timer, and the non-dismissible "your preview is over" popup.
-`guestCheck` is what asks for the account, and it was only on 12 call sites —
-fine while guests were rare, not fine now that every first visit is one. Eight
-write paths would have failed silently against the rules: liking/disliking a
-mission or proof, liking a comment, and both comment boxes. All gated, each with
-its own message, plus `submitProof`, which had `bannedCheck` but no guest gate.
-The prompt is now in the overlay stack so the phone back button dismisses it
-instead of navigating away; no URL of its own, it is a nudge not a place.
-Theme: Sign Up in the topbar was #fff on #D9D9D9 — near-invisible, on the button
-a visitor most needs. Now black on white, Login a white outline beside it, both
-`nowrap` (it was breaking across two lines on a 412px phone). The prompt
-inherited `.modal`, still translucent reddish with blur — now the flat black +
-white hairline from `.auth-box`. Its icon slot took colour emoji, three of them
-empty strings, so it jumped about; now a monochrome Material glyph per action.
-VERIFIED: Live on `20260825f`, real browser, a profile that has never signed
-in. 13/13: lands in the app not on a wall, guest mode on, no badge, feed loads,
-Sign Up legible (#fff bg / #000 text), all four sampled actions name what they
-need, prompt is rgb(0,0,0) with no blur and a glyph icon, back dismisses it,
-Sign Up reaches the real screen, 0 page errors.
-RISK: 🔴 Found and fixed on the way in — `sw.js` VER had gone BACKWARDS
-(index.html on `e`, worker on `d`). Caches were still being purged so nothing
-was stuck, but a stamp that counts down will eventually match one a device
-already holds and leave the old build in place. All three moved forward together
-to `20260825f`. Worth checking all three values, not just that they changed.
-Not changed, and not mine to change unasked: mission cards show the bounty as a
-green "$1,000" — dollars on a rupee app, and a colour on a black-and-white one.
 OVER

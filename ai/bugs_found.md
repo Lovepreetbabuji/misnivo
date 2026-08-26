@@ -13,7 +13,7 @@ Status meanings:
 | **KNOWN** | real, already understood, deliberately not fixed yet — reason given |
 | **OPEN** | real, not fixed, needs a decision or work |
 
-**Summary: 21 fixed · 2 not real · 3 known · 3 open**
+**Summary: 21 fixed · 2 not real · 3 known · 4 open**
 
 *#14 App Check is DONE — Firestore, Authentication and AI Logic all enforced
 and verified live, 24-25 Aug 2026. The 2 Nov 2026 deadline is met early.*
@@ -115,6 +115,11 @@ and verified live, 24-25 Aug 2026. The 2 Nov 2026 deadline is met early.*
 > drawer — so this is not an open door for anyone *else*.
 
 ### 14. No Rate Limiting / API Abuse Protection (CRITICAL)
+> ⚠️ **Read #30 before trusting the word FIXED in this heading.** What was fixed
+> here is the SCRIPTED half — App Check refuses an automated browser. Per-user
+> rate limiting was never done and is not possible without a server; it is its
+> own finding now.
+>
 > **FIXED — enforced 24 Aug 2026.** Cloud Firestore and Authentication are both
 > Enforced in the Console, and the live site was re-tested afterwards in a real
 > browser window on a brand-new profile: a signed-out visitor still reads the
@@ -750,34 +755,76 @@ real applicant, header exact at "1 applicant" and "1+ applicant" when capped.
 > dollar sign, and the check was written to fail if it found no bounties at all
 > rather than pass on an empty page.
 
+### 30. No rate limiting anywhere (HIGH) — owner asked, checked, confirmed
+> **OPEN — the owner has decided to do this properly rather than patch it.**
+> The question was "do we have rate limiting?" and the answer, checked rather
+> than remembered, is **no**. There is no throttle, no cooldown, no
+> `lastPostAt`, and no time comparison of any kind in `js/app.js` or in
+> `firestore.rules`. Cloud Functions exist in the repo (315 lines) but are not
+> deployed — `firebase functions:list` fails on this project, which is the Spark
+> plan saying no.
+>
+> **Three things get mistaken for rate limiting here and none of them is:**
+> - **App Check / reCAPTCHA Enterprise** asks *"is this a real browser?"*, not
+>   *"how many times have you done this?"*. A real person, or a script running
+>   inside a real browser session, is waved through every single time. #14 closed
+>   the scripted-abuse case and its own text says per-user limits still need
+>   Cloud Functions — "FIXED" there does not mean this is covered.
+> - **The Firestore rules** constrain *what* may be written — a counter moving
+>   one step, a like list gaining only your own uid, text length caps — and say
+>   nothing about *how often*.
+> - **Cloudinary's plan caps** are per file (10MB image, 100MB video), not per
+>   unit of time.
+>
+> **What one signed-in account can do today:** post hundreds of missions a
+> minute, or thousands of comments. Every one is a billed write, and every
+> mission also spends two Gemini calls on the safety filter.
+>
+> 🔴 **There is a limit in place, and it points the wrong way.** reCAPTCHA's free
+> tier is 10,000 assessments a month across the whole organisation. Past it,
+> requests come back 429 with billing off — and since App Check is *enforced*,
+> that locks out **real users** while costing an attacker nothing. The only
+> ceiling the project has today punishes the victim.
+>
+> **A rules-only version was considered and rejected as unworkable, so nobody
+> re-tries it:** rules can compare `request.time` against a stored timestamp, but
+> the timestamp has to be written by the client. An attacker simply never
+> updates theirs, their stored time stays old, and they pass the check forever.
+> Counting events over time cannot be enforced by a party that also writes the
+> count. **This needs a server; there is no rules-only version of it.**
+>
+> A UI cooldown on the post button was offered as a partial measure — it stops
+> double-taps and casual spam and stops nothing deliberate, because anything
+> determined talks to Firestore directly and never sees the button. The owner
+> declined it on 26 Aug in favour of doing the real thing. Not implemented, on
+> purpose.
+
 ---
 
 ## Still open — split by whether anything can be done today
 
-**Waiting on the Blaze plan.** These three are one decision, not three; none of
-them can move until it is made.
+🔴 **Waiting on the Blaze plan. This is now FOUR things behind one decision,
+not three** — and the newest of them, rate limiting, is the one that grows
+with every user the app gains.
 
-1. **#17 Cloudinary signed uploads** — the only open finding that can cost real
-   money today. Narrowed a long way by the preset's format list and the plan's
-   own file-size caps, but bulk upload of valid media is still possible and only
-   a Cloud Function handing out a signature closes it.
-2. **#1 / #13 wallet on the server** — same door, same plan.
+1. **#30 rate limiting** — nothing anywhere stops one account writing without
+   limit. Cannot be done in rules; needs a server. See the entry for why the
+   rules-only version does not work.
+2. **#17 Cloudinary signed uploads** — narrowed a long way by the preset's
+   format list and the plan's own file-size caps, but bulk upload of valid
+   media is still possible and only a Cloud Function handing out a signature
+   closes it.
+3. **#1 / #13 wallet on the server** — same door, same plan.
 
-**Can be done now, no plan needed.**
+**Waiting on an answer from the owner.**
 
-3. **#23 arrays with no size limit** — Gemini's, not yet checked against the
-   code. If it holds it is the most serious thing open: one oversized write
-   into a likedBy array could break a mission document for everyone and be
-   downloaded by every visitor after.
-4. **#24 unverified email signup** — Gemini's, not yet checked.
-
-**Needs the owner to point at something.**
-
+4. **#24 unverified email signup** — real, checked, and deliberately not done:
+   the scripted half is what App Check already stops, and gating
+   `emailVerified` is friction paid by every honest sign-up. Three options are
+   written up in the entry; one of them needs picking.
 5. **#4** — no specific flow was ever named; nothing can be checked until one is.
 
-Everything else on this list is closed. #19, #20 and #21 were the last three
-that could be done without a plan change, and all three went live on 25 Aug —
-see their entries for what was verified and what was deliberately left.
+Everything else on this list is closed.
 
 **Not findings, but the two loose ends worth carrying forward:**
 
