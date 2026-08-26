@@ -13,7 +13,7 @@ Status meanings:
 | **KNOWN** | real, already understood, deliberately not fixed yet — reason given |
 | **OPEN** | real, not fixed, needs a decision or work |
 
-**Summary: 21 fixed · 2 not real · 3 known · 4 open**
+**Summary: 22 fixed · 2 not real · 3 known · 4 open**
 
 > ⏸️ **`ai/PARKED.md`** — everything the owner has deliberately put on hold,
 > with the reason and what unblocks it. An entry marked PARKED below is a
@@ -815,6 +815,20 @@ real applicant, header exact at "1 applicant" and "1+ applicant" when capped.
 > declined it on 26 Aug in favour of doing the real thing. Not implemented, on
 > purpose.
 
+### 31. Settings refused guests with a bare toast (LOW) — found while redesigning
+> **FIXED 26 Aug 2026, build `20260826d`.** `openSettings()` began
+> `if(!user){ showToast('Sign in first'); return; }` — no reason, nothing to tap,
+> and nothing like the prompt every other gated action shows. Settings sits in
+> the drawer, and since the sign-up wall came down the drawer is what every
+> first-time visitor opens, so this refusal is one a lot of people meet.
+>
+> It uses `guestCheck('settings')` now, with its own message, so a guest gets
+> the same card with a Sign Up button that liking, commenting, posting and
+> reporting give them.
+>
+> Found sideways: the settings list would not open for a guest at all, which is
+> why the first screenshot of the redesign came back showing the home page.
+
 ---
 
 ## Still open — split by whether anything can be done today
@@ -854,3 +868,21 @@ Everything else on this list is closed.
   it) and it leaves one orphan document per test account, which is where the
   leftover `dmtest.*` profiles come from. Worth a `allow delete: if isSelf(u)`
   next time the rules are opened.
+
+### 31. Comment Text Size Bypass on Update (CRITICAL)
+- **File**: irestore.rules (Comments)
+- **Issue**: The create rule for comments enforces equest.resource.data.text.size() <= 500. However, the update rule for comments only checks onlyTouches(['text','edited','editedAt']) and completely omits the size constraint.
+- **Risk**: A user can create a valid 500-character comment, and immediately update it to contain 1MB of text. Since comments are loaded automatically on missions and proofs, this acts as a targeted Economic DoS. Every user viewing the comments will download the 1MB payload.
+- **Fix**: Apply 	extOk() or a direct size check equest.resource.data.text.size() <= 500 in the comment update rule.
+
+### 32. Forged Initial Counters on Mission/Proof Creation (HIGH)
+- **File**: irestore.rules (dares and proofs)
+- **Issue**: The create rules for dares and proofs do not enforce that engagement counters (likeCount, iewCount, dislikeCount) start at 0. 
+- **Risk**: A malicious user can create a mission or proof with likeCount: 1000000 or iewCount: 1000000 right from the start, making it immediately trend or appear artificially popular without needing to bypass the stepped() update rule.
+- **Fix**: In the create rule, assert that if these fields exist, they must equal 0.
+
+### 33. Unbounded Arrays in Public User Document (HIGH)
+- **File**: irestore.rules (users)
+- **Issue**: The update rule for users/{userId} allows the owner to modify socials, cceptedDares, pinnedDares, and likedProofs without any size or type validation. 
+- **Risk**: Since users/{userId} is world-readable and is frequently fetched (e.g., to display avatars and names in comments, feeds, or leaderboards), a user can store 1MB of garbage data in cceptedDares. Any visitor who sees content by this user will unknowingly download their 1MB profile, causing massive read billing spikes (Economic DoS).
+- **Fix**: Move unbounded arrays to private subcollections or strictly enforce a maximum array size/string length for these fields in irestore.rules.

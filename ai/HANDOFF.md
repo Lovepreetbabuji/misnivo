@@ -101,6 +101,31 @@ Each of these is written down because it has already broken something real.
 
 # LOG — newest first, maximum 5 entries
 
+## 2026-08-26 21:40 — CLAUDE
+CHANGED: css/styles.css, index.html, js/app.js, sw.js, ai/bugs_found.md,
+PROJECT_CONTEXT.md — stamp 20260826f
+WHAT: Settings rebuilt to the three reference screens the owner sent. Fields go
+transparent with a light hairline (they are .pe-input — an earlier pass
+restyled .f-input and never touched this form, which is why it still looked
+like grey slabs), the avatar loses its neumorphic shadow for a thin ring,
+Change Photo and Save become solid white pills, the four nav rows get icons
+they never had, and on a phone the app topbar now gets out of the way so
+Settings is the whole screen. Also #31: openSettings refused guests with a bare
+"Sign in first" toast instead of the prompt every other gated action shows.
+VERIFIED: 7/7 signed in on a 412px viewport, plus screenshots read back rather
+than trusting computed styles — which is what caught the last two gaps.
+Throwaway account deleted.
+RISK: The icon change took two rounds for the same reason the settings border
+took three: a blanket rule sets .mi{ font-family:Material Icons Round
+!important }, so the Symbols face was never reached and the FILL 0 beside it
+applied to a font with no FILL axis. Five other rules in the file already carry
+!important for exactly this; mine now says why in a comment.
+Worth a look, NOT changed because it may be deliberate: the bounty badge on
+every feed card is var(--green) — the loudest thing on a screen the owner keeps
+asking to be black and white. Green for money is a real convention, so this is
+their call, not mine.
+OVER
+
 ## 2026-08-26 18:30 — CLAUDE
 CHANGED: ai/PARKED.md (new), ai/bugs_found.md, ai/HANDOFF.md,
 PROJECT_CONTEXT.md — no app code, no deploy
@@ -202,31 +227,4 @@ branch let a creator write anything, straight past the public guard. Guarded now
 #24 (unverified email signup) is REAL but left OPEN on purpose: the scripted
 part is what App Check already stops, and gating emailVerified is friction paid
 by every honest sign-up. Three options written up for the owner to pick.
-OVER
-
-## 2026-08-25 23:40 — CLAUDE
-CHANGED: js/app.js, css/styles.css, index.html, sw.js, ai/bugs_found.md,
-PROJECT_CONTEXT.md — stamp 20260825m
-WHAT: Seven things off the owner list. Two were real bugs. HOME STUCK ON A
-SKELETON (#26): renderHome had nowhere to record that the feed was already
-fetched, so it read "no approved videos" as "not loaded yet" and re-armed the
-loader on every visit — 320ms later it wiped the grid, mission cards included,
-and left it wiped for as long as the network took. SOMEBODY ELSE’S PROFILE
-(#27): _closeDetailOverlays closed the mission, video and shorts views and
-never the public profile overlay. Plus: bounty badge said $0 (now Rs.), the
-per-page legal footer is gone and those links are drawer rows with icons,
-desktop Settings has a real white edge, and the brand mark is hidden in the
-phone topbar.
-VERIFIED: The skeleton bug was REPRODUCED first — Firestore held at 6s on a
-412px viewport, skeleton at 320ms and still skeleton at 12s — then re-run after
-the fix: no skeleton, 4 cards intact throughout. Profile overlay 4/4. UI checks
-8/9 on both viewports, the one failure being my own selector. 0 page errors
-anywhere.
-RISK: The desktop Settings edge took three attempts and the reason is worth
-knowing: a blanket rule sets border:1px solid rgba(255,255,255,.28) !important
-on .modal and fifteen other panel classes, so nothing weaker than !important
-can give any panel a different edge.
-Gemini’s #23 (unbounded likedBy arrays) and #24 (unverified email signup) are
-still UNCHECKED — #23 reads like the most serious thing open if it holds.
-The AI safety filter was NOT re-tested this round; last verified on 20260825i.
 OVER
