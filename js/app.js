@@ -36,7 +36,7 @@ const firebaseConfig = {
 const WALLET_ENABLED = false;
 // On <html>, not <body>: it applies before the first paint, so a paused wallet
 // never flashes on screen on the way out.
-// (the .wallet-off class used to hide the wallet's own UI — there is none left)
+// (the .wallet-off class used to hide the wallet UI — there is none left)
 
 // Published for the AI Logic module in index.html, which runs on the modular
 // SDK and cannot see this scope. One source of truth for the project config.
@@ -2810,6 +2810,234 @@ function _skelRankRows(n){
       <span class="skel" style="width:78px;height:20px;flex:none;"></span></div>`;
   }
   return r;
+}
+// wallet history rows — .txn-icon is 40px at radius 12, not a circle
+function _skelTxnRows(n){
+  let r='';
+  for(let i=0;i<(n||5);i++){
+    r+=`<div class="sk-txn">
+      <span class="skel" style="width:40px;height:40px;border-radius:12px;flex:none;"></span>
+      <div style="flex:1;min-width:0;">
+        <span class="skel skel-line" style="display:block;width:58%;height:12px;"></span>
+        <span class="skel skel-line" style="display:block;width:34%;height:10px;margin-top:8px;"></span>
+      </div>
+      <span class="skel" style="width:70px;height:18px;flex:none;"></span></div>`;
+  }
+  return r;
+}
+
+// ONE shape per feed, used by the boot skeleton and by the page's own renderer.
+// They used to differ: refreshing /explore painted the explore skeleton, then
+// renderExplorer replaced it with _skelCards() — the HOME feed shape. Two
+// skeletons back to back, the second one belonging to a different page.
+function _skelFeed(pg){
+  switch(pg){
+    case 'explore':  return _skelCards(3);
+    case 'dares':
+    case 'accepted': return _skelDareCards(3);
+    default:         return _skelSecHdr('96px','82px') + _skelDareCards(2)
+                          + `<div style="margin-top:26px;">${_skelSecHdr('72px')}</div>` + _skelCards(2);
+  }
+}
+
+// A loader that appears and disappears inside a blink is a flash, not feedback —
+// and on a warm cache that is every single navigation. So: paint the skeleton
+// only once the wait is long enough to be worth telling someone about.
+// The exception is boot, where a skeleton is already on screen; there the page's
+// own copy must paint immediately or the handover leaves a blank gap.
+const _SKEL_DELAY = 320;
+function _skelAfter(el, html){
+  if (!el) return () => {};
+  if (document.body.classList.contains('boot-skel')){ el.innerHTML = html; return () => {}; }
+  const t = setTimeout(() => { el.innerHTML = html; }, _SKEL_DELAY);
+  return () => clearTimeout(t);
+}
+
+function _bootSkelKind(){
+  const path = (location.pathname || '/').replace(/\/+$/,'') || '/';
+  const m = path.match(_DEEP_RE);
+  if (m){ const v = _SEG_VIEW[m[1]] || m[1];
+    return v==='shorts' ? 'shorts' : v==='u' ? 'profile' : 'detail'; }
+  if (_URL_PAGE[path]) return (_URL_PAGE[path] === 'wallet') ? 'home' : _URL_PAGE[path];
+  // a modal URL (/wallet/deposit, /settings) restores onto its base page
+  if (_URL_MODAL[path]) return path.startsWith('/profile') ? 'profile' : 'home';
+  return 'home';
+}
+
+function _skelLine(w,h,mt){
+  return `<span class="skel skel-line" style="display:block;width:${w};${h?'height:'+h+';':''}${mt?'margin-top:'+mt+';':''}"></span>`;
+}
+
+function _bootSkelHtml(kind){
+  const chips = `<div class="sk-chips">${'<span class="skel sk-chip"></span>'.repeat(5)}</div>`;
+  switch(kind){
+    // Mission and long-video pages share this: full-bleed player, one-line title,
+    // creator row ending in Follow, a left action + four icon buttons on the
+    // right, then the Comments card and the More Missions / Related card.
+    case 'detail': return `<div class="sk-detail">
+      <div class="skel sk-hero"></div>
+      <div class="sk-dbody">
+        ${_skelLine('46%','15px')}
+        <div class="sk-creator"><span class="skel sk-av40"></span>
+          <span class="skel skel-line" style="width:150px;height:13px;"></span>
+          <span class="skel sk-pill"></span></div>
+        <div class="sk-actions">
+          <span class="skel sk-accept"></span>
+          <span class="sk-acts-r">${'<span class="skel sk-aicon"></span>'.repeat(4)}</span>
+        </div>
+        <div class="dd-bar">${_skelLine('96px','13px')}${_skelLine('62%','12px','14px')}</div>
+        <div class="dd-bar">${_skelLine('126px','13px')}
+          <div style="margin-top:14px;">${_skelDareCards(1)}</div></div>
+      </div></div>`;
+
+    case 'shorts': return `<div class="sk-shorts"><span class="skel skel-fill"></span></div>`;
+
+    // mobile profile runs its own topbar, so the skeleton carries one too --
+    // otherwise the site topbar flashes in and straight back out
+    case 'profile': return `<div class="sk-profile">
+      <div class="sk-phead"><span class="skel sk-av92"></span>
+        <div class="sk-cmeta">${_skelLine('52%','18px')}${_skelLine('36%','12px','11px')}</div></div>
+      <div class="sk-ptabs"><span class="skel"></span><span class="skel"></span></div>
+      <div class="sk-fchips">${'<span class="skel sk-fchip"></span>'.repeat(3)}</div>
+      ${_skelDareCards(2)}</div>`;
+
+    case 'wallet': return `<div class="sk-wallet">
+      ${_skelLine('86px','20px')}
+      <div class="wallet-card sk-wcard">
+        ${_skelLine('132px','10px')}${_skelLine('212px','34px','14px')}${_skelLine('200px','10px','12px')}
+        <div class="sk-wrow"><span class="skel sk-wstat"></span><span class="skel sk-wstat"></span></div>
+        <div class="sk-wrow sk-wbtns"><span class="skel sk-wbtn"></span><span class="skel sk-wbtn"></span></div>
+      </div>
+      ${_skelLine('92px','17px','26px')}
+      <div class="wstat-card sk-wstats">
+        <div class="sk-wrow" style="margin-top:0;">
+          <span class="skel sk-wsbox"></span><span class="skel sk-wsbox"></span><span class="skel sk-wsbox"></span></div>
+        <div class="skel sk-wchart"></div>
+      </div>
+      ${_skelLine('178px','17px','26px')}
+      <div class="skel sk-wacct"></div>
+      ${_skelLine('132px','16px','26px')}</div>`;
+
+    case 'leaderboard': return `<div class="sk-lb">${_skelLine('132px','20px')}
+      <div style="margin-top:20px;">${_skelRankRows(5)}</div></div>`;
+
+    case 'explore': return `${_skelLine('120px','16px')}<div class="sk-chips" style="margin-top:16px;">${'<span class="skel sk-chip"></span>'.repeat(5)}</div>${_skelFeed('explore')}`;
+
+    // both open on a section header with an action on the right
+    case 'dares':    return _skelSecHdr('150px','118px') + _skelFeed('dares');
+    case 'accepted': return _skelSecHdr('212px') + _skelFeed('accepted');
+
+    // home leads with the Missions shelf, then the Videos header and the feed
+    default: return chips + _skelFeed('home');
+  }
+}
+
+function _bootSkelShow(kind){
+  const main = document.querySelector('.main'); if (!main) return;
+  const html = _bootSkelHtml(kind); if (!html) return;
+  let el = document.getElementById('bootSkel');
+  if (!el){ el = document.createElement('div'); el.id = 'bootSkel'; main.appendChild(el); }
+  el.innerHTML = html;
+  document.body.classList.add('boot-skel', 'boot-skel-' + kind);
+  // The watch/mission view and the mobile profile each drop the site topbar.
+  // Reuse the app's own classes rather than re-deriving those rules, or the bar
+  // flashes in and out around the skeleton.
+  if (kind === 'profile') document.body.classList.add('profile-open');
+  if (kind === 'detail') document.body.classList.add('detail-open');
+  if (kind === 'shorts') document.body.classList.add('shorts-open');
+  // A deep link to a deleted video never resolves, and a stuck skeleton is worse
+  // than a stuck empty state — it promises content that is never coming.
+  clearTimeout(_bootSkelTO);
+  _bootSkelTO = setTimeout(_bootSkelHide, 12000);
+}
+
+function _bootSkelHide(){
+  _bootDone = true;                       // and disarm the not-yet-shown one
+  clearTimeout(_bootSkelArm); _bootSkelArm = null;
+  clearTimeout(_bootSkelTO); _bootSkelTO = null;
+  [...document.body.classList].filter(c => c.indexOf('boot-skel') === 0)
+    .forEach(c => document.body.classList.remove(c));
+  // Hand the chrome back only if nothing real is using it — by the time goPage
+  // calls this it has already set profile-open for the page it landed on, and a
+  // deep link opens its overlay before this runs.
+  if (typeof _curPage === 'undefined' || _curPage !== 'profile') document.body.classList.remove('profile-open');
+  if (!document.querySelector('.video-detail-overlay.open')) document.body.classList.remove('detail-open');
+  if (!document.querySelector('.shorts-overlay.open')) document.body.classList.remove('shorts-open');
+  const el = document.getElementById('bootSkel');
+  if (el) el.remove();              // removed, not hidden — see the rule above
+}
+
+let _homeCancelSkel = () => {};
+// Has a server answer for the feed ever arrived? This is the flag whose absence
+// caused "home is stuck on a skeleton while every other page is fine".
+//
+// An EMPTY feed is an answer, not a state of still-loading. Without somewhere to
+// record that, every single visit to Home re-armed the loading skeleton, and
+// 320ms later that skeleton replaced the whole grid — mission cards included —
+// and stayed there for as long as the network took. On a phone on poor mobile
+// data that is seconds; on a connection that has stalled (the app was in the
+// background, the socket is dead) it is forever, because the read never returns
+// and so never repaints.
+// Reproduced with Firestore held at 6s latency: tap Missions, tap Home, and the
+// grid was skeleton at 320ms and still skeleton twelve seconds later.
+let _homeLoadedOnce = false;
+let _homeFetchedAt  = 0;
+let _homeFetching   = false;
+const HOME_FRESH_MS = 45000;   // don't re-read the feed on every tab switch
+
+async function renderHome(cat) {
+  if (cat) homeFilterCat = cat;
+  const grid = document.getElementById('homeVideoGrid');
+  _homeCancelSkel();                     // a re-entry must not leave an old timer armed
+
+  // 1) INSTANT paint from what we already have (memory this session, else the local
+  //    IndexedDB cache) — no waiting on the network for repeat opens.
+  //    The loader is for the FIRST load only. After that there is always
+  //    something honest to show, even if that something is "no videos yet".
+  if (_homeLoadedOnce || (homeProofs && homeProofs.length)) {
+    _homeRenderFeed();
+  } else {
+    _homeCancelSkel = _skelAfter(grid, _skelFeed('home'));
+    try {
+      const c = await db.collection('proofs').where('status','==','approved').limit(PROOF_POOL_LIMIT).get({ source:'cache' });
+      if (!c.empty) { homeProofs = c.docs.map(d=>({id:d.id,...d.data()})); allProofs = homeProofs;
+        _homeCancelSkel();
+        if (typeof _maybeInitialRoute === 'function') _maybeInitialRoute(); _homeRenderFeed(); }
+    } catch(e){}
+  }
+
+  // 2) REFRESH from the server in the background (stale-while-revalidate).
+  //    Not on every visit: goPage('home') calls this, so tapping between tabs
+  //    was re-reading up to PROOF_POOL_LIMIT documents each time, for a feed
+  //    that had not changed. One in flight at a time, and at most one every
+  //    HOME_FRESH_MS once we have a real answer.
+  if (_homeFetching) return;
+  if (_homeLoadedOnce && (Date.now() - _homeFetchedAt) < HOME_FRESH_MS) return;
+  _homeFetching = true;
+  try {
+    const snap = await db.collection('proofs').where('status','==','approved').limit(PROOF_POOL_LIMIT).get();
+    homeProofs = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    allProofs = homeProofs; // sync for explorer/search/related
+    _homeLoadedOnce = true;
+    _homeFetchedAt  = Date.now();
+    _homeCancelSkel();
+    if (typeof _maybeInitialRoute === 'function') _maybeInitialRoute();   // deep-link /watch|/shorts
+    _homeRenderFeed();
+  } catch(e) {
+    _homeCancelSkel();
+    // A failed refresh must not wipe a feed that is already on screen. Only say
+    // something when there is nothing there to keep.
+    if (grid && !_homeLoadedOnce && !(homeProofs && homeProofs.length)) {
+      grid.innerHTML = `<div class="empty">
+      <span class="mi">error_outline</span>
+      <div class="empty-title">Load Error</div>
+      <p class="empty-desc">${escHtml(e.message || 'Could not load')}</p></div>`;
+    } else {
+      _homeRenderFeed(true);   // repaint over any skeleton left behind
+    }
+  } finally {
+    _homeFetching = false;
+  }
 }
 // ── Why the thumbnails used to blink ──
 // renderHome() paints up to three times on one visit: once from memory, once
