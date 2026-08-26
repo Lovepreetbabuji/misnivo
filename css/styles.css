@@ -5995,9 +5995,26 @@ body.no-anim #shortsOverlay .shorts-comments{ transition:none !important; }
 #settingsOverlay .pe-social-row .mi,
 #settingsOverlay .pe-social-row .pe-x-logo{ color:var(--t2); }
 
-/* ── The list: icon, label, chevron, hairline ── */
-.set-nav-item .mi{ color:var(--t2); flex-shrink:0; }
+/* ── The list: icon, label, chevron, hairline ──
+   Outlined icons, not filled. Material Icons Round draws solid glyphs; the
+   reference — and the drawer, which already does this — uses the Symbols face
+   with FILL 0, so the icons read as line art against a black page instead of
+   four white blobs. All four names are in the subsetted icon_names list, so
+   they resolve; the Round face stays behind as a fallback and the chevron on
+   the right is drawn separately and is unaffected. */
+.set-nav-item .mi{
+  color:var(--t2); flex-shrink:0;
+  font-family:'Material Symbols Outlined','Material Icons Round';
+  font-variation-settings:'FILL' 0,'wght' 250,'GRAD' 0,'opsz' 24;
+}
 .set-nav-item.active .mi{ color:#fff; }
+
+/* Log out / Delete: outlined like everything else on this screen, not filled
+   grey slabs. Delete keeps its red — it is the one destructive thing here and
+   losing that would be worse than the inconsistency. */
+#settingsOverlay .set-btn{ background:transparent; border-color:rgba(255,255,255,.28); }
+#settingsOverlay .set-btn:hover{ background:rgba(255,255,255,.07); }
+#settingsOverlay .set-btn.danger{ background:transparent; }
 
 @media(max-width:768px){
   /* Phone: Settings IS the page, so the rows run edge to edge and the only
