@@ -97,6 +97,34 @@ Each of these is written down because it has already broken something real.
 
 # LOG — newest first, maximum 5 entries
 
+## 2026-08-26 15:05 — CLAUDE
+CHANGED: js/app.js, index.html, sw.js, ai/bugs_found.md, PROJECT_CONTEXT.md —
+stamp 20260826a
+WHAT: Gemini had added nothing new, so this was a hunt, and it found two real
+bugs. #28: the report flow had NO account check anywhere. openReportModal is
+reachable from six guest-visible places, and submitReport then read user.uid
+off a null user — the TypeError was swallowed by that function’s own
+try/catch and shown to the reporter as a toast reading "Error: Cannot read
+properties of null". #29: the earlier currency pass fixed ONE badge and
+claimed the job; thirteen more are written inside template literals, which the
+first grep could not match, and they are the ones on every card people look at.
+VERIFIED: 8/8 live as a guest — Report now shows the "Report this" prompt, the
+form stays shut, nothing throws, no raw JavaScript text reaches the screen;
+every bounty element reads Rs., and that check fails rather than passes if it
+finds no bounties at all.
+Before hunting I re-tested yesterday’s rules change against the real buttons,
+reading the DATABASE back rather than the screen — those writes end in
+.catch(() => {}) so a refusal would be invisible. 9/9: likes, dislikes,
+like-to-dislike switches, comments and views all still land.
+RISK: The scan that found #28 named nineteen functions reading user.* with no
+guard nearby. Most are called from paths already gated, and I checked which
+were reachable by a guest — only report was. That list is a heuristic, not a
+clean bill of health: a different entry point could reach another of them.
+Routing was swept too — every page URL, a shared mission link and a shared
+profile link all open correctly. There are still ZERO approved proofs in the
+database, so nothing on the video half of the app was exercised with content.
+OVER
+
 ## 2026-08-26 01:10 — CLAUDE
 CHANGED: firestore.rules (DEPLOYED), index.html, css/styles.css, sw.js,
 ai/bugs_found.md — stamp 20260825n
@@ -212,33 +240,4 @@ already holds and leave the old build in place. All three moved forward together
 to `20260825f`. Worth checking all three values, not just that they changed.
 Not changed, and not mine to change unasked: mission cards show the bounty as a
 green "$1,000" — dollars on a rupee app, and a colour on a black-and-white one.
-OVER
-
-## 2026-08-25 19:30 — CLAUDE
-CHANGED: `firestore.rules` (DEPLOYED), `js/app.js`, `index.html`, `sw.js`,
-`css/styles.css`, `ai/bugs_found.md`, `PROJECT_CONTEXT.md` — stamp `20260825e`
-WHAT: Closed the last three findings that did not need a plan change. #19 —
-a completed mission accepted more proof; the rule never read `completed`, and
-because the update rule judges each proof alone, a creator could approve a
-second one and record two people as completing one bounty. Now gated in the
-rule plus refused in `openProof()` and again in `submitProof()`. #20 — comments
-must name a real proof or mission, follows a real account. #21 — static Open
-Graph / Twitter tags.
-VERIFIED: Rules deployed then tested by doing the thing they should refuse, on
-the live site with a throwaway account: proof on an open mission allowed, same
-write after closing it `permission-denied`; fake comment id and fake follow
-target both refused while the real ones still worked. 12/12. The tags were
-checked with `curl` and no JavaScript, which is how a scraper sees them.
-Test mission and account deleted.
-RISK: 🔴 **I swept another session's uncommitted work into my commit and pushed
-it live.** `git add -A` picked up an in-progress `css/styles.css` (guest UI to
-black-and-white) and an `app.js` change that removes the sign-up wall — a
-visitor now lands straight in the app instead of the auth screen. I did not
-write either and had not read them before pushing. I smoke-tested afterwards:
-the site boots, guest mode is on, Sign Up still reaches the auth screen,
-0 errors — so nothing is broken, but that was luck, not care. **Use
-`git add <paths>` on this repo while a second session is open.**
-Also: `users/{uid}/private/main` has no delete rule, so a test account cannot
-remove its own private drawer — one orphan per throwaway account, which is
-where the leftover `dmtest.*` profiles come from.
 OVER

@@ -13,7 +13,7 @@ Status meanings:
 | **KNOWN** | real, already understood, deliberately not fixed yet — reason given |
 | **OPEN** | real, not fixed, needs a decision or work |
 
-**Summary: 19 fixed · 2 not real · 3 known · 3 open**
+**Summary: 21 fixed · 2 not real · 3 known · 3 open**
 
 *#14 App Check is DONE — Firestore, Authentication and AI Logic all enforced
 and verified live, 24-25 Aug 2026. The 2 Nov 2026 deadline is met early.*
@@ -706,6 +706,49 @@ real applicant, header exact at "1 applicant" and "1+ applicant" when capped.
 >
 > Verified live: opened a real stranger's profile, tapped Home — closed; same
 > from any other tab. 4/4.
+
+### 28. Reporting crashed for guests (HIGH) — found by hunting
+> **FIXED 26 Aug 2026, build `20260826a`.** Nothing in the report flow checked
+> for an account. `openReportModal` is reachable from six places — the menu on a
+> mission card, the mission view, the video view, the clips menu, and under a
+> comment — and every one of them is visible to a guest, which since the sign-up
+> wall came down is **every first-time visitor**.
+>
+> `submitReport()` then read `user.uid`, `user.name` and `user.email` off a null
+> user. The TypeError landed inside that function's own `try/catch`, so the
+> person reporting abusive content was shown a toast reading
+> **"Error: Cannot read properties of null (reading 'uid')"** — and their report
+> went nowhere.
+>
+> Gated where the form opens, so the account is asked for before a reason is
+> typed rather than after, with a plain `!user` refusal behind it because that
+> function has no fallback for a null user. A `report` entry was added to
+> `GUEST_ACTION_MSGS`; its `flag` icon is safe because the guest prompt draws in
+> the full Material Icons Round face, not the subset the drawer uses.
+>
+> Verified live as a guest: tapping Report shows "Report this", the form does
+> not open, nothing throws, and no raw JavaScript text reaches the screen.
+>
+> **How it was found, because the method is the point:** a scan for functions
+> that read `user.*` with no guard nearby. It named nineteen; most were called
+> from paths already gated, and checking which were genuinely reachable by a
+> guest is what left this one standing.
+
+### 29. Thirteen more amounts still said dollars (MODERATE) — my own miss
+> **FIXED 26 Aug 2026, build `20260826a`.** The owner asked for this once
+> already and the previous pass fixed **one** badge and called it done. It was
+> one of fourteen.
+>
+> The other thirteen are written `${...}` inside template literals, and a grep
+> for a dollar sign followed by a digit or a quote does not match that — which
+> is exactly why "I searched and found one" was worth nothing. They were the
+> ones people actually look at: every mission card, every video card, every clip
+> tag, the related-video badges, the mission detail badge and the "bounty won"
+> line.
+>
+> Verified live: every bounty element on screen reads Rs., none contains a
+> dollar sign, and the check was written to fail if it found no bounties at all
+> rather than pass on an empty page.
 
 ---
 
