@@ -18,17 +18,17 @@ rules_version = '2';
 //    admin.auth().setCustomUserClaims(uid, { admin: true })
 //
 //  ─────────────────────────────────────────────────────────────────────────
-//  TWO THINGS THESE RULES CANNOT FIX, both from where the data lives:
+//  ONE THING THESE RULES CANNOT FIX, from where the data lives:
 //
-//  1. THE WALLET IS CLIENT-WRITTEN. wallet.balance sits on users/{uid}, and
-//     the app debits and credits it from the browser, so the owner must be
-//     allowed to write it. That means the owner can also write 99999999. No
-//     rule can tell a legitimate debit from a made-up one — only a server can,
-//     because only a server knows what the balance is supposed to be. Until
-//     balance changes move into Cloud Functions (or a callable that the client
-//     asks rather than tells), the wallet is honour-system.
+//  THE WALLET USED TO BE THE OTHER ONE. It was client-written — balance on
+//  users/{uid}, debited and credited by the browser — and no rule could tell a
+//  real debit from an invented one. It was REMOVED from the app on 27 Aug 2026
+//  rather than guarded, which is the only thing that actually ends that
+//  argument. Existing accounts may still carry a leftover wallet field in their
+//  private drawer; the migration branch below lets them delete it and nothing
+//  writes one any more. Real payments, when they come, get built on a server.
 //
-//  2. THE USER DOCUMENT IS WORLD-READABLE, and always will be — public profiles
+//  THE USER DOCUMENT IS WORLD-READABLE, and always will be — public profiles
 //     need name, username, photo and bio from it, and Firestore has no
 //     field-level read control. DONE: email, dateOfBirth, ageVerifiedAt,
 //     underageBlocked, blockedAt, wallet and the ban now live in
@@ -39,7 +39,6 @@ rules_version = '2';
 //     a field counts as touching it, so removing them from that list would stop
 //     an un-migrated account from ever clearing its old public copy.
 //
-//  The wallet one is not a rules bug and needs a server before real money moves.
 // ═══════════════════════════════════════════════════════════════════════════
 
 service cloud.firestore {

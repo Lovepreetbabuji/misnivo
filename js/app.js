@@ -2244,7 +2244,7 @@ async function initUser(fbUser) {
   // Update topbar
   const av = document.getElementById('topAv');
   if (user.picture) {
-    av.innerHTML = `<img src="${user.picture}" alt="av" onerror="this.parentElement.textContent='${user.name[0].toUpperCase()}'"/>`;
+    av.innerHTML = `<img src="${escHtml(user.picture)}" alt="av" onerror="this.parentElement.textContent='${String(user.name||'?').charAt(0).toUpperCase().replace(/['"\\<>]/g,'')}'"/>`;
   } else {
     av.textContent = user.name[0].toUpperCase();
   }
@@ -2256,7 +2256,7 @@ async function initUser(fbUser) {
   // Sidebar profile avatar
   const sbAv = document.getElementById('sbProfAv');
   if (sbAv) {
-    if (user.picture) sbAv.innerHTML = `<img src="${user.picture}" alt="av"/>`;
+    if (user.picture) sbAv.innerHTML = `<img src="${escHtml(user.picture)}" alt="av"/>`;
     else sbAv.textContent = user.name[0].toUpperCase();
   }
   if (typeof _sbSyncHeader === 'function') _sbSyncHeader();
@@ -4799,7 +4799,7 @@ async function loadLeaderboard() {
       </div>`).join('');
   } catch(e) {
     _cancel();
-    el.innerHTML = `<div class="empty"><span class="mi">error_outline</span><div class="empty-title">Error</div><p class="empty-desc">${e.message}</p></div>`;
+    el.innerHTML = `<div class="empty"><span class="mi">error_outline</span><div class="empty-title">Error</div><p class="empty-desc">${escHtml(e.message)}</p></div>`;
   }
 }
 
@@ -4821,7 +4821,7 @@ function shareDare(dareId, title) {
 function renderProfile() {
   if (!user) { _clearAccountUI(); return; }   // blank it, don't leave the last face up
   const pic = document.getElementById('profPic');
-  if (user.picture) { pic.innerHTML = `<img src="${user.picture}" alt="av"/>`; }
+  if (user.picture) { pic.innerHTML = `<img src="${escHtml(user.picture)}" alt="av"/>`; }
   else { pic.textContent = user.name[0].toUpperCase(); }
 
   document.getElementById('profName').textContent     = user.name;
@@ -5448,7 +5448,7 @@ function _fillProfileEdit() {
 
   // Populate modal with current values
   const peAv = document.getElementById('peAvatar');
-  if (user.picture) peAv.innerHTML = `<img src="${user.picture}" alt="av" style="width:100%;height:100%;object-fit:cover;border-radius:50%;"/>`;
+  if (user.picture) peAv.innerHTML = `<img src="${escHtml(user.picture)}" alt="av" style="width:100%;height:100%;object-fit:cover;border-radius:50%;"/>`;
   else              peAv.textContent = user.name[0].toUpperCase();
 
   document.getElementById('peName').value    = user.name    || '';
@@ -5652,12 +5652,12 @@ async function saveProfile() {
     // Refresh UI
     renderProfile();
     const av = document.getElementById('topAv');
-    if (user.picture) av.innerHTML = `<img src="${user.picture}" alt="av" onerror="this.parentElement.textContent='${user.name[0].toUpperCase()}'"/>`;
+    if (user.picture) av.innerHTML = `<img src="${escHtml(user.picture)}" alt="av" onerror="this.parentElement.textContent='${String(user.name||'?').charAt(0).toUpperCase().replace(/['"\\<>]/g,'')}'"/>`;
     else              av.textContent = user.name[0].toUpperCase();
     document.getElementById('ddName').textContent  = user.name;
     const sbAv = document.getElementById('sbProfAv');
     if (sbAv) {
-      if (user.picture) sbAv.innerHTML = `<img src="${user.picture}" alt="av"/>`;
+      if (user.picture) sbAv.innerHTML = `<img src="${escHtml(user.picture)}" alt="av"/>`;
       else              sbAv.textContent = user.name[0].toUpperCase();
     }
     if (typeof _sbSyncHeader === 'function') _sbSyncHeader();
@@ -6143,7 +6143,7 @@ function _sbDismiss() {
 function _sbSyncHeader() {
   const av = document.getElementById('sbHeadAv');
   if (av) {
-    if (user && user.picture)   av.innerHTML   = `<img src="${user.picture}" alt="av"/>`;
+    if (user && user.picture)   av.innerHTML   = `<img src="${escHtml(user.picture)}" alt="av"/>`;
     else if (user && user.name) av.textContent = user.name[0].toUpperCase();
     else                        av.innerHTML   = '<span class="mi">person</span>';
   }
@@ -7097,7 +7097,7 @@ async function _renderVideoDetail(p) {
   _vdUpdateDislikeUI(p);
   // Shared comment-box input avatar
   const vdAv=document.getElementById('ddInputAv');
-  if(vdAv){if(user?.picture)vdAv.innerHTML=`<img src="${user.picture}" style="width:100%;height:100%;object-fit:cover;border-radius:50%;" alt="av"/>`;else if(user)vdAv.textContent=user.name[0].toUpperCase();}
+  if(vdAv){if(user?.picture)vdAv.innerHTML=`<img src="${escHtml(user.picture)}" style="width:100%;height:100%;object-fit:cover;border-radius:50%;" alt="av"/>`;else if(user)vdAv.textContent=user.name[0].toUpperCase();}
   // Comments use the shared box (proofId = proof.id)
   _ddCurrentId = p.id;
   _ddCanPin = (p.takerId === user?.uid) || (creatorId === user?.uid); // taker AND creator can pin
@@ -7572,7 +7572,7 @@ function openDareDetail(dareId){
   _ddUpdateLikeUI(d);
 
   const av = document.getElementById('ddInputAv');
-  if (user?.picture) av.innerHTML = `<img src="${user.picture}" style="width:100%;height:100%;object-fit:cover;border-radius:50%;" alt="av"/>`;
+  if (user?.picture) av.innerHTML = `<img src="${escHtml(user.picture)}" style="width:100%;height:100%;object-fit:cover;border-radius:50%;" alt="av"/>`;
   else if (user) av.textContent = user.name[0].toUpperCase();
 
   _ddCanPin = (d.creatorUid === user?.uid); // creator can pin on their dare
@@ -8616,7 +8616,7 @@ async function renderExplorer() {
     cancelSkel();
     // only surface the error if there is nothing on screen to keep
     if(!(typeof allProofs!=='undefined' && allProofs.length))
-      container.innerHTML=`<div class="empty"><span class="mi">error_outline</span><div class="empty-title">Error loading trending</div><p class="empty-desc">${e.message}</p></div>`;
+      container.innerHTML=`<div class="empty"><span class="mi">error_outline</span><div class="empty-title">Error loading trending</div><p class="empty-desc">${escHtml(e.message)}</p></div>`;
   }
 }
 
