@@ -27,10 +27,16 @@ const firebaseConfig = {
 //  Missions are untouched: bounty amounts still show, and posting, accepting
 //  and proof submission all work. Only the money accounting is skipped.
 // ══════════════════════════════════════════════════════════════════════════
+// The wallet was REMOVED on 27 Aug 2026 — page, deposit, withdraw, KYC, bank
+// methods, PIN, transaction history, the lot. This constant stays because the
+// project's ground rules list it as do-not-rename and a stray reference should
+// still evaluate rather than throw. It is false and there is nothing left for
+// it to switch on; when real payments arrive they will be built on a server,
+// not by flipping this back to true.
 const WALLET_ENABLED = false;
 // On <html>, not <body>: it applies before the first paint, so a paused wallet
 // never flashes on screen on the way out.
-document.documentElement.classList.toggle('wallet-off', !WALLET_ENABLED);
+// (the .wallet-off class used to hide the wallet's own UI — there is none left)
 
 // Published for the AI Logic module in index.html, which runs on the modular
 // SDK and cannot see this scope. One source of truth for the project config.
@@ -2186,10 +2192,6 @@ async function initUser(fbUser) {
       user.username = handle;
       user.bio      = '';
       user.website  = '';
-      wallet = {
-        balance: 100000,
-        transactions: [{ type:'credit', title:'Welcome Bonus — Testnet', amount:100000, date:todayStr() }]
-      };
       acceptedDares = [];
       pinnedDares   = [];
       const batch = db.batch();
@@ -2236,7 +2238,6 @@ async function initUser(fbUser) {
     }
   } catch(e) {
     console.error('initUser error:', e);
-    wallet = { balance:100000, pending:0, transactions:[] };
     acceptedDares = [];
   }
 
@@ -2491,7 +2492,7 @@ async function logout() {
   notifications = []; notifUnread = 0; notifLoaded = false;
   if (typeof _updateNotifBadge === 'function') _updateNotifBadge();
   await auth.signOut();
-  user = null; dares = []; wallet = { balance:100000, pending:0, transactions:[] }; acceptedDares = [];
+  user = null; dares = []; acceptedDares = [];
   // Everything the signed-in session had open has to go with it. Settings used
   // to stay on screen over the sign-in page, and edits made there were then
   // applied to the NEXT account that signed in.
@@ -2558,7 +2559,7 @@ const _URL_MODAL = Object.fromEntries(Object.entries(_MODAL_URL).map(([k,v])=>[v
 _bootShell();
 
 function goPage(pg, _fromPop) {
-  if (pg === 'wallet' && !WALLET_ENABLED) pg = 'home';   // paused: /wallet lands on home
+  if (pg === 'wallet') pg = 'home';   // the wallet is gone; /wallet lands on home
   // GUEST_BLOCKED_PAGES was written but never read, so the pages it names — the
   // profile and the accepted list, both of which are about *an account* — opened
   // for guests and showed whatever the last session had left painted there.
@@ -2809,236 +2810,6 @@ function _skelRankRows(n){
       <span class="skel" style="width:78px;height:20px;flex:none;"></span></div>`;
   }
   return r;
-}
-// wallet history rows — .txn-icon is 40px at radius 12, not a circle
-function _skelTxnRows(n){
-  let r='';
-  for(let i=0;i<(n||5);i++){
-    r+=`<div class="sk-txn">
-      <span class="skel" style="width:40px;height:40px;border-radius:12px;flex:none;"></span>
-      <div style="flex:1;min-width:0;">
-        <span class="skel skel-line" style="display:block;width:58%;height:12px;"></span>
-        <span class="skel skel-line" style="display:block;width:34%;height:10px;margin-top:8px;"></span>
-      </div>
-      <span class="skel" style="width:70px;height:18px;flex:none;"></span></div>`;
-  }
-  return r;
-}
-
-// ONE shape per feed, used by the boot skeleton and by the page's own renderer.
-// They used to differ: refreshing /explore painted the explore skeleton, then
-// renderExplorer replaced it with _skelCards() — the HOME feed shape. Two
-// skeletons back to back, the second one belonging to a different page.
-function _skelFeed(pg){
-  switch(pg){
-    case 'explore':  return _skelCards(3);
-    case 'dares':
-    case 'accepted': return _skelDareCards(3);
-    default:         return _skelSecHdr('96px','82px') + _skelDareCards(2)
-                          + `<div style="margin-top:26px;">${_skelSecHdr('72px')}</div>` + _skelCards(2);
-  }
-}
-
-// A loader that appears and disappears inside a blink is a flash, not feedback —
-// and on a warm cache that is every single navigation. So: paint the skeleton
-// only once the wait is long enough to be worth telling someone about.
-// The exception is boot, where a skeleton is already on screen; there the page's
-// own copy must paint immediately or the handover leaves a blank gap.
-const _SKEL_DELAY = 320;
-function _skelAfter(el, html){
-  if (!el) return () => {};
-  if (document.body.classList.contains('boot-skel')){ el.innerHTML = html; return () => {}; }
-  const t = setTimeout(() => { el.innerHTML = html; }, _SKEL_DELAY);
-  return () => clearTimeout(t);
-}
-
-function _bootSkelKind(){
-  const path = (location.pathname || '/').replace(/\/+$/,'') || '/';
-  const m = path.match(_DEEP_RE);
-  if (m){ const v = _SEG_VIEW[m[1]] || m[1];
-    return v==='shorts' ? 'shorts' : v==='u' ? 'profile' : 'detail'; }
-  if (_URL_PAGE[path]) return (_URL_PAGE[path] === 'wallet' && !WALLET_ENABLED) ? 'home' : _URL_PAGE[path];
-  // a modal URL (/wallet/deposit, /settings) restores onto its base page
-  if (_URL_MODAL[path]) return (path.startsWith('/wallet') && WALLET_ENABLED) ? 'wallet'
-                             : path.startsWith('/profile') ? 'profile' : 'home';
-  return 'home';
-}
-
-function _skelLine(w,h,mt){
-  return `<span class="skel skel-line" style="display:block;width:${w};${h?'height:'+h+';':''}${mt?'margin-top:'+mt+';':''}"></span>`;
-}
-
-function _bootSkelHtml(kind){
-  const chips = `<div class="sk-chips">${'<span class="skel sk-chip"></span>'.repeat(5)}</div>`;
-  switch(kind){
-    // Mission and long-video pages share this: full-bleed player, one-line title,
-    // creator row ending in Follow, a left action + four icon buttons on the
-    // right, then the Comments card and the More Missions / Related card.
-    case 'detail': return `<div class="sk-detail">
-      <div class="skel sk-hero"></div>
-      <div class="sk-dbody">
-        ${_skelLine('46%','15px')}
-        <div class="sk-creator"><span class="skel sk-av40"></span>
-          <span class="skel skel-line" style="width:150px;height:13px;"></span>
-          <span class="skel sk-pill"></span></div>
-        <div class="sk-actions">
-          <span class="skel sk-accept"></span>
-          <span class="sk-acts-r">${'<span class="skel sk-aicon"></span>'.repeat(4)}</span>
-        </div>
-        <div class="dd-bar">${_skelLine('96px','13px')}${_skelLine('62%','12px','14px')}</div>
-        <div class="dd-bar">${_skelLine('126px','13px')}
-          <div style="margin-top:14px;">${_skelDareCards(1)}</div></div>
-      </div></div>`;
-
-    case 'shorts': return `<div class="sk-shorts"><span class="skel skel-fill"></span></div>`;
-
-    // mobile profile runs its own topbar, so the skeleton carries one too --
-    // otherwise the site topbar flashes in and straight back out
-    case 'profile': return `<div class="sk-profile">
-      <div class="sk-phead"><span class="skel sk-av92"></span>
-        <div class="sk-cmeta">${_skelLine('52%','18px')}${_skelLine('36%','12px','11px')}</div></div>
-      <div class="sk-ptabs"><span class="skel"></span><span class="skel"></span></div>
-      <div class="sk-fchips">${'<span class="skel sk-fchip"></span>'.repeat(3)}</div>
-      ${_skelDareCards(2)}</div>`;
-
-    case 'wallet': return `<div class="sk-wallet">
-      ${_skelLine('86px','20px')}
-      <div class="wallet-card sk-wcard">
-        ${_skelLine('132px','10px')}${_skelLine('212px','34px','14px')}${_skelLine('200px','10px','12px')}
-        <div class="sk-wrow"><span class="skel sk-wstat"></span><span class="skel sk-wstat"></span></div>
-        <div class="sk-wrow sk-wbtns"><span class="skel sk-wbtn"></span><span class="skel sk-wbtn"></span></div>
-      </div>
-      ${_skelLine('92px','17px','26px')}
-      <div class="wstat-card sk-wstats">
-        <div class="sk-wrow" style="margin-top:0;">
-          <span class="skel sk-wsbox"></span><span class="skel sk-wsbox"></span><span class="skel sk-wsbox"></span></div>
-        <div class="skel sk-wchart"></div>
-      </div>
-      ${_skelLine('178px','17px','26px')}
-      <div class="skel sk-wacct"></div>
-      ${_skelLine('132px','16px','26px')}
-      ${_skelTxnRows(5)}</div>`;
-
-    case 'leaderboard': return `<div class="sk-lb">${_skelLine('132px','20px')}
-      <div style="margin-top:20px;">${_skelRankRows(5)}</div></div>`;
-
-    case 'explore': return `${_skelLine('120px','16px')}<div class="sk-chips" style="margin-top:16px;">${'<span class="skel sk-chip"></span>'.repeat(5)}</div>${_skelFeed('explore')}`;
-
-    // both open on a section header with an action on the right
-    case 'dares':    return _skelSecHdr('150px','118px') + _skelFeed('dares');
-    case 'accepted': return _skelSecHdr('212px') + _skelFeed('accepted');
-
-    // home leads with the Missions shelf, then the Videos header and the feed
-    default: return chips + _skelFeed('home');
-  }
-}
-
-function _bootSkelShow(kind){
-  const main = document.querySelector('.main'); if (!main) return;
-  const html = _bootSkelHtml(kind); if (!html) return;
-  let el = document.getElementById('bootSkel');
-  if (!el){ el = document.createElement('div'); el.id = 'bootSkel'; main.appendChild(el); }
-  el.innerHTML = html;
-  document.body.classList.add('boot-skel', 'boot-skel-' + kind);
-  // The watch/mission view and the mobile profile each drop the site topbar.
-  // Reuse the app's own classes rather than re-deriving those rules, or the bar
-  // flashes in and out around the skeleton.
-  if (kind === 'profile') document.body.classList.add('profile-open');
-  if (kind === 'detail') document.body.classList.add('detail-open');
-  if (kind === 'shorts') document.body.classList.add('shorts-open');
-  // A deep link to a deleted video never resolves, and a stuck skeleton is worse
-  // than a stuck empty state — it promises content that is never coming.
-  clearTimeout(_bootSkelTO);
-  _bootSkelTO = setTimeout(_bootSkelHide, 12000);
-}
-
-function _bootSkelHide(){
-  _bootDone = true;                       // and disarm the not-yet-shown one
-  clearTimeout(_bootSkelArm); _bootSkelArm = null;
-  clearTimeout(_bootSkelTO); _bootSkelTO = null;
-  [...document.body.classList].filter(c => c.indexOf('boot-skel') === 0)
-    .forEach(c => document.body.classList.remove(c));
-  // Hand the chrome back only if nothing real is using it — by the time goPage
-  // calls this it has already set profile-open for the page it landed on, and a
-  // deep link opens its overlay before this runs.
-  if (typeof _curPage === 'undefined' || _curPage !== 'profile') document.body.classList.remove('profile-open');
-  if (!document.querySelector('.video-detail-overlay.open')) document.body.classList.remove('detail-open');
-  if (!document.querySelector('.shorts-overlay.open')) document.body.classList.remove('shorts-open');
-  const el = document.getElementById('bootSkel');
-  if (el) el.remove();              // removed, not hidden — see the rule above
-}
-
-let _homeCancelSkel = () => {};
-// Has a server answer for the feed ever arrived? This is the flag whose absence
-// caused "home is stuck on a skeleton while every other page is fine".
-//
-// An EMPTY feed is an answer, not a state of still-loading. Without somewhere to
-// record that, every single visit to Home re-armed the loading skeleton, and
-// 320ms later that skeleton replaced the whole grid — mission cards included —
-// and stayed there for as long as the network took. On a phone on poor mobile
-// data that is seconds; on a connection that has stalled (the app was in the
-// background, the socket is dead) it is forever, because the read never returns
-// and so never repaints.
-// Reproduced with Firestore held at 6s latency: tap Missions, tap Home, and the
-// grid was skeleton at 320ms and still skeleton twelve seconds later.
-let _homeLoadedOnce = false;
-let _homeFetchedAt  = 0;
-let _homeFetching   = false;
-const HOME_FRESH_MS = 45000;   // don't re-read the feed on every tab switch
-
-async function renderHome(cat) {
-  if (cat) homeFilterCat = cat;
-  const grid = document.getElementById('homeVideoGrid');
-  _homeCancelSkel();                     // a re-entry must not leave an old timer armed
-
-  // 1) INSTANT paint from what we already have (memory this session, else the local
-  //    IndexedDB cache) — no waiting on the network for repeat opens.
-  //    The loader is for the FIRST load only. After that there is always
-  //    something honest to show, even if that something is "no videos yet".
-  if (_homeLoadedOnce || (homeProofs && homeProofs.length)) {
-    _homeRenderFeed();
-  } else {
-    _homeCancelSkel = _skelAfter(grid, _skelFeed('home'));
-    try {
-      const c = await db.collection('proofs').where('status','==','approved').limit(PROOF_POOL_LIMIT).get({ source:'cache' });
-      if (!c.empty) { homeProofs = c.docs.map(d=>({id:d.id,...d.data()})); allProofs = homeProofs;
-        _homeCancelSkel();
-        if (typeof _maybeInitialRoute === 'function') _maybeInitialRoute(); _homeRenderFeed(); }
-    } catch(e){}
-  }
-
-  // 2) REFRESH from the server in the background (stale-while-revalidate).
-  //    Not on every visit: goPage('home') calls this, so tapping between tabs
-  //    was re-reading up to PROOF_POOL_LIMIT documents each time, for a feed
-  //    that had not changed. One in flight at a time, and at most one every
-  //    HOME_FRESH_MS once we have a real answer.
-  if (_homeFetching) return;
-  if (_homeLoadedOnce && (Date.now() - _homeFetchedAt) < HOME_FRESH_MS) return;
-  _homeFetching = true;
-  try {
-    const snap = await db.collection('proofs').where('status','==','approved').limit(PROOF_POOL_LIMIT).get();
-    homeProofs = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-    allProofs = homeProofs; // sync for explorer/search/related
-    _homeLoadedOnce = true;
-    _homeFetchedAt  = Date.now();
-    _homeCancelSkel();
-    if (typeof _maybeInitialRoute === 'function') _maybeInitialRoute();   // deep-link /watch|/shorts
-    _homeRenderFeed();
-  } catch(e) {
-    _homeCancelSkel();
-    // A failed refresh must not wipe a feed that is already on screen. Only say
-    // something when there is nothing there to keep.
-    if (grid && !_homeLoadedOnce && !(homeProofs && homeProofs.length)) {
-      grid.innerHTML = `<div class="empty">
-      <span class="mi">error_outline</span>
-      <div class="empty-title">Load Error</div>
-      <p class="empty-desc">${escHtml(e.message || 'Could not load')}</p></div>`;
-    } else {
-      _homeRenderFeed(true);   // repaint over any skeleton left behind
-    }
-  } finally {
-    _homeFetching = false;
-  }
 }
 // ── Why the thumbnails used to blink ──
 // renderHome() paints up to three times on one visit: once from memory, once
@@ -3777,16 +3548,9 @@ async function submitDare() {
   // Balance gating is part of the wallet, so it pauses with it. The reward
   // amount is still collected and still shown on the mission — it just is not
   // charged to anything yet.
-  if (WALLET_ENABLED) {
-    if (!editingDareId && reward > wallet.balance) {
-      showToast('Insufficient wallet balance'); return;
-    }
-    if (editingDareId) {   // editing: only the reward *increase* needs more balance
-      const _oldD = dares.find(d=>d.id===editingDareId);
-      const _oldR = _oldD ? (_oldD.rewardAmount ?? _oldD.bounty ?? 0) : 0;
-      if (reward - _oldR > wallet.balance) { showToast('Insufficient balance to raise the reward'); return; }
-    }
-  }
+  // Nothing is charged for posting. The reward is a number on the mission and
+  // a promise between two people; there is no balance behind it to debit, and
+  // pretending otherwise is what the wallet was doing.
 
   // Expiry
   let expiresAt = null;
@@ -3892,17 +3656,6 @@ async function submitDare() {
         ...dareData,
         updatedAt: firebase.firestore.FieldValue.serverTimestamp()
       });
-      if (WALLET_ENABLED && _delta !== 0) {   // keep escrow accounting in sync
-        wallet.balance -= _delta;
-        wallet.transactions = wallet.transactions || [];
-        wallet.transactions.unshift({
-          id:'w'+Date.now()+Math.floor(Math.random()*1000), ts:Date.now(), status:'completed',
-          type: _delta>0?'debit':'credit', category: _delta>0?'dare_posted':'refund',
-          title: (_delta>0?'Reward raised: ':'Reward lowered (refund): ') + caption.substring(0,25),
-          amount: Math.abs(_delta), ref:'REF'+Date.now().toString(36).toUpperCase(), date: todayStr()
-        });
-        await _privRef().set({ wallet }, { merge:true });
-      }
       closePost();
       showToast('Mission updated successfully!');
       editingDareId = null;
@@ -3947,16 +3700,6 @@ async function submitDare() {
       }
       _postAgreementP = null;      // this mission's record is closed out
 
-      if (WALLET_ENABLED && reward > 0) {
-        wallet.balance -= reward;
-        wallet.transactions.unshift({
-          id:'w'+Date.now()+Math.floor(Math.random()*1000), ts:Date.now(), status:'completed',
-          type:'debit', category:'dare_posted',
-          title:'Mission Posted: ' + caption.substring(0,30),
-          amount: reward, ref:'REF'+Date.now().toString(36).toUpperCase(), date: todayStr()
-        });
-        await _privRef().set({ wallet }, { merge:true });
-      }
 
       closePost();
       const schedMsg = currentVis === 'scheduled'
@@ -4711,9 +4454,7 @@ async function approveProof(proofId) {
   const proof = currentProofs.find(p => p.id === proofId);
   if (!proof) return;
   if (proof.status !== 'submitted') { showToast('This proof has already been ' + proof.status); return; }
-  if (!confirm(WALLET_ENABLED
-      ? `Approve and transfer Rs.${(proof.dareBounty||0).toLocaleString('en-IN')} to ${proof.takerName}?`
-      : `Approve ${proof.takerName}'s proof?`)) return;
+  if (!confirm(`Approve ${proof.takerName}'s proof?`)) return;
 
   try {
     // ONE batch: the proof and the mission move together or not at all. This
@@ -4732,9 +4473,7 @@ async function approveProof(proofId) {
 
     currentProofs = currentProofs.map(p => p.id === proofId ? {...p, status:'approved'} : p);
     renderProofsList();
-    showToast(WALLET_ENABLED
-      ? `Rs.${(proof.dareBounty||0).toLocaleString('en-IN')} ${proof.takerName} sent successfully!`
-      : `Proof approved — ${proof.takerName} completed the mission`);
+    showToast(`Proof approved — ${proof.takerName} completed the mission`);
   } catch(e) {
     showToast('Error: ' + e.message);
   }
@@ -4909,8 +4648,6 @@ function renderProfile() {
   const submitted = acceptedDares.filter(a => a.proofStatus === 'submitted' || a.proofStatus === 'approved');
 
 
-  document.getElementById('walletBal').textContent  = 'Rs. ' + wallet.balance.toLocaleString('en-IN');
-
   // Tabs: Completed (your won videos) · My Dares · Accepted — all card-style + sub-filters
   _renderProfileSocials(user, 'profSocials');
   _renderProfileSocials(user, 'profSocialsBar');   // mobile: socials shown in the glassy topbar
@@ -5041,13 +4778,17 @@ function _renderProfileStats(myPosted){
   myPosted = myPosted || (dares||[]).filter(d => d.creatorUid === user.uid);
   const posted    = myPosted.length;
   const completed = myPosted.filter(d => d.completed).length;
-  const txns      = (wallet.transactions||[]);
-  const earned    = txns.filter(t => _wtxnCat(t)==='bounty_won').reduce((s,t)=>s+(t.amount||0),0);
-  const paid      = txns.filter(t => _wtxnCat(t)==='dare_posted').reduce((s,t)=>s+(t.amount||0),0);
-  const verified  = (wallet.kyc && wallet.kyc.status==='verified');
+  // These used to be read off the wallet's transaction list. That list was the
+  // browser's own invention, so "Earned" counted money nobody ever sent. Both
+  // numbers now come from what actually happened: approved proofs for what this
+  // person earned, completed missions for what they promised out.
+  const _pool     = (typeof allProofs!=='undefined' && allProofs.length) ? allProofs : (homeProofs||[]);
+  const earned    = (_pool||[]).filter(p => p.takerId === user.uid && p.status === 'approved')
+                               .reduce((s,p) => s + (p.dareBounty||0), 0);
+  const paid      = myPosted.filter(d => d.completed)
+                            .reduce((s,d) => s + (d.rewardAmount ?? d.bounty ?? 0), 0);
   const stat = (val,lbl) => `<div class="pstat"><div class="pstat-v">${val}</div><div class="pstat-l">${lbl}</div></div>`;
   el.innerHTML = `
-    ${verified ? `<div class="pstat-verified"><span class="mi">verified</span> Verified</div>` : ''}
     <div class="pstat-grid">
       ${stat(posted, 'Missions')}
       ${stat(completed, 'Completed')}
@@ -5360,12 +5101,12 @@ function _renderProfileBadges(myPosted){
   const el=document.getElementById('profBadges'); if(!el) return;
   myPosted = myPosted || (dares||[]).filter(d=>d.creatorUid===user.uid);
   const completed=myPosted.filter(d=>d.completed).length;
-  const earned=(wallet.transactions||[]).filter(t=>_wtxnCat(t)==='bounty_won').reduce((s,t)=>s+(t.amount||0),0);
+  // From approved proofs, for the same reason as the stats row above.
+  const _bpool=(typeof allProofs!=='undefined'&&allProofs.length)?allProofs:(homeProofs||[]);
+  const earned=(_bpool||[]).filter(p=>p.takerId===user.uid&&p.status==='approved').reduce((s,p)=>s+(p.dareBounty||0),0);
   const pool=(typeof allProofs!=='undefined'&&allProofs.length)?allProofs:homeProofs;
   const videos=(pool||[]).filter(p=>p.takerId===user.uid).length;
-  const verified=(wallet.kyc&&wallet.kyc.status==='verified');
   const badges=[
-    verified           && {i:'verified',      t:'Verified',      c:'#0A84FF'},
     myPosted.length>=1 && {i:'rocket_launch', t:'First Mission',    c:'#FF9F0A'},
     completed>=5       && {i:'military_tech',  t:'Dedicated',     c:'#BF5AF2'},
     videos>=1          && {i:'movie',          t:'Creator',       c:'#FF2D55'},
@@ -5800,21 +5541,10 @@ async function deleteDare(id) {
   const d = dares.find(x => x.id === id);
   if (!d) return;
   const title = d.caption || d.title || 'this mission';
-  if (!confirm(`Delete "${title}"?` + (WALLET_ENABLED
-      ? '\n\nIf you set a reward, it will be refunded to your wallet.' : ''))) return;
+  if (!confirm(`Delete "${title}"?`)) return;
   try {
     await db.collection('dares').doc(id).delete();
-    // Refund reward if dare was not completed
-    const reward = d.rewardAmount ?? d.bounty ?? 0;
-    if (WALLET_ENABLED && reward > 0 && !d.completed) {
-      wallet.balance += reward;
-      wallet.transactions.unshift({ id:'w'+Date.now()+Math.floor(Math.random()*1000), ts:Date.now(), status:'completed',
-        type:'credit', category:'refund', title:'Mission Deleted (Refund): '+title.slice(0,25), amount:reward,
-        ref:'REF'+Date.now().toString(36).toUpperCase(), date:todayStr() });
-      await _privRef().set({ wallet }, { merge:true });
-    }
-    showToast('Mission deleted' + (WALLET_ENABLED && reward>0 && !d.completed
-      ? ` · Rs.${reward.toLocaleString('en-IN')} refunded` : ''));
+    showToast('Mission deleted');
     renderProfile();
   } catch(e) { showToast('Error: '+e.message); }
 }
@@ -6212,7 +5942,7 @@ const _SB_BACK_MIN = 70;    // px of right→left travel that counts as "go back
 let _sbDrag = null;
 
 // Elements that own horizontal dragging themselves — never steal from them
-const _SB_SKIP = '.chips-bar,.shorts-row,.pfilter-row,.exp-tabs,.wallet-filters,' +
+const _SB_SKIP = '.chips-bar,.shorts-row,.pfilter-row,.exp-tabs,' +
                  '.dd-rel-shortsrow,input,textarea,select,[contenteditable]';
 
 // Full-screen views with their own left/right swipes (details drawer, shorts nav)
@@ -6752,7 +6482,7 @@ const GUEST_ACTION_MSGS = {
   post:        { icon:'bolt',         title:'Post Missions', msg:'Create a free account to set bounties and challenge others.' },
   accept:      { icon:'task_alt',     title:'Accept Missions', msg:'Sign up to accept missions and earn real money.' },
   proof:       { icon:'videocam',     title:'Submit Proof', msg:'Create an account to submit video proof and claim your reward.' },
-  profile:     { icon:'person',       title:'Your Profile', msg:'Sign up to build your profile, track earnings, and manage your wallet.' },
+  profile:     { icon:'person',       title:'Your Profile', msg:'Sign up to build your profile and track what you have earned.' },
   accepted:    { icon:'checklist',    title:'Accepted Missions', msg:'Create an account to track and manage the missions you have accepted.' },
   leaderboard: { icon:'leaderboard',  title:'Leaderboard', msg:'Join to see top earners and compete for the highest rewards.' },
   comment:     { icon:'chat_bubble',  title:'Join the conversation', msg:'Create a free account to comment and reply.' },
@@ -7981,9 +7711,6 @@ function _bootRoute(){
   if (!_isKnownPath(path)) show404();      // wrong address: say so
 }
 function _openModalById(id){
-  // a refresh on /wallet/deposit must not resurrect a paused modal
-  if (!WALLET_ENABLED && ['depositOverlay','withdrawOverlay','kycOverlay',
-      'methodOverlay','pinOverlay','txnDetailOverlay'].indexOf(id) >= 0) return;
   switch(id){
     case 'settingsOverlay':      openSettings(); break;
     case 'notifSettingsOverlay': openNotifSettings(); break;
@@ -9756,415 +9483,19 @@ function shortsTouchEnd(e) {
   if (Math.abs(dy) > 60) shortsNav(dy > 0 ? 1 : -1);
 }
 
-// ════════════════════════════════════════════════════════════════════
-//  WALLET — testnet money dashboard (escrow + history + deposit/withdraw)
-// ════════════════════════════════════════════════════════════════════
-let _walletFilter = 'all', _walletQuery = '';
-const _WTXN_CATS = {
-  deposit:     { icon:'add',            label:'Deposit',      type:'credit' },
-  withdraw:    { icon:'account_balance',label:'Withdrawal',   type:'debit'  },
-  bounty_won:  { icon:'emoji_events',   label:'Bounty Won',   type:'credit' },
-  bounty_paid: { icon:'paid',           label:'Bounty Paid',  type:'debit'  },
-  dare_posted: { icon:'lock',           label:'Mission Posted',  type:'debit'  },
-  refund:      { icon:'undo',           label:'Refund',       type:'credit' },
-  claim:       { icon:'savings',        label:'Claimed',      type:'credit' },
-  other:       { icon:'swap_horiz',     label:'Transaction',  type:'credit' }
-};
-const _WFILTERS = [['all','All'],['deposit','Deposits'],['withdraw','Withdrawals'],['bounty_won','Bounty Won'],['dare_posted','Bounty Paid'],['refund','Refunds']];
-
-// Derive a category for old transactions that only have {type,title,amount,date}
-function _wtxnCat(t){
-  if (t.category && _WTXN_CATS[t.category]) return t.category;
-  const s = (t.title||'').toLowerCase();
-  if (s.startsWith('deposit')) return 'deposit';
-  if (s.startsWith('withdraw')) return 'withdraw';
-  if (s.includes('bounty won')) return 'bounty_won';
-  if (s.includes('refund') || s.includes('deleted')) return 'refund';
-  if (s.startsWith('mission posted')) return 'dare_posted';
-  return t.type === 'credit' ? 'other' : 'dare_posted';
-}
-function _wtxnTs(t){ return t.ts || (t.date ? new Date(t.date).getTime() : 0) || 0; }
-
-// Total bounty locked in YOUR active (incomplete) dares — computed, never drifts
-function _walletLocked(){
-  if (!user || typeof dares === 'undefined') return 0;
-  return (dares||[]).filter(d => d.creatorUid === user.uid && !d.completed)
-    .reduce((s,d) => s + (d.rewardAmount ?? d.bounty ?? 0), 0);
-}
-
-// Add a transaction + persist the wallet (current user)
-function _walletAddTxn(o){
-  if (!WALLET_ENABLED) return;   // paused: nothing is written to the wallet field
-  wallet.transactions = wallet.transactions || [];
-  wallet.transactions.unshift({
-    id: 'w'+Date.now()+Math.floor(Math.random()*1000),
-    ts: Date.now(),
-    status: o.status || 'completed',
-    type: o.type || (_WTXN_CATS[o.category]?.type) || 'credit',
-    category: o.category || 'other',
-    title: o.title || (_WTXN_CATS[o.category]?.label) || 'Transaction',
-    amount: o.amount || 0,
-    ref: o.ref || ('REF'+Date.now().toString(36).toUpperCase()),
-    date: todayStr()
-  });
-  if (user) _privRef().set({ wallet }, { merge:true }).catch(()=>{});
-}
-
-// Auto-refund: your own dares that expired without being completed → bounty back
-async function _walletReconcileExpired(){
-  if (!WALLET_ENABLED) return false;          // no refunds to reconcile while paused
-  if (!user || typeof dares === 'undefined') return false;
-  const now = Date.now(); let changed = false;
-  for (const d of (dares||[])){
-    if (d.creatorUid !== user.uid || d.completed || d.refunded) continue;
-    const reward = d.rewardAmount ?? d.bounty ?? 0;
-    if (reward <= 0 || !d.expiresAt) continue;
-    const exp = d.expiresAt.toDate ? d.expiresAt.toDate() : new Date(d.expiresAt);
-    if (exp.getTime() >= now) continue;                 // not expired yet
-    d.refunded = true; d.completed = true;              // bounty was never paid out → safe to refund
-    wallet.balance = (wallet.balance||0) + reward;
-    wallet.transactions = wallet.transactions || [];
-    wallet.transactions.unshift({ id:'w'+Date.now()+Math.floor(Math.random()*1000), ts:Date.now(), status:'completed',
-      type:'credit', category:'refund', title:'Mission Expired (Refund): '+((d.caption||d.title||'').slice(0,25)), amount:reward,
-      ref:'REF'+Date.now().toString(36).toUpperCase(), date:todayStr() });
-    db.collection('dares').doc(d.id).update({ refunded:true, completed:true }).catch(()=>{});
-    changed = true;
-  }
-  if (changed) _privRef().set({ wallet }, { merge:true }).catch(()=>{});
-  return changed;
-}
-
-function renderWallet() {
-  if (!WALLET_ENABLED) return;
-  wallet = wallet || { balance:0, pending:0, transactions:[] };
-  wallet.pending = wallet.pending || 0;
-  _walletReconcileExpired().then(changed=>{ if (changed) renderWallet(); });
-  const locked = _walletLocked();
-  const bal = document.getElementById('walletBal');
-  if (bal) bal.textContent = 'Rs. ' + (wallet.balance||0).toLocaleString('en-IN');
-  const lk = document.getElementById('walletLocked'); if (lk) lk.textContent = 'Rs. ' + locked.toLocaleString('en-IN');
-  const pd = document.getElementById('walletPending'); if (pd) pd.textContent = 'Rs. ' + (wallet.pending||0).toLocaleString('en-IN');
-  // Claim button
-  const cb = document.getElementById('walletClaimBtn'), ca = document.getElementById('walletClaimAmt');
-  if (cb){ if ((wallet.pending||0) > 0){ cb.style.display=''; if(ca) ca.textContent='Rs.'+wallet.pending.toLocaleString('en-IN'); } else cb.style.display='none'; }
-  // Filter chips
-  const fc = document.getElementById('walletFilters');
-  if (fc) fc.innerHTML = _WFILTERS.map(([k,l])=>`<button class="wfilter ${_walletFilter===k?'active':''}" onclick="_walletSetFilter('${k}')">${l}</button>`).join('');
-  _renderWalletStats();
-  _renderWalletAcct();
-  _renderWalletTxns();
-}
-
-function _renderWalletTxns(){
-  const tx = document.getElementById('walletTxns'); if (!tx) return;
-  let list = (wallet.transactions||[]).slice();
-  if (_walletFilter !== 'all') list = list.filter(t => _wtxnCat(t) === _walletFilter);
-  if (_walletQuery){
-    const q = _walletQuery.toLowerCase();
-    list = list.filter(t => (t.title||'').toLowerCase().includes(q) || (''+(t.amount||'')).includes(q) || (t.date||'').toLowerCase().includes(q));
-  }
-  list.sort((a,b)=>_wtxnTs(b)-_wtxnTs(a));
-  if (!list.length){
-    tx.innerHTML = `<div class="empty" style="padding:40px;"><span class="mi">receipt_long</span>
-      <div class="empty-title" style="font-size:18px;">${(wallet.transactions||[]).length?'No matches':'No Transactions'}</div>
-      <p class="empty-desc">${(wallet.transactions||[]).length?'Try a different filter or search.':'Your transaction history will appear here.'}</p></div>`;
-    return;
-  }
-  tx.innerHTML = list.map(t=>{
-    const cat = _wtxnCat(t), meta = _WTXN_CATS[cat] || _WTXN_CATS.other;
-    const credit = (t.type||meta.type) === 'credit';
-    const pending = t.status && t.status !== 'completed';
-    return `<div class="txn-item" onclick="openTxnDetail('${t.id||''}')">
-      <div class="txn-left">
-        <div class="txn-icon" style="background:${credit?'rgba(0,200,83,.15)':'rgba(229,57,53,.15)'};">
-          <span class="mi" style="color:${credit?'var(--green)':'var(--red)'};">${meta.icon}</span>
-        </div>
-        <div><div class="txn-title">${escHtml(t.title||meta.label)}</div>
-          <div class="txn-date">${t.date||''}${pending?` · <span class="txn-status ${t.status}">${t.status}</span>`:''}</div></div>
-      </div>
-      <div class="txn-amt ${credit?'credit':'debit'}">${credit?'+':'-'}Rs.${(t.amount||0).toLocaleString('en-IN')}</div>
-    </div>`;
-  }).join('');
-}
-
-function _walletSetFilter(k){ _walletFilter = k; renderWallet(); }
-function _walletSearchInput(v){ _walletQuery = (v||'').trim(); _renderWalletTxns(); }
-
-function openTxnDetail(id){
-  if (!WALLET_ENABLED) return;
-  const t = (wallet.transactions||[]).find(x=>x.id===id); if(!t) return;
-  const cat = _wtxnCat(t), meta = _WTXN_CATS[cat]||_WTXN_CATS.other;
-  const credit = (t.type||meta.type)==='credit';
-  const row=(k,v)=>`<div class="txd-row"><span>${k}</span><b>${v}</b></div>`;
-  document.getElementById('txnDetailBody').innerHTML = `
-    <div class="txd-amt ${credit?'credit':'debit'}">${credit?'+':'-'}Rs.${(t.amount||0).toLocaleString('en-IN')}</div>
-    <div class="txd-title">${escHtml(t.title||meta.label)}</div>
-    ${row('Type', meta.label)}
-    ${row('Status', `<span class="txn-status ${t.status||'completed'}">${t.status||'completed'}</span>`)}
-    ${row('Date', t.date||'—')}
-    ${row('Reference', t.ref||'—')}`;
-  _ovOpen('txnDetailOverlay');
-}
-
-// ── Deposit / Withdraw (testnet) ──
-function openDepositModal(){
-  if (!WALLET_ENABLED) return;
-  if(!user){ showToast('Sign in first'); return; }
-  const inp=document.getElementById('depositAmt'); if(inp) inp.value='';
-  const chips=document.getElementById('depositChips');
-  if(chips) chips.innerHTML=[500,1000,5000,10000].map(a=>`<button class="wchip" onclick="document.getElementById('depositAmt').value=${a}">+Rs.${a.toLocaleString('en-IN')}</button>`).join('');
-  _ovOpen('depositOverlay');
-  setTimeout(()=>inp&&inp.focus(),50);
-}
-function doDeposit(){
-  if (!WALLET_ENABLED) return;
-  const amt=Math.floor(+document.getElementById('depositAmt').value||0);
-  if(amt<=0){ showToast('Enter a valid amount'); return; }
-  if(amt>500000){ showToast('Max Rs.5,00,000 per deposit (testnet)'); return; }
-  wallet.balance=(wallet.balance||0)+amt;
-  _walletAddTxn({ category:'deposit', title:'Deposit', amount:amt });
-  _walletNotify('Money added', `Rs.${amt.toLocaleString('en-IN')} added to your wallet`, true);
-  closeWalletModal('depositOverlay');
-  showToast(`Rs.${amt.toLocaleString('en-IN')} added`);
-  renderWallet();
-}
-function openWithdrawModal(){
-  if (!WALLET_ENABLED) return;
-  if(!user){ showToast('Sign in first'); return; }
-  const inp=document.getElementById('withdrawAmt'); if(inp) inp.value='';
-  const av=document.getElementById('withdrawAvail'); if(av) av.textContent='Available: Rs. '+(wallet.balance||0).toLocaleString('en-IN');
-  _ovOpen('withdrawOverlay');
-  setTimeout(()=>inp&&inp.focus(),50);
-}
-function doWithdraw(){
-  if (!WALLET_ENABLED) return;
-  const amt=Math.floor(+document.getElementById('withdrawAmt').value||0);
-  if(amt<=0){ showToast('Enter a valid amount'); return; }
-  if(amt>(wallet.balance||0)){ showToast('Insufficient available balance'); return; }
-  if(((wallet.kyc&&wallet.kyc.status)||'none')!=='verified'){ closeWalletModal('withdrawOverlay'); showToast('Complete KYC to withdraw'); openKycModal(); return; }
-  if(!(wallet.methods||[]).length){ closeWalletModal('withdrawOverlay'); showToast('Add a bank/UPI account first'); openMethodModal(); return; }
-  const exec=()=>_executeWithdraw(amt);
-  if(wallet.pin){ closeWalletModal('withdrawOverlay'); _pinVerify(exec); } else exec();
-}
-function _executeWithdraw(amt){
-  if (!WALLET_ENABLED) return;
-  wallet.balance-=amt;
-  const tx={ id:'w'+Date.now()+Math.floor(Math.random()*1000), ts:Date.now(), status:'processing',
-    type:'debit', category:'withdraw', title:'Withdrawal to '+((wallet.methods||[])[0]?.label||'bank'), amount:amt,
-    ref:'REF'+Date.now().toString(36).toUpperCase(), date:todayStr() };
-  wallet.transactions=wallet.transactions||[]; wallet.transactions.unshift(tx);
-  if(user) _privRef().set({ wallet }, { merge:true }).catch(()=>{});
-  closeWalletModal('withdrawOverlay');
-  showToast('Withdrawal initiated · processing');
-  renderWallet();
-  setTimeout(()=>{ tx.status='completed';                       // testnet: simulate settlement
-    if(user) _privRef().set({ wallet }, { merge:true }).catch(()=>{});
-    const wp=document.getElementById('pageWallet'); if(wp&&wp.classList.contains('active')) renderWallet();
-    _walletNotify('Withdrawal completed', `Rs.${amt.toLocaleString('en-IN')} sent to your account`, false);
-    showToast('Withdrawal completed');
-  }, 4000);
-}
-function claimPending(){
-  if (!WALLET_ENABLED) return;
-  const amt=wallet.pending||0; if(amt<=0) return;
-  wallet.balance=(wallet.balance||0)+amt; wallet.pending=0;
-  _walletAddTxn({ category:'claim', title:'Pending earnings claimed', amount:amt });
-  _walletNotify('Earnings claimed', `Rs.${amt.toLocaleString('en-IN')} moved to your balance`, true);
-  showToast(`Rs.${amt.toLocaleString('en-IN')} moved to balance`);
-  renderWallet();
-}
+// The wallet lived here — around 400 lines of balance, escrow, deposit,
+// withdraw, KYC, bank methods, a transaction PIN and a CSV export, all running
+// on a fake Rs.1,00,000 the browser added up by itself. Removed 27 Aug 2026 at
+// the owner's request. It closes the two oldest findings on the list (#1, #13):
+// the balance was writable by whoever owned the account, and no rule could ever
+// have told a real debit from an invented one. When real payments arrive this
+// comes back on a server, where a balance can be trusted.
+//
+// One thing survived, because half the app calls it: closeWalletModal is a
+// generic overlay closer despite the name — settings, search, the follow list
+// and the filter sheet all use it. Renaming it would mean touching thirty-one
+// call sites for no behaviour change, so it keeps the name and this note.
 function closeWalletModal(id){ _ovSync(id); const el=document.getElementById(id); if(el) el.classList.remove('open'); }
-
-// ── KYC ──
-function openKycModal(){
-  if (!WALLET_ENABLED) return;
-  if(!user){ showToast('Sign in first'); return; }
-  wallet.kyc = wallet.kyc || { status:'none' };
-  if(wallet.kyc.status==='verified'){ showToast('KYC already verified ✓'); return; }
-  document.getElementById('kycName').value = wallet.kyc.name||'';
-  document.getElementById('kycPan').value  = wallet.kyc.pan||'';
-  _ovOpen('kycOverlay');
-}
-function submitKyc(){
-  if (!WALLET_ENABLED) return;
-  const name=(document.getElementById('kycName').value||'').trim();
-  const pan=(document.getElementById('kycPan').value||'').trim().toUpperCase();
-  if(name.length<3){ showToast('Enter your full name'); return; }
-  if(!/^[A-Z]{5}[0-9]{4}[A-Z]$/.test(pan)){ showToast('Enter a valid PAN (ABCDE1234F)'); return; }
-  wallet.kyc={ status:'verified', name, pan };          // testnet: instant approval
-  if(user) _privRef().set({ wallet }, { merge:true }).catch(()=>{});
-  closeWalletModal('kycOverlay'); showToast('KYC verified ✓'); renderWallet();
-}
-
-// ── Linked accounts (UPI / bank) ──
-let _methodType='upi';
-function _methodTab(t){
-  _methodType=t;
-  document.getElementById('wmtabUpi').classList.toggle('active',t==='upi');
-  document.getElementById('wmtabBank').classList.toggle('active',t==='bank');
-  document.getElementById('methodUpi').style.display = t==='upi'?'':'none';
-  document.getElementById('methodBank').style.display = t==='bank'?'':'none';
-}
-function openMethodModal(){
-  if (!WALLET_ENABLED) return;
-  if(!user){ showToast('Sign in first'); return; }
-  ['mUpi','mBankName','mBankNum','mBankIfsc'].forEach(id=>{ const e=document.getElementById(id); if(e) e.value=''; });
-  _methodTab('upi'); _ovOpen('methodOverlay');
-}
-function addMethod(){
-  if (!WALLET_ENABLED) return;
-  wallet.methods=wallet.methods||[]; let m=null;
-  if(_methodType==='upi'){
-    const v=(document.getElementById('mUpi').value||'').trim();
-    if(!/^[\w.\-]{2,}@[a-zA-Z]{2,}$/.test(v)){ showToast('Enter a valid UPI ID'); return; }
-    m={ id:'m'+Date.now(), type:'upi', label:v, sub:'UPI' };
-  } else {
-    const nm=(document.getElementById('mBankName').value||'').trim();
-    const num=(document.getElementById('mBankNum').value||'').trim().replace(/\s/g,'');
-    const ifsc=(document.getElementById('mBankIfsc').value||'').trim().toUpperCase();
-    if(nm.length<3||!/^\d{6,18}$/.test(num)||ifsc.length<6){ showToast('Fill valid bank details'); return; }
-    m={ id:'m'+Date.now(), type:'bank', label:'••••'+num.slice(-4), sub:nm+' · '+ifsc };
-  }
-  wallet.methods.push(m);
-  if(user) _privRef().set({ wallet }, { merge:true }).catch(()=>{});
-  closeWalletModal('methodOverlay'); showToast('Account added'); renderWallet();
-}
-function removeMethod(id){
-  if (!WALLET_ENABLED) return;
-  wallet.methods=(wallet.methods||[]).filter(m=>m.id!==id);
-  if(user) _privRef().set({ wallet }, { merge:true }).catch(()=>{});
-  renderWallet();
-}
-
-// ── Transaction PIN (set / verify) ──
-let _pinCb=null, _pinMode='set';
-function openPinModal(){
-  if (!WALLET_ENABLED) return;
-  _pinMode = wallet.pin ? 'change':'set';
-  document.getElementById('pinTitle').textContent = wallet.pin?'Change transaction PIN':'Set transaction PIN';
-  document.getElementById('pinNote').innerHTML = '<span class="mi">lock</span> A 4-digit PIN protects your withdrawals.';
-  document.getElementById('pinSubmitBtn').textContent='Save PIN';
-  document.getElementById('pinInput').value='';
-  _ovOpen('pinOverlay');
-  setTimeout(()=>document.getElementById('pinInput').focus(),60);
-}
-function _pinVerify(cb){
-  _pinMode='verify'; _pinCb=cb;
-  document.getElementById('pinTitle').textContent='Enter PIN';
-  document.getElementById('pinNote').innerHTML='<span class="mi">lock</span> Enter your 4-digit PIN to confirm.';
-  document.getElementById('pinSubmitBtn').textContent='Confirm';
-  document.getElementById('pinInput').value='';
-  _ovOpen('pinOverlay');
-  setTimeout(()=>document.getElementById('pinInput').focus(),60);
-}
-function _pinSubmit(){
-  if (!WALLET_ENABLED) return;
-  const v=(document.getElementById('pinInput').value||'').trim();
-  if(!/^\d{4}$/.test(v)){ showToast('Enter a 4-digit PIN'); return; }
-  if(_pinMode==='verify'){
-    if(v!==wallet.pin){ showToast('Incorrect PIN'); return; }
-    closeWalletModal('pinOverlay'); const cb=_pinCb; _pinCb=null; if(cb) cb();
-  } else {
-    wallet.pin=v;
-    if(user) _privRef().set({ wallet }, { merge:true }).catch(()=>{});
-    closeWalletModal('pinOverlay'); showToast('PIN saved ✓'); renderWallet();
-  }
-}
-
-// ── Account & Security section (rendered inside the wallet page) ──
-function _renderWalletAcct(){
-  const el=document.getElementById('walletAcct'); if(!el) return;
-  const kyc=(wallet.kyc&&wallet.kyc.status)||'none';
-  const methods=wallet.methods||[];
-  const kycBadge = kyc==='verified'?'<span class="wacc-badge ok">Verified</span>'
-    : kyc==='pending'?'<span class="wacc-badge pend">Pending</span>'
-    : '<span class="wacc-badge no">Not verified</span>';
-  el.innerHTML = `
-    <div class="sec-title" style="font-size:16px;margin:26px 0 12px;"><div class="sec-dot"></div>Account &amp; Security</div>
-    <div class="wacc-card">
-      <div class="wacc-row" onclick="openKycModal()">
-        <div class="wacc-l"><span class="wacc-ic"><span class="mi">verified_user</span></span>
-          <div><div class="wacc-t">KYC verification</div><div class="wacc-s">PAN check, needed for withdrawals</div></div></div>
-        <div class="wacc-r">${kycBadge}<span class="mi" style="color:var(--t3);">chevron_right</span></div>
-      </div>
-      <div class="wacc-row" onclick="openPinModal()">
-        <div class="wacc-l"><span class="wacc-ic"><span class="mi">lock</span></span>
-          <div><div class="wacc-t">Transaction PIN</div><div class="wacc-s">${wallet.pin?'PIN is set · tap to change':'Not set'}</div></div></div>
-        <div class="wacc-r"><span class="mi" style="color:var(--t3);">chevron_right</span></div>
-      </div>
-      <div class="wacc-methods">
-        <div class="wacc-methods-hdr"><span>Linked accounts</span><button onclick="openMethodModal()"><span class="mi">add</span>Add</button></div>
-        ${methods.length? methods.map(m=>`<div class="wacc-method">
-            <span class="wacc-mic"><span class="mi">${m.type==='upi'?'qr_code_2':'account_balance'}</span></span>
-            <div class="wacc-mbody"><div class="wacc-mt">${escHtml(m.label)}</div><div class="wacc-ms">${escHtml(m.sub||'')}</div></div>
-            <button class="wacc-mdel" onclick="removeMethod('${m.id}')" title="Remove"><span class="mi">delete</span></button>
-          </div>`).join('')
-          : '<div class="wacc-empty">No accounts linked yet</div>'}
-      </div>
-    </div>`;
-}
-
-// ── Insights: earnings summary + 6-month income/expense chart ──
-function _renderWalletStats(){
-  const el=document.getElementById('walletStats'); if(!el) return;
-  const txns=wallet.transactions||[];
-  if(!txns.length){ el.innerHTML=''; return; }
-  let totalIn=0, totalOut=0, bountyWon=0;
-  const now=new Date(), mk=d=>d.getFullYear()+'-'+d.getMonth();
-  const months=[]; for(let i=5;i>=0;i--){ const d=new Date(now.getFullYear(),now.getMonth()-i,1); months.push({k:mk(d),label:d.toLocaleString('en-US',{month:'short'}),inc:0,exp:0}); }
-  const mMap={}; months.forEach(m=>mMap[m.k]=m);
-  txns.forEach(t=>{
-    const cat=_wtxnCat(t), meta=_WTXN_CATS[cat]||_WTXN_CATS.other, credit=(t.type||meta.type)==='credit', amt=t.amount||0;
-    if(credit){ totalIn+=amt; if(cat==='bounty_won') bountyWon+=amt; } else totalOut+=amt;
-    const ts=_wtxnTs(t); if(ts){ const m=mMap[mk(new Date(ts))]; if(m){ credit?m.inc+=amt:m.exp+=amt; } }
-  });
-  const max=Math.max(1,...months.map(m=>Math.max(m.inc,m.exp)));
-  const tm=mMap[mk(now)]||{inc:0,exp:0}, net=tm.inc-tm.exp;
-  el.innerHTML=`
-    <div class="sec-title" style="font-size:16px;margin:26px 0 12px;"><div class="sec-dot"></div>Insights</div>
-    <div class="wstat-card">
-      <div class="wstat-row">
-        <div class="wstat-box"><div class="wstat-lbl">Total in</div><div class="wstat-val green">+Rs.${totalIn.toLocaleString('en-IN')}</div></div>
-        <div class="wstat-box"><div class="wstat-lbl">Total out</div><div class="wstat-val red">-Rs.${totalOut.toLocaleString('en-IN')}</div></div>
-        <div class="wstat-box"><div class="wstat-lbl">Bounty earned</div><div class="wstat-val">Rs.${bountyWon.toLocaleString('en-IN')}</div></div>
-      </div>
-      <div class="wstat-chart">
-        ${months.map(m=>`<div class="wbar-col">
-          <div class="wbars">
-            <div class="wbar inc" style="height:${Math.round(m.inc/max*100)}%" title="In Rs.${m.inc.toLocaleString('en-IN')}"></div>
-            <div class="wbar exp" style="height:${Math.round(m.exp/max*100)}%" title="Out Rs.${m.exp.toLocaleString('en-IN')}"></div>
-          </div>
-          <div class="wbar-lbl">${m.label}</div>
-        </div>`).join('')}
-      </div>
-      <div class="wstat-legend"><span><i class="wdot inc"></i>Income</span><span><i class="wdot exp"></i>Expense</span>
-        <span class="wstat-net">This month: <b class="${net>=0?'green':'red'}">${net>=0?'+':'−'}Rs.${Math.abs(net).toLocaleString('en-IN')}</b></span></div>
-    </div>`;
-}
-
-// ── Statement export (CSV) ──
-function exportWalletCSV(){
-  if (!WALLET_ENABLED) return;
-  const txns=(wallet.transactions||[]).slice().sort((a,b)=>_wtxnTs(b)-_wtxnTs(a));
-  if(!txns.length){ showToast('No transactions to export'); return; }
-  const esc=s=>`"${(''+s).replace(/"/g,'""')}"`;
-  const rows=[['Date','Type','Category','Title','Amount (Rs)','Status','Reference']];
-  txns.forEach(t=>{ const cat=_wtxnCat(t), meta=_WTXN_CATS[cat]||_WTXN_CATS.other, credit=(t.type||meta.type)==='credit';
-    rows.push([t.date||'', credit?'Credit':'Debit', meta.label, t.title||'', (credit?'+':'-')+(t.amount||0), t.status||'completed', t.ref||'']); });
-  const csv=rows.map(r=>r.map(esc).join(',')).join('\r\n');
-  const blob=new Blob([csv],{type:'text/csv;charset=utf-8;'}), url=URL.createObjectURL(blob);
-  // The saved file carries the app's name onto the person's own device, so it
-  // was the last place the old one was still being handed out.
-  const a=document.createElement('a'); a.href=url; a.download='misnivo-statement-'+todayStr().replace(/\s+/g,'-')+'.csv';
-  document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
-  showToast('Statement downloaded');
-}
-
-// ── Wallet event notification (self) ──
-// No-op since /notifications is server-write-only. Every wallet event is
-// already listed in the wallet's own transaction history, so nothing is lost;
-// re-opening writes to clients just to notify yourself is not worth the hole.
-function _walletNotify(){ return; }
 
 // Smart router: shorts (<60s) open Shorts player, long videos open YouTube watch page
 function openVideo(proofId) {
