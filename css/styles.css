@@ -6004,7 +6004,12 @@ body.no-anim #shortsOverlay .shorts-comments{ transition:none !important; }
    the right is drawn separately and is unaffected. */
 .set-nav-item .mi{
   color:var(--t2); flex-shrink:0;
-  font-family:'Material Symbols Outlined','Material Icons Round';
+  /* !important because a blanket rule further down says
+     .mi{ font-family:'Material Icons Round' !important } and nothing weaker
+     beats it. Five other rules in this file already do exactly this to reach
+     the Symbols face; without it the variation settings below still apply and
+     do nothing, because Material Icons Round has no FILL axis to vary. */
+  font-family:'Material Symbols Outlined','Material Icons Round' !important;
   font-variation-settings:'FILL' 0,'wght' 250,'GRAD' 0,'opsz' 24;
 }
 .set-nav-item.active .mi{ color:#fff; }
