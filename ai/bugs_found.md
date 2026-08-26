@@ -920,6 +920,8 @@ real applicant, header exact at "1 applicant" and "1+ applicant" when capped.
 > 119 sites were already correct.
 
 ### 34. Two profile functions that have never rendered anything (LOW)
+> ⏸️ **PARKED BY THE OWNER — see `ai/PARKED.md`.** Do not pick this up on your own.
+>
 > **OPEN — found while removing the wallet, not caused by it.**
 > `_renderProfileStats()` and `_renderProfileBadges()` both start with
 > `getElementById('profStats')` / `('profBadges')` and return when it is missing.

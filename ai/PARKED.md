@@ -62,6 +62,23 @@ Three options were put to the owner; one needs picking:
 
 **Parked 26 Aug 2026** — owner: *"abhi ke liye abc mein chhod do"*.
 
+### #34 — the profile stats row
+Two functions, `_renderProfileStats()` and `_renderProfileBadges()`, would draw
+a six-box row on the Profile page — Missions, Completed, Earned, Paid out,
+Followers, Following — plus an achievements strip under it.
+
+Neither has ever run. Their container (`#profStats` / `#profBadges`) is not in
+`index.html`, and nothing calls either function. `git show` confirms both were
+already true before the wallet removal, so this is an unfinished feature rather
+than something that broke.
+
+Two different jobs depending on the answer, which is why it was asked rather
+than guessed: **wanted** means adding the container and wiring the calls;
+**not wanted** means deleting both functions, about forty lines.
+
+**Parked 27 Aug 2026** — owner: *"nahi abhi nahi"*. Not urgent either way; the
+page works today and nothing is broken by leaving it.
+
 ### #4 — "over-reliance on client-side enforcement"
 No specific flow was ever named, so there is nothing to check. Every critical
 transition found so far *is* enforced server-side. **Unblocks when the owner
