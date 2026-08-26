@@ -13,7 +13,7 @@ Status meanings:
 | **KNOWN** | real, already understood, deliberately not fixed yet — reason given |
 | **OPEN** | real, not fixed, needs a decision or work |
 
-**Summary: 26 fixed · 2 closed by removal · 2 not real · 1 known · 4 open**
+**Summary: 27 fixed · 2 closed by removal · 2 not real · 1 known · 4 open**
 
 > ⏸️ **`ai/PARKED.md`** — everything the owner has deliberately put on hold,
 > with the reason and what unblocks it. An entry marked PARKED below is a
@@ -934,6 +934,39 @@ real applicant, header exact at "1 applicant" and "1+ applicant" when capped.
 > a feature that was never finished, and which one it is changes what the fix
 > should be. **The owner should say whether that stats row is wanted** — if yes
 > the container needs adding back, if no both functions should go.
+
+### 38. The same gap on the other branch, twice more (HIGH) — found by following #35
+> **FIXED 27 Aug 2026, rules deployed.** Gemini's #35 was not one bug, it was a
+> shape: *a rule that guards one branch and not its twin.* Sweeping every
+> collection for that shape found two more, and both were real when tested.
+>
+> **`users` create had no ceilings at all.** The update branch caps name, bio,
+> website, photoURL, socials, settings and three arrays. Create was
+> `allow create: if isSelf(userId)` and nothing else — so a brand-new account's
+> **very first write**, the one `initUser` makes a second after sign-up, could
+> carry a 50KB bio straight past every one of them. Verified before fixing: it
+> went in. `users/{uid}` is world-readable and fetched for a name and an avatar
+> all over the app, so that is a payload everyone downloads afterwards.
+>
+> **The proof rejection reason had no ceiling.** `proofTextOk()` caps it when
+> the proof is CREATED — but the taker creates the proof, and it is the *mission
+> owner* who writes `rejectionReason`, on the update, where nothing checked it.
+> The reject form allows 500 characters; the rule allowed any number.
+>
+> The private drawer's create was uncapped too and got the same treatment. Not
+> world-readable, so it is a billing and bloat problem rather than everyone's —
+> but the app fetches that document on every boot.
+>
+> **The fix is one function, not two lists.** `userTextOk()` is now called by
+> both the create and the update branch, so they cannot drift apart again. That
+> drift is the whole bug; writing the caps out twice is what caused it.
+>
+> Verified in both directions, and the direction that mattered most was the
+> boring one: **a real sign-up through the real form still works and its profile
+> document still lands.** Adding a condition to the create branch is exactly the
+> change that breaks every new account, so that was checked first. Then: a 50KB
+> bio at create time refused, a normal bio allowed, a 50KB rejection reason
+> refused, a normal rejection allowed, submitting a proof unaffected. 9/9.
 
 ---
 

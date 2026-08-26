@@ -180,7 +180,28 @@ service cloud.firestore {
       // and every new sign-up was refused its public document. The account
       // existed in Auth with no profile behind it. Caught by a fresh sign-up
       // failing with permission-denied inside initUser.
-      allow create: if isSelf(userId);
+      // The size caps live in one function because they have to apply to the
+      // CREATE as well. They did not: create was `isSelf(userId)` and nothing
+      // else, so a brand-new account's very first write — the one initUser
+      // makes a second after sign-up — could carry a 50KB bio straight past
+      // every ceiling on the update branch below. Verified before fixing: it
+      // went in. users/{uid} is world-readable and fetched for an avatar and a
+      // name all over the app, so that is a payload everyone downloads.
+      // Same class as #35: a rule that guards one branch and not its twin.
+      function userTextOk() {
+        return textOk(request.resource.data.get('name', null), 100)
+            && textOk(request.resource.data.get('username', null), 40)
+            && textOk(request.resource.data.get('bio', null), 300)
+            && textOk(request.resource.data.get('website', null), 300)
+            && textOk(request.resource.data.get('photoURL', null), 800)
+            && mapOk(request.resource.data.get('socials', null), 400)
+            && mapOk(request.resource.data.get('settings', null), 400)
+            && listOk(request.resource.data.get('pinnedDares', null), 2000)
+            && listOk(request.resource.data.get('likedProofs', null), 40000)
+            && (!('acceptedDares' in request.resource.data)
+                || request.resource.data.acceptedDares.size() <= 500);
+      }
+      allow create: if isSelf(userId) && userTextOk();
 
       // Only the account owner, and only the fields the UI actually edits.
       // email, dateOfBirth, ageVerifiedAt, underageBlocked, blockedAt and wallet
@@ -192,24 +213,9 @@ service cloud.firestore {
                              'settings','acceptedDares','pinnedDares',
                              'likedProofs','fcmUpdatedAt'
                            ])
-                        // and nothing enormous in any of them — the form caps
-                        // these at 60/30/160/40, so the ceilings here are well
-                        // clear of anything the app itself writes
-                        && textOk(request.resource.data.get('name', null), 100)
-                        && textOk(request.resource.data.get('username', null), 40)
-                        && textOk(request.resource.data.get('bio', null), 300)
-                        && textOk(request.resource.data.get('website', null), 300)
-                        && textOk(request.resource.data.get('photoURL', null), 800)
-                        // The rest of the whitelist had no ceiling at all.
-                        // socials is three handles; settings is six switches;
-                        // the last three are legacy copies kept here only so an
-                        // un-migrated account can delete them.
-                        && mapOk(request.resource.data.get('socials', null), 400)
-                        && mapOk(request.resource.data.get('settings', null), 400)
-                        && listOk(request.resource.data.get('pinnedDares', null), 2000)
-                        && listOk(request.resource.data.get('likedProofs', null), 40000)
-                        && (!('acceptedDares' in request.resource.data)
-                            || request.resource.data.acceptedDares.size() <= 500))
+                        // the same ceilings the create uses — one function, so
+                        // the two branches cannot drift apart again
+                        && userTextOk())
                     // One-way migration: an existing account may REMOVE the old
                     // top-level copies once they have been written to private/.
                     // Removal only — none of them may survive the write, so this
@@ -237,7 +243,19 @@ service cloud.firestore {
         // unban or lift a wrong age block — the account holder cannot do the
         // last two for itself, by design, so the admin path has to exist.
         allow read:   if isSelf(userId) || isAdmin();
-        allow create: if isSelf(userId);
+        // Not world-readable, so this is a billing and bloat problem rather
+        // than everyone's problem — but it is still a document the app fetches
+        // on every boot, and it had no ceiling at all.
+        function privTextOk() {
+          return textOk(request.resource.data.get('email', null), 200)
+              && textOk(request.resource.data.get('dateOfBirth', null), 40)
+              && textOk(request.resource.data.get('bannedReason', null), 1000)
+              && listOk(request.resource.data.get('pinnedDares', null), 2000)
+              && listOk(request.resource.data.get('likedProofs', null), 40000)
+              && (!('acceptedDares' in request.resource.data)
+                  || request.resource.data.acceptedDares.size() <= 500);
+        }
+        allow create: if isSelf(userId) && privTextOk();
         allow update: if isAdmin()
                       || isSelf(userId)
                       && (!touched().hasAny(['dateOfBirth'])
@@ -439,10 +457,16 @@ service cloud.firestore {
         // → approved without limit, firing a notification and (later) a payout
         // every time. A rejected taker submits a NEW proof document, so nothing
         // legitimate needs to reopen this one.
+        // The reject form allows 500 characters. The rule allowed any number:
+        // proofTextOk() caps rejectionReason when the proof is CREATED, and the
+        // taker is the one who creates it — the mission owner writes that field
+        // here, on the update, where nothing checked it. /proofs is
+        // world-readable and the feed pulls it.
         (signedIn() && resource.data.posterId == uid()
                     && onlyTouches(['status','rejectionReason'])
                     && resource.data.status == 'submitted'
-                    && request.resource.data.status in ['approved','rejected'])
+                    && request.resource.data.status in ['approved','rejected']
+                    && textOk(request.resource.data.get('rejectionReason', null), 1000))
         // anyone signed in may like / dislike / recount comments
         // (commentCount is a full recount from a query, so it is not step-checked)
         || (signedIn() && onlyTouches([

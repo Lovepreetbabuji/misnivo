@@ -101,6 +101,35 @@ Each of these is written down because it has already broken something real.
 
 # LOG — newest first, maximum 5 entries
 
+## 2026-08-27 06:40 — CLAUDE
+CHANGED: firestore.rules (DEPLOYED), ai/bugs_found.md — no app code, no deploy
+WHAT: A hunt that started from Gemini’s #35 rather than from scratch. That
+was not one bug, it was a SHAPE — a rule that guards one branch and not its
+twin — so I swept every collection for the same shape and found two more,
+both real when tested. #38: `users` create was `isSelf(userId)` and nothing
+else, so a new account’s FIRST write (the one initUser makes seconds after
+sign-up) could carry a 50KB bio past every cap on the update branch; and the
+proof rejectionReason was capped on create, which the TAKER does, while the
+mission owner writes that field on the update, where nothing checked it. The
+private drawer’s create was uncapped too.
+VERIFIED: 9/9, and the first check was the one that mattered — a real sign-up
+through the real form still works and its profile document still lands.
+Adding a condition to a create branch is exactly the change that breaks every
+new account. Then: 50KB bio at create refused, normal bio allowed, 50KB
+rejection reason refused, normal rejection allowed, proof submission
+unaffected. Test accounts deleted.
+RISK: The caps are now ONE function (userTextOk) called by both branches
+rather than two copies of the same list. The drift between those copies was
+the entire bug, so anything added to one must never be added to only one.
+Note for the next sweep: my earlier audit asked "which FIELDS have no limit"
+and walked the create rules. That question cannot find this class. The right
+question is "does every branch that can write this field check it".
+One result was a red herring worth writing down: an update that rewrites the
+same bytes has an EMPTY diff, so onlyTouches() passes trivially and the write
+is allowed whatever the content. It changes nothing, so it is not a hole —
+but it reads like one in a test.
+OVER
+
 ## 2026-08-27 04:15 — CLAUDE
 CHANGED: index.html, js/app.js, css/styles.css, sw.js, firestore.rules
 (DEPLOYED), ai/bugs_found.md, ai/PARKED.md, PROJECT_CONTEXT.md — stamp
@@ -210,28 +239,4 @@ the owner and wait.
 Two things they still owe an answer on and know it: which of a/b/c for #24
 (parked today, on purpose), and the Blaze cost breakdown they asked for, which
 has not been produced yet.
-OVER
-
-## 2026-08-26 17:20 — CLAUDE
-CHANGED: ai/bugs_found.md, PROJECT_CONTEXT.md only — NO app code, no deploy
-WHAT: The owner asked whether the app has rate limiting. Checked rather than
-remembered: it does not. No throttle, no cooldown, no lastPostAt, no time
-comparison in js/app.js or firestore.rules; Cloud Functions exist in the repo
-but functions:list fails, which is Spark saying no. Written up as #30, and #14
-now carries a warning at the top, because its heading says FIXED and that only
-covers the SCRIPTED half — App Check asks whether you are a real browser, never
-how many times you have done something.
-VERIFIED: n/a — nothing was changed. The finding itself was checked by grep
-across both files and by firebase functions:list against the live project.
-RISK: Worth knowing before anyone tries it: a rules-only rate limit does NOT
-work here. Rules can compare request.time to a stored timestamp, but the client
-writes that timestamp, so an attacker just never updates theirs and passes for
-ever. Also recorded: reCAPTCHA free tier is 10,000 assessments a month org-wide
-and App Check is ENFORCED, so crossing it returns 429 and locks out real users
-while costing an attacker nothing — the only ceiling this project has points at
-the victim.
-A UI cooldown was offered as a partial measure and the owner declined it on
-purpose, in favour of doing the real thing on Blaze. Not implemented.
-The open list was stale and is rebuilt: #23 is fixed, #24 has a verdict, and
-the Blaze queue is FOUR items now, not three.
 OVER
