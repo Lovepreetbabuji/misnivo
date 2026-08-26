@@ -90,12 +90,38 @@ Each of these is written down because it has already broken something real.
   user-facing text. This is a task marketplace, not a game of chance.
 - **New personal fields go in `PRIVATE_FIELDS`** (`js/app.js`), never on the
   public `users/{uid}` document, which anyone can read.
+- **`ai/PARKED.md` is a list of the owner’s DECISIONS, not a queue.** Anything
+  in it was deliberately put on hold — it is not an oversight and it is not
+  free work waiting to be picked up. If you think a parked item has become
+  urgent, say so to the owner and wait. Same rule as §4 above.
 - **Keep secrets out of this file.** It is safe today only because the repo is
   private and the site's SPA rule hides it — both could change.
 
 ---
 
 # LOG — newest first, maximum 5 entries
+
+## 2026-08-26 18:30 — CLAUDE
+CHANGED: ai/PARKED.md (new), ai/bugs_found.md, ai/HANDOFF.md,
+PROJECT_CONTEXT.md — no app code, no deploy
+WHAT: The owner asked for the things they have deliberately put on hold to be
+visible as decisions rather than sitting in the bug list looking unfinished.
+New file ai/PARKED.md: the four items behind the Blaze plan (#30 rate
+limiting, #17 Cloudinary, #1/#13 wallet), the two waiting on an answer from
+them (#24 email verification, #4), the loose ends that are not findings, and a
+section for things already rejected so they do not get re-proposed. Each of
+those six entries in bugs_found.md now carries a PARKED marker pointing at it,
+and it is named in the PROJECT_CONTEXT file map and in the ground rules here.
+VERIFIED: n/a — documentation only. Markers counted: 6 of 6 placed.
+RISK: The point of the file is the opposite of a queue, and the ground rule
+above says so: anything in it is a decision that was made out loud, not free
+work waiting to be picked up. Implementing a parked item because it looks open
+is the exact mistake it exists to prevent — if one becomes urgent, say so to
+the owner and wait.
+Two things they still owe an answer on and know it: which of a/b/c for #24
+(parked today, on purpose), and the Blaze cost breakdown they asked for, which
+has not been produced yet.
+OVER
 
 ## 2026-08-26 17:20 — CLAUDE
 CHANGED: ai/bugs_found.md, PROJECT_CONTEXT.md only — NO app code, no deploy
@@ -203,31 +229,4 @@ can give any panel a different edge.
 Gemini’s #23 (unbounded likedBy arrays) and #24 (unverified email signup) are
 still UNCHECKED — #23 reads like the most serious thing open if it holds.
 The AI safety filter was NOT re-tested this round; last verified on 20260825i.
-OVER
-
-## 2026-08-25 21:15 — CLAUDE
-CHANGED: `js/app.js`, `index.html`, `sw.js`, `misnivo-sm.webp/.png` (new),
-`ai/bugs_found.md`, `PROJECT_CONTEXT.md` — stamp `20260825i`
-WHAT: A real user reported the app is slow to load. Measured it first — cold
-3.34s / 1100KB / 37 requests — then fixed the three things that accounted for
-most of it: uploaded images were served at ORIGINAL size (four feed images =
-390KB, one of them 150KB, for cards a few hundred px wide; `_optImg` now sizes
-them), the logo was a 113KB PNG preloaded at high priority (5KB as WebP), and a
-SECOND reCAPTCHA loaded for every visitor for the AI filter's separate Firebase
-app. After: 2.59s / 650KB / 30 requests, one reCAPTCHA.
-VERIFIED: Measured before and after on the live site, same harness. Then signed
-in and drove the real flow: normal mission ALLOWED in 4.3s, harmful BLOCKED in
-3.7s, no un-sized Cloudinary image left on the page, logo renders, 0 errors.
-Throwaway account deleted.
-RISK: 🔴 **I broke the safety filter mid-way and it is worth knowing how.**
-Making the AI app lazy moved its App Check token fetch into the moment of use;
-that token is reCAPTCHA-backed, takes 5-6s cold, and ate the 20s budget in
-`_aiAsk`, so the check timed out — and it fails CLOSED, meaning every mission
-refused. Only caught because I tested the filter itself, not just the page.
-Fixed by waking it in `openPost()` instead. **A warm model answers in 1.4-3s;
-an AI call taking tens of seconds is the App Check token, not the model.**
-Also fixed in bugs_found.md: two entries had been added as a second #21 and
-#22, now #23 and #24, and a heading had been merged into nonsense. Neither is
-checked against the code yet — #23 (unbounded likedBy arrays) reads like the
-most serious thing open if it holds.
 OVER

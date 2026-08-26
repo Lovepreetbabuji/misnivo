@@ -49,6 +49,7 @@ Misnivo). Support: `misnivo.support@gmail.com`.
 | `claude.md` / `GEMINI.md` / `AGENTS.md` | AI instructions (response format, rules) |
 | `ai/HANDOFF.md` | **Claude ↔ Gemini kaam saunpne ki jagah** |
 | `ai/bugs_found.md` | Mile hue bugs ki list |
+| `ai/PARKED.md` | **Jo cheezein maine jaan-boojh kar roki hain** — kyun ruki, kab chalu hogi |
 | `FIREBASE_SETUP.md` | Firebase setup notes |
 
 ---

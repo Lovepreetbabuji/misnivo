@@ -15,12 +15,18 @@ Status meanings:
 
 **Summary: 21 fixed · 2 not real · 3 known · 4 open**
 
+> ⏸️ **`ai/PARKED.md`** — everything the owner has deliberately put on hold,
+> with the reason and what unblocks it. An entry marked PARKED below is a
+> DECISION, not an oversight: do not implement it without being asked.
+
 *#14 App Check is DONE — Firestore, Authentication and AI Logic all enforced
 and verified live, 24-25 Aug 2026. The 2 Nov 2026 deadline is met early.*
 
 ---
 
 ### 1. Client-Side Wallet Manipulation (CRITICAL)
+> ⏸️ **PARKED BY THE OWNER — see `ai/PARKED.md`.** Do not pick this up on your own.
+>
 > **KNOWN — needs a server, not a rule.** Real, and already written up at the top
 > of `firestore.rules`. The wallet moved into `users/{uid}/private/main`, so it is
 > no longer public, and `WALLET_ENABLED = false` has the whole feature paused —
@@ -50,6 +56,8 @@ and verified live, 24-25 Aug 2026. The 2 Nov 2026 deadline is met early.*
 > mission and says why, so nobody meets a silent failure.
 
 ### 4. Over-reliance on Client-side Rule Enforcement (MODERATE)
+> ⏸️ **PARKED BY THE OWNER — see `ai/PARKED.md`.** Do not pick this up on your own.
+>
 > **OPEN — but no specific instance was named.** Every critical transition found
 > so far *is* enforced server-side: submitting proof, judging it, editing a
 > taken mission, banning. If a particular flow is only guarded in the UI, point
@@ -108,6 +116,8 @@ and verified live, 24-25 Aug 2026. The 2 Nov 2026 deadline is met early.*
 > written from them.
 
 ### 13. Bypassable Client-Side Feature Flags (MODERATE)
+> ⏸️ **PARKED BY THE OWNER — see `ai/PARKED.md`.** Do not pick this up on your own.
+>
 > **KNOWN — same root cause as #1.** Flipping `WALLET_ENABLED` in the console
 > only unhides UI; the exposure underneath is that the owner may write their own
 > wallet document, which is #1 and needs a server. Note that `wallet` is not in
@@ -267,6 +277,8 @@ its own.
 - **Fix**: Implement Firestore cursor pagination (`startAfter(lastVisible)`) combined with a "Load More" button or Intersection Observer.
 
 ### 17. Unauthenticated Cloudinary Uploads (HIGH)
+> ⏸️ **PARKED BY THE OWNER — see `ai/PARKED.md`.** Do not pick this up on your own.
+>
 > **STILL OPEN — narrowed, not closed.** Real, and the finding stands exactly
 > as written: the cloud name and the unsigned preset are both in `js/app.js`,
 > anyone can read them, and nothing in the browser can stop a script that skips
@@ -593,6 +605,8 @@ real applicant, header exact at "1 applicant" and "1+ applicant" when capped.
 - **Fix**: Use `request.resource.data.likedBy.size()` and string length validation, or better, move likes to a separate subcollection instead of arrays on the main document.
 
 ### 24. Unverified Email Signup Spam (HIGH)
+> ⏸️ **PARKED BY THE OWNER — see `ai/PARKED.md`.** Do not pick this up on your own.
+>
 > **OPEN — real as described, but the severity does not hold and the fix is a
 > product decision, so it is left for the owner.** Confirmed in the code:
 > `emailSignup()` creates the account, sets the display name and drops straight
@@ -756,6 +770,8 @@ real applicant, header exact at "1 applicant" and "1+ applicant" when capped.
 > rather than pass on an empty page.
 
 ### 30. No rate limiting anywhere (HIGH) — owner asked, checked, confirmed
+> ⏸️ **PARKED BY THE OWNER — see `ai/PARKED.md`.** Do not pick this up on your own.
+>
 > **OPEN — the owner has decided to do this properly rather than patch it.**
 > The question was "do we have rate limiting?" and the answer, checked rather
 > than remembered, is **no**. There is no throttle, no cooldown, no
