@@ -101,6 +101,34 @@ Each of these is written down because it has already broken something real.
 
 # LOG — newest first, maximum 5 entries
 
+## 2026-08-27 00:30 — CLAUDE
+CHANGED: firestore.rules (DEPLOYED), ai/bugs_found.md — no app code
+WHAT: The owner raised maxlength on the bio box in the inspector, typed past
+it and saved. Their instinct was right and bigger than the box they tried.
+The 1000-char bio itself IS refused today (textOk caps bio at 300, verified),
+but textOk only ever guarded EIGHT named fields — every other field on every
+collection had no ceiling at all. Tested live from an ordinary account: 50KB
+went into users.socials/settings/pinnedDares/likedProofs, dares.tags and
+dares.creator, proofs.note and takerName, comments.userName, reports.reason,
+and rewardAmount took 999999999. Eleven for eleven, on collections the feed
+downloads. Fixed with listOk/mapOk/numOk beside textOk — join() and values()
+collapse a list or map into one string, so one length check covers both "too
+many entries" and "one enormous entry".
+VERIFIED: 5/5. All eleven oversized writes now permission-denied, AND seven
+normal flows still work — posting a mission with five tags, submitting a
+proof, commenting, reporting, saving a profile, changing a settings toggle,
+pinning missions. Test data and account deleted.
+RISK: I briefly thought I had broken sign-up — two runs failed at signup right
+after the deploy. I had not: five different user-document creates all
+succeeded when tested directly. The harness was signing up ~4s after page
+load, before App Check had minted a token. **Give it ~12s before any write in
+a test, and do not read an early permission-denied as a rules bug.**
+Still true and deliberate: the form caps bio at 160 while the rule allows 300.
+The ceilings are set clear of what the app writes on purpose, so a bypass can
+still get ~2x the form limit. Tightening them to match exactly is a decision,
+not an oversight.
+OVER
+
 ## 2026-08-26 21:40 — CLAUDE
 CHANGED: css/styles.css, index.html, js/app.js, sw.js, ai/bugs_found.md,
 PROJECT_CONTEXT.md — stamp 20260826f
@@ -198,33 +226,4 @@ clean bill of health: a different entry point could reach another of them.
 Routing was swept too — every page URL, a shared mission link and a shared
 profile link all open correctly. There are still ZERO approved proofs in the
 database, so nothing on the video half of the app was exercised with content.
-OVER
-
-## 2026-08-26 01:10 — CLAUDE
-CHANGED: firestore.rules (DEPLOYED), index.html, css/styles.css, sw.js,
-ai/bugs_found.md — stamp 20260825n
-WHAT: Fixed my own breakage from the last build, then took Gemini #23 and #24.
-The four drawer icons I added rendered as the WORDS description/lock/rule/mail:
-the sidebar draws in Material Symbols Outlined, which this page loads as a
-SUBSET listed in icon_names=, and I added rows without adding names. The Round
-face in the stack does not save you. Logo: what was wanted was the mark on the
-LOADING screen (the same one that becomes the home-screen icon after send-to-
-desktop, so it showed twice per launch) — removed; the phone topbar keeps its
-mark, hiding it there was my misreading and is reverted.
-#23 was real and was the most serious thing open: nothing guarded likedBy /
-dislikedBy at all, so any signed-in account could write 900KB into a mission
-everyone downloads. selfOnlyList() now allows only the caller’s own uid in or
-out, plus a size clause because hasOnly() is happy with 50,000 copies of one
-legitimate value.
-VERIFIED: Icons 4/4 as glyphs, splash bare, topbar mark back. Rules attacked
-live against the deployed version: 200KB string permission-denied, another
-account’s uid permission-denied, normal like and unlike still allowed. 7/8.
-RISK: Two things the first rules attempt got wrong, both found by testing, not
-reading. prev()/next() default a missing field to 0, so .size() on a never-liked
-mission would have refused the FIRST like — prevList()/nextList() default to [].
-And my first attack passed because the test account OWNED the mission: the owner
-branch let a creator write anything, straight past the public guard. Guarded now.
-#24 (unverified email signup) is REAL but left OPEN on purpose: the scripted
-part is what App Check already stops, and gating emailVerified is friction paid
-by every honest sign-up. Three options written up for the owner to pick.
 OVER

@@ -13,7 +13,7 @@ Status meanings:
 | **KNOWN** | real, already understood, deliberately not fixed yet — reason given |
 | **OPEN** | real, not fixed, needs a decision or work |
 
-**Summary: 22 fixed · 2 not real · 3 known · 4 open**
+**Summary: 23 fixed · 2 not real · 3 known · 4 open**
 
 > ⏸️ **`ai/PARKED.md`** — everything the owner has deliberately put on hold,
 > with the reason and what unblocks it. An entry marked PARKED below is a
@@ -828,6 +828,57 @@ real applicant, header exact at "1 applicant" and "1+ applicant" when capped.
 >
 > Found sideways: the settings list would not open for a guest at all, which is
 > why the first screenshot of the redesign came back showing the home page.
+
+### 32. Only eight fields had a size limit; every other one had none (HIGH) — owner found it
+> **FIXED 26 Aug 2026, rules deployed.** The owner raised `maxlength` on the bio
+> box in the browser inspector, typed past the form's limit, saved, and saw the
+> result on another account. Their conclusion — *"users inspect mode mein jaakar
+> ye kuch gadbad aaram se kar sakte hain"* — was right, and wider than the one
+> box they tried.
+>
+> **What was actually true, checked rather than assumed.** The specific 1000-char
+> bio is refused today: `textOk(bio, 300)` has been there since #11, and both a
+> 1000 and a 301 character bio come back `permission-denied`. What DOES get
+> through is 300 when the form promises 160 — so the bypass is real, just
+> smaller than it looked.
+>
+> **The real finding is what `textOk` was not covering.** It guarded eight named
+> fields. Every other field, on every collection, had no ceiling at all. Tested
+> from an ordinary signed-in account against the live rules, 50KB went into all
+> eleven of these:
+>
+> | Where | Field |
+> |---|---|
+> | `users` | `socials`, `settings`, `pinnedDares`, `likedProofs` |
+> | `dares` | `tags`, `creator`, and `rewardAmount: 999999999` |
+> | `proofs` | `note`, `takerName` |
+> | `comments` | `userName` |
+> | `reports` | `reason` |
+>
+> Eleven for eleven. `users`, `dares`, `proofs` and `comments` are all
+> world-readable and pulled by the feed, so each one is a payload every visitor
+> downloads afterwards — the same shape as #23, reached through a different door.
+> `rewardAmount` is not a size problem but a trust one: `MIN_REWARD` and
+> `MAX_REWARD` live in `app.js` only, so a mission could advertise a bounty of
+> 999,999,999 on the feed.
+>
+> **Fixed with three helpers beside `textOk`.** Rules cannot walk a list element
+> by element, but `List.join()` and `Map.values()` collapse either into one
+> string, so a single length check covers both "too many entries" and "one
+> enormous entry". `numOk` pins `rewardAmount` to the app's own 1..1,000,000.
+> Caps are set generously against what the app writes — tags allow 300 characters
+> across all five, a proof note 2000 where the form says 200 — so nothing
+> legitimate is near them.
+>
+> **Verified both directions, which is the half that matters.** All eleven
+> oversized writes now return `permission-denied`, and posting a mission with
+> five tags, submitting a proof, posting a comment, filing a report, saving a
+> profile, changing a settings toggle and pinning three missions all still work.
+>
+> **The lesson worth keeping:** a `maxlength`, a disabled button, a dropdown with
+> three options — none of them is a control. They are conveniences for people who
+> are not fighting you. The rules file is the only thing standing between an
+> account and the database, so any limit that matters has to exist there too.
 
 ---
 

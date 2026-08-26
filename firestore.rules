@@ -68,6 +68,25 @@ service cloud.firestore {
     // billed to the project every time. Absent is fine — these are all optional.
     function textOk(v, max) { return v == null || (v is string && v.size() <= max); }
 
+    // Same idea for a LIST of strings and for a MAP's values. Rules cannot walk
+    // a list element by element, but List.join() and Map.values() turn either
+    // one into a single string, and one length check then covers both "too many
+    // entries" and "one enormous entry".
+    // Why this exists: textOk was guarding eight named fields and nothing else,
+    // so every OTHER field on every collection had no ceiling at all. Checked
+    // against the live rules from an ordinary account: 50KB went into socials,
+    // settings, pinnedDares, likedProofs, a mission's tags and creator name, a
+    // proof's note and takerName, a comment's userName and a report's reason —
+    // eleven for eleven. /users, /dares, /proofs and /comments are all
+    // world-readable and pulled by the feed, so each one of those is a payload
+    // downloaded by everybody afterwards.
+    // The owner found this from the other end: raising maxlength in the browser
+    // inspector and typing past the form's limit. The form is a convenience,
+    // never a control — these are the control.
+    function listOk(v, max)  { return v == null || (v is list && v.join('|').size() <= max); }
+    function mapOk(v, max)   { return v == null || (v is map  && v.values().join('|').size() <= max); }
+    function numOk(v, lo, hi){ return v == null || (v is number && v >= lo && v <= hi); }
+
     // keys this update is trying to change
     function touched()    { return request.resource.data.diff(resource.data).affectedKeys(); }
     // the update touches nothing outside `allowed`
@@ -168,7 +187,17 @@ service cloud.firestore {
                         && textOk(request.resource.data.get('username', null), 40)
                         && textOk(request.resource.data.get('bio', null), 300)
                         && textOk(request.resource.data.get('website', null), 300)
-                        && textOk(request.resource.data.get('photoURL', null), 800))
+                        && textOk(request.resource.data.get('photoURL', null), 800)
+                        // The rest of the whitelist had no ceiling at all.
+                        // socials is three handles; settings is six switches;
+                        // the last three are legacy copies kept here only so an
+                        // un-migrated account can delete them.
+                        && mapOk(request.resource.data.get('socials', null), 400)
+                        && mapOk(request.resource.data.get('settings', null), 400)
+                        && listOk(request.resource.data.get('pinnedDares', null), 2000)
+                        && listOk(request.resource.data.get('likedProofs', null), 40000)
+                        && (!('acceptedDares' in request.resource.data)
+                            || request.resource.data.acceptedDares.size() <= 500))
                     // One-way migration: an existing account may REMOVE the old
                     // top-level copies once they have been written to private/.
                     // Removal only — none of them may survive the write, so this
@@ -235,7 +264,21 @@ service cloud.firestore {
       function dareTextOk() {
         return textOk(request.resource.data.get('caption', null), 200)
             && textOk(request.resource.data.get('title', null), 200)
-            && textOk(request.resource.data.get('description', null), 4000);
+            && textOk(request.resource.data.get('description', null), 4000)
+            // Everything else the card carries. The feed downloads these for
+            // every mission it shows, so an unbounded one is everyone's problem.
+            && textOk(request.resource.data.get('creator', null), 100)
+            && textOk(request.resource.data.get('creatorUsername', null), 60)
+            && textOk(request.resource.data.get('creatorPhotoURL', null), 800)
+            && textOk(request.resource.data.get('thumbnailURL', null), 800)
+            && textOk(request.resource.data.get('cat', null), 60)
+            // The post form allows 5 tags of 30 characters.
+            && listOk(request.resource.data.get('tags', null), 300)
+            && listOk(request.resource.data.get('rules', null), 2000)
+            // MIN_REWARD and MAX_REWARD are 1 and 1,000,000 — in app.js only,
+            // so 999999999 went straight in and showed as a real bounty.
+            && numOk(request.resource.data.get('rewardAmount', null), 0, 1000000)
+            && numOk(request.resource.data.get('bounty', null), 0, 1000000);
       }
       allow create: if signedIn() && !isBanned()
                     && request.resource.data.creatorUid == uid()
@@ -349,9 +392,29 @@ service cloud.firestore {
         return get(/databases/$(database)/documents/dares/$(dareId))
                  .data.get('completed', false) == false;
       }
+      // A proof carries a copy of everything needed to draw its card, and none
+      // of it was bounded. The feed reads this collection.
+      function proofTextOk() {
+        return textOk(request.resource.data.get('note', null), 2000)
+            && textOk(request.resource.data.get('takerName', null), 100)
+            && textOk(request.resource.data.get('takerUsername', null), 60)
+            && textOk(request.resource.data.get('takerPhotoURL', null), 800)
+            && textOk(request.resource.data.get('posterName', null), 100)
+            && textOk(request.resource.data.get('posterUsername', null), 60)
+            && textOk(request.resource.data.get('posterPhotoURL', null), 800)
+            && textOk(request.resource.data.get('dareTitle', null), 300)
+            && textOk(request.resource.data.get('videoURL', null), 800)
+            && textOk(request.resource.data.get('proofThumbnailURL', null), 800)
+            && textOk(request.resource.data.get('videoFilename', null), 300)
+            && textOk(request.resource.data.get('videoSize', null), 40)
+            && textOk(request.resource.data.get('cat', null), 60)
+            && textOk(request.resource.data.get('rejectionReason', null), 1000)
+            && numOk(request.resource.data.get('dareBounty', null), 0, 1000000);
+      }
       allow create: if signedIn() && !isBanned()
                     && request.resource.data.takerId == uid()
                     && request.resource.data.status == 'submitted'
+                    && proofTextOk()
                     && exists(/databases/$(database)/documents/dares/$(request.resource.data.dareId))
                     && missionOpen(request.resource.data.dareId)
                     && mayProve(request.resource.data.dareId);
@@ -430,6 +493,9 @@ service cloud.firestore {
                     && request.resource.data.text.size() > 0
                     && request.resource.data.text.size() <= 500
                     && request.resource.data.likeCount == 0
+                    // text was capped; the name and picture beside it were not
+                    && textOk(request.resource.data.get('userName', null), 100)
+                    && textOk(request.resource.data.get('userPhotoURL', null), 800)
                     && commentTargetExists(request.resource.data.proofId);
 
       allow update: if
@@ -477,7 +543,12 @@ service cloud.firestore {
     match /reports/{reportId} {
       allow read:   if isAdmin();
       allow create: if signedIn() && request.resource.data.reporterUid == uid()
-                    && request.resource.data.status == 'pending';
+                    && request.resource.data.status == 'pending'
+                    // the report form allows 500 characters
+                    && textOk(request.resource.data.get('reason', null), 2000)
+                    && textOk(request.resource.data.get('targetName', null), 300)
+                    && textOk(request.resource.data.get('reporterName', null), 100)
+                    && textOk(request.resource.data.get('reporterEmail', null), 200);
       allow update, delete: if isAdmin();
     }
 
