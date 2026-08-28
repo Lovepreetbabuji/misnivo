@@ -101,6 +101,41 @@ Each of these is written down because it has already broken something real.
 
 # LOG — newest first, maximum 5 entries
 
+## 2026-08-28 23:05 — CLAUDE
+CHANGED: nothing — no app code, no rules, no deploy
+WHAT: Owner asked me to look at bugs Gemini had found. There are none new.
+Gemini's last entry is 12:20 today and its five findings — the three pot rules
+holes, the unescaped image URLs, and escHtml's missing single quote — were all
+fixed and verified on 28 Aug. Nothing has been added to bugs_found.md since,
+the working tree is clean, and there are no commits but mine.
+So instead I re-ran the checks against the CURRENT build rather than trusting
+the earlier passes, because the pot code has been restructured twice since
+those fixes landed (the comment-sheet shell, then the two-faces sheet) and a
+regression in that path would have been plausible.
+VERIFIED on 20260828g: 15/15 pot rules — no receipt, a receipt spent twice, a
+receipt that does not exist, claiming more than the receipt says, bumping the
+head count with a repeat receipt, a second receipt at the fixed first-time
+address, draining, another person's name, editing a receipt, Rs.5000 in one.
+All refused. 12/12 on the URL escaping. And the creator-funds-own-mission
+clause, which had been SKIPPED in every earlier run because no test account
+owned a mission, finally got a real test: a mission created by the probe
+account, then refused on both the receipt and the owner update branch, and
+refused by the form before either. That one is no longer taken on trust.
+RISK: The one FAIL in the run is my own litter and worth stating exactly, since
+it looks like a live inconsistency: mission SbEJK6jmqOa8SHBFINUt has 19
+receipts summing Rs.1,085 against a potTotal of Rs.1,045 — a Rs.40 gap from
+four orphan receipts my refused probes left behind. That is the design working
+as intended (receipt first, total second, so the total can lag but never lead),
+not a defect, and it is confined to test data.
+🔴 THE OWNER'S CLEANUP, now measured exactly. Two missions carry all of it,
+both titled "pot test mission": SbEJK6jmqOa8SHBFINUt (Rs.1,045, 8 people, 19
+receipts) and k3BSm0NMZ7H15TEK39Ui (Rs.50, 1 person, 1 receipt). 20 receipts in
+total. The four REAL missions have zero pot and zero receipts — they are clean,
+so deleting those two missions and their receipts clears every bit of this.
+Receipts are admin-delete-only by design.
+OVER
+
+
 ## 2026-08-28 21:10 — CLAUDE
 CHANGED: js/app.js, index.html, css/styles.css, sw.js — stamp 20260828g
 WHAT: Six UI notes from the owner. The Add-to-pot form was a modal opening OVER
@@ -221,16 +256,4 @@ CHANGED: ai/bugs_found.md, ai/HANDOFF.md
 WHAT: Continued audit for logic/XSS bugs per owner request. Found two unescaped HTML interpolation issues in `js/app.js` (XSS via `photoURL` and incomplete `escHtml` missing single quote). Added them as #38 and #39 to `bugs_found.md`.
 VERIFIED: Code review verified that `_optAv` injects raw URL strings into `src="..."` without HTML encoding, and `escHtml` does not escape single quotes.
 RISK: XSS vulnerabilities present a critical risk. Needs owner permission to fix in `js/app.js`.
-OVER
-
-## 2026-08-28 12:10 — GEMINI
-READ BY GEMINI ✓ 2026-08-28
-CHANGED: ai/HANDOFF.md (No app code)
-WHAT: 1. Answered owner's questions about SPA vs bundled app structures (React/Next) and PWA vs Native (Playstore) benefits.
-2. Reviewed Claude's new THE POT feature. Found serious backend logic flaws in `firestore.rules`.
-VERIFIED: Code review only.
-RISK: 🔴 POT FEATURE BUGS:
-1. `potGrowsOnly` limits increments to 500, but DOES NOT enforce a matching `pot_contributions` receipt. An attacker can write a loop to inflate a mission's `potTotal` to 10,000,000 without leaving any receipts.
-2. The rules for `pot_contributions` DO NOT prevent the mission creator from funding their own pot (only the UI hides it).
-3. `potContributors` can be incremented multiple times by the same user if they spam the submit button, because the rule allows +1 without checking uniqueness, and the client-side check (`firstTime`) is subject to race conditions.
 OVER
