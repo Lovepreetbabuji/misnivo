@@ -2685,7 +2685,7 @@ function _activeDareCard(d, showKind){
   let expiry='';
   if (d.expiresAt){ const exp=d.expiresAt.toDate?d.expiresAt.toDate():new Date(d.expiresAt); const ms=exp-Date.now();
     if (ms>0){ const h=Math.floor(ms/3600000); expiry=`<span class="adc-expiry"><span class="mi">schedule</span>${h>=24?Math.floor(h/24)+'d':h+'h'} left</span>`; } }
-  const inner = thumb ? `<img src="${thumb}" loading="lazy" decoding="async"/>`
+  const inner = thumb ? `<img src="${safeUrl(thumb)}" loading="lazy" decoding="async"/>`
     : `<div class="adc-thumb-bg" style="background:linear-gradient(135deg,${color}22,${color}55);"><span class="mi" style="color:${color};">${icon}</span></div>`;
   const cAv = _avHtml(d.creatorPhotoURL || (isMine?(user&&user.picture):''), d.creator);
   const safe = (''+title).replace(/[\\'"<>]/g,'');
@@ -3093,7 +3093,7 @@ function _renderVideoGrid(proofs) {
     <div class="yt-card" onclick="openVideoDetail('${p.id}')">
       <div class="yt-thumb">
         ${vidThumb(p,640)
-          ? `<img src="${vidThumb(p,640)}" alt="" loading="lazy" decoding="async" style="width:100%;height:100%;object-fit:cover;display:block;"/>`
+          ? `<img src="${safeUrl(vidThumb(p,640))}" alt="" loading="lazy" decoding="async" style="width:100%;height:100%;object-fit:cover;display:block;"/>`
           : `<div class="yt-thumb-bg"><span class="mi">${icon}</span></div>`
         }
         <div class="yt-play-over"><span class="mi">play_circle</span></div>
@@ -3142,7 +3142,7 @@ function _renderShortsSection(shorts) {
     <div class="short-card" onclick="openShorts('${p.id}')" data-vurl="${p.videoURL||''}" data-dur="${p.videoDuration||0}">
       <div class="short-thumb">
         ${vidThumb(p,360)
-          ? `<img src="${vidThumb(p,360)}" alt="" loading="lazy" decoding="async" style="width:100%;height:100%;object-fit:cover;display:block;"/>`
+          ? `<img src="${safeUrl(vidThumb(p,360))}" alt="" loading="lazy" decoding="async" style="width:100%;height:100%;object-fit:cover;display:block;"/>`
           : `<div class="short-thumb-bg" style="background:#272727;"><span class="mi" style="color:${color};">${icon}</span></div>`
         }
         <div class="short-play-over"><span class="mi">play_circle</span></div>
@@ -3677,6 +3677,41 @@ function switchVis(type) {
 // ════════════════════════════════════════════════════════════════════
 //  HELPER — HTML escape (prevents XSS in dynamic innerHTML)
 // ════════════════════════════════════════════════════════════════════
+// A URL that came out of somebody else's document, on its way into an
+// attribute. Escaping alone is not enough here, because there are two separate
+// dangers and it only answers one of them:
+//
+//   · a quote or an angle bracket breaks OUT of the attribute and writes new
+//     markup — escaped below
+//   · javascript: and friends are still a perfectly "valid" URL after escaping,
+//     and an href or src pointing at one runs the code in it — so the scheme is
+//     checked FIRST, and anything that is not plain http(s), a same-origin
+//     path, a blob, or an inline image comes back empty
+//
+// Empty renders as a broken image, which is the right outcome: the picture is
+// lost, the page is not. Every one of these fields (thumbnailURL, videoURL,
+// photoURL, banner, website) is capped for LENGTH by the rules and for nothing
+// else, so what is inside them is whoever wrote them.
+function safeUrl(u) {
+  const v = String(u == null ? '' : u).trim();
+  if (!v) return '';
+  if (!(/^https?:\/\//i.test(v) || v.startsWith('//') || v.startsWith('/')
+        || v.startsWith('blob:') || /^data:image\//i.test(v))) return '';
+  return v.replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/'/g, '&#39;')
+          .replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+
+// The same URL going into a CSS background instead of an attribute. HTML
+// escaping is wrong here — a browser does not decode &amp; inside url() — so
+// this quotes the value and removes what could close the quote or the call.
+function safeCssUrl(u) {
+  const v = String(u == null ? '' : u).trim();
+  if (!v) return '';
+  if (!(/^https?:\/\//i.test(v) || v.startsWith('//') || v.startsWith('/')
+        || v.startsWith('blob:') || /^data:image\//i.test(v))) return '';
+  return 'url("' + v.replace(/["'()\\\s]/g, '') + '")';
+}
+
 function escHtml(str) {
   return String(str)
     .replace(/&/g,'&amp;').replace(/</g,'&lt;')
@@ -4618,7 +4653,7 @@ function renderProofsList() {
 
 function proofItemHTML(p) {
   const videoSection = p.videoURL
-    ? `<video src="${_optVid(p.videoURL, _vidMaxW())}" controls playsinline
+    ? `<video src="${safeUrl(_optVid(p.videoURL, _vidMaxW()))}" controls playsinline
         style="width:100%;border-radius:14px;margin-bottom:12px;max-height:260px;background:#000;display:block;">
        </video>`
     : `<div class="proof-file-row"><span class="mi">video_file</span>${p.videoFilename||'—'}<span style="margin-left:auto;font-size:11px;color:var(--t3);">${p.videoSize||''}</span></div>`;
@@ -4896,7 +4931,7 @@ function _profileDareCard(d){
   const reward=d.rewardAmount ?? d.bounty ?? 0;
   const thumb=_optImg(d.thumbnailURL||'', 480);
   const color=CAT_C[cat]||'#FFFFFF', icon=CAT_I[cat]||'bolt';
-  const inner=thumb?`<img src="${thumb}" loading="lazy" decoding="async"/>`:`<div class="adc-thumb-bg" style="background:linear-gradient(135deg,${color}22,${color}55);"><span class="mi" style="color:${color};">${icon}</span></div>`;
+  const inner=thumb?`<img src="${safeUrl(thumb)}" loading="lazy" decoding="async"/>`:`<div class="adc-thumb-bg" style="background:linear-gradient(135deg,${color}22,${color}55);"><span class="mi" style="color:${color};">${icon}</span></div>`;
   const isPinned=(typeof pinnedDares!=='undefined'&&pinnedDares.includes(d.id));
   const proofs=d.proofCount||0;
   const cAv=_avHtml(d.creatorPhotoURL||(user&&user.picture),d.creator||user?.name);
@@ -4930,7 +4965,7 @@ function _profileAcceptedCard(a){
   const reward=a.bounty ?? d.rewardAmount ?? d.bounty ?? 0;
   const thumb=_optImg(d.thumbnailURL||a.thumbnailURL||'', 480);
   const cat=d.tags?.[0]||d.cat||a.cat||'fitness'; const color=CAT_C[cat]||'#FFFFFF', icon=CAT_I[cat]||'bolt';
-  const inner=thumb?`<img src="${thumb}" loading="lazy" decoding="async"/>`:`<div class="adc-thumb-bg" style="background:linear-gradient(135deg,${color}22,${color}55);"><span class="mi" style="color:${color};">${icon}</span></div>`;
+  const inner=thumb?`<img src="${safeUrl(thumb)}" loading="lazy" decoding="async"/>`:`<div class="adc-thumb-bg" style="background:linear-gradient(135deg,${color}22,${color}55);"><span class="mi" style="color:${color};">${icon}</span></div>`;
   let badge, action='';
   if(a.applicantStatus==='pending'){ badge='<span class="pdc-status applied">Applied</span>'; }
   else if(a.proofStatus==='approved'){ badge='<span class="pdc-status done">Approved · Live</span>'; }
@@ -5075,9 +5110,9 @@ async function openPublicProfile(uid){
   // 'picture' only ever exists on the in-memory user object, so reading it off a
   // fetched document was always undefined and every public avatar fell back to
   // an initial.
-  if (pic){ pic.innerHTML = u?.photoURL ? `<img src="${u.photoURL}" alt="av"/>` : name[0].toUpperCase(); }
+  if (pic){ pic.innerHTML = u?.photoURL ? `<img src="${safeUrl(u.photoURL)}" alt="av"/>` : name[0].toUpperCase(); }
   const ban = document.getElementById('ppBanner');
-  if (ban){ ban.style.background = u?.banner ? `url(${u.banner}) center/cover` : ''; }
+  if (ban){ ban.style.background = u?.banner ? (safeCssUrl(u.banner) ? safeCssUrl(u.banner) + ' center/cover' : '') : ''; }
   // reset tabs to Videos
   document.querySelectorAll('#pubProfOverlay .tab').forEach((t,i)=>t.classList.toggle('active', i===0));
   const pv=document.getElementById('ppVideos'), pd=document.getElementById('ppDares');
@@ -5337,7 +5372,7 @@ function _renderProfileSocials(u, elId){
   if(s.insta) links.push(`<a href="https://instagram.com/${encodeURIComponent((''+s.insta).replace(/^@/,''))}" target="_blank" rel="noopener" class="psocial" title="Instagram"><span class="mi">photo_camera</span></a>`);
   if(s.x)     links.push(`<a href="https://x.com/${encodeURIComponent((''+s.x).replace(/^@/,''))}" target="_blank" rel="noopener" class="psocial" title="X"><span class="psoc-x">X</span></a>`);
   if(s.yt)    links.push(`<a href="https://youtube.com/${encodeURIComponent((''+s.yt))}" target="_blank" rel="noopener" class="psocial" title="YouTube"><span class="mi">smart_display</span></a>`);
-  if(u.website) links.push(`<a href="${escHtml(u.website)}" target="_blank" rel="noopener" class="psocial" title="Website"><span class="mi">link</span></a>`);
+  if(u.website) links.push(`<a href="${safeUrl(u.website)}" target="_blank" rel="noopener" class="psocial" title="Website"><span class="mi">link</span></a>`);
   el.innerHTML = links.join('');
 }
 
@@ -5565,7 +5600,7 @@ async function onProfilePhotoSelected(e) {
   peSelectedPhotoFile = photo;
   const url = URL.createObjectURL(photo);
   const peAv = document.getElementById('peAvatar');
-  peAv.innerHTML = `<img src="${url}" alt="preview" style="width:100%;height:100%;object-fit:cover;border-radius:50%;"/>`;
+  peAv.innerHTML = `<img src="${safeUrl(url)}" alt="preview" style="width:100%;height:100%;object-fit:cover;border-radius:50%;"/>`;
 }
 
 // ── Save profile ──────────────────────────────────────────────────────────────
@@ -6851,7 +6886,7 @@ function _explorerVideoCard(p) {
   const dur=p.videoDuration?(p.videoDuration>=60?Math.floor(p.videoDuration/60)+':'+String(p.videoDuration%60).padStart(2,'0'):p.videoDuration+'s'):'';
   return `<div class="yt-card" onclick="openVideo('${p.id}')">
     <div class="yt-thumb">
-      ${vidThumb(p,480)?`<img src="${vidThumb(p,480)}" alt="" loading="lazy" decoding="async" style="width:100%;height:100%;object-fit:cover;display:block;"/>`:`<div class="yt-thumb-bg"><span class="mi">${icon}</span></div>`}
+      ${vidThumb(p,480)?`<img src="${safeUrl(vidThumb(p,480))}" alt="" loading="lazy" decoding="async" style="width:100%;height:100%;object-fit:cover;display:block;"/>`:`<div class="yt-thumb-bg"><span class="mi">${icon}</span></div>`}
       <div class="yt-play-over"><span class="mi">play_circle</span></div>
       <div class="yt-bounty">Rs.${(p.dareBounty||0).toLocaleString('en-IN')}</div>
       ${dur?`<div style="position:absolute;bottom:8px;right:8px;background:rgba(0,0,0,.8);color:#fff;font-size:10px;font-weight:600;padding:2px 7px;border-radius:5px;">${dur}</div>`:''}
@@ -7003,7 +7038,7 @@ function _vdRelLongCard(p){
   const cat=p.cat||'fitness';const color=CAT_C[cat]||'#717171';const t=vidThumb(p,320);
   const badge=`<span class="dd-rel-badge">Rs.${(p.dareBounty||0).toLocaleString('en-IN')}</span>`;
   const thumb = t
-    ? `<div class="dd-rel-thumb"><img src="${t}" loading="lazy" decoding="async"/>${badge}</div>`
+    ? `<div class="dd-rel-thumb"><img src="${safeUrl(t)}" loading="lazy" decoding="async"/>${badge}</div>`
     : `<div class="dd-rel-thumb dd-rel-thumb-bg" style="background:linear-gradient(135deg,${color}22,${color}55);"><span class="mi" style="color:${color};">play_circle</span>${badge}</div>`;
   return `<div class="dd-rel-card" onclick="openVideo('${p.id}')">${thumb}
     <div class="dd-rel-title">${escHtml(p.dareTitle||'Mission Video')}</div>
@@ -7012,7 +7047,7 @@ function _vdRelLongCard(p){
 }
 function _vdRelShortCard(p){
   const cat=p.cat||'fitness';const color=CAT_C[cat]||'#717171';const t=vidThumb(p,240);
-  const inner = t ? `<img src="${t}" loading="lazy" decoding="async"/>` : `<div class="dd-rel-short-bg" style="background:linear-gradient(135deg,${color}22,${color}55);"><span class="mi" style="color:${color};">play_circle</span></div>`;
+  const inner = t ? `<img src="${safeUrl(t)}" loading="lazy" decoding="async"/>` : `<div class="dd-rel-short-bg" style="background:linear-gradient(135deg,${color}22,${color}55);"><span class="mi" style="color:${color};">play_circle</span></div>`;
   return `<div class="dd-rel-short" onclick="openVideo('${p.id}')">
     <div class="dd-rel-short-thumb">${inner}<span class="dd-rel-badge">Rs.${(p.dareBounty||0).toLocaleString('en-IN')}</span></div>
     <div class="dd-rel-short-title">${escHtml(p.dareTitle||'')}</div>
@@ -7326,7 +7361,7 @@ function _videoCardSearch(p) {
   const dur=p.videoDuration?(p.videoDuration>=60?Math.floor(p.videoDuration/60)+':'+String(p.videoDuration%60).padStart(2,'0'):p.videoDuration+'s'):'';
   return `<div class="yt-card" onclick="openVideo('${p.id}')">
     <div class="yt-thumb">
-      ${vidThumb(p,480)?`<img src="${vidThumb(p,480)}" alt="" loading="lazy" decoding="async" style="width:100%;height:100%;object-fit:cover;display:block;"/>`:`<div class="yt-thumb-bg"><span class="mi">${icon}</span></div>`}
+      ${vidThumb(p,480)?`<img src="${safeUrl(vidThumb(p,480))}" alt="" loading="lazy" decoding="async" style="width:100%;height:100%;object-fit:cover;display:block;"/>`:`<div class="yt-thumb-bg"><span class="mi">${icon}</span></div>`}
       <div class="yt-play-over"><span class="mi">play_circle</span></div>
       <div class="yt-bounty">Rs.${(p.dareBounty||0).toLocaleString('en-IN')}</div>
       ${dur?`<div style="position:absolute;bottom:8px;right:8px;background:rgba(0,0,0,.8);color:#fff;font-size:10px;font-weight:600;padding:2px 7px;border-radius:5px;">${dur}</div>`:''}
@@ -7536,7 +7571,7 @@ function openDareDetail(dareId){
     if (ms > 0){ const hrs = Math.floor(ms/3600000); expiryBadge = `<span class="dd-expiry-badge"><span class="mi">schedule</span>${hrs>=24 ? Math.floor(hrs/24)+'d' : hrs+'h'} left</span>`; }
   }
   const heroInner = thumb
-    ? `<img src="${thumb}" alt="" style="width:100%;height:100%;object-fit:cover;display:block;"/>`
+    ? `<img src="${safeUrl(thumb)}" alt="" style="width:100%;height:100%;object-fit:cover;display:block;"/>`
     : `<div class="dd-hero-bg" style="background:linear-gradient(135deg,${color}22,${color}55);"><span class="mi" style="color:${color};font-size:72px;">${icon}</span></div>`;
   // The badge is what the mission is WORTH: what the creator put up plus what
   // everyone else has added. A taker does not care which half is which.
@@ -8955,7 +8990,7 @@ function _shortsSlideHtml(p, i) {
     </div>
 
     <div class="shorts-slide-box">
-      <video class="shorts-snap-video" data-src="${p.videoURL||''}" poster="${vidThumb(p,480)}" loop playsinline preload="metadata"
+      <video class="shorts-snap-video" data-src="${safeUrl(p.videoURL)}" poster="${safeUrl(vidThumb(p,480))}" loop playsinline preload="metadata"
         onclick="_shortsTap(this)" ontimeupdate="shortsSlideOnTime(this)"
         onpause="_shortsSlideSyncIcons(this)" onplay="_shortsSlideSyncIcons(this)"></video>
       <button class="shorts-center-play" onclick="shortsSlideTogglePlay(this)" aria-label="Play"><span class="mi">play_arrow</span></button>
@@ -10128,7 +10163,7 @@ function _longCardHtml(p) {
   return `
     <div class="yt-card" onclick="openVideoDetail('${p.id}')" data-vurl="${p.videoURL||''}" data-dur="${p.videoDuration||0}">
       <div class="yt-thumb">
-        ${t ? `<img src="${t}" alt="" loading="lazy" decoding="async" onerror="this.style.display='none'"/>` : `<div class="yt-thumb-bg"><span class="mi">bolt</span></div>`}
+        ${t ? `<img src="${safeUrl(t)}" alt="" loading="lazy" decoding="async" onerror="this.style.display='none'"/>` : `<div class="yt-thumb-bg"><span class="mi">bolt</span></div>`}
         ${dur?`<div class="yt-dur">${dur}</div>`:''}
         <div class="yt-bounty">Rs.${(p.dareBounty||0).toLocaleString('en-IN')}</div>
       </div>
@@ -10152,7 +10187,7 @@ function _shortsRowHtml(shorts, noHdr) {
       return `
       <div class="short-card" onclick="openShorts('${p.id}')" data-vurl="${p.videoURL||''}" data-dur="${p.videoDuration||0}">
         <div class="short-thumb">
-          ${t ? `<img src="${t}" alt="" loading="lazy" decoding="async" onerror="this.style.display='none'"/>` : `<div class="yt-thumb-bg"><span class="mi">bolt</span></div>`}
+          ${t ? `<img src="${safeUrl(t)}" alt="" loading="lazy" decoding="async" onerror="this.style.display='none'"/>` : `<div class="yt-thumb-bg"><span class="mi">bolt</span></div>`}
           <div class="short-bounty-tag">Rs.${(p.dareBounty||0).toLocaleString('en-IN')}</div>
         </div>
         <div class="short-cap">${escHtml(_cap)}</div>
