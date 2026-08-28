@@ -950,7 +950,7 @@ function uploadToCloudinary(file, resourceType, onProgress) {
 // ════════════════════════════
 let user            = null;
 let dares           = [];
-let wallet          = { balance:100000, pending:0, transactions:[] };
+// (the wallet global lived here — removed 27 Aug 2026 with the feature)
 let acceptedDares   = [];
 let activeCat       = 'all';
 let proofDareId           = null;
@@ -2203,7 +2203,11 @@ async function initUser(fbUser) {
         createdAt: firebase.firestore.FieldValue.serverTimestamp()
       });
       // private half — owner only
-      batch.set(_privRef(user.uid), { email: user.email, wallet,
+      // No wallet. It was removed on 27 Aug 2026, but this line kept writing a
+      // fake Rs.1,00,000 balance into every new account's private drawer — a
+      // leftover from that removal, found by reading a fresh signup's documents
+      // back rather than trusting that the feature was gone.
+      batch.set(_privRef(user.uid), { email: user.email,
         acceptedDares, pinnedDares: [], likedProofs: [], settings: {} });
       batch.set(db.collection('usernames').doc(handle), { uid: user.uid });
       await batch.commit();
@@ -2217,7 +2221,6 @@ async function initUser(fbUser) {
       if (moved) priv = { ...moved, ...priv };
 
       user.email    = priv.email || user.email;   // falls back to the auth record
-      wallet        = priv.wallet     || { balance:100000, pending:0, transactions:[] };
       // priv first, public second: the public copy is gone once this account has
       // migrated, and still there on the sign-in that migrates it.
       acceptedDares = priv.acceptedDares || d.acceptedDares || [];
@@ -2536,6 +2539,8 @@ let _pageNavInit = false;   // first goPage uses replaceState, rest pushState
 // No /chat. Private messaging was removed: a side deal struck in a DM cannot be
 // seen or moderated, and that is not a risk this platform can carry. Mission
 // comments remain, and they are public.
+// /wallet stays in this map on purpose: goPage() reads it to turn an old
+// bookmarked /wallet link into home rather than a dead page. Nothing else uses it.
 const _PAGE_URL  = { home:'/', explore:'/explore', dares:'/dares', accepted:'/accepted', wallet:'/wallet', profile:'/profile', leaderboard:'/leaderboard' };
 // Bottom-nav order, left to right. Drives BOTH the swipe direction and which
 // way a page slides in: moving right in this list slides in from the right,
@@ -2601,7 +2606,6 @@ function goPage(pg, _fromPop) {
   if (pg === 'dares')       renderDaresPage();
   if (pg === 'accepted')    renderAcceptedPage();
   if (pg === 'profile')     renderProfile();
-  if (pg === 'wallet')      renderWallet();
   if (pg === 'leaderboard') loadLeaderboard();
   // History entry so the BACK button steps between main pages — each page has its own URL.
   if (!_navBack && !_fromPop) {
@@ -2901,23 +2905,6 @@ function _bootSkelHtml(kind){
       <div class="sk-ptabs"><span class="skel"></span><span class="skel"></span></div>
       <div class="sk-fchips">${'<span class="skel sk-fchip"></span>'.repeat(3)}</div>
       ${_skelDareCards(2)}</div>`;
-
-    case 'wallet': return `<div class="sk-wallet">
-      ${_skelLine('86px','20px')}
-      <div class="wallet-card sk-wcard">
-        ${_skelLine('132px','10px')}${_skelLine('212px','34px','14px')}${_skelLine('200px','10px','12px')}
-        <div class="sk-wrow"><span class="skel sk-wstat"></span><span class="skel sk-wstat"></span></div>
-        <div class="sk-wrow sk-wbtns"><span class="skel sk-wbtn"></span><span class="skel sk-wbtn"></span></div>
-      </div>
-      ${_skelLine('92px','17px','26px')}
-      <div class="wstat-card sk-wstats">
-        <div class="sk-wrow" style="margin-top:0;">
-          <span class="skel sk-wsbox"></span><span class="skel sk-wsbox"></span><span class="skel sk-wsbox"></span></div>
-        <div class="skel sk-wchart"></div>
-      </div>
-      ${_skelLine('178px','17px','26px')}
-      <div class="skel sk-wacct"></div>
-      ${_skelLine('132px','16px','26px')}</div>`;
 
     case 'leaderboard': return `<div class="sk-lb">${_skelLine('132px','20px')}
       <div style="margin-top:20px;">${_skelRankRows(5)}</div></div>`;
@@ -7949,8 +7936,7 @@ function _bootRoute(){
   if(path==='/following'){ goPage('profile'); _ppFollowList('following'); return; }
   const mid=_URL_MODAL[path];
   if(mid){
-    const base = path.startsWith('/wallet') ? 'wallet'
-      : (path.startsWith('/profile') || path==='/followers') ? 'profile' : 'home';
+    const base = (path.startsWith('/profile') || path==='/followers') ? 'profile' : 'home';
     goPage(base); _openModalById(mid); return;
   }
   goPage('home');
