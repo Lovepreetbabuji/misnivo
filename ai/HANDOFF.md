@@ -101,6 +101,38 @@ Each of these is written down because it has already broken something real.
 
 # LOG — newest first, maximum 5 entries
 
+## 2026-08-27 12:10 — CLAUDE
+CHANGED: firestore.rules (DEPLOYED), js/app.js, index.html, css/styles.css,
+sw.js, ai/PARKED.md — stamp 20260827f
+WHAT: Built THE POT — anyone signed in except the creator can add Rs.10-500 to
+a mission. New /pot_contributions collection (one receipt per contribution),
+potTotal and potContributors on the mission, a sheet with quick-pick chips, a
+pot row listing who chipped in, and the card badge now showing reward + pot as
+one number with the split underneath. Nothing is charged and the copy says so.
+Also cleaned five leftovers the wallet removal missed — the worst still wrote a
+fake Rs.1,00,000 into EVERY new account’s private drawer.
+VERIFIED: 22/22 live. Rs.10 lands (+10, +1 person), a second gift raises the
+total but not the people count, the form and the RULES both refuse below-min,
+above-max, decimals, another person’s name, a missing mission, shrinking the
+pot, inflating it, and editing a receipt. Creator refused on their own mission.
+Guest asked to sign up. Badge reads "Rs.130 · Rs.100 + Rs.30 pot". 0 errors.
+RISK: The spec asked for a bell notification to the creator. NOT BUILT and it
+cannot be from a browser — /notifications is allow create: if false for every
+client, deliberately. The pot row tells the creator instead. Options written
+up in PARKED.md; the "let contributors write it" one must not be taken.
+The spec also said #FF0033. Not used — the ground rules above forbid it on
+anything new and --blue has been white since this app went black and white.
+Say the word and it turns red.
+🔴 LEFTOVER TEST DATA the owner must clear (needs the admin claim): missions
+SbEJK6jmqOa8SHBFINUt and k3BSm0NMZ7H15TEK39Ui, both "pot test mission", one
+carrying Rs.30 of test pot, plus 2 pot_contributions receipts. Receipts are
+admin-delete-only by design and their creators’ accounts are gone, so I
+cannot remove them myself.
+Also: creating several accounts back to back from one browser gets App Check
+token-invalid and every write then reads as permission-denied. That is the
+feature working. One clean sign-up per browser profile, with a gap.
+OVER
+
 ## 2026-08-27 08:20 — CLAUDE
 CHANGED: js/app.js, index.html, sw.js, ai/bugs_found.md — stamp 20260827d
 WHAT: Swept the three areas never checked before — search, notifications,
@@ -216,29 +248,4 @@ Still true and deliberate: the form caps bio at 160 while the rule allows 300.
 The ceilings are set clear of what the app writes on purpose, so a bypass can
 still get ~2x the form limit. Tightening them to match exactly is a decision,
 not an oversight.
-OVER
-
-## 2026-08-26 21:40 — CLAUDE
-CHANGED: css/styles.css, index.html, js/app.js, sw.js, ai/bugs_found.md,
-PROJECT_CONTEXT.md — stamp 20260826f
-WHAT: Settings rebuilt to the three reference screens the owner sent. Fields go
-transparent with a light hairline (they are .pe-input — an earlier pass
-restyled .f-input and never touched this form, which is why it still looked
-like grey slabs), the avatar loses its neumorphic shadow for a thin ring,
-Change Photo and Save become solid white pills, the four nav rows get icons
-they never had, and on a phone the app topbar now gets out of the way so
-Settings is the whole screen. Also #31: openSettings refused guests with a bare
-"Sign in first" toast instead of the prompt every other gated action shows.
-VERIFIED: 7/7 signed in on a 412px viewport, plus screenshots read back rather
-than trusting computed styles — which is what caught the last two gaps.
-Throwaway account deleted.
-RISK: The icon change took two rounds for the same reason the settings border
-took three: a blanket rule sets .mi{ font-family:Material Icons Round
-!important }, so the Symbols face was never reached and the FILL 0 beside it
-applied to a font with no FILL axis. Five other rules in the file already carry
-!important for exactly this; mine now says why in a comment.
-Worth a look, NOT changed because it may be deliberate: the bounty badge on
-every feed card is var(--green) — the loudest thing on a screen the owner keeps
-asking to be black and white. Green for money is a real convention, so this is
-their call, not mine.
 OVER

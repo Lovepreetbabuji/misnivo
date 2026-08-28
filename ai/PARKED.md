@@ -79,6 +79,31 @@ than guessed: **wanted** means adding the container and wiring the calls;
 **Parked 27 Aug 2026** — owner: *"nahi abhi nahi"*. Not urgent either way; the
 page works today and nothing is broken by leaving it.
 
+### The pot's bell notification
+The pot feature (built 27 Aug 2026) was specified with: *"Jab koi pot mein daale,
+mission banane wale ko dikhe — Someone added Rs.20 to your mission."*
+
+**Everything else in that spec is built and working. This one line is not, and
+it cannot be, from the browser.** `/notifications` is `allow create: if false`
+for every client, on purpose — the comment in the rules says why: otherwise any
+user could post any message into any other user's bell. Writing them is a Cloud
+Functions job, and Functions need Blaze.
+
+What exists instead: the mission's own pot row tells the creator
+*"3 people have added to your mission"* whenever they open it. That is the same
+information, in the place it is about, without opening a hole.
+
+Three ways to close the gap properly, for the owner to pick when it matters:
+- **Wait for Blaze.** A Function writes the notification on each contribution.
+  This is the right answer and it is already in the queue for other reasons.
+- **Derive it on the creator's own client.** Their app queries contributions on
+  their own missions since a stored "last seen" time and shows a bell badge. No
+  rules change, no hole, but it only fires while they have the app open.
+- **Let contributors write the notification.** Do NOT do this. It is the exact
+  hole the rules were written to close.
+
+**Not parked by decision — parked by the plan.** Moves with Blaze.
+
 ### #4 — "over-reliance on client-side enforcement"
 No specific flow was ever named, so there is nothing to check. Every critical
 transition found so far *is* enforced server-side. **Unblocks when the owner
