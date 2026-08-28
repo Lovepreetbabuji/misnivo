@@ -9846,9 +9846,21 @@ async function submitPot(){
       } else throw e;
     }
 
-    // paint it immediately; the listener will confirm a moment later
+    // Read the new numbers back rather than adding v to what is on screen.
+    // Adding was wrong whenever the mission's own listener had already delivered
+    // the updated document — the arithmetic then ran on a value that already
+    // included this gift, and the card showed Rs.950 for a pot holding Rs.930.
+    // It also did not correct itself: the next listener tick carries no change,
+    // so the wrong number sat there until something else moved. One read after
+    // the write cannot double-count, and this is a rare action.
     const d = (dares || []).find(x => x.id === id);
-    if (d){ d.potTotal = _potOf(d) + v; if (firstTime) d.potContributors = _potPeople(d) + 1; }
+    if (d) {
+      try {
+        const fresh = (await db.collection('dares').doc(id).get()).data() || {};
+        d.potTotal        = fresh.potTotal || 0;
+        d.potContributors = fresh.potContributors || 0;
+      } catch(e){ /* the listener will bring it along shortly */ }
+    }
     closePotModal();
     showToast(`Rs.${v.toLocaleString('en-IN')} added to the pot`);
     if (_ddCurrentId === id) _ddSyncPotBtn(d);
