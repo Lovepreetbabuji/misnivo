@@ -62,7 +62,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,100..400,0..1,0&icon_names=account_balance_wallet,add,arrow_back,bolt,bookmark,chat_bubble,close,description,expand_less,explore,home,lock,mail,menu,more_vert,notifications,person,reply,rule,search,send,settings,thumb_down,thumb_up,tune&display=block" rel="stylesheet"/>
 
 <!-- App Styles -->
-<link rel="stylesheet" href="/css/styles.css?v=20260828g"/>
+<link rel="stylesheet" href="/css/styles.css?v=20260828h"/>
 
 <!-- The splash logo must be in flight before anything else competes for the pipe -->
 <!-- The logo is the first pixel anyone sees, so it is preloaded — which made its
@@ -268,7 +268,7 @@
         <button class="btn-signup-topbar" onclick="leaveGuestMode('signup')">Sign Up</button>
       </div>
       <button class="btn-post" id="btnPostTop" onclick="openPost()"><span class="mi">add_circle</span><span>Post Mission</span></button>
-      <div class="notif-wrap">
+      <div class="notif-wrap" id="notifWrap">
         <button class="icon-btn notif-btn" onclick="toggleNotifPanel()"><span class="mi">notifications</span><div class="notif-badge" id="notifBadge" style="display:none;">0</div></button>
       </div>
       <!-- Profile-page only: replaces the avatar with Settings on desktop -->
@@ -339,6 +339,36 @@
         <span class="mi">home</span><span class="nav-lbl">Home</span>
       </div>
       <div class="nav-item" id="nav-explore" onclick="goPage('explore')"><span class="mi">explore</span><span class="nav-lbl">Explore</span></div>
+
+      <div class="sb-div"></div>
+      <div class="sb-group-label">MORE</div>
+      <div class="nav-item" id="nav-settings" onclick="closeSidebar();openSettings()">
+        <span class="mi">settings</span><span class="nav-lbl">Settings</span>
+      </div>
+      <div class="nav-item" onclick="closeSidebar();openFeedback()">
+        <span class="mi">reply</span><span class="nav-lbl">Send feedback</span>
+      </div>
+      <div class="nav-item nav-hidden" id="sbAdmin" onclick="closeSidebar();openAdmin()">
+        <span class="mi">tune</span><span class="nav-lbl">Admin</span>
+      </div>
+
+      <!-- The legal links live down here too, the way YouTube's drawer carries
+           them: reachable from anywhere without hunting for the page footer. -->
+      <div class="sb-sep"></div>
+      <div class="nav-item" onclick="closeSidebar();openLegal('terms')">
+        <span class="mi">description</span><span class="nav-lbl">Terms</span>
+      </div>
+      <div class="nav-item" onclick="closeSidebar();openLegal('privacy')">
+        <span class="mi">lock</span><span class="nav-lbl">Privacy</span>
+      </div>
+      <div class="nav-item" onclick="closeSidebar();openLegal('guidelines')">
+        <span class="mi">rule</span><span class="nav-lbl">Community Guidelines</span>
+      </div>
+      <div class="nav-item" onclick="closeSidebar();openLegal('contact')">
+        <span class="mi">mail</span><span class="nav-lbl">Contact &amp; Grievance</span>
+      </div>
+      <div class="sb-legal-copy">&copy; 2026 Misnivo</div>
+    </div>
   </aside>
 
   <!-- MAIN CONTENT -->
@@ -1154,7 +1184,7 @@
 <!-- App Logic -->
 <!-- defer, so it runs after the Firebase bundles above and after the DOM is
      parsed — same order as before, but nothing blocks the first paint -->
-<script defer src="/js/app.js?v=20260828g"></script>
+<script defer src="/js/app.js?v=20260828h"></script>
 
 <!-- ══ Firebase AI Logic — stage 2 of the mission safety filter ══
      A SECOND, modular Firebase app. The rest of the site runs on the compat
@@ -1624,7 +1654,7 @@
         <div class="collab-row-name" id="cmCreatorName">@creator</div>
         <div class="collab-row-label">Mission Creator</div>
       </div>
-      <button class="collab-follow-btn" id="cmCreatorFollow" onclick="toggleFollow(document.getElementById('collabModal').dataset.creatorId,'creator')">Follow</button>
+      <button class="collab-follow-btn" id="cmCreatorFollow" onclick="toggleFollow(document.getElementById('collabModal').dataset.creatorId,'creator',this)">Follow</button>
     </div>
     <div class="collab-row">
       <div class="collab-row-av vd-collab-av2" id="cmTakerAv">T</div>
@@ -1632,7 +1662,7 @@
         <div class="collab-row-name" id="cmTakerName">@taker</div>
         <div class="collab-row-label">Mission Taker (Bounty Winner)</div>
       </div>
-      <button class="collab-follow-btn" id="cmTakerFollow" onclick="toggleFollow(document.getElementById('collabModal').dataset.takerId,'taker')">Follow</button>
+      <button class="collab-follow-btn" id="cmTakerFollow" onclick="toggleFollow(document.getElementById('collabModal').dataset.takerId,'taker',this)">Follow</button>
     </div>
   </div>
 </div>

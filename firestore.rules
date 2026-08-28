@@ -397,9 +397,17 @@ service cloud.firestore {
       // mission, the expiry refund flag, and likes. 'refunded' is bookkeeping,
       // not a term of the deal, so it stays open.
       function whileRunning() {
+        // creator/creatorUsername/creatorPhotoURL are here so somebody who
+        // changes their profile photo can refresh the copy every mission
+        // carries — including missions already taken, which is most of the ones
+        // worth refreshing. They are the creator's OWN identity fields, this
+        // branch already requires creatorUid == uid(), and dareTextOk() caps
+        // all three, so the worst available is renaming yourself on your own
+        // mission — which you can already do before it is taken.
         return ['approvedTakers','takers','proofCount','completed','refunded',
                 'likedBy','likeCount','dislikedBy','dislikeCount','viewCount',
-                'potTotal','potContributors','lastPotReceipt'];
+                'potTotal','potContributors','lastPotReceipt',
+                'creator','creatorUsername','creatorPhotoURL'];
       }
       allow update: if
         // the owner may edit their own mission — freely until it is taken,

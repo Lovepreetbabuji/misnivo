@@ -2748,9 +2748,16 @@ function _activeDareCard(d, showKind){
     if (ms>0){ const h=Math.floor(ms/3600000); expiry=`<span class="adc-expiry"><span class="mi">schedule</span>${h>=24?Math.floor(h/24)+'d':h+'h'} left</span>`; } }
   const inner = thumb ? `<img src="${safeUrl(thumb)}" loading="lazy" decoding="async"/>`
     : `<div class="adc-thumb-bg" style="background:linear-gradient(135deg,${color}22,${color}55);"><span class="mi" style="color:${color};">${icon}</span></div>`;
-  const cAv = _avHtml(d.creatorPhotoURL || (isMine?(user&&user.picture):''), d.creator);
+  // On your OWN mission the live account wins over the copy stored on the
+  // document. That copy is written once, when the mission is posted, so after
+  // changing your photo or name every mission you have ever posted still showed
+  // the old one back to you. The stored copy is still what everyone ELSE reads
+  // — saveProfile() refreshes it on your missions, but only the live value is
+  // certain to be current the instant you look.
+  const cAv = _avHtml(isMine ? ((user&&user.picture) || d.creatorPhotoURL) : d.creatorPhotoURL, d.creator);
   const safe = (''+title).replace(/[\\'"<>]/g,'');
-  const uname = (d.creatorUsername||d.creator||'creator');
+  const uname = isMine ? (user?.username || user?.name || d.creatorUsername || d.creator || 'creator')
+                       : (d.creatorUsername || d.creator || 'creator');
   const pinned = (typeof pinnedDares!=='undefined' && pinnedDares.includes(d.id))
     ? `<div class="adc-pin"><span class="mi">push_pin</span></div>` : '';
   const menuItem = isMine
@@ -5668,6 +5675,30 @@ async function onProfilePhotoSelected(e) {
 }
 
 // ── Save profile ──────────────────────────────────────────────────────────────
+// Each mission carries a copy of its creator's name, username and photo, taken
+// once when the mission was posted. That copy is what every OTHER person reads
+// off the card — so changing your photo left old missions showing the old one
+// to everyone. This rewrites the copy on the missions we have in memory, which
+// is the window the feed is showing anyway.
+//
+// Quiet by design. It is cosmetic, each write is independent, and a mission
+// that refuses (an old shape, a rule that moved) must not turn a profile save
+// that actually worked into an error message.
+async function _refreshMyDareIdentity(name, username, photoURL){
+  if (!user) return;
+  const mine = (dares || []).filter(d => d.creatorUid === user.uid);
+  for (const d of mine) {
+    if (d.creator === name && d.creatorUsername === username && d.creatorPhotoURL === photoURL) continue;
+    try {
+      await db.collection('dares').doc(d.id).update({
+        creator: name, creatorUsername: username, creatorPhotoURL: photoURL || ''
+      });
+      d.creator = name; d.creatorUsername = username; d.creatorPhotoURL = photoURL || '';
+    } catch(e){ /* leave that one on its old copy */ }
+  }
+  if (typeof _daresRerenderDebounced === 'function') _daresRerenderDebounced();
+}
+
 async function saveProfile() {
   // This used to reach `user.picture` with no account and fail on the null.
   // A thrown TypeError is not an access check — say no properly.
@@ -5746,6 +5777,13 @@ async function saveProfile() {
       else              sbAv.textContent = user.name[0].toUpperCase();
     }
     if (typeof _sbSyncHeader === 'function') _sbSyncHeader();
+
+    // Other people read the copy stored on each mission, not your account, so
+    // without this your new photo would reach everybody except through a
+    // mission you had already posted. Best effort and deliberately quiet: it is
+    // cosmetic, it is capped at the missions actually on screen, and a failure
+    // must not make a successful profile save look like it failed.
+    _refreshMyDareIdentity(newName, newHandle, photoURL);
 
     cancelProfileEdit();
     showToast('Profile updated successfully!');
@@ -7348,13 +7386,18 @@ function _setTopbarMode(mode) {
   const guestEl   = document.getElementById('guestTopbarEl');
   const loggedEl  = document.getElementById('loggedInTopbarEl');
   const postBtn   = document.getElementById('btnPostTop');
+  // The bell sits outside both blocks, so it survived every switch and showed
+  // to people with no account — who have nothing that could notify them.
+  const bell = document.getElementById('notifWrap');
   if (mode === 'guest') {
     if (guestEl)  guestEl.style.display  = 'flex';
     if (loggedEl) loggedEl.style.display = 'none';
+    if (bell)     bell.style.display     = 'none';
   } else {
     if (guestEl)  guestEl.style.display  = 'none';
     if (loggedEl) loggedEl.style.display = 'flex';
     if (postBtn)  postBtn.style.display  = '';
+    if (bell)     bell.style.display     = '';
   }
 }
 
@@ -7496,6 +7539,7 @@ let _ddCurrentId = null;
 //  as on transitionend so a dropped event can't strand a blank player.
 // ════════════════════════════════════════════════════════════════════
 const _HERO_MS   = 420;
+let _heroLanding = null;          // the finish() of the flight currently in the air
 const _HERO_EASE = 'cubic-bezier(.25,.8,.25,1)';
 let _heroSrc = null;
 
@@ -7573,8 +7617,16 @@ function _heroFly(destEl){
   fly.appendChild(pic);
   document.body.appendChild(fly);
 
-  const prevVis = destEl.style.visibility;
-  destEl.style.visibility = 'hidden';                 // no duplicate during the flight
+  // Hide the destination for the flight — but NEVER by remembering what was
+  // there and putting it back. Clicking fast enough to start a second flight
+  // before the first finished meant the second one remembered "hidden", and
+  // then restored "hidden" when it landed. The slot stayed black for the rest
+  // of the session, and every click after that re-learned the same wrong value.
+  // The stylesheet never sets an inline visibility, so clearing it is both
+  // correct and safe to repeat. Any flight still in the air is landed first, so
+  // only one of these can ever be outstanding.
+  if (_heroLanding) { try { _heroLanding(); } catch(e){} }
+  destEl.style.visibility = 'hidden';
 
   const destRadius = getComputedStyle(destEl).borderRadius;
   requestAnimationFrame(() => {
@@ -7588,9 +7640,11 @@ function _heroFly(destEl){
   let settled = false;
   const finish = () => {
     if (settled) return; settled = true;
-    destEl.style.visibility = prevVis;
+    if (_heroLanding === finish) _heroLanding = null;
+    destEl.style.visibility = '';
     fly.remove();
   };
+  _heroLanding = finish;
   fly.addEventListener('transitionend', finish, { once:true });
   setTimeout(finish, _HERO_MS + 280);                 // belt and braces
   return true;
@@ -7650,15 +7704,23 @@ function openDareDetail(dareId){
     .map(t=>`<span class="dd-tag-link" onclick="searchTag('${(''+t).replace(/[\\'"<>]/g,'')}')">#${escHtml(t)}</span>`).join('');
 
   const ddMeta = `${_relTimeStr(d.createdAt || d.date)} · ${_fmtCount(d.viewCount||0)} views`;
-  const creatorPic = d.creatorPhotoURL || (d.creatorUid === user?.uid ? (user?.picture||'') : '');
+  // Same on the mission page itself: your own mission reads you, not the copy
+  // taken when you posted it.
+  const _ddMine    = !!user && d.creatorUid === user.uid;
+  const creatorPic = _ddMine ? (user.picture || d.creatorPhotoURL || '') : (d.creatorPhotoURL || '');
+  const creatorNm  = _ddMine ? (user.name || d.creator || 'Creator') : (d.creator || 'Creator');
   const _ddCu = d.creatorUid||'';
   // Meta gets its own line under the title; this row is just the avatar and Follow.
   const _ddMetaEl = document.getElementById('ddMetaLine');
   if (_ddMetaEl) _ddMetaEl.textContent = ddMeta.replace(/\s*·\s*/g, ' • ');
   document.getElementById('ddCreator').innerHTML = `
-    <div class="dd-creator-av" style="cursor:pointer" onclick="openPublicProfile('${_ddCu}')">${_avHtml(creatorPic, d.creator)}</div>
-    <span class="dd-creator-nm" style="cursor:pointer" onclick="openPublicProfile('${_ddCu}')">${escHtml(d.creator||'Creator')}</span>
-    ${d.creatorUid !== user?.uid ? `<button class="shorts-follow dd-follow" onclick="toggleFollow('${_ddCu}','creator')">Follow</button>` : ''}`;
+    <div class="dd-creator-av" style="cursor:pointer" onclick="openPublicProfile('${_ddCu}')">${_avHtml(creatorPic, creatorNm)}</div>
+    <span class="dd-creator-nm" style="cursor:pointer" onclick="openPublicProfile('${_ddCu}')">${escHtml(creatorNm)}</span>
+    ${!_ddMine ? `<button class="shorts-follow dd-follow" id="ddFollowBtn" onclick="toggleFollow('${_ddCu}','creator',this)">Follow</button>` : ''}`;
+  // The button was hard-coded to say "Follow" — it never asked whether you
+  // already followed this person, so somebody you followed months ago still
+  // greeted you with "Follow" every time you opened their mission.
+  if (!_ddMine) _syncFollowBtn(document.getElementById('ddFollowBtn'), _ddCu, 'creator');
   _ddSyncSave();
 
   const desc = d.description || d.desc || '';
@@ -9236,10 +9298,11 @@ function _shortsFillFixed(p, d){
       <div class="shorts-creator-row">
         <div class="shorts-creator-av">${_avHtml(d.creatorPhotoURL||p.posterPhotoURL, creatorName)}</div>
         <span class="shorts-creator-name">@${creatorName}</span>
-        <button class="shorts-follow" onclick="toggleFollow('${creatorId}','creator')">Follow</button>
+        <button class="shorts-follow" id="shFollowBtn" onclick="toggleFollow('${creatorId}','creator',this)">Follow</button>
       </div>
       <div class="shorts-taker-row"><span class="shorts-taker-label">Taker</span><span class="shorts-taker-name">@${takerName}</span></div>
       <div class="shorts-caption" data-preview="${capPreview}" data-full="${caption}">${capPreview}${capToggle}</div>`;
+    _syncFollowBtn(info.querySelector('#shFollowBtn'), creatorId, 'creator');
   }
   const liked = (typeof userLikes!=='undefined' && userLikes.includes(p.id));
   const lb = document.getElementById('shortsFxLikeBtn'); if (lb) lb.classList.toggle('liked', liked);
@@ -9766,16 +9829,41 @@ function shortsToggleDetailsLeft(btn){
 }
 
 // Simple follow (creator/taker) — reuse if toggleFollow exists, else basic
-async function toggleFollow(targetUid, type) {
+// Paint a follow button to match what is actually stored. Every button that
+// says "Follow" needs this on the way in, or it is guessing.
+function _followId(targetUid, type){ return user.uid + '_' + targetUid + '_' + (type||'creator'); }
+function _paintFollowBtn(btn, following){
+  if (!btn) return;
+  btn.textContent = following ? 'Following' : 'Follow';
+  btn.classList.toggle('following', !!following);
+}
+async function _syncFollowBtn(btn, targetUid, type){
+  if (!btn || !user || !targetUid) return;
+  try { _paintFollowBtn(btn, (await db.collection('follows').doc(_followId(targetUid, type)).get()).exists); }
+  catch(e){ /* leave it reading "Follow"; the write itself is still guarded */ }
+}
+
+// The button is passed in now. Before, this wrote to Firestore and showed a
+// toast and that was all — the button it was fired from went on saying
+// "Follow" until the page was rebuilt from scratch, so following somebody
+// looked like it had failed.
+async function toggleFollow(targetUid, type, btn) {
   if (guestCheck && guestCheck()) return;
   if (!targetUid || (user && targetUid === user.uid)) { showToast("Can't follow yourself"); return; }
   try {
-    const fid = user.uid + '_' + targetUid + '_' + type;
-    const ref = db.collection('follows').doc(fid);
+    const ref = db.collection('follows').doc(_followId(targetUid, type));
     const doc = await ref.get();
-    if (doc.exists) { await ref.delete(); showToast('Unfollowed'); }
-    else { await ref.set({ followerUid: user.uid, targetUid, type, createdAt: firebase.firestore.FieldValue.serverTimestamp() }); showToast('Following!'); }
-  } catch(e) { showToast('Could not follow'); }
+    const nowFollowing = !doc.exists;
+    // Paint first, then write. A follow is reversible and the write is fast;
+    // making the button wait on the round trip is what makes it feel broken.
+    _paintFollowBtn(btn, nowFollowing);
+    if (nowFollowing) await ref.set({ followerUid: user.uid, targetUid, type, createdAt: firebase.firestore.FieldValue.serverTimestamp() });
+    else await ref.delete();
+    showToast(nowFollowing ? 'Following!' : 'Unfollowed');
+  } catch(e) {
+    _paintFollowBtn(btn, !btn || !btn.classList.contains('following'));   // put it back
+    showToast('Could not follow');
+  }
 }
 
 // Keyboard nav for shorts
@@ -10168,6 +10256,13 @@ function openCollabModal() {
   document.getElementById('cmTakerName').textContent   = ov.dataset.takerName||'@taker';
   document.getElementById('cmCreatorAv').innerHTML = _avHtml(ov.dataset.creatorPhoto||'', ov.dataset.creatorName||'C');
   document.getElementById('cmTakerAv').innerHTML   = _avHtml(ov.dataset.takerPhoto||'', ov.dataset.takerName||'T');
+  // Both buttons in here said "Follow" whatever was stored, same as the mission
+  // page did. They are the last two.
+  // Read the ids off collabModal, not off the overlay: that is where the two
+  // buttons read them from, and using a different source is how the button and
+  // its own state end up describing different people.
+  _syncFollowBtn(document.getElementById('cmCreatorFollow'), cm.dataset.creatorId, 'creator');
+  _syncFollowBtn(document.getElementById('cmTakerFollow'),   cm.dataset.takerId,   'taker');
   cm.style.display = 'flex';
   cm.classList.add('open');   // .overlay needs .open or it stays invisible (opacity:0)
   _subOpen('collabModal');
