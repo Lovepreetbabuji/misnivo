@@ -1,4 +1,4 @@
-TURN: CLAUDE
+TURN: FREE
 
 <!-- ^ Keep this on line 1. FREE = nobody is working. Set it to your own name
      while you work, and back to FREE the moment you stop. If it already has
@@ -101,6 +101,42 @@ Each of these is written down because it has already broken something real.
 
 # LOG — newest first, maximum 5 entries
 
+## 2026-08-28 21:10 — CLAUDE
+CHANGED: js/app.js, index.html, css/styles.css, sw.js — stamp 20260828g
+WHAT: Six UI notes from the owner. The Add-to-pot form was a modal opening OVER
+the pot sheet; it is now the sheet's second face — same container, same header,
+a back arrow that turns it round — and #potOverlay is gone, with its
+/add-to-pot URL. Pot and Follow took Accept's white outline instead of the dim
+28% hairline, on the mission page and the long-video page. On a wide screen the
+pot sheet docks over column 1 through the same _dockToCol1() the comment sheet
+uses, instead of floating mid-page. Agreements moved from #0d0d0d to #000 to
+match the sidebar, and on a phone they take the whole page — the modal was
+already full size but the overlay around it kept its padding and centring.
+VERIFIED: 8/9 signed in on mobile, plus a desktop pass for the docking. The one
+FAIL was my assertion again: I checked the back arrow computed to "inline-flex"
+when it computes to "flex" inside a flex header — visible either way, and the
+next check confirmed it toggles back to "none". Full round trip works: Add
+turns the sheet, a chip fills the amount and arms the button, submitting lands
+back on the ranking with the new total (Rs.995 -> Rs.1,005) and one panel open
+throughout. Agreement measured at 412x412 wide and 850x850 tall with 0px
+radius on mobile, still a 560px card on desktop, and rgb(0,0,0) matching the
+sidebar exactly on both.
+RISK: I made a real mistake worth reading before touching these buttons. I
+"fixed" the Pot button's size by adding a height/padding rule, on a theory
+about .vd-action-btn's desktop padding winning over .dd-cta-btn. Measurement
+says that theory is wrong — the two buttons carry the SAME two classes, so
+every rule that touches one touches the other, and they already agreed at
+32px/16px on mobile and 34px/10px on desktop. My rule was the only thing that
+ever made them differ (34 vs 32 on mobile). It is removed, with a comment there
+saying why nothing belongs in that spot. What actually read as "smaller" was
+only the dim border.
+🔴 TEST DATA still to clear (needs the admin claim): missions
+SbEJK6jmqOa8SHBFINUt (now Rs.1,005) and k3BSm0NMZ7H15TEK39Ui (Rs.50), both
+"pot test mission", plus their receipts — two are orphans from earlier probes,
+so the first mission's list adds up to Rs.20 more than its header until they go.
+OVER
+
+
 ## 2026-08-28 18:30 — CLAUDE
 CHANGED: js/app.js, index.html, css/styles.css, sw.js, ai/bugs_found.md
 — stamp 20260828e
@@ -197,36 +233,4 @@ RISK: 🔴 POT FEATURE BUGS:
 1. `potGrowsOnly` limits increments to 500, but DOES NOT enforce a matching `pot_contributions` receipt. An attacker can write a loop to inflate a mission's `potTotal` to 10,000,000 without leaving any receipts.
 2. The rules for `pot_contributions` DO NOT prevent the mission creator from funding their own pot (only the UI hides it).
 3. `potContributors` can be incremented multiple times by the same user if they spam the submit button, because the rule allows +1 without checking uniqueness, and the client-side check (`firstTime`) is subject to race conditions.
-OVER
-
-## 2026-08-27 12:10 — CLAUDE
-CHANGED: firestore.rules (DEPLOYED), js/app.js, index.html, css/styles.css,
-sw.js, ai/PARKED.md — stamp 20260827f
-WHAT: Built THE POT — anyone signed in except the creator can add Rs.10-500 to
-a mission. New /pot_contributions collection (one receipt per contribution),
-potTotal and potContributors on the mission, a sheet with quick-pick chips, a
-pot row listing who chipped in, and the card badge now showing reward + pot as
-one number with the split underneath. Nothing is charged and the copy says so.
-Also cleaned five leftovers the wallet removal missed — the worst still wrote a
-fake Rs.1,00,000 into EVERY new account’s private drawer.
-VERIFIED: 22/22 live. Rs.10 lands (+10, +1 person), a second gift raises the
-total but not the people count, the form and the RULES both refuse below-min,
-above-max, decimals, another person’s name, a missing mission, shrinking the
-pot, inflating it, and editing a receipt. Creator refused on their own mission.
-Guest asked to sign up. Badge reads "Rs.130 · Rs.100 + Rs.30 pot". 0 errors.
-RISK: The spec asked for a bell notification to the creator. NOT BUILT and it
-cannot be from a browser — /notifications is allow create: if false for every
-client, deliberately. The pot row tells the creator instead. Options written
-up in PARKED.md; the "let contributors write it" one must not be taken.
-The spec also said #FF0033. Not used — the ground rules above forbid it on
-anything new and --blue has been white since this app went black and white.
-Say the word and it turns red.
-🔴 LEFTOVER TEST DATA the owner must clear (needs the admin claim): missions
-SbEJK6jmqOa8SHBFINUt and k3BSm0NMZ7H15TEK39Ui, both "pot test mission", one
-carrying Rs.30 of test pot, plus 2 pot_contributions receipts. Receipts are
-admin-delete-only by design and their creators’ accounts are gone, so I
-cannot remove them myself.
-Also: creating several accounts back to back from one browser gets App Check
-token-invalid and every write then reads as permission-denied. That is the
-feature working. One clean sign-up per browser profile, with a gap.
 OVER
