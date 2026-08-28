@@ -1306,6 +1306,59 @@ setTimeout(_splashDone, _SPLASH_MAX);               // safety net either way
 //  AUTH STATE LISTENER
 //  This is the single entry point
 // ════════════════════════════
+// ════════════════════════════════════════════════════════════════════
+//  WARM START — the two public reads do not wait for auth
+//
+//  Missions and approved videos are both `allow read: if true`. Neither needs
+//  an account. But both were started from inside the auth branches — the guest
+//  path and _bootApp() — so the whole sign-in round trip sat in front of the
+//  first thing anybody sees: the Firebase SDKs load, App Check fetches a
+//  reCAPTCHA token, auth decides there is nobody signed in, and only THEN does
+//  the app ask for the missions.
+//
+//  Measured on a cold load before this: the mission list arrived at 5.6s and
+//  home was a wall of grey boxes for all of it. That is also why opening a
+//  mission or a profile felt FASTER than the home screen they were opened from
+//  — those pages read a list that was already in memory and paid nothing, while
+//  home was the one page still waiting for it.
+//
+//  Starting here changes no behaviour. The queries are identical, the listener
+//  is the same one the auth branches ask for (they now find it already
+//  running), and a signed-in visitor sees what a guest sees because these two
+//  collections are public to both.
+let _warmStarted = false;
+function _warmPublicFeed(){
+  if (_warmStarted) return; _warmStarted = true;
+
+  try { startDaresListener(); } catch(e){}
+
+  // The same query renderHome() makes, made earlier. It fills the pool that
+  // home, explore and search all read, and marks the feed fresh so renderHome
+  // does not immediately repeat it.
+  try {
+    if (_homeFetching) return;
+    _homeFetching = true;
+    db.collection('proofs').where('status','==','approved').limit(PROOF_POOL_LIMIT).get()
+      .then(snap => {
+        homeProofs = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        allProofs  = homeProofs;
+        _homeLoadedOnce = true;
+        _homeFetchedAt  = Date.now();
+        _homeCancelSkel();
+        if (typeof _maybeInitialRoute === 'function') _maybeInitialRoute();
+        const active = document.querySelector('.page.active');
+        if (active && active.id === 'pageHome') _homeRenderFeed(true);
+      })
+      .catch(() => { /* renderHome tries again and reports it there */ })
+      .finally(() => { _homeFetching = false; });
+  } catch(e){ _homeFetching = false; }
+}
+// On the next tick, not on this line: nearly every name in there —
+// PROOF_POOL_LIMIT, homeProofs, daresUnsub — is declared further down this file
+// with const/let, and touching one before its line has run is a ReferenceError,
+// not an undefined. One tick is still long before auth answers.
+setTimeout(_warmPublicFeed, 0);
+
 auth.onAuthStateChanged(async (fbUser) => {
   // remembered so the NEXT load can show the app shell without waiting on auth
   try { fbUser ? localStorage.setItem(_AUTH_HINT,'1') : localStorage.removeItem(_AUTH_HINT); } catch(e){}
@@ -2361,8 +2414,16 @@ let _daresLimit  = DARES_PAGE;
 let _daresMaybeMore = false;   // last snapshot came back full → older ones exist
 let _daresLoadingMore = false;
 
+let _daresLiveLimit = 0;
 function startDaresListener() {
+  // Called from five places — the guest path, the signed-in boot, sign-up, and
+  // now the warm start below. Re-subscribing with the SAME window throws a live
+  // listener away and pays for the whole query again, so a repeat call with
+  // nothing new to ask for does nothing. "Load more" still re-subscribes,
+  // because it has widened _daresLimit.
+  if (daresUnsub && _daresLiveLimit === _daresLimit) return;
   if (daresUnsub) daresUnsub();
+  _daresLiveLimit = _daresLimit;
   daresUnsub = db.collection('dares')
     .orderBy('createdAt', 'desc')
     .limit(_daresLimit)              // newest N — cap the payload as the collection grows
@@ -2550,7 +2611,7 @@ const _TABS = ['home','dares','accepted','profile'];
 const _MODAL_URL = { postOverlay:'/post', proofOverlay:'/submit-proof', settingsOverlay:'/settings',
   notifSettingsOverlay:'/settings/notifications', moreSettingsOverlay:'/settings/more',
   followListOverlay:'/followers', photoViewer:'/profile/photo',
-  potOverlay:'/add-to-pot', potListOverlay:'/pot',
+  potOverlay:'/add-to-pot',
   reviewOverlay:'/review-proofs', rejectOverlay:'/reject-proof', reportOverlay:'/report',
   selectTakersOverlay:'/select-takers', videoPlayOverlay:'/play',
   searchOverlay:'/search', sFilterSheet:'/search/filters' };
@@ -3044,7 +3105,10 @@ function _homeRenderFeed(force) {
   const grid = document.getElementById('homeVideoGrid');
   // :not(.skel-yt) matters — the skeleton also uses .yt-card, and counting it as
   // "painted" would strand the loader on screen when the feed comes back empty
-  const painted = grid && grid.querySelector('.yt-card:not(.skel-yt), .active-dare-card, .short-card');
+  // :not(.skel-yt) has to be on EVERY branch, not just the first. The boot
+  // skeleton's mission placeholders are .active-dare-card.skel-yt, so the bare
+  // .active-dare-card here counted the loader itself as "already painted".
+  const painted = grid && grid.querySelector('.yt-card:not(.skel-yt), .active-dare-card:not(.skel-yt), .short-card');
   if (!force && painted && sig === _feedSig) return;   // nothing changed — leave the DOM alone
   _feedSig = sig;
 
@@ -7981,9 +8045,12 @@ function _openModalById(id){
     case 'sFilterSheet':         openSearchFilters(); break;
     // contextual — URL dikhta hai par refresh restore nahi (need a dare/proof id):
     // proofOverlay, reviewOverlay, rejectOverlay, reportOverlay,
-    // selectTakersOverlay, videoPlayOverlay, potOverlay, potListOverlay
-    // Both pot screens are in that list on purpose: /pot and /add-to-pot mean
-    // nothing without knowing WHICH mission, and a refresh has lost that.
+    // selectTakersOverlay, videoPlayOverlay, potOverlay
+    // potOverlay is in that list on purpose: /add-to-pot means nothing without
+    // knowing WHICH mission, and a refresh has lost that.
+    // The pot LIST is not here at all — it is a sub-layer like the comment
+    // sheet, sharing that sheet's shell and its history handling, so it has no
+    // URL of its own and back closes it one step.
   }
 }
 
@@ -8010,6 +8077,7 @@ window.addEventListener('popstate', function(e){
   // close any open sub-layer first (keep a guard state)
   // no _dmPush() here any more — re-pushing while closing is what made backing
   // out of these layers grow the stack instead of shrink it
+  if (isOpen('potListOverlay')){ _potListDrop(); return; }
   if (isOpen('ddCommentsBox')){ closeDareComments(); return; }
   if (isOpen('ddDetailsDrawer')){ closeDareDetails(); return; }
   if (isOpen('vdDetailsDrawer')){ closeVideoDesc(); return; }
@@ -9899,6 +9967,8 @@ async function submitPot(){
     closePotModal();
     showToast(`Rs.${v.toLocaleString('en-IN')} added to the pot`);
     if (_ddCurrentId === id) _ddSyncPotBtn(d);
+    // the sheet is still open behind the form — repaint it with the new numbers
+    if (document.getElementById('potListOverlay')?.classList.contains('open')) openPotList(id);
     if (typeof _daresRerenderDebounced === 'function') _daresRerenderDebounced();
   } catch(e){
     document.getElementById('potErr').textContent = 'Could not add to the pot — ' + (e.code || e.message);
@@ -9907,13 +9977,13 @@ async function submitPot(){
   }
 }
 
-// The Pot button beside Accept just carries the number; the list lives behind it.
+// The button says "Pot" and nothing else. It carried the amount for a while,
+// which put a third number on a row that already had the badge above it and the
+// like counts beside it — and the amount is the first thing inside the sheet
+// anyway, in type big enough to be the answer rather than a label.
 function _ddSyncPotBtn(d){
   const btn = document.getElementById('ddPotBtn');
-  const amt = document.getElementById('ddPotBtnAmt');
-  if (!btn || !d) return;
-  if (amt) amt.textContent = 'Rs.' + _potOf(d).toLocaleString('en-IN');
-  btn.style.display = '';
+  if (btn) btn.style.display = d ? '' : 'none';
 }
 
 // Everyone who has added, biggest first.
@@ -9937,10 +10007,17 @@ function _potRank(rows){
   return Object.values(by).sort((x, y) => (y.total - x.total) || (x.first - y.first));
 }
 
-function closePotList(){
-  _ovSync('potListOverlay');
-  document.getElementById('potListOverlay').classList.remove('open');
+// Closing has two doors, the same two the comment sheet has. _potListDrop() is
+// the plain visual close the router calls when the page underneath goes away;
+// closePotList() is what a tap on ✕, the scrim or a swipe reaches, and it hands
+// the pushed history entry back instead of stranding it — otherwise every open
+// leaves an entry behind and Back needs pressing twice.
+function _potListDrop(){
+  _subDrop('potListOverlay');
+  const ov = document.getElementById('potListOverlay');
+  if (ov){ ov.classList.remove('open'); ov.querySelector('.dd-cbox')?.classList.remove('cbox-full'); }
 }
+function closePotList(){ _subDismiss('potListOverlay', _potListDrop); }
 
 async function openPotList(missionId){
   const id = missionId || _ddCurrentId;
@@ -9960,12 +10037,26 @@ async function openPotList(missionId){
         <div class="pot-people">${people} ${people === 1 ? 'person has' : 'people have'} added${mine && total ? ' to your mission' : ''}</div>
         <div class="pot-split">Reward Rs.${_rewardOf(d).toLocaleString('en-IN')} + pot Rs.${total.toLocaleString('en-IN')} = <b>Rs.${_totalOf(d).toLocaleString('en-IN')}</b></div>
       </div>
-      ${canAdd ? `<button class="pot-add-btn" onclick="closePotList();openPotModal('${d.id}')">
+      ${canAdd ? `<button class="pot-add-btn" onclick="openPotModal('${d.id}')">
         <span class="mi">add</span> Add to pot</button>` : ''}
     </div>
     <div class="pot-rank" id="potRank">${total ? '<div class="pot-rank-load">Loading…</div>' : ''}</div>`;
 
-  _ovOpen('potListOverlay', '/pot');
+  const ov = document.getElementById('potListOverlay');
+  const wasOpen = ov.classList.contains('open');
+  ov.classList.add('open');
+  _subOpen('potListOverlay');
+  const sheet = ov.querySelector('.dd-cbox');
+  // Rest where the mission's picture ends, exactly as the comment sheet does,
+  // so the two never open to different heights on the same page.
+  if (!wasOpen && window.innerWidth <= 768){
+    const media = document.querySelector('#dareDetailOverlay .dd-hero');
+    const bottom = media ? media.getBoundingClientRect().bottom : 0;
+    const rest = Math.max(0, Math.min(bottom, window.innerHeight * 0.5));
+    sheet._restTop = Math.round(rest);
+    _cboxSetTop(sheet, rest);
+  }
+  _cboxBindGrip(sheet, 'potListOverlay', closePotList);
   if (!total) return;
 
   try {

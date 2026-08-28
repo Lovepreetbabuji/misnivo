@@ -6539,14 +6539,20 @@ body.age-gated{ overflow:hidden; }
 /* ── the Pot button, beside Accept ── */
 .dd-pot-btn{ white-space:nowrap; }
 
-/* ── the pot sheet: the box on top, the ranking under it ── */
-#potListOverlay .modal.pot-modal{
-  /* .modal carries a blanket `border:...!important` (16 panel classes share it),
-     so overriding it needs !important back — same as #potOverlay below. */
-  background:#000 !important;
-  backdrop-filter:none !important; -webkit-backdrop-filter:none !important;
-  border:1px solid rgba(255,255,255,.28) !important;
-  box-shadow:none !important; max-width:460px;
+/* ── the pot sheet ──
+   The shell is the comment sheet's, so everything about how it moves is already
+   written above and nothing is repeated here. What is left is the inside. */
+.pot-sheet .dd-cbox-list{ gap:0; padding:16px 16px 24px; }
+@media(min-width:769px){
+  /* On a wide screen the comment sheet is positioned by JS over column 1. The
+     pot has no column to dock to, so it centres itself instead of stretching
+     the full width of the window. */
+  .pot-sheet .dd-cbox{
+    left:50%; right:auto; width:min(460px, calc(100% - 32px));
+    transform:translateX(-50%) translateY(calc(100% + 24px));
+    height:auto; max-height:70vh;
+  }
+  .pot-sheet.open .dd-cbox{ transform:translateX(-50%) translateY(0); }
 }
 .pot-box{
   display:flex; align-items:center; justify-content:space-between; gap:12px;
