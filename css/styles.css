@@ -5253,21 +5253,12 @@ body::after{
 #videoDetailOverlay .dd-cta-btn.is-cta,
 #dareDetailOverlay .dd-pot-btn,
 #videoDetailOverlay .dd-pot-btn{ border-color:#fff !important; }
-/* 2. …and the same box as Accept. .vd-action-btn's own desktop rule sets a
-   10px padding and lands AFTER .dd-cta-btn in the file, so the Pot button —
-   which carries both classes — was being squeezed narrower than Accept, which
-   carries only one. Stated once here for both. */
-#dareDetailOverlay .dd-pot-btn,
-#videoDetailOverlay .dd-pot-btn{
-  height:32px; padding:0 16px !important; gap:6px;
-  font-size:13px; font-weight:600;
-}
-#dareDetailOverlay .dd-pot-btn .mi,
-#videoDetailOverlay .dd-pot-btn .mi{ font-size:18px; }
-@media(max-width:768px){
-  #dareDetailOverlay .dd-pot-btn,
-  #videoDetailOverlay .dd-pot-btn{ height:34px; }
-}
+/* No size rule for .dd-pot-btn on purpose. Measured on the live page, Accept
+   and Pot already agree on both widths — 32px/16px on a phone, 34px/10px on a
+   desktop — because they carry the SAME two classes and every rule that touches
+   one touches the other. What made Pot look smaller was only the dim border,
+   fixed above. An added height here did nothing but make the two disagree on
+   mobile, which is how this comment came to exist. */
 #dareDetailOverlay .dd-cta-btn.is-done,
 #videoDetailOverlay .dd-cta-btn.is-done,
 #dareDetailOverlay .dd-cta-btn.is-mine,
