@@ -62,7 +62,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,100..400,0..1,0&icon_names=account_balance_wallet,add,arrow_back,bolt,bookmark,chat_bubble,close,description,expand_less,explore,home,lock,mail,menu,more_vert,notifications,person,reply,rule,search,send,settings,thumb_down,thumb_up,tune&display=block" rel="stylesheet"/>
 
 <!-- App Styles -->
-<link rel="stylesheet" href="/css/styles.css?v=20260828e"/>
+<link rel="stylesheet" href="/css/styles.css?v=20260828f"/>
 
 <!-- The splash logo must be in flight before anything else competes for the pipe -->
 <!-- The logo is the first pixel anyone sees, so it is preloaded — which made its
@@ -1154,7 +1154,7 @@
 <!-- App Logic -->
 <!-- defer, so it runs after the Firebase bundles above and after the DOM is
      parsed — same order as before, but nothing blocks the first paint -->
-<script defer src="/js/app.js?v=20260828e"></script>
+<script defer src="/js/app.js?v=20260828f"></script>
 
 <!-- ══ Firebase AI Logic — stage 2 of the mission safety filter ══
      A SECOND, modular Firebase app. The rest of the site runs on the compat
@@ -1235,39 +1235,22 @@
   <div class="dd-cbox">
     <div class="cbox-grip" aria-hidden="true"></div>
     <div class="dd-cbox-head">
-      <span class="dd-cbox-title"><span class="mi">group</span> Pot</span>
+      <span class="dd-cbox-title">
+        <button class="pot-back" id="potBack" onclick="closePotModal()" aria-label="Back"><span class="mi">arrow_back</span></button>
+        <span class="mi" id="potHeadIcon">group</span> <span id="potHeadTitle">Pot</span>
+      </span>
       <button class="dd-cbox-close" onclick="closePotList()" aria-label="Close"><span class="mi">close</span></button>
     </div>
     <div class="dd-cbox-list" id="potListBody"></div>
   </div>
 </div>
 
-<!-- ADD TO POT -->
-<div class="overlay as-page" id="potOverlay">
-  <div class="modal pot-modal">
-    <div class="modal-hdr">
-      <div class="modal-title">Add to the pot</div>
-      <button class="modal-close" onclick="closePotModal()"><span class="mi">close</span></button>
-    </div>
-    <p class="pot-sub" id="potForTitle"></p>
-
-    <div class="pot-amt-row">
-      <span class="pot-amt-cur">Rs.</span>
-      <input class="pot-amt-input" id="potAmt" type="number" inputmode="numeric"
-             min="10" max="500" step="1" placeholder="0" oninput="_potOnInput()"/>
-    </div>
-    <div class="pot-chips" id="potChips"></div>
-    <div class="pot-err" id="potErr"></div>
-
-    <p class="pot-note">
-      <span class="mi">info</span>
-      Nothing is charged. Real payments are not switched on yet — this records
-      what you pledged to this mission and shows it on the card.
-    </p>
-
-    <button class="btn-fill pot-submit" id="potSubmitBtn" onclick="submitPot()">Add to pot</button>
-  </div>
-</div>
+<!-- The "Add to the pot" form used to be a separate modal that opened over the
+     sheet. Two stacked panels for one small decision read as a stack of doors,
+     so the form is now a second FACE of the same sheet: the ranking slides out,
+     the amount slides in, and the back arrow in the header brings the ranking
+     back. Its markup is built in openPotModal() beside the ranking's, because
+     the two share one container and one set of styles. -->
 
 <!-- REPORT MODAL -->
 <div class="overlay as-page" id="reportOverlay">

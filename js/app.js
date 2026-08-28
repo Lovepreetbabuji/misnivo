@@ -2611,7 +2611,7 @@ const _TABS = ['home','dares','accepted','profile'];
 const _MODAL_URL = { postOverlay:'/post', proofOverlay:'/submit-proof', settingsOverlay:'/settings',
   notifSettingsOverlay:'/settings/notifications', moreSettingsOverlay:'/settings/more',
   followListOverlay:'/followers', photoViewer:'/profile/photo',
-  potOverlay:'/add-to-pot',
+
   reviewOverlay:'/review-proofs', rejectOverlay:'/reject-proof', reportOverlay:'/report',
   selectTakersOverlay:'/select-takers', videoPlayOverlay:'/play',
   searchOverlay:'/search', sFilterSheet:'/search/filters' };
@@ -8045,12 +8045,10 @@ function _openModalById(id){
     case 'sFilterSheet':         openSearchFilters(); break;
     // contextual — URL dikhta hai par refresh restore nahi (need a dare/proof id):
     // proofOverlay, reviewOverlay, rejectOverlay, reportOverlay,
-    // selectTakersOverlay, videoPlayOverlay, potOverlay
-    // potOverlay is in that list on purpose: /add-to-pot means nothing without
-    // knowing WHICH mission, and a refresh has lost that.
-    // The pot LIST is not here at all — it is a sub-layer like the comment
-    // sheet, sharing that sheet's shell and its history handling, so it has no
-    // URL of its own and back closes it one step.
+    // selectTakersOverlay, videoPlayOverlay
+    // Neither pot screen is here: they are two faces of ONE sub-layer, which
+    // shares the comment sheet's shell and history handling, so there is no URL
+    // to restore and back closes the whole thing in one step.
   }
 }
 
@@ -9845,10 +9843,14 @@ function _rewardOf(d) { return (d && (d.rewardAmount ?? d.bounty)) || 0; }
 function _totalOf(d)  { return _rewardOf(d) + _potOf(d); }
 function _potPeople(d){ return Math.max(0, (d && d.potContributors) || 0); }
 
+// The sheet has two faces and this turns it to the second one. It is not a new
+// panel: same container, same header, same history entry — only the contents
+// swap, and the back arrow in the header turns it back to the ranking. A second
+// modal stacked on the first read as a stack of doors for one small decision.
 function openPotModal(missionId){
   if (typeof guestCheck === 'function' && guestCheck('pot')) return;
   if (bannedCheck()) return;
-  const id = missionId || _ddCurrentId;
+  const id = missionId || _potMissionId || _ddCurrentId;
   const d = (dares || []).find(x => x.id === id);
   if (!d) { showToast('Mission not found'); return; }
   // The whole point of the feature is that this is NOT the creator's money.
@@ -9856,18 +9858,37 @@ function openPotModal(missionId){
   if (d.completed) { showToast('This mission is already completed'); return; }
 
   _potMissionId = id;
-  document.getElementById('potForTitle').textContent = d.caption || d.title || 'this mission';
-  const amt = document.getElementById('potAmt');
-  amt.value = ''; amt.min = POT_MIN; amt.max = POT_MAX;
-  document.getElementById('potErr').textContent = '';
-  document.getElementById('potChips').innerHTML =
-    [10, 20, 50, 100, 250, 500].map(v => `<button class="pot-chip" onclick="_potPick(${v})">Rs.${v}</button>`).join('');
+  const body = document.getElementById('potListBody'); if (!body) return;
+  // If somebody reached this without the sheet being up, put the sheet up first
+  // so the form has its container.
+  const ov = document.getElementById('potListOverlay');
+  if (!ov.classList.contains('open')) { openPotList(id); }
+
+  document.getElementById('potHeadTitle').textContent = 'Add to the pot';
+  document.querySelector('#potListOverlay .dd-cbox-head').classList.add('pot-head-add');
+
+  body.innerHTML = `
+    <p class="pot-sub" id="potForTitle">${escHtml(d.caption || d.title || 'this mission')}</p>
+    <div class="pot-amt-row">
+      <span class="pot-amt-cur">Rs.</span>
+      <input class="pot-amt-input" id="potAmt" type="number" inputmode="numeric"
+             min="${POT_MIN}" max="${POT_MAX}" step="1" placeholder="0" oninput="_potOnInput()"/>
+    </div>
+    <div class="pot-chips" id="potChips">${
+      [10,20,50,100,250,500].map(v => `<button class="pot-chip" onclick="_potPick(${v})">Rs.${v}</button>`).join('')}</div>
+    <div class="pot-err" id="potErr"></div>
+    <p class="pot-note">
+      <span class="mi">info</span>
+      Nothing is charged. Real payments are not switched on yet — this records
+      what you pledged to this mission and shows it on the card.
+    </p>
+    <button class="btn-fill pot-submit" id="potSubmitBtn" onclick="submitPot()">Add to pot</button>`;
   _potOnInput();
-  _ovOpen('potOverlay', '/add-to-pot');
 }
+// Back to the ranking — the sheet stays where it is.
 function closePotModal(){
-  _ovSync('potOverlay');
-  document.getElementById('potOverlay').classList.remove('open');
+  const ov = document.getElementById('potListOverlay');
+  if (ov && ov.classList.contains('open') && _potMissionId) { openPotList(_potMissionId); return; }
   _potMissionId = null;
 }
 function _potPick(v){ const el = document.getElementById('potAmt'); el.value = v; _potOnInput(); }
@@ -9875,11 +9896,16 @@ function _potPick(v){ const el = document.getElementById('potAmt'); el.value = v
 // The form's own check. It is a convenience, not a control — the rule refuses
 // anything outside 10..500 whatever the box says.
 function _potOnInput(){
-  const v = parseInt(document.getElementById('potAmt').value, 10);
+  // The form is built inside the sheet and a successful add repaints the sheet
+  // back to the ranking, so by the time submitPot's finally block runs these
+  // three may be gone. Nothing to validate then.
+  const amtEl = document.getElementById('potAmt');
   const err = document.getElementById('potErr');
   const btn = document.getElementById('potSubmitBtn');
+  if (!amtEl || !err || !btn) return;
+  const v = parseInt(amtEl.value, 10);
   let msg = '';
-  if (document.getElementById('potAmt').value !== '') {
+  if (amtEl.value !== '') {
     if (!Number.isFinite(v))        msg = 'Enter a number';
     else if (v < POT_MIN)           msg = `Minimum is Rs.${POT_MIN}`;
     else if (v > POT_MAX)           msg = `Maximum is Rs.${POT_MAX}`;
@@ -9894,7 +9920,8 @@ async function submitPot(){
   if (typeof guestCheck === 'function' && guestCheck('pot')) return;
   if (!user) { showToast('Sign in first'); return; }
   const id = _potMissionId; if (!id) return;
-  const v = parseInt(document.getElementById('potAmt').value, 10);
+  const amtEl = document.getElementById('potAmt'); if (!amtEl) return;
+  const v = parseInt(amtEl.value, 10);
   if (!Number.isFinite(v) || v < POT_MIN || v > POT_MAX) { _potOnInput(); return; }
 
   const btn = document.getElementById('potSubmitBtn');
@@ -9964,16 +9991,17 @@ async function submitPot(){
         d.potContributors = fresh.potContributors || 0;
       } catch(e){ /* the listener will bring it along shortly */ }
     }
-    closePotModal();
     showToast(`Rs.${v.toLocaleString('en-IN')} added to the pot`);
     if (_ddCurrentId === id) _ddSyncPotBtn(d);
-    // the sheet is still open behind the form — repaint it with the new numbers
+    // turn the sheet back to the ranking, which now includes this gift
     if (document.getElementById('potListOverlay')?.classList.contains('open')) openPotList(id);
     if (typeof _daresRerenderDebounced === 'function') _daresRerenderDebounced();
   } catch(e){
-    document.getElementById('potErr').textContent = 'Could not add to the pot — ' + (e.code || e.message);
+    const err = document.getElementById('potErr');
+    if (err) err.textContent = 'Could not add to the pot — ' + (e.code || e.message);
+    else showToast('Could not add to the pot — ' + (e.code || e.message));
   } finally {
-    btn.disabled = false; _potOnInput();
+    if (btn && btn.isConnected) { btn.disabled = false; _potOnInput(); }
   }
 }
 
@@ -10026,6 +10054,11 @@ async function openPotList(missionId){
   _potMissionId = id;
   const body = document.getElementById('potListBody'); if (!body) return;
 
+  const head = document.querySelector('#potListOverlay .dd-cbox-head');
+  if (head) head.classList.remove('pot-head-add');
+  const hTtl = document.getElementById('potHeadTitle');
+  if (hTtl) hTtl.textContent = 'Pot';
+
   const total = _potOf(d), people = _potPeople(d);
   const mine  = user && d.creatorUid === user.uid;
   const canAdd = !mine && !d.completed;
@@ -10047,8 +10080,12 @@ async function openPotList(missionId){
   ov.classList.add('open');
   _subOpen('potListOverlay');
   const sheet = ov.querySelector('.dd-cbox');
-  // Rest where the mission's picture ends, exactly as the comment sheet does,
-  // so the two never open to different heights on the same page.
+  // Desktop: sit exactly over column 1, the way the comment sheet does. It was
+  // floating in the middle of the page instead, which is the one thing that
+  // still made it read as a different kind of panel.
+  _dockToCol1(sheet, 'dareDetailOverlay', true);
+  // Mobile: rest where the mission's picture ends, again as the comment sheet
+  // does, so the two never open to different heights on the same page.
   if (!wasOpen && window.innerWidth <= 768){
     const media = document.querySelector('#dareDetailOverlay .dd-hero');
     const bottom = media ? media.getBoundingClientRect().bottom : 0;

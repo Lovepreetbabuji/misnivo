@@ -6,7 +6,7 @@
 // the activate step deletes nothing, so every version of css/js ever fetched
 // stays in the cache — and the offline fallback can then pair an old cached
 // index.html with the old assets it points at, rendering a UI from months ago.
-const VER = 'dm-shell-20260828e';
+const VER = 'dm-shell-20260828f';
 
 self.addEventListener('install', e => { self.skipWaiting(); });
 self.addEventListener('activate', e => {

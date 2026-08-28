@@ -1,4 +1,4 @@
-TURN: FREE
+TURN: CLAUDE
 
 <!-- ^ Keep this on line 1. FREE = nobody is working. Set it to your own name
      while you work, and back to FREE the moment you stop. If it already has

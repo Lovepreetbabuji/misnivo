@@ -5196,10 +5196,15 @@ body::after{
   font-size:14px; font-weight:600; color:#fff; min-width:0;
   overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
 }
+/* Follow and Pot carry the SAME outline as Accept. They were on the dim 28%
+   hairline while Accept was on solid white, and side by side that did not read
+   as "less important" — it read as a fainter, smaller button, which is what got
+   reported. Same border, same box; Accept still leads because it is first and
+   carries the primary word. */
 #dareDetailOverlay .dd-follow,
 #videoDetailOverlay .dd-follow{
   margin-left:auto; flex-shrink:0;
-  background:transparent !important; border:1px solid rgba(255,255,255,.28) !important;
+  background:transparent !important; border:1px solid #fff !important;
   color:#fff !important; border-radius:999px !important;
   padding:0 16px !important; height:32px; line-height:30px;
   font-size:13px !important; font-weight:600 !important;
@@ -5245,7 +5250,24 @@ body::after{
 #dareDetailOverlay .dd-cta-btn .mi,
 #videoDetailOverlay .dd-cta-btn .mi{ font-size:18px; }
 #dareDetailOverlay .dd-cta-btn.is-cta,
-#videoDetailOverlay .dd-cta-btn.is-cta{ border-color:#fff !important; }
+#videoDetailOverlay .dd-cta-btn.is-cta,
+#dareDetailOverlay .dd-pot-btn,
+#videoDetailOverlay .dd-pot-btn{ border-color:#fff !important; }
+/* 2. …and the same box as Accept. .vd-action-btn's own desktop rule sets a
+   10px padding and lands AFTER .dd-cta-btn in the file, so the Pot button —
+   which carries both classes — was being squeezed narrower than Accept, which
+   carries only one. Stated once here for both. */
+#dareDetailOverlay .dd-pot-btn,
+#videoDetailOverlay .dd-pot-btn{
+  height:32px; padding:0 16px !important; gap:6px;
+  font-size:13px; font-weight:600;
+}
+#dareDetailOverlay .dd-pot-btn .mi,
+#videoDetailOverlay .dd-pot-btn .mi{ font-size:18px; }
+@media(max-width:768px){
+  #dareDetailOverlay .dd-pot-btn,
+  #videoDetailOverlay .dd-pot-btn{ height:34px; }
+}
 #dareDetailOverlay .dd-cta-btn.is-done,
 #videoDetailOverlay .dd-cta-btn.is-done,
 #dareDetailOverlay .dd-cta-btn.is-mine,
@@ -6118,7 +6140,11 @@ body.no-anim #proofOverlay.as-page .modal{ transition:none !important; }
 .agreement-modal{
   position:relative;                       /* the scroll hint anchors to this */
   width:100%; max-width:560px; max-height:88vh;
-  background:#0d0d0d !important; border:1px solid rgba(255,255,255,.14);
+  /* #000, not #0d0d0d. Every other full surface in this app — the sidebar, the
+     topbar, the comment sheet, .auth-box — is pure black, and #0d0d0d sat just
+     far enough off it to look like a different shade rather than a deliberate
+     one, most obviously with the hamburger drawer open beside it. */
+  background:#000 !important; border:1px solid rgba(255,255,255,.14);
   border-radius:16px; display:flex; flex-direction:column; overflow:hidden;
   backdrop-filter:none !important; -webkit-backdrop-filter:none !important;
 }
@@ -6502,7 +6528,7 @@ body.age-gated{ overflow:hidden; }
   position:absolute; left:0; right:0; bottom:0; pointer-events:none;
   display:flex; align-items:center; justify-content:center; gap:4px;
   padding:22px 0 10px; font-size:11px; font-weight:600; color:rgba(255,255,255,.55);
-  background:linear-gradient(to top, #0d0d0d 55%, rgba(13,13,13,0));
+  background:linear-gradient(to top, #000 55%, rgba(0,0,0,0));
 }
 .agreement-scroll-hint .mi{ font-size:16px; animation:agreementBounce 1.4s ease-in-out infinite; }
 @keyframes agreementBounce{ 0%,100%{transform:translateY(0);} 50%{transform:translateY(3px);} }
@@ -6517,8 +6543,20 @@ body.age-gated{ overflow:hidden; }
 .agreement-actions .btn-submit-proof{ flex:1; box-shadow:none; }
 
 @media(max-width:768px){
-  .agreement-modal{ max-width:none; width:100%; height:100%; max-height:none; border-radius:0; }
+  /* A phone gets the whole page, not a card with a strip of overlay showing
+     round it. The overlay's own padding and centring have to go too, or the
+     modal is full size inside a box that is still inset. */
+  #agreementOverlay{
+    padding:0 !important; align-items:stretch !important; justify-content:stretch !important;
+    background:#000 !important;
+  }
+  .agreement-modal{
+    max-width:none; width:100%; height:100%; max-height:none;
+    border-radius:0 !important; border:none !important;
+  }
   .agreement-body{ max-height:none; }
+  .agreement-hdr{ padding-top:calc(18px + env(safe-area-inset-top,0px)); }
+  .agreement-body{ padding-bottom:calc(16px + env(safe-area-inset-bottom,0px)); }
 }
 
 
@@ -6543,17 +6581,22 @@ body.age-gated{ overflow:hidden; }
    The shell is the comment sheet's, so everything about how it moves is already
    written above and nothing is repeated here. What is left is the inside. */
 .pot-sheet .dd-cbox-list{ gap:0; padding:16px 16px 24px; }
-@media(min-width:769px){
-  /* On a wide screen the comment sheet is positioned by JS over column 1. The
-     pot has no column to dock to, so it centres itself instead of stretching
-     the full width of the window. */
-  .pot-sheet .dd-cbox{
-    left:50%; right:auto; width:min(460px, calc(100% - 32px));
-    transform:translateX(-50%) translateY(calc(100% + 24px));
-    height:auto; max-height:70vh;
-  }
-  .pot-sheet.open .dd-cbox{ transform:translateX(-50%) translateY(0); }
+.pot-sheet .pot-sub{ margin-top:0; }
+.pot-sheet .pot-submit{ margin-top:4px; }
+/* On a wide screen it docks over column 1 through the same _dockToCol1() the
+   comment sheet uses, so no positioning is needed here. */
+
+/* the back arrow, shown only on the "add" face */
+.pot-back{
+  display:none; width:30px; height:30px; margin-right:2px; flex-shrink:0;
+  align-items:center; justify-content:center;
+  background:transparent; border:none; color:#fff; cursor:pointer;
+  border-radius:50%; padding:0;
 }
+.pot-head-add .pot-back{ display:inline-flex; }
+.pot-head-add #potHeadIcon{ display:none; }
+.pot-back:hover{ background:rgba(255,255,255,.10); }
+.pot-back .mi{ font-size:22px; }
 .pot-box{
   display:flex; align-items:center; justify-content:space-between; gap:12px;
   padding:16px; border:1px solid rgba(255,255,255,.16); border-radius:14px;
@@ -6602,12 +6645,6 @@ body.age-gated{ overflow:hidden; }
 }
 
 /* ── the amount sheet ── */
-#potOverlay .modal.pot-modal{
-  background:#000 !important;
-  backdrop-filter:none !important; -webkit-backdrop-filter:none !important;
-  border:1px solid rgba(255,255,255,.28) !important;
-  box-shadow:none !important; max-width:420px;
-}
 .pot-sub{
   font-size:13px; color:rgba(255,255,255,.6); margin:0 0 18px;
   overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
