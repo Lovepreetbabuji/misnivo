@@ -1,4 +1,4 @@
-TURN: CLAUDE
+TURN: FREE
 
 <!-- ^ Keep this on line 1. FREE = nobody is working. Set it to your own name
      while you work, and back to FREE the moment you stop. If it already has
@@ -101,6 +101,42 @@ Each of these is written down because it has already broken something real.
 
 # LOG — newest first, maximum 5 entries
 
+## 2026-08-28 18:30 — CLAUDE
+CHANGED: js/app.js, index.html, css/styles.css, sw.js, ai/bugs_found.md
+— stamp 20260828e
+WHAT: Owner's three follow-ups. (1) The Pot button is outlined and says "Pot"
+with no number — it was a third amount on a row that already had the badge
+above it and the vote counts beside it. (2) The pot sheet is now literally the
+comment sheet's shell (.dd-cbox-overlay / .dd-cbox / .cbox-grip) rather than a
+lookalike, so it slides up, drags to resize, swipes down to close and answers
+Back in one press, all from code that already existed. The Add form opens ON TOP
+of it instead of closing it first, which also removed a history race.
+(3) Home was slow: the mission list and the video pool are both public reads but
+were started from inside the auth branches, so the whole sign-in round trip sat
+in front of the first paint. Both start on the first tick now, plus five
+preconnect hints that were missing. Details as #45 in bugs_found.md.
+VERIFIED: 9/12 on the live build; all three FAILs were my own assertions, not
+the code — a stamp check that raced the deploy, an arbitrary "under 3s" line
+that a 3.47s cold load missed, and an outline test asserting "1px" when a 1px
+border reads back as 0.667px at devicePixelRatio 2 (the outline is there; the
+screenshot shows it). Timings: mission list was 5615 ms cold, now 3.7 s cold
+median and 0.8-1.0 s on a repeat visit. Sheet checks that passed: it is the
+comment shell, the grip shows, it animates transform rather than jumping, it
+rests at the picture's bottom edge (232px), dragging the grip down closes it,
+and Back closes it while leaving the mission open.
+RISK: The rest of the cold path is App Check + reCAPTCHA Enterprise. That is a
+deliberate choice and cannot be made faster from the client, so a first-ever
+visit stays in seconds. Nothing here changes that and nothing should try.
+startDaresListener() is idempotent now — a repeat call with the same window does
+nothing. Anything that ever needs to force a re-subscribe WITHOUT widening
+_daresLimit has to clear _daresLiveLimit first, or it will silently no-op.
+🔴 TEST DATA still to clear (needs the admin claim): missions
+SbEJK6jmqOa8SHBFINUt (Rs.940) and k3BSm0NMZ7H15TEK39Ui (Rs.50), both "pot test
+mission", plus their receipts — two of which are orphans from my probes, so that
+first mission's list adds up to Rs.20 more than its header until they go.
+OVER
+
+
 ## 2026-08-28 16:40 — CLAUDE
 READ BY CLAUDE ✓ 2026-08-28 (both 12:10 and 12:20 entries)
 CHANGED: js/app.js, index.html, css/styles.css, sw.js, firestore.rules
@@ -193,28 +229,4 @@ cannot remove them myself.
 Also: creating several accounts back to back from one browser gets App Check
 token-invalid and every write then reads as permission-denied. That is the
 feature working. One clean sign-up per browser profile, with a gap.
-OVER
-
-## 2026-08-27 08:20 — CLAUDE
-CHANGED: js/app.js, index.html, sw.js, ai/bugs_found.md — stamp 20260827d
-WHAT: Swept the three areas never checked before — search, notifications,
-offline. One real find (#39): /searches is signed-in-only in the rules, but
-the client had no matching check, so every guest search fired a transaction
-that came back 403 and was swallowed. Guarded. The other two came back clean,
-recorded as #40 rather than left unmentioned.
-VERIFIED: 9/10 before, 9/10 after with the 403s gone from the search phase.
-Offline is the standout: with the network cut, pages still switch and a full
-reload still serves the app from the service worker instead of a browser
-error page; the feed recovers on its own when the network returns.
-RISK: 🔴 A finding of mine turned out to be nothing, and the reason is worth
-carrying. My first search probe counted img[onerror] after typing an XSS
-payload, found six, and reported an injection. Those six are the app’s own
-AVATARS — they use onerror for the fallback letter. A dedicated probe showed
-the payload never executed, never became an element, and is escaped on the
-page. **Count what the payload did, not what looks like it.**
-Worth telling the owner rather than only fixing: Trending Searches has only
-ever counted signed-in people, so that list fills far slower than it looks
-like it should. Opening it to guests is how you get a fake trending list, so
-it should stay this way — but the number means something narrower than its
-label says.
 OVER

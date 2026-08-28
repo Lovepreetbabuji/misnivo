@@ -13,7 +13,7 @@ Status meanings:
 | **KNOWN** | real, already understood, deliberately not fixed yet — reason given |
 | **OPEN** | real, not fixed, needs a decision or work |
 
-**Summary: 34 fixed · 2 closed by removal · 3 not real · 1 known · 4 open**
+**Summary: 36 fixed · 2 closed by removal · 3 not real · 1 known · 4 open**
 
 > ⏸️ **`ai/PARKED.md`** — everything the owner has deliberately put on hold,
 > with the reason and what unblocks it. An entry marked PARKED below is a
@@ -1047,6 +1047,43 @@ Everything else on this list is closed.
   leftover `dmtest.*` profiles come from. Worth a `allow delete: if isSelf(u)`
   next time the rules are opened.
 
+
+### 45. Home waited to find out who you were before asking for the missions (HIGH)
+> **FIXED 28 Aug — reported by the owner, who noticed it from the right end.**
+
+The complaint was that home took a long time while a mission page or a profile
+opened from it appeared at once. That is backwards, and the backwardness was the
+clue: those pages read a list already in memory and pay nothing, so home was the
+only page still waiting for it.
+
+Missions and approved videos are both `allow read: if true` — neither needs an
+account. Both queries were nevertheless started from inside the auth branches
+(the guest path and `_bootApp()`), so the whole sign-in round trip sat in front
+of the first thing anybody sees: SDKs load, App Check fetches a reCAPTCHA token,
+auth decides there is nobody signed in, and only then does the app ask.
+
+Measured on a cold load: the mission snapshot at **5615 ms**, home a wall of grey
+boxes for all of it. Both reads now start on the first tick, beside auth instead
+of behind it, and five hosts on that path got preconnect hints they never had.
+Cold median **3.7 s**; a repeat visit, which is what anybody using the app
+actually sees, **0.8–1.0 s**.
+
+Honest limit: the rest of the cold path is App Check and reCAPTCHA Enterprise,
+which is a deliberate choice and cannot be made faster from the client. A
+first-ever visit will stay in seconds.
+
+Two things found while measuring, fixed alongside:
+
+**`startDaresListener()` is called from five places** and each call tore down a
+live listener and paid for the whole query again. A repeat call asking for the
+same window now does nothing; "load more" still re-subscribes, because it has
+widened the window.
+
+**The "already painted?" test counted the loader as content.** It read
+`.active-dare-card` with no `:not(.skel-yt)`, although the comment directly
+above it explains why that matters and the very next selector on the same line
+does exclude them. The boot skeleton's mission placeholders ARE
+`.active-dare-card.skel-yt`.
 
 ### 41. The pot's total could be inflated with no money behind it (CRITICAL)
 > **FIXED 28 Aug — raised by Gemini, confirmed by testing.**
