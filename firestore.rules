@@ -96,7 +96,8 @@ service cloud.firestore {
     function countersStartAtZero() {
       return zeroStart('likeCount') && zeroStart('dislikeCount')
           && zeroStart('viewCount') && zeroStart('commentCount')
-          && zeroStart('takers')    && zeroStart('proofCount');
+          && zeroStart('takers')    && zeroStart('proofCount')
+          && zeroStart('potTotal')  && zeroStart('potContributors');
     }
 
     // keys this update is trying to change
@@ -150,6 +151,28 @@ service cloud.firestore {
     // first like. These two default to an empty list instead.
     function prevList(field) { return resource.data.get(field, []); }
     function nextList(field) { return request.resource.data.get(field, []); }
+    // THE POT. Anyone signed in may add to a mission's pot, so anyone signed in
+    // can write these two fields — which means the rule, not the button, is what
+    // keeps them honest. Three things it has to hold:
+    //   · the total only ever goes UP (nobody can drain a pot, including the
+    //     mission's own creator)
+    //   · one write moves it by at most one contribution, so the 500 ceiling on
+    //     the form cannot be stepped around by sending 50,000 in one go
+    //   · the contributor count moves by at most one at a time
+    // The matching /pot_contributions record is what makes the total auditable:
+    // if these two ever disagree, the receipts are the truth.
+    function potGrowsOnly() {
+      return (!touched().hasAny(['potTotal'])
+              || (next('potTotal') is number
+                  && next('potTotal') >= prev('potTotal')
+                  && (next('potTotal') - prev('potTotal')) <= 500
+                  && next('potTotal') <= 10000000))
+          && (!touched().hasAny(['potContributors'])
+              || (next('potContributors') is number
+                  && next('potContributors') >= prev('potContributors')
+                  && (next('potContributors') - prev('potContributors')) <= 1));
+    }
+
     function selfOnlyList(field) {
       return !touched().hasAny([field])
           || (nextList(field) is list
@@ -330,7 +353,8 @@ service cloud.firestore {
       // not a term of the deal, so it stays open.
       function whileRunning() {
         return ['approvedTakers','takers','proofCount','completed','refunded',
-                'likedBy','likeCount','dislikedBy','dislikeCount','viewCount'];
+                'likedBy','likeCount','dislikedBy','dislikeCount','viewCount',
+                'potTotal','potContributors'];
       }
       allow update: if
         // the owner may edit their own mission — freely until it is taken,
@@ -339,9 +363,13 @@ service cloud.firestore {
         // write anyone's like into their own mission, and without it the owner
         // branch was a way straight past the guard on the public branch below —
         // on a mission everyone downloads, which is the whole point of #23.
+        // potGrowsOnly() applies to the creator too. A mission's own creator
+        // draining or inflating its pot would be the whole point of the feature
+        // gone, and the owner branch is the obvious way round the public one.
         (signedIn() && resource.data.creatorUid == uid()
                     && dareTextOk()
                     && likeListsOk()
+                    && potGrowsOnly()
                     && (!dareTaken() || onlyTouches(whileRunning())))
         // A creator clearing the legacy creatorEmail off an old mission. It is
         // removal only — the field may not survive the write — so this can never
@@ -358,10 +386,12 @@ service cloud.firestore {
         // which is also used by /proofs where neither field exists.
         || (signedIn() && onlyTouches([
               'likedBy','likeCount','dislikedBy','dislikeCount',
-              'viewCount','takers','proofCount'
+              'viewCount','takers','proofCount',
+              'potTotal','potContributors'
             ]) && steppedAll()
               && stepped('takers') && stepped('proofCount')
-              && likeListsOk())
+              && likeListsOk()
+              && potGrowsOnly())
         // guests still count a view
         || (onlyTouches(['viewCount']) && stepped('viewCount'));
 
@@ -583,6 +613,37 @@ service cloud.firestore {
                     && followId == uid() + '_' + request.resource.data.targetUid + '_' + request.resource.data.type;
       allow delete: if signedIn() && resource.data.followerUid == uid();
       allow update: if false;
+    }
+
+    // ─── pot contributions ────────────────────────────────────────────────
+    // One row per contribution, written by the person contributing, in their own
+    // name. Readable by everyone because the mission shows who chipped in.
+    //
+    // WRITE ONCE, NEVER CHANGED. No update and no delete for anybody, admin
+    // included: these rows are the receipts behind dares.potTotal, and a receipt
+    // you can edit afterwards is not a receipt. If a contribution ever has to be
+    // reversed, that is a new row with the reason on it, decided by a server
+    // that can also move the money — not a quiet edit here.
+    match /pot_contributions/{id} {
+      allow read: if true;
+      allow create: if signedIn() && !isBanned()
+                    && request.resource.data.userId == uid()
+                    && request.resource.data.amount is number
+                    && request.resource.data.amount >= 10
+                    && request.resource.data.amount <= 500
+                    && request.resource.data.amount == math.floor(request.resource.data.amount)
+                    && request.resource.data.missionId is string
+                    && exists(/databases/$(database)/documents/dares/$(request.resource.data.missionId))
+                    && textOk(request.resource.data.get('userName', null), 100)
+                    && textOk(request.resource.data.get('userPhotoURL', null), 800)
+                    && textOk(request.resource.data.get('missionId', null), 200);
+      // Never editable, by anybody. A receipt you can change is not a receipt.
+      // Deletable by an admin only, and that is not a loophole — it is the one
+      // way to honour "delete my data", and to clear test rows. An admin cannot
+      // EDIT one, so a number can be removed from the record but never quietly
+      // altered inside it.
+      allow update: if false;
+      allow delete: if isAdmin();
     }
 
     // ─── reports (abuse) ──────────────────────────────────────────────────

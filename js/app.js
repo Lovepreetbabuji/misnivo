@@ -2544,9 +2544,8 @@ const _PAGE_URL  = { home:'/', explore:'/explore', dares:'/dares', accepted:'/ac
 const _TABS = ['home','dares','accepted','profile'];
 const _MODAL_URL = { postOverlay:'/post', proofOverlay:'/submit-proof', settingsOverlay:'/settings',
   notifSettingsOverlay:'/settings/notifications', moreSettingsOverlay:'/settings/more',
-  depositOverlay:'/wallet/deposit', withdrawOverlay:'/wallet/withdraw',
-  kycOverlay:'/wallet/kyc', methodOverlay:'/wallet/account', pinOverlay:'/wallet/pin',
-  txnDetailOverlay:'/wallet/transaction', followListOverlay:'/followers', photoViewer:'/profile/photo',
+  followListOverlay:'/followers', photoViewer:'/profile/photo',
+  potOverlay:'/add-to-pot',
   reviewOverlay:'/review-proofs', rejectOverlay:'/reject-proof', reportOverlay:'/report',
   selectTakersOverlay:'/select-takers', videoPlayOverlay:'/play',
   searchOverlay:'/search', sFilterSheet:'/search/filters' };
@@ -2678,6 +2677,7 @@ function _activeDareCard(d, showKind){
   const thumb = _optImg(d.thumbnailURL||'', 480);
   const color = CAT_C[cat]||'#FFFFFF', icon = CAT_I[cat]||'bolt';
   const isMine = d.creatorUid===user?.uid;
+  const potLine = _potLine(d);
   const accepted = (typeof d.takers==='number') ? d.takers : (d.approvedTakers?.length||0);
   let expiry='';
   if (d.expiresAt){ const exp=d.expiresAt.toDate?d.expiresAt.toDate():new Date(d.expiresAt); const ms=exp-Date.now();
@@ -2694,7 +2694,8 @@ function _activeDareCard(d, showKind){
        <button onclick="event.stopPropagation();_closeAdcMenus();openEditDare('${d.id}')"><span class="mi">edit</span>Edit</button>`
     : `<button onclick="event.stopPropagation();_closeAdcMenus();openReportModal('dare','${d.id}','${safe}')"><span class="mi">flag</span>Report</button>`;
   return `<div class="active-dare-card" onclick="openDareDetail('${d.id}')">
-    <div class="adc-thumb">${inner}${showKind?'<span class="adc-kind">Mission</span>':''}${pinned}${expiry}<span class="adc-bounty">Rs.${reward.toLocaleString('en-IN')}</span></div>
+    <div class="adc-thumb">${inner}${showKind?'<span class="adc-kind">Mission</span>':''}${pinned}${expiry}<span class="adc-bounty">Rs.${_totalOf(d).toLocaleString('en-IN')}</span>${
+      potLine ? `<span class="adc-pot"><span class="mi">group</span>${potLine}</span>` : ''}</div>
     <div class="yt-info">
       <div class="yt-av">${cAv}</div>
       <div class="yt-meta">
@@ -6717,6 +6718,7 @@ const GUEST_ACTION_MSGS = {
   feedback:    { icon:'feedback',     title:'Send feedback', msg:'Create a free account so we can reply to you about it.' },
   like:        { icon:'thumb_up',     title:'Like this', msg:'Sign up to like missions and proofs, and keep what you like.' },
   report:      { icon:'flag',         title:'Report this', msg:'Create a free account so we can follow up with you about the report.' },
+  pot:         { icon:'group',        title:'Add to the pot', msg:'Create a free account to add to a mission and have your name on it.' },
   settings:    { icon:'settings',     title:'Your settings', msg:'Settings belong to an account — create a free one to set your profile, notifications and privacy.' },
   default:     { icon:'lock',         title:'Create a free account', msg:'Sign up to unlock all features — post missions, accept challenges, and earn money.' },
 };
@@ -7551,8 +7553,15 @@ function openDareDetail(dareId){
   const heroInner = thumb
     ? `<img src="${thumb}" alt="" style="width:100%;height:100%;object-fit:cover;display:block;"/>`
     : `<div class="dd-hero-bg" style="background:linear-gradient(135deg,${color}22,${color}55);"><span class="mi" style="color:${color};font-size:72px;">${icon}</span></div>`;
+  // The badge is what the mission is WORTH: what the creator put up plus what
+  // everyone else has added. A taker does not care which half is which.
+  const _ddTotal = _totalOf(d);
+  const _ddPotL  = _potLine(d);
   document.getElementById('ddHero').innerHTML = heroInner +
-    `<span class="dd-bounty-badge">Rs.${reward.toLocaleString('en-IN')}</span>` + expiryBadge;
+    `<span class="dd-bounty-badge">Rs.${_ddTotal.toLocaleString('en-IN')}` +
+      (_ddPotL ? `<span class="dd-bounty-split">Rs.${_rewardOf(d).toLocaleString('en-IN')} + Rs.${_potOf(d).toLocaleString('en-IN')} pot</span>` : '') +
+    `</span>` + expiryBadge;
+  _ddRenderPot(d);
 
   // Tags live below description+rules (col 2): always blue, click = search that tag
   document.getElementById('ddTags').innerHTML = (d.tags?.length ? d.tags : [cat])
@@ -7954,17 +7963,15 @@ function _openModalById(id){
     case 'moreSettingsOverlay':  openMoreSettings(); break;
     case 'settingsOverlay':      openSettings(); break;
     case 'postOverlay':          openPost(); break;
-    case 'depositOverlay':       openDepositModal(); break;
-    case 'withdrawOverlay':      openWithdrawModal(); break;
-    case 'kycOverlay':           openKycModal(); break;
-    case 'methodOverlay':        openMethodModal(); break;
     case 'followListOverlay':    _ppFollowList('followers'); break;
     case 'photoViewer':          _viewProfilePhoto(); break;
     case 'searchOverlay':        openMobileSearch(); break;
     case 'sFilterSheet':         openSearchFilters(); break;
-    // contextual — URL dikhta hai par refresh restore nahi (need a dare/proof/txn id):
+    // contextual — URL dikhta hai par refresh restore nahi (need a dare/proof id):
     // proofOverlay, reviewOverlay, rejectOverlay, reportOverlay,
-    // selectTakersOverlay, videoPlayOverlay, pinOverlay, txnDetailOverlay
+    // selectTakersOverlay, videoPlayOverlay, potOverlay
+    // potOverlay is in that list on purpose: /add-to-pot means nothing without
+    // knowing WHICH mission, and a refresh has lost that.
   }
 }
 
@@ -9733,6 +9740,169 @@ function shortsTouchEnd(e) {
 // and the filter sheet all use it. Renaming it would mean touching thirty-one
 // call sites for no behaviour change, so it keeps the name and this note.
 function closeWalletModal(id){ _ovSync(id); const el=document.getElementById(id); if(el) el.classList.remove('open'); }
+
+// ════════════════════════════════════════════════════════════════════
+//  THE POT — anyone can add to a mission's reward, not just its creator
+//
+//  Nothing is charged. WALLET_ENABLED is false and the wallet itself was
+//  deleted, so there is no balance to debit and no payout path: a contribution
+//  is a RECORD of what somebody pledged, shown on the card. The copy says so
+//  in the sheet, because a number that looks like money and is not one is the
+//  fastest way to lose somebody's trust.
+//
+//  Two writes, one batch. The receipt in /pot_contributions and the running
+//  total on the mission move together or not at all — the same reason
+//  approveProof batches the proof and the mission. Half of this landing would
+//  leave a total nobody can account for.
+// ════════════════════════════════════════════════════════════════════
+const POT_MIN = 10, POT_MAX = 500;
+let _potMissionId = null;
+
+function _potOf(d)    { return Math.max(0, (d && d.potTotal) || 0); }
+function _rewardOf(d) { return (d && (d.rewardAmount ?? d.bounty)) || 0; }
+// What the card shows. The creator's amount and the pot are one number to a
+// taker — they are what completing the mission is worth.
+function _totalOf(d)  { return _rewardOf(d) + _potOf(d); }
+function _potPeople(d){ return Math.max(0, (d && d.potContributors) || 0); }
+
+// "Rs.380 · 12 people" — only when there is a pot to talk about.
+function _potLine(d){
+  const t = _potOf(d); if (!t) return '';
+  const n = _potPeople(d);
+  return `Rs.${t.toLocaleString('en-IN')} · ${n} ${n === 1 ? 'person' : 'people'}`;
+}
+
+function openPotModal(missionId){
+  if (typeof guestCheck === 'function' && guestCheck('pot')) return;
+  if (bannedCheck()) return;
+  const id = missionId || _ddCurrentId;
+  const d = (dares || []).find(x => x.id === id);
+  if (!d) { showToast('Mission not found'); return; }
+  // The whole point of the feature is that this is NOT the creator's money.
+  if (d.creatorUid === user.uid) { showToast('This is your own mission — the pot is for other people to add to'); return; }
+  if (d.completed) { showToast('This mission is already completed'); return; }
+
+  _potMissionId = id;
+  document.getElementById('potForTitle').textContent = d.caption || d.title || 'this mission';
+  const amt = document.getElementById('potAmt');
+  amt.value = ''; amt.min = POT_MIN; amt.max = POT_MAX;
+  document.getElementById('potErr').textContent = '';
+  document.getElementById('potChips').innerHTML =
+    [10, 20, 50, 100, 250, 500].map(v => `<button class="pot-chip" onclick="_potPick(${v})">Rs.${v}</button>`).join('');
+  _potOnInput();
+  _ovOpen('potOverlay', '/add-to-pot');
+}
+function closePotModal(){
+  _ovSync('potOverlay');
+  document.getElementById('potOverlay').classList.remove('open');
+  _potMissionId = null;
+}
+function _potPick(v){ const el = document.getElementById('potAmt'); el.value = v; _potOnInput(); }
+
+// The form's own check. It is a convenience, not a control — the rule refuses
+// anything outside 10..500 whatever the box says.
+function _potOnInput(){
+  const v = parseInt(document.getElementById('potAmt').value, 10);
+  const err = document.getElementById('potErr');
+  const btn = document.getElementById('potSubmitBtn');
+  let msg = '';
+  if (document.getElementById('potAmt').value !== '') {
+    if (!Number.isFinite(v))        msg = 'Enter a number';
+    else if (v < POT_MIN)           msg = `Minimum is Rs.${POT_MIN}`;
+    else if (v > POT_MAX)           msg = `Maximum is Rs.${POT_MAX}`;
+  }
+  err.textContent = msg;
+  const okNow = Number.isFinite(v) && v >= POT_MIN && v <= POT_MAX;
+  btn.disabled = !okNow;
+  btn.textContent = okNow ? `Add Rs.${v.toLocaleString('en-IN')} to pot` : 'Add to pot';
+}
+
+async function submitPot(){
+  if (typeof guestCheck === 'function' && guestCheck('pot')) return;
+  if (!user) { showToast('Sign in first'); return; }
+  const id = _potMissionId; if (!id) return;
+  const v = parseInt(document.getElementById('potAmt').value, 10);
+  if (!Number.isFinite(v) || v < POT_MIN || v > POT_MAX) { _potOnInput(); return; }
+
+  const btn = document.getElementById('potSubmitBtn');
+  btn.disabled = true; btn.textContent = 'Adding…';
+  try {
+    // Has this person chipped in before? If so the TOTAL grows but the count of
+    // people does not — otherwise "12 people" quietly becomes twelve visits by
+    // the same three.
+    let firstTime = true;
+    try {
+      const mine = await db.collection('pot_contributions')
+        .where('missionId','==',id).where('userId','==',user.uid).limit(1).get();
+      firstTime = mine.empty;
+    } catch(e){ /* if the lookup fails, count them — over-counting a person is
+                   better than losing the contribution */ }
+
+    const batch = db.batch();
+    batch.set(db.collection('pot_contributions').doc(), {
+      missionId: id, userId: user.uid,
+      userName: user.name || 'Someone',
+      userPhotoURL: user.picture || '',
+      amount: v,
+      createdAt: firebase.firestore.FieldValue.serverTimestamp()
+    });
+    const upd = { potTotal: firebase.firestore.FieldValue.increment(v) };
+    if (firstTime) upd.potContributors = firebase.firestore.FieldValue.increment(1);
+    batch.update(db.collection('dares').doc(id), upd);
+    await batch.commit();
+
+    // paint it immediately; the listener will confirm a moment later
+    const d = (dares || []).find(x => x.id === id);
+    if (d){ d.potTotal = _potOf(d) + v; if (firstTime) d.potContributors = _potPeople(d) + 1; }
+    closePotModal();
+    showToast(`Rs.${v.toLocaleString('en-IN')} added to the pot`);
+    if (_ddCurrentId === id) _ddRenderPot(d);
+    if (typeof _daresRerenderDebounced === 'function') _daresRerenderDebounced();
+  } catch(e){
+    document.getElementById('potErr').textContent = 'Could not add to the pot — ' + (e.code || e.message);
+  } finally {
+    btn.disabled = false; _potOnInput();
+  }
+}
+
+// The pot row inside a mission. Shows the total, who chipped in, and the button
+// — and for the creator, the same thing read the other way round: what came in.
+async function _ddRenderPot(d){
+  const el = document.getElementById('ddPot'); if (!el) return;
+  if (!d){ el.style.display = 'none'; return; }
+  const total = _potOf(d), people = _potPeople(d);
+  const mine  = user && d.creatorUid === user.uid;
+  const canAdd = !mine && !d.completed;
+  if (!total && !canAdd){ el.style.display = 'none'; return; }
+  el.style.display = '';
+
+  el.innerHTML = `
+    <div class="pot-head">
+      <div>
+        <div class="pot-total">Rs.${total.toLocaleString('en-IN')}<span class="pot-of"> in the pot</span></div>
+        <div class="pot-people">${people} ${people === 1 ? 'person has' : 'people have'} added${
+          mine && total ? ' to your mission' : ''}</div>
+      </div>
+      ${canAdd ? `<button class="pot-add-btn" onclick="openPotModal('${d.id}')">
+        <span class="mi">add</span> Add to pot</button>` : ''}
+    </div>
+    <div class="pot-names" id="potNames"></div>`;
+
+  if (!total) return;
+  try {
+    const snap = await db.collection('pot_contributions')
+      .where('missionId','==',d.id).limit(50).get();
+    const rows = snap.docs.map(x => x.data())
+      .sort((a,b) => ((b.createdAt&&b.createdAt.seconds)||0) - ((a.createdAt&&a.createdAt.seconds)||0));
+    const box = document.getElementById('potNames'); if (!box) return;
+    box.innerHTML = rows.slice(0, 12).map(c => `
+      <span class="pot-name">
+        <span class="pot-name-av">${_avHtml(c.userPhotoURL || '', c.userName || '?')}</span>
+        ${escHtml(c.userName || 'Someone')}
+        <b>Rs.${((c.amount)||0).toLocaleString('en-IN')}</b>
+      </span>`).join('') + (rows.length > 12 ? `<span class="pot-name pot-more">+${rows.length - 12} more</span>` : '');
+  } catch(e){ /* the row still shows the total; names are a nicety */ }
+}
 
 // Smart router: shorts (<60s) open Shorts player, long videos open YouTube watch page
 function openVideo(proofId) {

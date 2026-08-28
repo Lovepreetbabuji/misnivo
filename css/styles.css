@@ -6520,3 +6520,109 @@ body.age-gated{ overflow:hidden; }
   .agreement-modal{ max-width:none; width:100%; height:100%; max-height:none; border-radius:0; }
   .agreement-body{ max-height:none; }
 }
+
+
+/* ═══════════════════════════════════════════════════════════════════════
+   THE POT — anyone can add to a mission's reward
+   Same language as the rest of the app: flat black, thin white hairlines,
+   and exactly one solid white thing per surface (the button you press).
+   No colour is introduced. The project's ground rules are explicit that
+   nothing new gets #FF0033, and --blue has been #FFFFFF since this app
+   went black and white.
+   ═══════════════════════════════════════════════════════════════════════ */
+
+/* ── on a mission card ── */
+.adc-pot{
+  position:absolute; top:38px; right:8px;
+  display:inline-flex; align-items:center; gap:5px;
+  background:rgba(0,0,0,.72); color:rgba(255,255,255,.92);
+  font-size:11.5px; font-weight:600; padding:3px 9px; border-radius:8px;
+  letter-spacing:.2px; max-width:calc(100% - 16px);
+  white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+}
+.adc-pot .mi{ font-size:14px; }
+
+/* ── the split line under the big badge in a mission ── */
+.dd-bounty-split{
+  display:block; font-size:11px; font-weight:500;
+  color:rgba(255,255,255,.66); letter-spacing:.2px; margin-top:2px;
+}
+
+/* ── the pot row inside a mission ── */
+.dd-pot{
+  margin:14px 12px 0; padding:14px;
+  background:transparent; border:1px solid rgba(255,255,255,.16); border-radius:14px;
+}
+.pot-head{ display:flex; align-items:center; justify-content:space-between; gap:12px; }
+.pot-total{ font-size:20px; font-weight:800; color:#fff; letter-spacing:-.2px; }
+.pot-of{ font-size:13px; font-weight:500; color:rgba(255,255,255,.55); letter-spacing:0; }
+.pot-people{ font-size:12.5px; color:rgba(255,255,255,.55); margin-top:3px; }
+.pot-add-btn{
+  flex-shrink:0; display:inline-flex; align-items:center; gap:6px;
+  background:#fff; color:#0d0d0d; border:1px solid #fff; border-radius:999px;
+  padding:9px 16px; font-size:13.5px; font-weight:700; font-family:inherit; cursor:pointer;
+}
+.pot-add-btn:hover{ background:#D9D9D9; border-color:#D9D9D9; }
+.pot-add-btn .mi{ font-size:18px; }
+
+.pot-names{ display:flex; flex-wrap:wrap; gap:8px; margin-top:12px; }
+.pot-names:empty{ margin-top:0; }
+.pot-name{
+  display:inline-flex; align-items:center; gap:6px;
+  border:1px solid rgba(255,255,255,.16); border-radius:999px;
+  padding:4px 10px 4px 4px; font-size:12.5px; color:rgba(255,255,255,.85);
+}
+.pot-name b{ color:#fff; font-weight:700; }
+.pot-name-av{
+  width:22px; height:22px; border-radius:50%; overflow:hidden; flex-shrink:0;
+  background:#1a1a1a; display:flex; align-items:center; justify-content:center;
+  font-size:11px; font-weight:700; color:#fff;
+}
+.pot-name-av img{ width:100%; height:100%; object-fit:cover; display:block; }
+.pot-more{ color:rgba(255,255,255,.55); padding-left:10px; }
+
+/* ── the amount sheet ── */
+#potOverlay .modal.pot-modal{
+  background:#000 !important;
+  backdrop-filter:none !important; -webkit-backdrop-filter:none !important;
+  border:1px solid rgba(255,255,255,.28) !important;
+  box-shadow:none !important; max-width:420px;
+}
+.pot-sub{
+  font-size:13px; color:rgba(255,255,255,.6); margin:0 0 18px;
+  overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+}
+.pot-amt-row{
+  display:flex; align-items:center; gap:8px;
+  border:1px solid rgba(255,255,255,.28); border-radius:14px; padding:14px 16px;
+}
+.pot-amt-cur{ font-size:20px; font-weight:700; color:rgba(255,255,255,.55); }
+.pot-amt-input{
+  flex:1; min-width:0; background:transparent; border:none; outline:none;
+  color:#fff; font-size:26px; font-weight:800; font-family:inherit; letter-spacing:-.5px;
+}
+.pot-amt-input::-webkit-outer-spin-button,
+.pot-amt-input::-webkit-inner-spin-button{ -webkit-appearance:none; margin:0; }
+.pot-amt-input[type=number]{ -moz-appearance:textfield; }
+
+.pot-chips{ display:flex; flex-wrap:wrap; gap:8px; margin-top:14px; }
+.pot-chip{
+  background:transparent; border:1px solid rgba(255,255,255,.28); border-radius:999px;
+  color:#fff; padding:7px 14px; font-size:13px; font-weight:600;
+  font-family:inherit; cursor:pointer;
+}
+.pot-chip:hover{ background:rgba(255,255,255,.08); border-color:#fff; }
+.pot-err{ min-height:18px; margin-top:10px; font-size:12.5px; color:#FF6B6B; }
+.pot-note{
+  display:flex; gap:8px; align-items:flex-start;
+  font-size:12px; line-height:1.6; color:rgba(255,255,255,.5); margin:4px 0 18px;
+}
+.pot-note .mi{ font-size:16px; flex-shrink:0; margin-top:1px; }
+.pot-submit{ width:100%; border-radius:999px; }
+.pot-submit:disabled{ opacity:.45; cursor:not-allowed; }
+
+@media(max-width:768px){
+  .dd-pot{ margin:14px 12px 0; }
+  .pot-head{ flex-direction:column; align-items:stretch; gap:12px; }
+  .pot-add-btn{ justify-content:center; width:100%; }
+}
