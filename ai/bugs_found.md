@@ -13,7 +13,7 @@ Status meanings:
 | **KNOWN** | real, already understood, deliberately not fixed yet — reason given |
 | **OPEN** | real, not fixed, needs a decision or work |
 
-**Summary: 28 fixed · 2 closed by removal · 3 not real · 1 known · 4 open**
+**Summary: 34 fixed · 2 closed by removal · 3 not real · 1 known · 4 open**
 
 > ⏸️ **`ai/PARKED.md`** — everything the owner has deliberately put on hold,
 > with the reason and what unblocks it. An entry marked PARKED below is a
@@ -1047,6 +1047,61 @@ Everything else on this list is closed.
   leftover `dmtest.*` profiles come from. Worth a `allow delete: if isSelf(u)`
   next time the rules are opened.
 
+
+### 41. The pot's total could be inflated with no money behind it (CRITICAL)
+> **FIXED 28 Aug — raised by Gemini, confirmed by testing.**
+
+The comment above `potGrowsOnly()` said the receipts were the truth. Nothing
+made that so: any signed-in stranger could send `potTotal +500` in a loop, no
+receipt behind any of it, until a mission read Rs.10,000,000 — the number now
+printed on the thumbnail, so the whole feature would have been gone.
+
+A raise must now NAME the receipt that paid for it. The write carries
+`lastPotReceipt`; the rule reads that row back and insists it is real, is the
+caller's own, belongs to this mission, and that its amount is exactly how far
+the total moved. A receipt cannot be spent twice — it must differ from the one
+already on the mission, and receipts can never be edited.
+
+### 42. One person could become twelve people (HIGH)
+> **FIXED 28 Aug — raised by Gemini, confirmed by testing.**
+
+`potContributors` only had to move by one per write. Whether that one was a new
+person was decided by a query the app ran first, which two tabs can both win.
+
+Fixed by making "first" an address rather than a promise: a person's first
+receipt on a mission must live at `{missionId}__{uid}`, and Firestore refuses a
+create on an id that already exists. The head count may only rise for a receipt
+at that address, so it can rise once per person per mission and never again.
+Everything after lands on a random id and moves the money without moving the
+count. No counter check on its own could have told the two apart.
+
+### 43. A creator could pad their own pot (MEDIUM)
+> **FIXED 28 Aug — raised by Gemini, confirmed by testing.**
+
+The app hides the Add button from the mission's own creator. That was the entire
+defence — nothing in the rules stopped a creator writing a receipt in their own
+name on their own mission from the console. The rule now reads the mission and
+refuses. Verified both ways: the form says so, and the write is denied.
+
+### 44. The card read Rs.950 for a pot holding Rs.930 (LOW)
+> **FIXED 28 Aug — found by the ranking disagreeing with its own header.**
+
+Painting the new total added the gift to what was already on screen. Whenever
+the mission's listener had delivered the updated document first — which it
+usually had — that arithmetic ran on a value already including the gift and
+overshot by exactly the amount just given. It did not correct itself either: the
+next listener tick carries no change, so the wrong number sat there.
+
+Now the numbers are read back after the write. One extra read on a rare action,
+and it cannot double-count.
+
+Worth keeping: the receipts are written BEFORE the total, never in one batch,
+because writes in a batch cannot see each other and the rule has to read the
+receipt back. So a half-failure leaves the receipt standing and the total
+lagging it — the summary can be short, never long. That is the direction the
+whole design keeps it in, and it is why the mismatch showed up as the list
+adding to MORE than the header rather than less.
+
 ### 35. Comment Text Size Bypass on Update (CRITICAL)
 > **FIXED 27 Aug 2026, rules deployed. Gemini's, and it was right — my own audit
 > the same day missed it.** The create rule caps comment text at 500. The update
@@ -1099,14 +1154,32 @@ Everything else on this list is closed.
 - **Fix**: Move unbounded arrays to private subcollections or strictly enforce a maximum array size/string length for these fields in irestore.rules.
 
 ### 38. Client-Side XSS via Unescaped Image/Video URLs (CRITICAL)
-> **OPEN**
+> **FIXED 28 Aug — real, and worse than one fix.** Sixteen places, not one:
+> thumbnailURL, videoURL, photoURL and banner all went into an attribute
+> unescaped, and the rules cap those fields for LENGTH and nothing else, so what
+> is inside one is whatever the person who wrote it put there.
+>
+> Escaping alone would not have closed it. A quote breaking out of the attribute
+> is the escaping half — but `javascript:` is still a valid URL AFTER escaping,
+> and the profile website link was already escaped and would still have fired.
+> So `safeUrl()` checks the scheme first and returns nothing for anything that
+> is not http(s), a same-origin path, a blob, or an inline image; the banner
+> needed `safeCssUrl()` instead, because a browser does not decode `&amp;`
+> inside `url()` and HTML escaping there would have broken every real banner
+> while stopping nothing.
+>
+> Verified live on 20260828c: 11 checks, every feed picture still loading, and a
+> payload pushed through the real card renderer landed inside `src` as text —
+> no onerror attribute, nothing ran.
 - **File**: js/app.js (_avHtml, _activeDareCard, _shortsSlideHtml)
 - **Issue**: Image and video URLs (photoURL, 	humbnailURL, ideoURL, proofThumbnailURL) are read from Firestore and inserted directly into DOM attributes (e.g., src="") without HTML escaping.
 - **Risk**: A malicious user can bypass the client UI, write a payload like "><script>alert(1)</script> into their photoURL or ideoURL field in Firestore, and trigger a Stored XSS attack against any user viewing their profile, mission, or proof. Since irestore.rules only limits the length of these strings to 800 characters, the payload is successfully saved and distributed to all clients.
 - **Fix**: Apply HTML escaping (e.g., escHtml or similar attribute-safe escaping) to all URL fields before interpolating them into HTML strings. Ensure _optAv and _optImg properly escape quotes.
 
 ### 39. XSS Vulnerability due to Incomplete escHtml Escaping (HIGH)
-> **OPEN**
+> **FIXED 28 Aug.** `escHtml` now escapes the single quote too. It mattered
+> because trending searches are interpolated into an `onclick` written with
+> single quotes, and `/searches` is writable.
 - **File**: js/app.js (escHtml, trending searches)
 - **Issue**: The escHtml function escapes &, <, >, and ", but it **does not escape single quotes (')**.
 - **Risk**: When escHtml is used inside a single-quoted context (e.g., onclick="doTrendingSearch('')"), an attacker can break out of the string by providing a payload containing a single quote. An attacker can write a malicious search term to the publicly writable searches collection, leading to Stored XSS when users click the trending search item.

@@ -1,4 +1,4 @@
-TURN: CLAUDE
+TURN: FREE
 
 <!-- ^ Keep this on line 1. FREE = nobody is working. Set it to your own name
      while you work, and back to FREE the moment you stop. If it already has
@@ -101,6 +101,49 @@ Each of these is written down because it has already broken something real.
 
 # LOG — newest first, maximum 5 entries
 
+## 2026-08-28 16:40 — CLAUDE
+READ BY CLAUDE ✓ 2026-08-28 (both 12:10 and 12:20 entries)
+CHANGED: js/app.js, index.html, css/styles.css, sw.js, firestore.rules
+(DEPLOYED), ai/bugs_found.md — stamp 20260828c
+WHAT: Owner's pot revision. The thumbnail carries ONE number now — the total —
+and the split moved into the sheet; where a card said "N accepted" it says how
+many people are in the pot. The open pot row inside a mission became a Pot
+button beside Accept, and behind it a sheet: the box on top, a ranking under
+it, biggest backer first with ties going to whoever got there first. The
+ranking is per PERSON, so two gifts from one name add up into one row.
+Then Gemini's three pot findings, all three real when tested, all three fixed
+in the rules (#41/#42/#43 in bugs_found.md), plus its #38/#39 — #38 was
+sixteen places, not one, and escaping alone would not have closed it because
+javascript: survives escaping and the profile website link was already escaped.
+VERIFIED: 9/9 UI, 15/15 rules, 7/7 on clean data, 11/12 images-and-payloads.
+The one FAIL was my own assertion being wrong, not the code: I expected an
+https:// payload to be REJECTED when the right answer is escaped-and-inert, and
+the test that counts what the payload DID passed — nothing ran, no onerror
+attribute, the whole string sat inside src as text.
+Probes that mattered: a raise with no receipt, a receipt spent twice, a receipt
+that does not exist, claiming more than the receipt says, bumping the head
+count with a repeat receipt, a second receipt at the fixed first-time address,
+draining, a receipt in another name, editing a receipt, Rs.5000 in one — all
+refused. Creator refused on their own mission both by the form and by the rule.
+RISK: Two things the owner should know rather than only me.
+1. Receipts are written BEFORE the total and NOT in one batch — they cannot be,
+because writes in a batch cannot see each other and the rule has to read the
+receipt back. So a half-failure leaves a receipt standing with the total
+lagging it. The summary can be short, never long. That is deliberate.
+2. potContributors is exactly "unique people" now, but only because the first
+receipt lives at a fixed address {missionId}__{uid}. Anything that changes how
+receipt ids are made breaks the head count silently. Do not touch that id.
+🔴 TEST DATA to clear (needs the admin claim): missions SbEJK6jmqOa8SHBFINUt
+(Rs.940, 4 people) and k3BSm0NMZ7H15TEK39Ui (Rs.50, 1 person), both "pot test
+mission", plus their pot_contributions receipts, two of which are ORPHANS from
+my probes — real receipts whose total was refused, so that mission's list adds
+up to Rs.20 more than its header until they go. Receipts are admin-delete-only
+by design.
+The bell notification for the creator is still NOT built and still cannot be
+from a browser. See PARKED.md.
+OVER
+
+
 ## 2026-08-28 12:20 — GEMINI
 CHANGED: ai/bugs_found.md, ai/HANDOFF.md
 WHAT: Continued audit for logic/XSS bugs per owner request. Found two unescaped HTML interpolation issues in `js/app.js` (XSS via `photoURL` and incomplete `escHtml` missing single quote). Added them as #38 and #39 to `bugs_found.md`.
@@ -174,33 +217,4 @@ ever counted signed-in people, so that list fills far slower than it looks
 like it should. Opening it to guests is how you get a fake trending list, so
 it should stay this way — but the number means something narrower than its
 label says.
-OVER
-
-## 2026-08-27 06:40 — CLAUDE
-CHANGED: firestore.rules (DEPLOYED), ai/bugs_found.md — no app code, no deploy
-WHAT: A hunt that started from Gemini’s #35 rather than from scratch. That
-was not one bug, it was a SHAPE — a rule that guards one branch and not its
-twin — so I swept every collection for the same shape and found two more,
-both real when tested. #38: `users` create was `isSelf(userId)` and nothing
-else, so a new account’s FIRST write (the one initUser makes seconds after
-sign-up) could carry a 50KB bio past every cap on the update branch; and the
-proof rejectionReason was capped on create, which the TAKER does, while the
-mission owner writes that field on the update, where nothing checked it. The
-private drawer’s create was uncapped too.
-VERIFIED: 9/9, and the first check was the one that mattered — a real sign-up
-through the real form still works and its profile document still lands.
-Adding a condition to a create branch is exactly the change that breaks every
-new account. Then: 50KB bio at create refused, normal bio allowed, 50KB
-rejection reason refused, normal rejection allowed, proof submission
-unaffected. Test accounts deleted.
-RISK: The caps are now ONE function (userTextOk) called by both branches
-rather than two copies of the same list. The drift between those copies was
-the entire bug, so anything added to one must never be added to only one.
-Note for the next sweep: my earlier audit asked "which FIELDS have no limit"
-and walked the create rules. That question cannot find this class. The right
-question is "does every branch that can write this field check it".
-One result was a red herring worth writing down: an update that rewrites the
-same bytes has an EMPTY diff, so onlyTouches() passes trivially and the write
-is allowed whatever the content. It changes nothing, so it is not a hole —
-but it reads like one in a test.
 OVER
