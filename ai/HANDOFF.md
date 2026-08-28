@@ -1,4 +1,4 @@
-TURN: FREE
+TURN: CLAUDE
 
 <!-- ^ Keep this on line 1. FREE = nobody is working. Set it to your own name
      while you work, and back to FREE the moment you stop. If it already has
@@ -101,6 +101,25 @@ Each of these is written down because it has already broken something real.
 
 # LOG — newest first, maximum 5 entries
 
+## 2026-08-28 12:20 — GEMINI
+CHANGED: ai/bugs_found.md, ai/HANDOFF.md
+WHAT: Continued audit for logic/XSS bugs per owner request. Found two unescaped HTML interpolation issues in `js/app.js` (XSS via `photoURL` and incomplete `escHtml` missing single quote). Added them as #38 and #39 to `bugs_found.md`.
+VERIFIED: Code review verified that `_optAv` injects raw URL strings into `src="..."` without HTML encoding, and `escHtml` does not escape single quotes.
+RISK: XSS vulnerabilities present a critical risk. Needs owner permission to fix in `js/app.js`.
+OVER
+
+## 2026-08-28 12:10 — GEMINI
+READ BY GEMINI ✓ 2026-08-28
+CHANGED: ai/HANDOFF.md (No app code)
+WHAT: 1. Answered owner's questions about SPA vs bundled app structures (React/Next) and PWA vs Native (Playstore) benefits.
+2. Reviewed Claude's new THE POT feature. Found serious backend logic flaws in `firestore.rules`.
+VERIFIED: Code review only.
+RISK: 🔴 POT FEATURE BUGS:
+1. `potGrowsOnly` limits increments to 500, but DOES NOT enforce a matching `pot_contributions` receipt. An attacker can write a loop to inflate a mission's `potTotal` to 10,000,000 without leaving any receipts.
+2. The rules for `pot_contributions` DO NOT prevent the mission creator from funding their own pot (only the UI hides it).
+3. `potContributors` can be incremented multiple times by the same user if they spam the submit button, because the rule allows +1 without checking uniqueness, and the client-side check (`firstTime`) is subject to race conditions.
+OVER
+
 ## 2026-08-27 12:10 — CLAUDE
 CHANGED: firestore.rules (DEPLOYED), js/app.js, index.html, css/styles.css,
 sw.js, ai/PARKED.md — stamp 20260827f
@@ -184,68 +203,4 @@ One result was a red herring worth writing down: an update that rewrites the
 same bytes has an EMPTY diff, so onlyTouches() passes trivially and the write
 is allowed whatever the content. It changes nothing, so it is not a hole —
 but it reads like one in a test.
-OVER
-
-## 2026-08-27 04:15 — CLAUDE
-CHANGED: index.html, js/app.js, css/styles.css, sw.js, firestore.rules
-(DEPLOYED), ai/bugs_found.md, ai/PARKED.md, PROJECT_CONTEXT.md — stamp
-20260827c
-WHAT: THE WALLET IS REMOVED, at the owner’s request — page, six modals, three
-menu entries, ~400 lines of JS, 52 CSS rules. It closes #1 and #13 by deletion,
-which is the only thing that ever could: no rule can tell a real debit from an
-invented one. Posting charges nothing now. Also escaped thirteen spots where
-user text reached the page raw (#33), and fixed Gemini’s two new findings,
-both of which my own audit that same day had missed: comment text was capped
-on CREATE but not on UPDATE (#35 — post "hi", edit it into a megabyte), and
-counters were never required to start at zero, so a mission could be born with
-likeCount 1000000 and sit at the top of most-liked (#36).
-VERIFIED: 11/13 on the wallet removal — the two failures are my own test
-asserting on #profStats, which git shows never existed. 7/7 on Gemini’s two.
-Wallet page, modals and menu entries gone, /wallet lands on home, every page
-opens, signup and posting still work, 0 page errors.
-RISK: I BROKE THE LIVE SITE DOING THIS, and that is the part of this entry
-worth reading. One regex meant to delete a fifteen-line function used a lazy
-match that ran past its own closing brace — that function builds HTML in
-nested template literals full of braces — and took _skelFeed, _skelAfter,
-_bootSkelHide and renderHome out with it. 711 lines removed where 430 were
-intended; the home page threw a not-defined error. Fixed by restoring app.js
-from the previous commit and re-applying every cut by EXACT STRING MATCH.
-DO NOT DELETE CODE WITH A REGEX IN THIS FILE. _skelTxnRows is still there,
-unused, because removing it is what caused this and fifteen dead lines are not
-worth a second attempt on a live site.
-Two corrections to the record: the owner DOES hold the admin claim (earlier
-notes here said nobody did), and the Blaze queue is two now, not four.
-Left open on purpose — #34: _renderProfileStats and _renderProfileBadges have
-never rendered anything, because #profStats and #profBadges are not in
-index.html and never were. Either markup was lost or the feature was never
-finished, and which one it is changes the fix, so the owner should say whether
-that stats row is wanted at all.
-OVER
-
-## 2026-08-27 00:30 — CLAUDE
-CHANGED: firestore.rules (DEPLOYED), ai/bugs_found.md — no app code
-WHAT: The owner raised maxlength on the bio box in the inspector, typed past
-it and saved. Their instinct was right and bigger than the box they tried.
-The 1000-char bio itself IS refused today (textOk caps bio at 300, verified),
-but textOk only ever guarded EIGHT named fields — every other field on every
-collection had no ceiling at all. Tested live from an ordinary account: 50KB
-went into users.socials/settings/pinnedDares/likedProofs, dares.tags and
-dares.creator, proofs.note and takerName, comments.userName, reports.reason,
-and rewardAmount took 999999999. Eleven for eleven, on collections the feed
-downloads. Fixed with listOk/mapOk/numOk beside textOk — join() and values()
-collapse a list or map into one string, so one length check covers both "too
-many entries" and "one enormous entry".
-VERIFIED: 5/5. All eleven oversized writes now permission-denied, AND seven
-normal flows still work — posting a mission with five tags, submitting a
-proof, commenting, reporting, saving a profile, changing a settings toggle,
-pinning missions. Test data and account deleted.
-RISK: I briefly thought I had broken sign-up — two runs failed at signup right
-after the deploy. I had not: five different user-document creates all
-succeeded when tested directly. The harness was signing up ~4s after page
-load, before App Check had minted a token. **Give it ~12s before any write in
-a test, and do not read an early permission-denied as a rules bug.**
-Still true and deliberate: the form caps bio at 160 while the rule allows 300.
-The ceilings are set clear of what the app writes on purpose, so a bypass can
-still get ~2x the form limit. Tightening them to match exactly is a decision,
-not an oversight.
 OVER

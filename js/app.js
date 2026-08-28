@@ -2550,7 +2550,7 @@ const _TABS = ['home','dares','accepted','profile'];
 const _MODAL_URL = { postOverlay:'/post', proofOverlay:'/submit-proof', settingsOverlay:'/settings',
   notifSettingsOverlay:'/settings/notifications', moreSettingsOverlay:'/settings/more',
   followListOverlay:'/followers', photoViewer:'/profile/photo',
-  potOverlay:'/add-to-pot',
+  potOverlay:'/add-to-pot', potListOverlay:'/pot',
   reviewOverlay:'/review-proofs', rejectOverlay:'/reject-proof', reportOverlay:'/report',
   selectTakersOverlay:'/select-takers', videoPlayOverlay:'/play',
   searchOverlay:'/search', sFilterSheet:'/search/filters' };
@@ -2681,7 +2681,6 @@ function _activeDareCard(d, showKind){
   const thumb = _optImg(d.thumbnailURL||'', 480);
   const color = CAT_C[cat]||'#FFFFFF', icon = CAT_I[cat]||'bolt';
   const isMine = d.creatorUid===user?.uid;
-  const potLine = _potLine(d);
   const accepted = (typeof d.takers==='number') ? d.takers : (d.approvedTakers?.length||0);
   let expiry='';
   if (d.expiresAt){ const exp=d.expiresAt.toDate?d.expiresAt.toDate():new Date(d.expiresAt); const ms=exp-Date.now();
@@ -2698,13 +2697,12 @@ function _activeDareCard(d, showKind){
        <button onclick="event.stopPropagation();_closeAdcMenus();openEditDare('${d.id}')"><span class="mi">edit</span>Edit</button>`
     : `<button onclick="event.stopPropagation();_closeAdcMenus();openReportModal('dare','${d.id}','${safe}')"><span class="mi">flag</span>Report</button>`;
   return `<div class="active-dare-card" onclick="openDareDetail('${d.id}')">
-    <div class="adc-thumb">${inner}${showKind?'<span class="adc-kind">Mission</span>':''}${pinned}${expiry}<span class="adc-bounty">Rs.${_totalOf(d).toLocaleString('en-IN')}</span>${
-      potLine ? `<span class="adc-pot"><span class="mi">group</span>${potLine}</span>` : ''}</div>
+    <div class="adc-thumb">${inner}${showKind?'<span class="adc-kind">Mission</span>':''}${pinned}${expiry}<span class="adc-bounty">Rs.${_totalOf(d).toLocaleString('en-IN')}</span></div>
     <div class="yt-info">
       <div class="yt-av">${cAv}</div>
       <div class="yt-meta">
         <div class="yt-title">${escHtml(title)}</div>
-        <div class="yt-sub"><span>@${escHtml(uname)}</span><span class="yt-dot"></span><span>${accepted} accepted</span><span class="yt-dot"></span><span>${_relTimeStr(d.createdAt || d.date)}</span></div>
+        <div class="yt-sub"><span>@${escHtml(uname)}</span><span class="yt-dot"></span><span>${_potPeople(d)} in pot</span><span class="yt-dot"></span><span>${_relTimeStr(d.createdAt || d.date)}</span></div>
       </div>
       <div class="adc-menu-wrap">
         <button class="adc-dots" onclick="event.stopPropagation();_toggleAdcMenu(this)" title="More"><span class="mi">more_vert</span></button>
@@ -3682,7 +3680,7 @@ function switchVis(type) {
 function escHtml(str) {
   return String(str)
     .replace(/&/g,'&amp;').replace(/</g,'&lt;')
-    .replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+    .replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
 }
 
 // Avatar inner-HTML: real profile photo if present, else the name's first letter.
@@ -3721,7 +3719,7 @@ function _optImg(url, w) {
 function _avHtml(photoURL, name) {
   const letter = (String(name||'?').trim().charAt(0) || '?').toUpperCase().replace(/['"\\<>]/g,'');
   return photoURL
-    ? `<img src="${_optAv(photoURL)}" alt="" loading="lazy" decoding="async" style="width:100%;height:100%;object-fit:cover;border-radius:50%;display:block;" onerror="this.parentElement.textContent='${letter}'"/>`
+    ? `<img src="${escHtml(_optAv(photoURL))}" alt="" loading="lazy" decoding="async" style="width:100%;height:100%;object-fit:cover;border-radius:50%;display:block;" onerror="this.parentElement.textContent='${letter}'"/>`
     : letter;
 }
 
@@ -7542,13 +7540,11 @@ function openDareDetail(dareId){
     : `<div class="dd-hero-bg" style="background:linear-gradient(135deg,${color}22,${color}55);"><span class="mi" style="color:${color};font-size:72px;">${icon}</span></div>`;
   // The badge is what the mission is WORTH: what the creator put up plus what
   // everyone else has added. A taker does not care which half is which.
-  const _ddTotal = _totalOf(d);
-  const _ddPotL  = _potLine(d);
+  // Just the total on the thumbnail. The split — what the creator put up versus
+  // what the pot has added — lives inside the pot sheet, where somebody has
+  // asked for it. On a thumbnail it was two numbers competing for one glance.
   document.getElementById('ddHero').innerHTML = heroInner +
-    `<span class="dd-bounty-badge">Rs.${_ddTotal.toLocaleString('en-IN')}` +
-      (_ddPotL ? `<span class="dd-bounty-split">Rs.${_rewardOf(d).toLocaleString('en-IN')} + Rs.${_potOf(d).toLocaleString('en-IN')} pot</span>` : '') +
-    `</span>` + expiryBadge;
-  _ddRenderPot(d);
+    `<span class="dd-bounty-badge">Rs.${_totalOf(d).toLocaleString('en-IN')}</span>` + expiryBadge;
 
   // Tags live below description+rules (col 2): always blue, click = search that tag
   document.getElementById('ddTags').innerHTML = (d.tags?.length ? d.tags : [cat])
@@ -7574,6 +7570,7 @@ function openDareDetail(dareId){
   const rulesBar = document.getElementById('ddRulesBar'); if (rulesBar) rulesBar.style.display = rules.length ? '' : 'none';
 
   document.getElementById('ddCta').innerHTML = _ddCtaHtml(d);
+  _ddSyncPotBtn(d);
   _ddUpdateLikeUI(d);
 
   const av = document.getElementById('ddInputAv');
@@ -7858,8 +7855,6 @@ const _OV_CLOSERS = {
   postOverlay:          () => closePost(),
   proofOverlay:         () => closeProof(),
 
-  depositOverlay:       () => closeWalletModal('depositOverlay'),
-  withdrawOverlay:      () => closeWalletModal('withdrawOverlay'),
   settingsOverlay:      () => { const e=document.getElementById('settingsOverlay'); if(e) e.classList.remove('open'); },
   // phase 2 — remaining popups (back closes one step; no shareable URL, they're contextual)
   photoViewer:          () => closePhotoViewer(),
@@ -7870,10 +7865,6 @@ const _OV_CLOSERS = {
   guestPrompt:          () => closeGuestPrompt(),
   selectTakersOverlay:  () => closeSelectTakersModal(),
   followListOverlay:    () => closeWalletModal('followListOverlay'),
-  kycOverlay:           () => closeWalletModal('kycOverlay'),
-  methodOverlay:        () => closeWalletModal('methodOverlay'),
-  pinOverlay:           () => closeWalletModal('pinOverlay'),
-  txnDetailOverlay:     () => closeWalletModal('txnDetailOverlay'),
   searchOverlay:        () => closeWalletModal('searchOverlay'),
   sFilterSheet:         () => closeWalletModal('sFilterSheet'),
   setSecOverlay:        () => closeSetSec(),
@@ -7955,9 +7946,9 @@ function _openModalById(id){
     case 'sFilterSheet':         openSearchFilters(); break;
     // contextual — URL dikhta hai par refresh restore nahi (need a dare/proof id):
     // proofOverlay, reviewOverlay, rejectOverlay, reportOverlay,
-    // selectTakersOverlay, videoPlayOverlay, potOverlay
-    // potOverlay is in that list on purpose: /add-to-pot means nothing without
-    // knowing WHICH mission, and a refresh has lost that.
+    // selectTakersOverlay, videoPlayOverlay, potOverlay, potListOverlay
+    // Both pot screens are in that list on purpose: /pot and /add-to-pot mean
+    // nothing without knowing WHICH mission, and a refresh has lost that.
   }
 }
 
@@ -9751,13 +9742,6 @@ function _rewardOf(d) { return (d && (d.rewardAmount ?? d.bounty)) || 0; }
 function _totalOf(d)  { return _rewardOf(d) + _potOf(d); }
 function _potPeople(d){ return Math.max(0, (d && d.potContributors) || 0); }
 
-// "Rs.380 · 12 people" — only when there is a pot to talk about.
-function _potLine(d){
-  const t = _potOf(d); if (!t) return '';
-  const n = _potPeople(d);
-  return `Rs.${t.toLocaleString('en-IN')} · ${n} ${n === 1 ? 'person' : 'people'}`;
-}
-
 function openPotModal(missionId){
   if (typeof guestCheck === 'function' && guestCheck('pot')) return;
   if (bannedCheck()) return;
@@ -9812,37 +9796,62 @@ async function submitPot(){
 
   const btn = document.getElementById('potSubmitBtn');
   btn.disabled = true; btn.textContent = 'Adding…';
-  try {
-    // Has this person chipped in before? If so the TOTAL grows but the count of
-    // people does not — otherwise "12 people" quietly becomes twelve visits by
-    // the same three.
-    let firstTime = true;
-    try {
-      const mine = await db.collection('pot_contributions')
-        .where('missionId','==',id).where('userId','==',user.uid).limit(1).get();
-      firstTime = mine.empty;
-    } catch(e){ /* if the lookup fails, count them — over-counting a person is
-                   better than losing the contribution */ }
 
-    const batch = db.batch();
-    batch.set(db.collection('pot_contributions').doc(), {
+  // A person's FIRST receipt on a mission is stored at a fixed address —
+  // {missionId}__{uid}. Everything after it gets a random one. That is not a
+  // tidy naming habit, it is the head count: Firestore refuses a create on an
+  // id that already exists and these rows can never be edited, so the fixed
+  // address can be written exactly once per person per mission. The rules let
+  // potContributors rise only for a receipt at that address, which is how
+  // "12 people" survives one person pressing the button twelve times.
+  const firstId = id + '__' + user.uid;
+  let firstTime = false;
+  try {
+    const had = await db.collection('pot_contributions').doc(firstId).get();
+    firstTime = !had.exists;
+  } catch(e){ /* cannot tell → do not claim a new person. The total still moves;
+                 the head count under-reports rather than inventing someone. */ }
+
+  // Receipt first, THEN the total — never one batch. The rule on the mission
+  // reads the receipt back before it will let the number move, and writes
+  // inside a batch cannot see each other. If the second half fails the receipt
+  // is left standing and the card lags behind it, which is the right way round:
+  // the receipts are the record, the total is a summary of them.
+  const write = async (rid, isFirst) => {
+    await db.collection('pot_contributions').doc(rid).set({
       missionId: id, userId: user.uid,
       userName: user.name || 'Someone',
       userPhotoURL: user.picture || '',
       amount: v,
       createdAt: firebase.firestore.FieldValue.serverTimestamp()
     });
-    const upd = { potTotal: firebase.firestore.FieldValue.increment(v) };
-    if (firstTime) upd.potContributors = firebase.firestore.FieldValue.increment(1);
-    batch.update(db.collection('dares').doc(id), upd);
-    await batch.commit();
+    const upd = {
+      potTotal: firebase.firestore.FieldValue.increment(v),
+      lastPotReceipt: rid
+    };
+    if (isFirst) upd.potContributors = firebase.firestore.FieldValue.increment(1);
+    await db.collection('dares').doc(id).update(upd);
+  };
+
+  try {
+    try {
+      await write(firstTime ? firstId : db.collection('pot_contributions').doc().id, firstTime);
+    } catch(e){
+      // Two tabs both believed they were the first: the loser's write to the
+      // fixed address arrives as an edit, which is refused. It is not a failed
+      // contribution — it is a repeat one. Send it again as a repeat.
+      if (firstTime && (e.code === 'permission-denied')) {
+        firstTime = false;
+        await write(db.collection('pot_contributions').doc().id, false);
+      } else throw e;
+    }
 
     // paint it immediately; the listener will confirm a moment later
     const d = (dares || []).find(x => x.id === id);
     if (d){ d.potTotal = _potOf(d) + v; if (firstTime) d.potContributors = _potPeople(d) + 1; }
     closePotModal();
     showToast(`Rs.${v.toLocaleString('en-IN')} added to the pot`);
-    if (_ddCurrentId === id) _ddRenderPot(d);
+    if (_ddCurrentId === id) _ddSyncPotBtn(d);
     if (typeof _daresRerenderDebounced === 'function') _daresRerenderDebounced();
   } catch(e){
     document.getElementById('potErr').textContent = 'Could not add to the pot — ' + (e.code || e.message);
@@ -9851,43 +9860,83 @@ async function submitPot(){
   }
 }
 
-// The pot row inside a mission. Shows the total, who chipped in, and the button
-// — and for the creator, the same thing read the other way round: what came in.
-async function _ddRenderPot(d){
-  const el = document.getElementById('ddPot'); if (!el) return;
-  if (!d){ el.style.display = 'none'; return; }
+// The Pot button beside Accept just carries the number; the list lives behind it.
+function _ddSyncPotBtn(d){
+  const btn = document.getElementById('ddPotBtn');
+  const amt = document.getElementById('ddPotBtnAmt');
+  if (!btn || !d) return;
+  if (amt) amt.textContent = 'Rs.' + _potOf(d).toLocaleString('en-IN');
+  btn.style.display = '';
+}
+
+// Everyone who has added, biggest first.
+//
+// Ranked by PERSON, not by contribution: somebody who gives twice is one name
+// with their amounts added up, which is what "who has put the most in" means to
+// a reader. A tie goes to whoever got there first — the earliest contribution
+// wins the higher place, so the order never shuffles on a reload.
+function _potRank(rows){
+  const by = {};
+  rows.forEach(c => {
+    const k = c.userId || 'anon';
+    const t = (c.createdAt && c.createdAt.seconds) || Number.MAX_SAFE_INTEGER;
+    if (!by[k]) by[k] = { userId:k, name:c.userName || 'Someone', pic:c.userPhotoURL || '', total:0, first:t, gifts:0 };
+    by[k].total += (c.amount || 0);
+    by[k].gifts += 1;
+    if (t < by[k].first) by[k].first = t;
+    if (c.userName) by[k].name = c.userName;
+    if (c.userPhotoURL) by[k].pic = c.userPhotoURL;
+  });
+  return Object.values(by).sort((x, y) => (y.total - x.total) || (x.first - y.first));
+}
+
+function closePotList(){
+  _ovSync('potListOverlay');
+  document.getElementById('potListOverlay').classList.remove('open');
+}
+
+async function openPotList(missionId){
+  const id = missionId || _ddCurrentId;
+  const d = (dares || []).find(x => x.id === id);
+  if (!d) { showToast('Mission not found'); return; }
+  _potMissionId = id;
+  const body = document.getElementById('potListBody'); if (!body) return;
+
   const total = _potOf(d), people = _potPeople(d);
   const mine  = user && d.creatorUid === user.uid;
   const canAdd = !mine && !d.completed;
-  if (!total && !canAdd){ el.style.display = 'none'; return; }
-  el.style.display = '';
 
-  el.innerHTML = `
-    <div class="pot-head">
-      <div>
+  body.innerHTML = `
+    <div class="pot-box">
+      <div class="pot-box-l">
         <div class="pot-total">Rs.${total.toLocaleString('en-IN')}<span class="pot-of"> in the pot</span></div>
-        <div class="pot-people">${people} ${people === 1 ? 'person has' : 'people have'} added${
-          mine && total ? ' to your mission' : ''}</div>
+        <div class="pot-people">${people} ${people === 1 ? 'person has' : 'people have'} added${mine && total ? ' to your mission' : ''}</div>
+        <div class="pot-split">Reward Rs.${_rewardOf(d).toLocaleString('en-IN')} + pot Rs.${total.toLocaleString('en-IN')} = <b>Rs.${_totalOf(d).toLocaleString('en-IN')}</b></div>
       </div>
-      ${canAdd ? `<button class="pot-add-btn" onclick="openPotModal('${d.id}')">
+      ${canAdd ? `<button class="pot-add-btn" onclick="closePotList();openPotModal('${d.id}')">
         <span class="mi">add</span> Add to pot</button>` : ''}
     </div>
-    <div class="pot-names" id="potNames"></div>`;
+    <div class="pot-rank" id="potRank">${total ? '<div class="pot-rank-load">Loading…</div>' : ''}</div>`;
 
+  _ovOpen('potListOverlay', '/pot');
   if (!total) return;
+
   try {
-    const snap = await db.collection('pot_contributions')
-      .where('missionId','==',d.id).limit(50).get();
-    const rows = snap.docs.map(x => x.data())
-      .sort((a,b) => ((b.createdAt&&b.createdAt.seconds)||0) - ((a.createdAt&&a.createdAt.seconds)||0));
-    const box = document.getElementById('potNames'); if (!box) return;
-    box.innerHTML = rows.slice(0, 12).map(c => `
-      <span class="pot-name">
-        <span class="pot-name-av">${_avHtml(c.userPhotoURL || '', c.userName || '?')}</span>
-        ${escHtml(c.userName || 'Someone')}
-        <b>Rs.${((c.amount)||0).toLocaleString('en-IN')}</b>
-      </span>`).join('') + (rows.length > 12 ? `<span class="pot-name pot-more">+${rows.length - 12} more</span>` : '');
-  } catch(e){ /* the row still shows the total; names are a nicety */ }
+    const snap = await db.collection('pot_contributions').where('missionId','==',id).limit(200).get();
+    const rank = _potRank(snap.docs.map(x => x.data()));
+    const box = document.getElementById('potRank'); if (!box) return;
+    box.innerHTML = rank.map((r, i) => `
+      <div class="pot-rank-row${i < 3 ? ' top' : ''}">
+        <span class="pot-rank-n">${i + 1}</span>
+        <span class="pot-rank-av">${_avHtml(r.pic, r.name)}</span>
+        <span class="pot-rank-nm">${escHtml(r.name)}${
+          r.gifts > 1 ? `<span class="pot-rank-times">${r.gifts} times</span>` : ''}</span>
+        <span class="pot-rank-amt">Rs.${r.total.toLocaleString('en-IN')}</span>
+      </div>`).join('');
+  } catch(e){
+    const box = document.getElementById('potRank');
+    if (box) box.innerHTML = '<div class="pot-rank-load">Could not load the list</div>';
+  }
 }
 
 // Smart router: shorts (<60s) open Shorts player, long videos open YouTube watch page

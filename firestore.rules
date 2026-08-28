@@ -161,6 +161,12 @@ service cloud.firestore {
     //   · the contributor count moves by at most one at a time
     // The matching /pot_contributions record is what makes the total auditable:
     // if these two ever disagree, the receipts are the truth.
+    //
+    // That last sentence used to be a hope. It said the receipts were the truth
+    // while nothing tied the total to them: a signed-in stranger could send
+    // potTotal +500 in a loop, with no receipt behind any of it, until a
+    // mission read Rs.10,000,000. The number sits on the thumbnail, so that is
+    // the whole feature gone. potReceiptOk() below makes the tie a rule.
     function potGrowsOnly() {
       return (!touched().hasAny(['potTotal'])
               || (next('potTotal') is number
@@ -171,6 +177,45 @@ service cloud.firestore {
               || (next('potContributors') is number
                   && next('potContributors') >= prev('potContributors')
                   && (next('potContributors') - prev('potContributors')) <= 1));
+    }
+
+    // A raise in the pot must NAME the receipt that paid for it.
+    //
+    // The write carries lastPotReceipt — the id of a /pot_contributions row —
+    // and the rule reads that row back and insists it is real, is the caller's
+    // own, belongs to THIS mission, and that its amount is exactly how far the
+    // total moved. So the total can never run ahead of the money pledged.
+    //
+    // A receipt cannot be spent twice: it must differ from the one already
+    // recorded on the mission, and a receipt can never be edited or re-created
+    // (create-only, no update, no delete except by an admin). One receipt, one
+    // raise.
+    //
+    // The contributor COUNT is tighter still. It may only go up when the named
+    // receipt is that person's FIRST on this mission, and "first" is not a
+    // promise the app makes — it is the document id: a first receipt must be
+    // stored at exactly {missionId}__{uid}. Firestore refuses a create on an id
+    // that already exists, so that row can be written once per person per
+    // mission and never again. Everything after it lands on a random id and can
+    // raise the money without touching the head count. That is what makes
+    // "12 people" mean twelve people, not one person pressing a button twelve
+    // times — which no counter check on its own could tell apart.
+    function potRcptId() { return request.resource.data.get('lastPotReceipt', ''); }
+    function potRcptNew() { return potRcptId() is string && potRcptId().size() > 0
+                                && potRcptId() != resource.data.get('lastPotReceipt', ''); }
+    function potRcpt()    { return get(/databases/$(database)/documents/pot_contributions/$(potRcptId())).data; }
+    function potReceiptOk(dareId) {
+      return !touched().hasAny(['potTotal', 'potContributors'])
+          || (potRcptNew()
+              && exists(/databases/$(database)/documents/pot_contributions/$(potRcptId()))
+              && potRcpt().userId == uid()
+              && potRcpt().missionId == dareId
+              && potRcpt().amount == next('potTotal') - prev('potTotal')
+              // the head count moves only for a first-ever receipt, whose id is
+              // fixed and therefore unrepeatable
+              && (!touched().hasAny(['potContributors'])
+                  || (potRcptId() == dareId + '__' + uid()
+                      && next('potContributors') - prev('potContributors') == 1)));
     }
 
     function selfOnlyList(field) {
@@ -354,7 +399,7 @@ service cloud.firestore {
       function whileRunning() {
         return ['approvedTakers','takers','proofCount','completed','refunded',
                 'likedBy','likeCount','dislikedBy','dislikeCount','viewCount',
-                'potTotal','potContributors'];
+                'potTotal','potContributors','lastPotReceipt'];
       }
       allow update: if
         // the owner may edit their own mission — freely until it is taken,
@@ -370,6 +415,7 @@ service cloud.firestore {
                     && dareTextOk()
                     && likeListsOk()
                     && potGrowsOnly()
+                    && potReceiptOk(dareId)
                     && (!dareTaken() || onlyTouches(whileRunning())))
         // A creator clearing the legacy creatorEmail off an old mission. It is
         // removal only — the field may not survive the write — so this can never
@@ -387,11 +433,12 @@ service cloud.firestore {
         || (signedIn() && onlyTouches([
               'likedBy','likeCount','dislikedBy','dislikeCount',
               'viewCount','takers','proofCount',
-              'potTotal','potContributors'
+              'potTotal','potContributors','lastPotReceipt'
             ]) && steppedAll()
               && stepped('takers') && stepped('proofCount')
               && likeListsOk()
-              && potGrowsOnly())
+              && potGrowsOnly()
+              && potReceiptOk(dareId))
         // guests still count a view
         || (onlyTouches(['viewCount']) && stepped('viewCount'));
 
@@ -634,6 +681,11 @@ service cloud.firestore {
                     && request.resource.data.amount == math.floor(request.resource.data.amount)
                     && request.resource.data.missionId is string
                     && exists(/databases/$(database)/documents/dares/$(request.resource.data.missionId))
+                    // A pot is other people backing your mission. The app hides
+                    // the button from the creator; without this line, hiding a
+                    // button was the entire defence, and the creator could pad
+                    // their own pot from the console.
+                    && get(/databases/$(database)/documents/dares/$(request.resource.data.missionId)).data.creatorUid != uid()
                     && textOk(request.resource.data.get('userName', null), 100)
                     && textOk(request.resource.data.get('userPhotoURL', null), 800)
                     && textOk(request.resource.data.get('missionId', null), 200);

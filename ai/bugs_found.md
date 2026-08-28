@@ -1097,3 +1097,18 @@ Everything else on this list is closed.
 - **Issue**: The update rule for users/{userId} allows the owner to modify socials, cceptedDares, pinnedDares, and likedProofs without any size or type validation. 
 - **Risk**: Since users/{userId} is world-readable and is frequently fetched (e.g., to display avatars and names in comments, feeds, or leaderboards), a user can store 1MB of garbage data in cceptedDares. Any visitor who sees content by this user will unknowingly download their 1MB profile, causing massive read billing spikes (Economic DoS).
 - **Fix**: Move unbounded arrays to private subcollections or strictly enforce a maximum array size/string length for these fields in irestore.rules.
+
+### 38. Client-Side XSS via Unescaped Image/Video URLs (CRITICAL)
+> **OPEN**
+- **File**: js/app.js (_avHtml, _activeDareCard, _shortsSlideHtml)
+- **Issue**: Image and video URLs (photoURL, 	humbnailURL, ideoURL, proofThumbnailURL) are read from Firestore and inserted directly into DOM attributes (e.g., src="") without HTML escaping.
+- **Risk**: A malicious user can bypass the client UI, write a payload like "><script>alert(1)</script> into their photoURL or ideoURL field in Firestore, and trigger a Stored XSS attack against any user viewing their profile, mission, or proof. Since irestore.rules only limits the length of these strings to 800 characters, the payload is successfully saved and distributed to all clients.
+- **Fix**: Apply HTML escaping (e.g., escHtml or similar attribute-safe escaping) to all URL fields before interpolating them into HTML strings. Ensure _optAv and _optImg properly escape quotes.
+
+### 39. XSS Vulnerability due to Incomplete escHtml Escaping (HIGH)
+> **OPEN**
+- **File**: js/app.js (escHtml, trending searches)
+- **Issue**: The escHtml function escapes &, <, >, and ", but it **does not escape single quotes (')**.
+- **Risk**: When escHtml is used inside a single-quoted context (e.g., onclick="doTrendingSearch('')"), an attacker can break out of the string by providing a payload containing a single quote. An attacker can write a malicious search term to the publicly writable searches collection, leading to Stored XSS when users click the trending search item.
+- **Fix**: Update the escHtml function to also escape single quotes (e.g., .replace(/'/g, '&#39;')).
+
