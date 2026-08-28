@@ -1,4 +1,4 @@
-TURN: CLAUDE
+TURN: FREE
 
 <!-- ^ Keep this on line 1. FREE = nobody is working. Set it to your own name
      while you work, and back to FREE the moment you stop. If it already has
@@ -100,6 +100,46 @@ Each of these is written down because it has already broken something real.
 ---
 
 # LOG — newest first, maximum 5 entries
+
+## 2026-08-29 00:40 — CLAUDE
+CHANGED: js/app.js, index.html, firestore.rules (DEPLOYED), sw.js,
+ai/bugs_found.md — stamp 20260828h
+WHAT: Five the owner found, written up as #46-#50.
+🔴 #46 is mine and it is the serious one: removing the wallet on 27 Aug cut the
+hamburger drawer from 39 lines to 7. Settings, Send feedback, Admin, Terms,
+Privacy, Community Guidelines, Contact and the copyright line all went, and the
+div was left unclosed. Restored, minus Wallet. I then read every non-wallet line
+that commit removed — the drawer block is the whole of it.
+#47 your own missions showed the identity you had when you posted them; fixed on
+both sides (your view reads your live account, and saveProfile rewrites the copy
+each mission carries so other people see it too).
+#48 Follow never became Following, in three places, for two reasons at once —
+the button never asked what was stored, and toggleFollow never touched the
+button it was fired from.
+#49 fast clicks on mission thumbnails left the slot black for the session: the
+flight animation remembered a "hidden" a previous flight had left behind, then
+restored it.
+#50 the bell showed to signed-out visitors.
+VERIFIED on 20260828h: 10/11. The FAIL was my assertion — I compared drawer
+labels to exact strings while textContent includes the icon ligature, so "Home"
+reads as "homeHome". All nine entries and the copyright are present, and the
+screenshot confirms it. Real passes: guest has no bell and a signed-in person
+does; 15 rapid clicks leave the thumbnail visible with no stranded fly layers;
+Follow -> Following -> still Following after closing and reopening the mission
+-> Follow again on a second tap; and a card built for your own mission renders
+your live name and photo, not the stored copy.
+RISK: whileRunning() now lets a creator write creator / creatorUsername /
+creatorPhotoURL on a mission that has already been taken. That is deliberate and
+narrow — same-branch creatorUid == uid(), dareTextOk() caps all three — but it
+does mean a creator can change the displayed name on a running mission, which
+they could already do before it was taken.
+_refreshMyDareIdentity() only rewrites missions currently in memory (the loaded
+window, 60 by default). Somebody with more than that will have older missions
+still carrying the old photo for other viewers until those load and they save
+again. Deliberate: the alternative is an unbounded write loop on every profile
+save.
+OVER
+
 
 ## 2026-08-28 23:05 — CLAUDE
 CHANGED: nothing — no app code, no rules, no deploy
@@ -248,12 +288,4 @@ up to Rs.20 more than its header until they go. Receipts are admin-delete-only
 by design.
 The bell notification for the creator is still NOT built and still cannot be
 from a browser. See PARKED.md.
-OVER
-
-
-## 2026-08-28 12:20 — GEMINI
-CHANGED: ai/bugs_found.md, ai/HANDOFF.md
-WHAT: Continued audit for logic/XSS bugs per owner request. Found two unescaped HTML interpolation issues in `js/app.js` (XSS via `photoURL` and incomplete `escHtml` missing single quote). Added them as #38 and #39 to `bugs_found.md`.
-VERIFIED: Code review verified that `_optAv` injects raw URL strings into `src="..."` without HTML encoding, and `escHtml` does not escape single quotes.
-RISK: XSS vulnerabilities present a critical risk. Needs owner permission to fix in `js/app.js`.
 OVER

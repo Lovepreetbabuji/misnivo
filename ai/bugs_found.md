@@ -13,7 +13,7 @@ Status meanings:
 | **KNOWN** | real, already understood, deliberately not fixed yet — reason given |
 | **OPEN** | real, not fixed, needs a decision or work |
 
-**Summary: 36 fixed · 2 closed by removal · 3 not real · 1 known · 4 open**
+**Summary: 41 fixed · 2 closed by removal · 3 not real · 1 known · 4 open**
 
 > ⏸️ **`ai/PARKED.md`** — everything the owner has deliberately put on hold,
 > with the reason and what unblocks it. An entry marked PARKED below is a
@@ -1047,6 +1047,87 @@ Everything else on this list is closed.
   leftover `dmtest.*` profiles come from. Worth a `allow delete: if isSelf(u)`
   next time the rules are opened.
 
+
+### 46. I deleted most of the hamburger drawer and did not notice (CRITICAL) — owner found it
+> **FIXED 28 Aug.**
+
+Removing the wallet on 27 Aug cut the drawer from 39 lines to 7. The pattern
+matched the Wallet entry and kept going, taking **Settings, Send feedback,
+Admin, Terms, Privacy, Community Guidelines, Contact & Grievance and the
+copyright line**, and leaving an unclosed `div`. The owner found it a day later,
+and reasonably asked whether I had deleted things.
+
+Everything is restored except Wallet, which was the point. I then read every
+line that commit removed which does not mention the wallet: the drawer block is
+the whole of it, nothing else was over-cut.
+
+**This is the second overrun in that one removal.** The first took 711 lines of
+`js/app.js` and was caught within the hour because the page threw
+"renderHome is not defined". This one deleted only markup, so nothing threw and
+nothing failed loudly — it just quietly became a drawer with two items. The
+lesson is not "be careful with regexes", it is that **a delete which breaks
+nothing at runtime gets no feedback at all**, so the diff has to be read.
+
+### 47. Your own missions showed the photo and name you had when you posted them (HIGH) — owner found it
+> **FIXED 28 Aug.**
+
+Every mission stores a copy of its creator's name, username and photo, written
+once at post time. Every render preferred that copy over the live account, so
+changing your profile photo left all your old missions showing the old one —
+to you and to everybody else.
+
+Two halves, because one alone is not enough. Your own missions now read your
+live account, which is instant and needs no write. And `saveProfile()` rewrites
+the stored copy on your missions, which is the only thing that fixes what OTHER
+people see. `whileRunning()` gains the three identity fields so an already-taken
+mission can be refreshed too — they are the creator's own fields, the branch
+already requires `creatorUid == uid()`, and `dareTextOk()` caps all three.
+
+### 48. Follow never turned into Following (HIGH) — owner found it
+> **FIXED 28 Aug.**
+
+Two bugs wearing one coat, in three places (the mission page, the clips player,
+the collab sheet):
+
+1. The button was **hard-coded to the word "Follow"** and never asked what was
+   stored, so somebody you followed months ago still greeted you with "Follow"
+   every time you opened their mission.
+2. `toggleFollow()` wrote to Firestore, showed a toast, and **never touched the
+   button it was fired from**, so following someone looked like it had failed.
+
+The button is passed in now and painted before the write, and every one of the
+three syncs itself from `/follows` on the way in. The public profile and the
+follow list were already doing both — which is why this went unnoticed: the
+feature demonstrably worked, just not where it was most often used.
+
+### 49. Clicking mission thumbnails fast left the slot black for the session (HIGH) — owner found it
+> **FIXED 28 Aug.**
+
+`_heroFly()` hides its destination during the flight and used to remember the
+previous value to put back:
+
+    const prevVis = destEl.style.visibility;
+    destEl.style.visibility = 'hidden';
+    ... finish: destEl.style.visibility = prevVis;
+
+Click fast enough to start a second flight before the first has landed and the
+second one **remembers "hidden"** — then restores "hidden" when it lands. The
+thumbnail slot stays black, and every click after that re-learns the same wrong
+value, so it never recovers without a reload.
+
+It clears the inline style now instead of replaying a captured one — the
+stylesheet never sets visibility inline, so clearing is both correct and safe to
+repeat — and any flight still in the air is landed before another starts.
+
+The shape is worth remembering: **saving and restoring state is only safe if you
+are certain you are the only one holding it.**
+
+### 50. The notification bell showed to people with no account (LOW) — owner found it
+> **FIXED 28 Aug.**
+
+The bell sits outside both topbar blocks, so `_setTopbarMode()` never reached it
+and it survived every switch. A signed-out visitor got a bell that could not
+have anything in it. It follows the mode now.
 
 ### 45. Home waited to find out who you were before asking for the missions (HIGH)
 > **FIXED 28 Aug — reported by the owner, who noticed it from the right end.**
